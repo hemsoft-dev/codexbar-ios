@@ -213,6 +213,10 @@ final class CodexCreditsPoolUITests: XCTestCase {
             tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
             XCTAssertFalse(header.label.contains("Renews in"), header.label)
             keep("renewals-\(dark ? "dark-large" : "light-default")-off-immediate", app: app)
+            let hiddenClaude = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Claude, ")).firstMatch
+            reveal(hiddenClaude, in: app)
+            XCTAssertFalse(hiddenClaude.label.contains("Renews in"))
+            keep("renewals-Claude-\(dark ? "dark-large" : "light-default")-hidden", app: app)
             var environment = app.launchEnvironment
             environment["CODEXBAR_UI_TEST_RESET"] = "0"
             app.terminate()
@@ -234,6 +238,13 @@ final class CodexCreditsPoolUITests: XCTestCase {
                 XCTAssertTrue(other.label.contains("Renews in"), other.label)
                 if title == "OpenCode Go + Zen" { XCTAssertFalse(other.label.contains("Plan unavailable")) }
                 keep("renewals-\(title)-\(dark ? "dark-large" : "light-default")", app: app)
+                if title == "Personal Claude" {
+                    tap(app.buttons["More options for \(title)"], in: app)
+                    tap(app.buttons["More information for \(title)"], in: app)
+                    XCTAssertTrue(app.staticTexts["Next subscription renewal"].waitForExistence(timeout: 5))
+                    keep("renewals-Claude-\(dark ? "dark-large" : "light-default")-exact", app: app)
+                    tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
+                }
                 if ["Personal Claude", "Personal Grok"].contains(title) {
                     other.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.4)).tap()
                     XCTAssertEqual(other.value as? String, "Collapsed")
@@ -280,14 +291,38 @@ final class CodexCreditsPoolUITests: XCTestCase {
             keep("renewals-google-free-\(dark ? "dark-large" : "light-default")", app: app)
             app.terminate()
         }
+        for state in ["unknown", "canceled"] {
+            let app = launchSpacingFixture(defaultText: false, dark: true, scenario: "subscription-renewals-\(state)")
+            let header = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Claude, ")).firstMatch
+            reveal(header, in: app)
+            XCTAssertFalse(header.label.contains("Renews in"))
+            XCTAssertTrue(header.label.contains("Max 20x"), header.label)
+            tap(app.buttons["More options for Personal Claude"], in: app)
+            tap(app.buttons["More information for Personal Claude"], in: app)
+            XCTAssertTrue(app.staticTexts[state == "unknown" ? "Renewal date unavailable" : "Does not renew"].waitForExistence(timeout: 5))
+            keep("renewals-Claude-dark-large-\(state)", app: app)
+            tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
+            app.terminate()
+        }
         exerciseSubscriptionBillingConnections()
     }
 
     private func exerciseSubscriptionBillingConnections() {
         let app = launchSpacingFixture(defaultText: true, dark: false, scenario: "subscription-renewals")
         for title in ["Personal Claude", "Personal Grok"] {
-            tap(app.buttons["More options for \(title)"], in: app)
-            tap(app.buttons["Configure account \(title)"], in: app)
+            if title == "Personal Claude" {
+                app.terminate()
+                app.launchEnvironment["CODEXBAR_UI_TEST_SCENARIO"] = "subscription-renewals-unknown"
+                app.launch()
+                tap(app.buttons["More options for \(title)"], in: app)
+                tap(app.buttons["More information for \(title)"], in: app)
+                XCTAssertTrue(app.staticTexts["Renewal date unavailable"].waitForExistence(timeout: 5))
+                keep("billing-Claude-recovery", app: app)
+                tap(app.buttons["subscription-billing-settings"], in: app)
+            } else {
+                tap(app.buttons["More options for \(title)"], in: app)
+                tap(app.buttons["Configure account \(title)"], in: app)
+            }
             XCTAssertTrue(app.collectionViews["provider-account-settings-form"].waitForExistence(timeout: 5), app.debugDescription)
             keep("billing-\(title)-disconnected", app: app)
             tap(app.buttons["subscription-billing-connect"], in: app)
@@ -347,6 +382,10 @@ final class CodexCreditsPoolUITests: XCTestCase {
 
     func testCompactCardHeadersAndIndependentControls() {
         continueAfterFailure = false
+        if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SUBJOURNEY"] == "billing" {
+            exerciseSubscriptionBillingConnections()
+            return
+        }
         exerciseSubscriptionRenewals()
         // Routine issue validation may select this subjourney; release runs keep every scenario.
         if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SUBJOURNEY"] == "renewals" { return }

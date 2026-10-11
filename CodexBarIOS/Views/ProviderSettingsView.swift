@@ -67,13 +67,20 @@ struct ProviderSettingsView: View {
                     .accessibilityIdentifier("subscription-billing-connect")
                     .disabled(viewModel.isClaudeOrganizationBilling)
                     Text(providerID == .claude
-                         ? "Personal Claude Pro and Max billing is supported. Team and Enterprise organization billing is unavailable. "
+                         ? "Personal Claude Pro and Max web billing is supported. Store purchases and Team/Enterprise billing are unavailable. "
                             + "Connect the same account; billing sign-in is separate from usage."
                          : "Connect the same personal SuperGrok commerce account to show its renewal date. X and API billing are separate.")
                         .font(.footnote).foregroundStyle(.secondary)
                     if configurationStore.hasSubscriptionBillingSession(for: configuration) {
                         Button("Disconnect Billing", role: .destructive) { viewModel.disconnectSubscriptionBilling() }
                             .accessibilityIdentifier("subscription-billing-disconnect")
+                    }
+                    if providerID == .claude, let problem = viewModel.usageResult?.subscriptionBillingProblem,
+                       problem.accountID == configuration.id {
+                        Text(problem.reason.message).font(.footnote)
+                    }
+                    if providerID == .claude {
+                        Link("View Claude Billing", destination: URL(string: "https://claude.ai/settings/billing")!)
                     }
                     if let message = viewModel.subscriptionBillingMessage {
                         Text(message).font(.footnote).accessibilityIdentifier("subscription-billing-message")

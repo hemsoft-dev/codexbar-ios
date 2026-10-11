@@ -36,7 +36,7 @@ final class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable 
                 client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
                 return
             }
-            body = "{\"status\":\"active\",\"next_charge_at\":\"\(date)\",\"next_charge_date\":null,\"plan_ending_at\":null,\"plan_ending_before\":null}"
+            body = "{\"status\":\"active\",\"next_charge_at\":\"\(date)\",\"plan_ending_at\":null}"
         }
         let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)

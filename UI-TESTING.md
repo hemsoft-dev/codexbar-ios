@@ -456,3 +456,11 @@ account is rejected, the matching sample account returns automatically, and
 Disconnect Billing and Cancel preserve the usage connection. No live sign-in or
 provider endpoint is accessed by that fixture.
 See [subscription source coverage](SUBSCRIPTION-RENEWALS.md).
+
+The renewal subjourney also opens Claude billing settings directly from unavailable
+More Information before exercising account mismatch, reload, matching return,
+disconnect and cancellation. Claude fixtures omit the unused legacy aliases.
+
+Set `CODEXBAR_UI_TEST_SUBJOURNEY` to `billing` in the copied xctestrun file to
+run only the guided billing recovery checks while diagnosing a connection flow.
+Use `renewals` for complete renewal-focused validation on both device families.

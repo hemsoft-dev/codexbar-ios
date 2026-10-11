@@ -13,7 +13,7 @@ specific to the product and authentication method already connected in this app.
 | Provider | Current evidence | Billing renewal support |
 | --- | --- | --- |
 | ChatGPT / Codex | `GET chatgpt.com/backend-api/subscriptions`, `active_until` plus Boolean `will_renew` | For verified individual Go, Plus and Pro plans, an optional request uses the existing account-bound OAuth grant, account query/header and Codex client identity headers. Business, Enterprise and unknown workspace plans lack a verified workspace billing contract and receive no lookup. A recognized 200 response supplies the date; rejected access or missing fields means unavailable. The inspected Codex Switch implementation reports successful OAuth reads with this request contract; native iOS transport/grant compatibility remains pending Franz's account check. |
-| Claude | OAuth profile identity plus an optional, separate Claude web session | Implemented for personal Pro/Max: **Connect Billing** in account settings opens a private phone sign-in, verifies the web account UUID and organization against the current OAuth profile, then reads `GET /api/organizations/<uuid>/subscription_details`. `status`, `next_charge_at`/`next_charge_date` and `plan_ending_at`/`plan_ending_before` are required. An access-end date overrides a residual next charge. Store-managed subscriptions work only if this provider response supplies the same explicit billing fields; no cross-app StoreKit lookup. Live account compatibility is pending Franz. |
+| Claude | OAuth profile identity plus an optional, separate Claude web session | Implemented for personal Pro/Max: **Connect Billing** in account settings opens a private phone sign-in, verifies the web account UUID and organization against the current OAuth profile, then reads `GET /api/organizations/<uuid>/subscription_details`. `status` is required; timestamp and legacy date aliases are optional alternatives, with at least one recognized date key. Malformed present fields and paused payments are rejected. An access-end date overrides a residual next charge. Store/marketplace-managed organization types are excluded; null Stripe status is unsupported. There is no cross-app StoreKit lookup. Live account compatibility is pending Franz. |
 | Cursor | `GetCurrentPeriodUsage` exposes a usage period; `/auth/full_stripe_profile` supplies membership | The official client exposes `pendingCancellationDate`, but no verified next-charge timestamp plus affirmative renewal and billing-owner contract. `billingCycleEnd` remains a quota-period boundary, never a promised charge. |
 | Copilot | Copilot quota windows | No per-subscription billing renewal and auto-renewal state in the connected quota response. |
 | GitHub billing | Account or organization metered usage | Product usage and invoice periods do not identify an individual renewing subscription. No renewal pill. |
@@ -189,3 +189,59 @@ parsers and owner checks; they do not establish live provider access.
 Verified Go billing remains visible when the independent Zen balance read fails.
 Partial-refresh preservation keeps only the fresh account-bound observation; an
 old renewal is never reused when the new Go billing state is unavailable.
+
+## Claude renewal acquisition follow-up
+
+[#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454) corrects an app-side
+schema rejection. The old parser required all four date aliases, including null
+values. The installed first-party Claude **1.49585.0** client treats timestamp
+and legacy calendar fields as alternatives, and reads the same organization
+`subscription_details` endpoint. The app now accepts absent aliases, keeps strict
+validation of present fields, and gives scheduled access endings precedence over
+residual next-charge dates. `active` and `trialing` require the returned next
+charge; `canceled` never renews. Dates are not calculated from billing cadence,
+trial end, invoices, usage resets or plan price. Monthly and annual subscriptions
+use the explicit date the provider returns. Paused payment responses remain
+unavailable.
+
+Evidence was acquired October 10, 2026 from installed application code only,
+not account storage or private responses. Artifacts under
+`/Applications/Claude.app/Contents/Resources/ion-dist/assets/v1/`:
+
+| Artifact | Evidence | SHA-256 |
+| --- | --- | --- |
+| `cab79e57d-BpPIy_mi.js` | `f`/`m` select ending/charge timestamp before the legacy date; optional property access. | `8859f2598fa2fb438860ea755b1e94300e77352161975cbf2fdce2833b392197` |
+| `shared-5-BLWkjkBP.js` | `oS` reads organization subscription details; `wS` updates scheduled cancellation before clearing next-charge fields at immediate cancellation. Store/marketplace billing types are distinct. No mutation is used by CodexBar. | `846c07db2a3edb91d44a27f7da188e520833bd42a84a961ee6594ada245f64fc` |
+| `c4a931512-Cuy-eKtj.js` | `st` reads nullable date fields. Its billing tool contract identifies UTC timestamps, legacy UTC calendar dates, Stripe status, and null status outside Stripe. | `4d4b568e30cf3524c7018bb8c04ff291143cd881ca9bc89c4824250277a53586` |
+
+This first-party code improves on the older
+[upstream parser](https://github.com/steipete/CodexBar/blob/6e118bdb5782707bfb0dfd0453d3483e3b216cd0/Sources/CodexBarCore/Providers/Claude/ClaudeWeb/ClaudeSubscriptionMetadata.swift),
+which also required all aliases. Public
+[billing guidance](https://support.claude.com/en/articles/8325618-paid-plan-billing-faqs)
+and [cancellation guidance](https://support.claude.com/en/articles/8325617-cancel-your-pro-or-max-subscription)
+establish web/store management and paid access through the canceled period;
+they do not establish OAuth access to personal billing. Anonymous web acquisition
+returned a Cloudflare challenge during this research. That does not establish
+whether the guided authenticated phone flow works for Franz.
+
+Claude uses the saved, separately verified billing session on each successful
+usage refresh. Missing authorization, expired cookies or HTTP 401, HTTP 403,
+identity mismatch, unsupported purchase source, transport failure and rejected
+response shape now have distinct account-bound messages. Keychain read failures
+produce a retry message instead of claiming that credentials are absent or
+belong to a different account. Known Team/Enterprise plans retain the unsupported
+explanation and do not offer the personal billing shortcut. More Information offers
+**Open Billing Settings** when no date is verified. Settings retain guided
+Connect/Reconnect Billing and link to the provider's billing page. The existing
+account/organization checks run before and after acquisition. Credential or
+session changes discard the observation. Optional billing errors retain usage;
+caller cancellation still propagates. No diagnostic contains response bodies,
+account identifiers, tokens or cookies. Team/Enterprise and store-managed billing
+remain unsupported; the provider's null status cannot become renewal evidence.
+
+Native URLProtocol tests intercept the production Claude provider and billing
+client for alternative fields, cancellation, malformed/paused responses, missing
+or expired access, denial, store ownership, transport failure, account mismatch,
+credential changes and caller cancellation. UI fixtures remain synthetic. Franz's
+Max 20X sign-in and comparison with [Claude Billing](https://claude.ai/settings/billing)
+are pending owner checks, not an agent delivery prerequisite or claimed pass.

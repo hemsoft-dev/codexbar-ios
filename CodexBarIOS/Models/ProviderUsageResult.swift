@@ -257,6 +257,7 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
     /// Review observations retained after a partial Greptile refresh, excluded from fresh history.
     public let greptileReviewActivityUnavailableReason: String?
     public var subscriptionRenewal: SubscriptionRenewal?
+    public var subscriptionBillingProblem: SubscriptionBillingProblem?
     public var greptileAllowanceRenewal: GreptileAllowanceRenewal?
     public let codexBankedRateLimitResets: CodexBankedRateLimitResets?
     /// Transient account-bound grants; never persist in usage history or device snapshots.
@@ -290,6 +291,7 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
         dashboardUsageMessages: [String]? = nil,
         cardInformationSections: [ProviderCardInformationSection] = [],
         subscriptionRenewal: SubscriptionRenewal? = nil,
+        subscriptionBillingProblem: SubscriptionBillingProblem? = nil,
         greptileAllowanceRenewal: GreptileAllowanceRenewal? = nil,
         greptileReviewActivityUnavailableReason: String? = nil,
         codexBankedRateLimitResets: CodexBankedRateLimitResets? = nil,
@@ -331,6 +333,7 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
         self.greptileReviewActivityUnavailableReason = greptileReviewActivityUnavailableReason
         // A fresh Go billing observation remains valid if only the independent Zen balance fails.
         self.subscriptionRenewal = failureMessage == nil || providerID == .openCodeZen ? subscriptionRenewal : nil
+        self.subscriptionBillingProblem = failureMessage == nil ? subscriptionBillingProblem : nil
         self.greptileAllowanceRenewal = greptileAllowanceRenewal
         self.codexBankedRateLimitResets = codexBankedRateLimitResets.flatMap {
             $0.availableCount > 0 ? $0 : nil

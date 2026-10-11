@@ -7,10 +7,14 @@ enum SubscriptionBillingParser {
         guard let root = object(data), let status = root["status"] as? String,
               ["active", "trialing", "canceled"].contains(status) else { return nil }
         let keys = ["next_charge_at", "next_charge_date", "plan_ending_at", "plan_ending_before"]
-        guard keys.allSatisfy({ root[$0] is NSNull || (root[$0] as? String).flatMap(date) != nil }) else { return nil }
+        // The first-party client treats timestamp and legacy calendar fields as alternatives.
+        guard keys.contains(where: { root[$0] != nil }),
+              keys.allSatisfy({ root[$0] == nil || root[$0] is NSNull || (root[$0] as? String).flatMap(date) != nil }),
+              root["payment_paused_until"] == nil || root["payment_paused_until"] is NSNull else { return nil }
         let ending = (root["plan_ending_at"] as? String).flatMap(date) ?? (root["plan_ending_before"] as? String).flatMap(date)
         let next = (root["next_charge_at"] as? String).flatMap(date) ?? (root["next_charge_date"] as? String).flatMap(date)
         let isRenewing = ending == nil && status != "canceled"
+        guard !isRenewing || next != nil else { return nil }
         let value = isRenewing ? next : ending
         return SubscriptionRenewal(accountID: configuration.id, providerID: .claude,
                                    state: isRenewing ? .renewing : .nonRenewing,

@@ -10,6 +10,20 @@ final class SubscriptionRenewalTests: XCTestCase {
                             date: now.addingTimeInterval(offset), observedAt: now.addingTimeInterval(observedOffset))
     }
 
+    func testClaudeDiagnosticsRespectOrganizationAndAccountBinding() {
+        for tier in ["team", "enterprise", "max"] {
+            var result = ProviderUsageResult(accountID: "personal", providerID: .claude, title: "Claude",
+                                             plan: .make(providerPrefix: "claude", identifier: tier, label: tier),
+                                             subtitle: "", bars: [], fetchedAt: now)
+            result.subscriptionBillingProblem = SubscriptionBillingProblem(accountID: "personal", reason: .notConnected)
+            let detail = result.subscriptionBillingInformation(at: now)?.items.first?.detail ?? ""
+            XCTAssertEqual(result.canOpenClaudeBillingSettings, tier == "max")
+            XCTAssertEqual(detail.contains("organization billing is unsupported"), tier != "max")
+            result.subscriptionBillingProblem = SubscriptionBillingProblem(accountID: "other", reason: .expiredSession)
+            XCTAssertFalse(result.subscriptionBillingInformation(at: now)?.items.first?.detail.contains("expired") == true)
+        }
+    }
+
     func testCountdownBoundariesAndElapsedTime() {
         for (seconds, label) in [(172_800.0, "Renews in 2d"), (86_399, "Renews in 23h"),
                                  (3_600, "Renews in 1h"), (3_599, "Renews in 59m"), (1, "Renews in 1m"),

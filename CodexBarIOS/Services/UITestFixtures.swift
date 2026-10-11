@@ -329,7 +329,7 @@ final class UITestFixtures {
             let date = ISO8601DateFormatter().string(from: now.addingTimeInterval(scenario == "subscription-renewals-past" ? -60 : offset))
             let observed = now.addingTimeInterval(scenario == "subscription-renewals-stale" ? -90_000 : 0)
             if account.providerID == .claude {
-                let data = Data("{\"status\":\"active\",\"next_charge_at\":\"\(date)\",\"next_charge_date\":null,\"plan_ending_at\":\(state == .nonRenewing ? "\"\(date)\"" : "null"),\"plan_ending_before\":null}".utf8)
+                let data = Data("{\"status\":\"active\",\"next_charge_at\":\"\(date)\",\"plan_ending_at\":\(state == .nonRenewing ? "\"\(date)\"" : "null")}".utf8)
                 renewal = SubscriptionBillingParser.claude(data, configuration: account, at: observed)
             } else {
                 let data = Data("{\"subscriptions\":[{\"xaiUserId\":\"synthetic-user\",\"tier\":\"SUBSCRIPTION_TIER_GROK_PRO\",\"status\":\"SUBSCRIPTION_STATUS_ACTIVE\",\"stripe\":{\"currentPeriodEnd\":\"\(date)\",\"cancelAtPeriodEnd\":\(state == .nonRenewing ? "true" : "false")}}]}".utf8)

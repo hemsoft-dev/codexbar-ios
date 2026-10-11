@@ -105,6 +105,32 @@ public struct SubscriptionRenewal: Equatable, Sendable {
     }
 }
 
+/// Safe diagnostic text bound to the same account as the optional billing read.
+public struct SubscriptionBillingProblem: Equatable, Sendable {
+    public enum Reason: Equatable, Sendable {
+        case notConnected, expiredSession, accountMismatch, accessDenied, unsupportedSubscription, transportFailure, rejectedResponse
+        case credentialsUnavailable
+
+        public var message: String {
+            switch self {
+            case .credentialsUnavailable:
+                "Saved billing credentials could not be read. Retry refresh. Your usage connection is unchanged."
+            case .notConnected: "Connect Billing in this Claude account's settings to verify its renewal date. Usage resets are separate."
+            case .expiredSession: "Billing sign-in expired. Reconnect billing with the same Claude account. Your usage connection is unchanged."
+            case .accountMismatch: "Billing does not match this Claude account. Reconnect billing with the account used for usage."
+            case .accessDenied: "Claude denied billing access. Reconnect billing or check Claude Billing for your subscription date."
+            case .unsupportedSubscription:
+                "This Claude purchase does not expose supported personal web billing. Check the store where you subscribed or your administrator."
+            case .transportFailure: "Claude Billing could not be reached. Refresh when your connection is available. Your usage connection is unchanged."
+            case .rejectedResponse: "Claude returned billing details that CodexBar could not verify. Check Claude Billing for the date."
+            }
+        }
+    }
+
+    public let accountID: String
+    public let reason: Reason
+}
+
 extension ProviderUsageResult {
     /// Also validates mutations: a copied observation must not appear on another account.
     public var boundSubscriptionRenewal: SubscriptionRenewal? {
@@ -123,6 +149,16 @@ extension ProviderUsageResult {
         ])
     }
 
+    public var canOpenClaudeBillingSettings: Bool {
+        providerID == .claude && !isClaudeOrganizationSubscription && !subscriptionBillingIsNotApplicable
+            && failureMessage == nil && boundSubscriptionRenewal == nil
+    }
+
+    private var isClaudeOrganizationSubscription: Bool {
+        guard providerID == .claude, let identifier = plan?.identifier.lowercased() else { return false }
+        return identifier.contains("team") || identifier.contains("enterprise")
+    }
+
     private var subscriptionBillingIsNotApplicable: Bool {
         if [.openRouter, .moonshot, .githubBilling, .antigravity].contains(providerID) { return true }
         let identifier = plan?.identifier.lowercased() ?? ""
@@ -137,10 +173,11 @@ extension ProviderUsageResult {
         case .codex:
             return "The current ChatGPT connection did not provide a verified subscription billing date. Usage resets are separate."
         case .claude:
-            if let identifier = plan?.identifier.lowercased(), identifier.contains("team") || identifier.contains("enterprise") {
+            if isClaudeOrganizationSubscription {
                 return "Claude Team and Enterprise organization billing is unsupported. Check billing with your organization's administrator. "
                     + "Usage resets are separate."
             }
+            if failureMessage == nil, let problem = subscriptionBillingProblem, problem.accountID == accountID { return problem.reason.message }
             return "Connect Billing in this Claude account's settings to verify its renewal date. If already connected, reconnect "
                 + "billing and refresh. Usage resets are separate."
         case .grok:

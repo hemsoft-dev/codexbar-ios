@@ -18,12 +18,169 @@ final class SubscriptionBillingTests: XCTestCase {
         XCTAssertEqual(canceled.state, .nonRenewing, "Cancellation overrides a residual next charge")
         XCTAssertTrue(canceled.isDateOnly)
         XCTAssertNil(canceled.compactLabel(at: now))
-        for body in [#"{"status":"active","next_charge_at":"2033-05-20T00:00:00Z"}"#,
-                     #"{"status":"active","next_charge_at":null,"next_charge_date":"2033-02-30","plan_ending_at":null,"plan_ending_before":null}"#,
+        for body in [#"{"status":"active","next_charge_at":null,"next_charge_date":"2033-02-30","plan_ending_at":null,"plan_ending_before":null}"#,
                      #"{"status":"expired","next_charge_at":null,"next_charge_date":null,"plan_ending_at":null,"plan_ending_before":null}"#,
         ] { XCTAssertNil(SubscriptionBillingParser.claude(Data(body.utf8), configuration: account, at: now)) }
         let empty = Data(#"{"status":"canceled","next_charge_at":null,"next_charge_date":null,"plan_ending_at":null,"plan_ending_before":null}"#.utf8)
         XCTAssertEqual(SubscriptionBillingParser.claude(empty, configuration: account, at: now)?.state, .nonRenewing)
+    }
+
+    func testClaudeAlternativeFieldsAndPaymentPause() throws {
+        let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
+        for status in ["active", "trialing"] {
+            for key in ["next_charge_at", "next_charge_date"] {
+                let value = key.hasSuffix("_at") ? "2033-05-20T00:00:00Z" : "2033-05-20"
+                let data = Data("{\"status\":\"\(status)\",\"billing_interval\":\"year\",\"\(key)\":\"\(value)\"}".utf8)
+                let parsed = try XCTUnwrap(SubscriptionBillingParser.claude(data, configuration: account, at: now))
+                XCTAssertEqual(parsed.state, .renewing)
+                XCTAssertEqual(parsed.isDateOnly, key.hasSuffix("_date"))
+            }
+        }
+        for key in ["plan_ending_at", "plan_ending_before"] {
+            let data = Data("{\"status\":\"active\",\"next_charge_at\":\"2033-05-20T00:00:00Z\",\"\(key)\":\"2033-05-19\"}".utf8)
+            XCTAssertEqual(SubscriptionBillingParser.claude(data, configuration: account, at: now)?.state, .nonRenewing)
+        }
+        for body in [#"{"status":"active"}"#, #"{"status":"active","next_charge_at":null}"#, #"{"status":"trialing","next_charge_date":null}"#,
+                     #"{"status":"active","next_charge_at":"2033-05-20T00:00:00Z","plan_ending_at":false}"#,
+                     #"{"status":"active","next_charge_at":"2033-05-20T00:00:00Z","payment_paused_until":"2033-06-01"}"#,
+        ] { XCTAssertNil(SubscriptionBillingParser.claude(Data(body.utf8), configuration: account, at: now)) }
+    }
+
+    func testClaudeBillingDiagnosticsAndUsagePreservation() async throws {
+        let cases: [(String, SubscriptionBillingProblem.Reason?)] = [
+            ("missing", .notConnected), ("expired", .expiredSession), ("401", .expiredSession), ("403", .accessDenied),
+            ("500", .transportFailure), ("network", .transportFailure), ("shape", .rejectedResponse),
+            ("mismatch", .accountMismatch), ("apple", .unsupportedSubscription), ("null-status", .unsupportedSubscription), ("success", nil),
+        ]
+        for (scenario, reason) in cases {
+            let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
+            let secrets = MemorySecretStore()
+            try secrets.saveSecret("usage-token", account: ProviderConfigurationStore.keychainAccount(for: account))
+            if scenario != "missing" {
+                let savedCookie = scenario == "expired"
+                    ? SubscriptionBillingSession.Cookie(name: "sessionKey", value: "old", expiresAt: .distantPast) : cookie
+                let billing = SubscriptionBillingSession(providerID: .claude, ownerID: owner, organizationID: organization, cookies: [savedCookie])
+                try secrets.saveSecret(billing.encoded(), account: SubscriptionBillingSession.keychainAccount(account))
+            }
+            let fixture = IsolatedTestURLSession { [self] request in
+                var status = 200
+                let data: Data
+                switch request.url?.path {
+                case "/api/oauth/usage": data = Data(#"{"five_hour":{"utilization":12,"resets_at":"2033-05-19T00:00:00Z"}}"#.utf8)
+                case "/api/oauth/profile": data = profile()
+                case "/api/account":
+                    if scenario == "network" { throw URLError(.notConnectedToInternet) }
+                    status = Int(scenario) ?? 200
+                    var root = try XCTUnwrap(SubscriptionBillingParser.object(webAccount(owner: scenario == "mismatch" ? "other" : nil)))
+                    if scenario == "apple" {
+                        root["memberships"] = [["organization": ["uuid": organization, "billing_type": "apple_subscription"]]]
+                    }
+                    data = try JSONSerialization.data(withJSONObject: root)
+                default:
+                    if request.url!.path.contains("subscription_details") {
+                        data = scenario == "shape" ? Data("{}".utf8) : scenario == "null-status" ? Data(#"{"status":null}"#.utf8)
+                            : Data(#"{"status":"active","next_charge_at":"2033-05-20T00:00:00Z"}"#.utf8)
+                    } else { status = 404; data = Data("{}".utf8) }
+                }
+                return (HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!, data)
+            }
+            defer { fixture.invalidate() }
+            let result = try await ClaudeUsageProvider(secretStore: secrets, session: fixture.session, now: { self.now }).fetchUsage(for: account)
+            XCTAssertNil(result.failureMessage, scenario)
+            XCTAssertFalse(result.bars.isEmpty, scenario)
+            XCTAssertEqual(result.subscriptionBillingProblem?.reason, reason, scenario)
+            XCTAssertEqual(result.subscriptionBillingProblem?.accountID, reason == nil ? nil : account.id, scenario)
+            XCTAssertEqual(result.boundSubscriptionRenewal != nil, reason == nil, scenario)
+            XCTAssertEqual(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: account)), "usage-token")
+        }
+    }
+
+    func testClaudeCallerBillingCredentialReadFailurePreservesUsageAndExplainsRetry() async throws {
+        let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
+        // The initial read, two plan-owner checks, accepted-usage check and final owner check succeed.
+        // Only the caller's subsequent optional billing-credential read fails, then recovers.
+        let secrets = TransientBillingReadSecretStore(account: ProviderConfigurationStore.keychainAccount(for: account), failureNumber: 6)
+        try secrets.saveSecret("usage-token", account: ProviderConfigurationStore.keychainAccount(for: account))
+        let fixture = IsolatedTestURLSession { [self] request in
+            XCTAssertFalse(request.url!.path.contains("subscription_details"))
+            let data = request.url?.path == "/api/oauth/profile" ? profile()
+                : Data(#"{"five_hour":{"utilization":12,"resets_at":"2033-05-19T00:00:00Z"}}"#.utf8)
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
+        }
+        defer { fixture.invalidate() }
+        let result = try await ClaudeUsageProvider(secretStore: secrets, session: fixture.session, now: { self.now }).fetchUsage(for: account)
+        XCTAssertNil(result.failureMessage)
+        XCTAssertFalse(result.bars.isEmpty)
+        XCTAssertNil(result.boundSubscriptionRenewal)
+        XCTAssertEqual(result.subscriptionBillingProblem?.reason, .credentialsUnavailable)
+        XCTAssertTrue(result.subscriptionBillingInformation(at: now)?.items.first?.detail.contains("Retry refresh") == true)
+        XCTAssertEqual(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: account)), "usage-token")
+    }
+
+    func testClaudeKeychainReadFailureDoesNotClaimMissingOrMismatchedCredentials() async throws {
+        for phase in ["usage", "billing", "final"] {
+            let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
+            let secrets = BillingMutationSecretStore()
+            let usageKey = ProviderConfigurationStore.keychainAccount(for: account)
+            let billingKey = SubscriptionBillingSession.keychainAccount(account)
+            try secrets.saveSecret("usage-token", account: usageKey)
+            let billing = SubscriptionBillingSession(providerID: .claude, ownerID: owner, organizationID: organization, cookies: [cookie])
+            let original = try billing.encoded()
+            try secrets.saveSecret(original, account: billingKey)
+            if phase != "final" { secrets.failingReadAccount = phase == "usage" ? usageKey : billingKey }
+            let fixture = IsolatedTestURLSession { [self] request in
+                let data: Data
+                switch request.url?.path {
+                case "/api/oauth/profile": data = profile()
+                case "/api/account": data = webAccount()
+                default: secrets.failingReadAccount = billingKey; data = claudeBilling()
+                }
+                return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
+            }
+            defer { fixture.invalidate() }
+            let result = try await SubscriptionBillingClient(session: fixture.session).fetchClaudeObservation(
+                configuration: account, usageSecret: "usage-token", secretStore: secrets, at: now)
+            XCTAssertNil(result.renewal)
+            XCTAssertEqual(result.problem?.reason, .credentialsUnavailable, phase)
+            secrets.failingReadAccount = nil
+            XCTAssertEqual(try secrets.readSecret(account: usageKey), "usage-token")
+            XCTAssertEqual(try secrets.readSecret(account: billingKey), original)
+        }
+    }
+
+    func testClaudeCredentialChangeDiscardsBillingAndCallerCancellationPropagates() async throws {
+        for mutation in ["usage", "billing", "cancel"] {
+            let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
+            let secrets = MemorySecretStore()
+            let usageKey = ProviderConfigurationStore.keychainAccount(for: account)
+            let billingKey = SubscriptionBillingSession.keychainAccount(account)
+            try secrets.saveSecret("usage-token", account: usageKey)
+            let billing = SubscriptionBillingSession(providerID: .claude, ownerID: owner, organizationID: organization, cookies: [cookie])
+            try secrets.saveSecret(billing.encoded(), account: billingKey)
+            let fixture = IsolatedTestURLSession { [self] request in
+                let data: Data
+                switch request.url?.path {
+                case "/api/oauth/profile": data = profile()
+                case "/api/account": data = webAccount()
+                default:
+                    try secrets.saveSecret("changed", account: mutation == "usage" ? usageKey : billingKey)
+                    data = claudeBilling()
+                }
+                return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
+            }
+            defer { fixture.invalidate() }
+            let task = Task {
+                try await SubscriptionBillingClient(session: fixture.session).fetchClaudeObservation(
+                    configuration: account, usageSecret: "usage-token", secretStore: secrets, at: now)
+            }
+            if mutation == "cancel" { task.cancel() }
+            do {
+                let result = try await task.value
+                XCTAssertNotEqual(mutation, "cancel")
+                XCTAssertNil(result.renewal)
+                XCTAssertEqual(result.problem?.reason, .accountMismatch)
+            } catch { XCTAssertEqual(mutation, "cancel"); XCTAssertTrue(error is CancellationError || (error as? URLError)?.code == .cancelled) }
+        }
     }
 
     func testGrokRequiresOwnedPersonalBillingAndExplicitRenewalState() throws {
@@ -320,9 +477,13 @@ final class SubscriptionBillingTests: XCTestCase {
 private final class BillingMutationSecretStore: SecretStore, @unchecked Sendable {
     private let storage = MemorySecretStore()
     var failingSaveAccount: String?
+    var failingReadAccount: String?
     var failingDeleteAccount: String?
 
-    func readSecret(account: String) throws -> String? { try storage.readSecret(account: account) }
+    func readSecret(account: String) throws -> String? {
+        if account == failingReadAccount { throw KeychainError.unhandledStatus(-25308) }
+        return try storage.readSecret(account: account)
+    }
 
     func saveSecret(_ secret: String, account: String) throws {
         if account == failingSaveAccount { throw KeychainError.unhandledStatus(-25308) }
@@ -333,4 +494,27 @@ private final class BillingMutationSecretStore: SecretStore, @unchecked Sendable
         if account == failingDeleteAccount { throw KeychainError.unhandledStatus(-25308) }
         try storage.deleteSecret(account: account)
     }
+}
+
+private final class TransientBillingReadSecretStore: SecretStore, @unchecked Sendable {
+    private let storage = MemorySecretStore()
+    private let lock = NSLock()
+    private let account: String
+    private let failureNumber: Int
+    private var reads = 0
+
+    init(account: String, failureNumber: Int) { self.account = account; self.failureNumber = failureNumber }
+
+    func readSecret(account: String) throws -> String? {
+        let fails = lock.withLock {
+            guard account == self.account else { return false }
+            reads += 1
+            return reads == failureNumber
+        }
+        if fails { throw KeychainError.unhandledStatus(-25308) }
+        return try storage.readSecret(account: account)
+    }
+
+    func saveSecret(_ secret: String, account: String) throws { try storage.saveSecret(secret, account: account) }
+    func deleteSecret(account: String) throws { try storage.deleteSecret(account: account) }
 }

@@ -69,6 +69,55 @@ final class SubscriptionBillingClient: @unchecked Sendable {
         return result
     }
 
+    struct ClaudeObservation {
+        let renewal: SubscriptionRenewal?
+        let problem: SubscriptionBillingProblem?
+    }
+
+    func fetchClaudeObservation(configuration: ProviderAccountConfiguration, usageSecret: String,
+                                secretStore: SecretStore, at now: Date) async throws -> ClaudeObservation {
+        try Task.checkCancellation()
+        func unavailable(_ reason: SubscriptionBillingProblem.Reason) -> ClaudeObservation {
+            ClaudeObservation(renewal: nil, problem: SubscriptionBillingProblem(accountID: configuration.id, reason: reason))
+        }
+        guard configuration.providerID == .claude else { return unavailable(.unsupportedSubscription) }
+        let key = SubscriptionBillingSession.keychainAccount(configuration)
+        let usageKey = ProviderConfigurationStore.keychainAccount(for: configuration)
+        let saved: String
+        do {
+            guard try secretStore.readSecret(account: usageKey) == usageSecret else { return unavailable(.accountMismatch) }
+            guard let value = try secretStore.readSecret(account: key) else { return unavailable(.notConnected) }
+            saved = value
+        } catch { return unavailable(.credentialsUnavailable) }
+        guard let billing = SubscriptionBillingSession.parse(saved, allowExpired: true), billing.providerID == .claude else {
+            return unavailable(.rejectedResponse)
+        }
+        guard SubscriptionBillingSession.header(billing.cookies, at: Date()) != nil else { return unavailable(.expiredSession) }
+        let observation: ClaudeObservation
+        do {
+            observation = ClaudeObservation(renewal: try await claude(billing, configuration: configuration, usageSecret: usageSecret, at: now),
+                                            problem: nil)
+        } catch {
+            try Task.checkCancellation()
+            let reason: SubscriptionBillingProblem.Reason
+            switch error as? SubscriptionBillingError {
+            case .expiredSession: reason = .expiredSession
+            case .accountMismatch: reason = .accountMismatch
+            case .accessDenied: reason = .accessDenied
+            case .unsupportedSubscription: reason = .unsupportedSubscription
+            case .rejectedResponse, .unavailable: reason = .rejectedResponse
+            default: reason = .transportFailure
+            }
+            observation = unavailable(reason)
+        }
+        try Task.checkCancellation()
+        do {
+            guard try secretStore.readSecret(account: key) == saved,
+                  try secretStore.readSecret(account: usageKey) == usageSecret else { return unavailable(.accountMismatch) }
+        } catch { return unavailable(.credentialsUnavailable) }
+        return observation
+    }
+
     private struct ClaudeOwner: Equatable {
         let account: String
         let organization: String
@@ -95,7 +144,10 @@ final class SubscriptionBillingClient: @unchecked Sendable {
         guard owner.account == billing.ownerID, owner.organization == billing.organizationID else { throw SubscriptionBillingError.accountMismatch }
         try await verifyClaudeWebOwner(billing)
         let data = try await webGet("/api/organizations/\(owner.organization)/subscription_details", billing: billing)
-        guard let result = SubscriptionBillingParser.claude(data, configuration: configuration, at: now) else { throw SubscriptionBillingError.unavailable }
+        guard let result = SubscriptionBillingParser.claude(data, configuration: configuration, at: now) else {
+            if SubscriptionBillingParser.object(data)?["status"] is NSNull { throw SubscriptionBillingError.unsupportedSubscription }
+            throw SubscriptionBillingError.rejectedResponse
+        }
         try await verifyClaudeWebOwner(billing)
         guard try await claudeOwner(usageSecret) == owner else { throw SubscriptionBillingError.accountMismatch }
         return result
@@ -110,6 +162,12 @@ final class SubscriptionBillingClient: @unchecked Sendable {
         guard account == billing.ownerID, organizations.filter({ $0 == billing.organizationID }).count == 1 else {
             throw SubscriptionBillingError.accountMismatch
         }
+        let organization = memberships.compactMap { $0["organization"] as? [String: Any] }
+            .first { $0["uuid"] as? String == billing.organizationID }
+        if let type = organization?["billing_type"] as? String,
+           ["apple_subscription", "google_play_subscription", "aws_marketplace", "external_subscription_contracted"].contains(type) {
+            throw SubscriptionBillingError.unsupportedSubscription
+        }
     }
 
     private func grok(_ billing: SubscriptionBillingSession, configuration: ProviderAccountConfiguration, at now: Date) async throws -> SubscriptionRenewal? {
@@ -123,8 +181,8 @@ final class SubscriptionBillingClient: @unchecked Sendable {
 
     private func webGet(_ path: String, billing: SubscriptionBillingSession) async throws -> Data {
         guard let host = SubscriptionBillingSession.host(billing.providerID),
-              let header = SubscriptionBillingSession.header(billing.cookies, at: Date()),
               let url = URL(string: "https://\(host)\(path)") else { throw SubscriptionBillingError.unavailable }
+        guard let header = SubscriptionBillingSession.header(billing.cookies, at: Date()) else { throw SubscriptionBillingError.expiredSession }
         var request = URLRequest(url: url)
         request.setValue(header, forHTTPHeaderField: "Cookie")
         request.setValue("https://\(host)", forHTTPHeaderField: "Origin")
@@ -141,8 +199,11 @@ final class SubscriptionBillingClient: @unchecked Sendable {
         request.setValue("CodexBarIOS", forHTTPHeaderField: "User-Agent")
         let (data, response) = try await session.data(for: request)
         try Task.checkCancellation()
-        guard let response = response as? HTTPURLResponse, response.statusCode == 200,
-              response.url == request.url, data.count <= 65_536 else { throw SubscriptionBillingError.unavailable }
+        guard let response = response as? HTTPURLResponse, response.url == request.url else { throw SubscriptionBillingError.transportFailure }
+        if response.statusCode == 401, request.value(forHTTPHeaderField: "Cookie") != nil { throw SubscriptionBillingError.expiredSession }
+        if response.statusCode == 403 { throw SubscriptionBillingError.accessDenied }
+        guard response.statusCode == 200 else { throw SubscriptionBillingError.transportFailure }
+        guard data.count <= 65_536 else { throw SubscriptionBillingError.rejectedResponse }
         return data
     }
 }

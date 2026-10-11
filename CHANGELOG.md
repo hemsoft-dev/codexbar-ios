@@ -67,6 +67,7 @@ building, testing, or releasing the app.
   ([#417](https://github.com/HemSoft/codexbar-ios/issues/417))
 
 ### Fixed
+- Claude renewal dates accept the provider's timestamp or legacy date fields without requiring both. Billing details now explain expired sign-in, account mismatch, denied access and unavailable responses, with a shortcut to billing settings. ([#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454))
 
 - See verified Cursor Pro and Pro+ subscriptions in each account’s header pill, with independent plan names that survive refresh and relaunch. Unknown plans remain clearly unavailable. ([#438](https://github.com/hemsoft-dev/codexbar-ios/issues/438))
 

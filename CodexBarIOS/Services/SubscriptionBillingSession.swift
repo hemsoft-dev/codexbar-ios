@@ -58,17 +58,22 @@ struct SubscriptionBillingSession: Codable, Equatable, Sendable {
         return value
     }
 
-    static func parse(_ value: String?) -> Self? {
+    static func parse(_ value: String?, allowExpired: Bool = false) -> Self? {
         guard let value, value.utf8.count <= 32_768,
               let session = try? JSONDecoder().decode(Self.self, from: Data(value.utf8)),
               host(session.providerID) != nil, !session.ownerID.isEmpty,
-              header(session.cookies, at: Date()) != nil else { return nil }
+              header(allowExpired ? session.cookies.map { Cookie(name: $0.name, value: $0.value, expiresAt: nil) } : session.cookies,
+                     at: Date()) != nil else { return nil }
         return session
     }
 }
 
 enum SubscriptionBillingError: Equatable, LocalizedError {
     case unavailable
+    case expiredSession
+    case accessDenied
+    case transportFailure
+    case rejectedResponse
     case accountMismatch
     case canceled
     case unsupportedSubscription
@@ -76,6 +81,10 @@ enum SubscriptionBillingError: Equatable, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unavailable: "Billing could not be verified. Finish signing in, then try again. Your usage connection is unchanged."
+        case .expiredSession: "Billing sign-in expired. Reconnect billing with the same account. Your usage connection is unchanged."
+        case .accessDenied: "The provider denied billing access. Reconnect billing or check your subscription with the provider."
+        case .transportFailure: "Billing could not be reached. Refresh when your connection is available. Your usage connection is unchanged."
+        case .rejectedResponse: "The provider returned billing details that CodexBar could not verify. Check the provider for the date."
         case .accountMismatch: "Choose the same account you connected for usage. This billing session belongs to a different account."
         case .unsupportedSubscription:
             "This subscription does not provide supported personal billing details. "

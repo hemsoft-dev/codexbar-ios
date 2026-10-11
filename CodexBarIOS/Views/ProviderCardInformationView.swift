@@ -4,6 +4,7 @@ struct ProviderCardInformationView: View {
     let sections: [ProviderCardInformationSection]
     let greptileRenewal: GreptileAllowanceRenewal?
     var onConnect: (() -> Void)?
+    var showsBillingSettings = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -27,6 +28,10 @@ struct ProviderCardInformationView: View {
                             }
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel("\(item.label), \(item.detail)")
+                        }
+                        if section.id == "subscription-renewal", showsBillingSettings {
+                            Button("Open Billing Settings") { onConnect?() }
+                                .accessibilityIdentifier("subscription-billing-settings")
                         }
                     }
                 }
