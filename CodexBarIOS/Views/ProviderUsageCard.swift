@@ -981,7 +981,10 @@ struct ProviderUsageCard: View {
     private func reconnectFromInformation() {
         guard reconnectAfterInformation else { return }
         reconnectAfterInformation = false
-        onConfigureAccount()
+        // Let SwiftUI finish removing this sheet before the dashboard presents settings.
+        DispatchQueue.main.async {
+            onConfigureAccount()
+        }
     }
 
     private var greptileRenewal: GreptileAllowanceRenewal? {

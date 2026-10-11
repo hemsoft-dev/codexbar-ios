@@ -382,6 +382,10 @@ final class CodexCreditsPoolUITests: XCTestCase {
 
     func testCompactCardHeadersAndIndependentControls() {
         continueAfterFailure = false
+        if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SUBJOURNEY"] == "billing" {
+            exerciseSubscriptionBillingConnections()
+            return
+        }
         exerciseSubscriptionRenewals()
         // Routine issue validation may select this subjourney; release runs keep every scenario.
         if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SUBJOURNEY"] == "renewals" { return }

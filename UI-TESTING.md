@@ -460,3 +460,7 @@ See [subscription source coverage](SUBSCRIPTION-RENEWALS.md).
 The renewal subjourney also opens Claude billing settings directly from unavailable
 More Information before exercising account mismatch, reload, matching return,
 disconnect and cancellation. Claude fixtures omit the unused legacy aliases.
+
+Set `CODEXBAR_UI_TEST_SUBJOURNEY` to `billing` in the copied xctestrun file to
+run only the guided billing recovery checks while diagnosing a connection flow.
+Use `renewals` for complete renewal-focused validation on both device families.
