@@ -84,14 +84,22 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
             planResolution: resolution
         )
         if oauthOutcome.isSuccessfulSnapshot {
-            if let usageSecret = try? secretStore.readSecret(account: ProviderConfigurationStore.keychainAccount(for: configuration)),
-               ClaudeCredentialsParser.parse(usageSecret)?.accessToken == token {
+            let usageSecret: String?
+            do {
+                usageSecret = try secretStore.readSecret(account: ProviderConfigurationStore.keychainAccount(for: configuration))
+            } catch {
+                try Task.checkCancellation()
+                usageSecret = nil
+                resolved.subscriptionBillingProblem = SubscriptionBillingProblem(accountID: configuration.id, reason: .credentialsUnavailable)
+            }
+            if let usageSecret, ClaudeCredentialsParser.parse(usageSecret)?.accessToken == token {
                 let billing = try await SubscriptionBillingClient(session: session).fetchClaudeObservation(
                     configuration: configuration, usageSecret: usageSecret, secretStore: secretStore, at: now()
                 )
                 resolved.subscriptionRenewal = billing.renewal
                 resolved.subscriptionBillingProblem = billing.problem
             }
+            try Task.checkCancellation()
             guard try currentToken(for: configuration) == token else {
                 return failureResult("Claude account changed during refresh. Refresh again.", configuration: configuration)
             }

@@ -95,6 +95,28 @@ final class SubscriptionBillingTests: XCTestCase {
         }
     }
 
+    func testClaudeCallerBillingCredentialReadFailurePreservesUsageAndExplainsRetry() async throws {
+        let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
+        // The initial read, two plan-owner checks, accepted-usage check and final owner check succeed.
+        // Only the caller's subsequent optional billing-credential read fails, then recovers.
+        let secrets = TransientBillingReadSecretStore(account: ProviderConfigurationStore.keychainAccount(for: account), failureNumber: 6)
+        try secrets.saveSecret("usage-token", account: ProviderConfigurationStore.keychainAccount(for: account))
+        let fixture = IsolatedTestURLSession { [self] request in
+            XCTAssertFalse(request.url!.path.contains("subscription_details"))
+            let data = request.url?.path == "/api/oauth/profile" ? profile()
+                : Data(#"{"five_hour":{"utilization":12,"resets_at":"2033-05-19T00:00:00Z"}}"#.utf8)
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
+        }
+        defer { fixture.invalidate() }
+        let result = try await ClaudeUsageProvider(secretStore: secrets, session: fixture.session, now: { self.now }).fetchUsage(for: account)
+        XCTAssertNil(result.failureMessage)
+        XCTAssertFalse(result.bars.isEmpty)
+        XCTAssertNil(result.boundSubscriptionRenewal)
+        XCTAssertEqual(result.subscriptionBillingProblem?.reason, .credentialsUnavailable)
+        XCTAssertTrue(result.subscriptionBillingInformation(at: now)?.items.first?.detail.contains("Retry refresh") == true)
+        XCTAssertEqual(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: account)), "usage-token")
+    }
+
     func testClaudeKeychainReadFailureDoesNotClaimMissingOrMismatchedCredentials() async throws {
         for phase in ["usage", "billing", "final"] {
             let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
@@ -472,4 +494,27 @@ private final class BillingMutationSecretStore: SecretStore, @unchecked Sendable
         if account == failingDeleteAccount { throw KeychainError.unhandledStatus(-25308) }
         try storage.deleteSecret(account: account)
     }
+}
+
+private final class TransientBillingReadSecretStore: SecretStore, @unchecked Sendable {
+    private let storage = MemorySecretStore()
+    private let lock = NSLock()
+    private let account: String
+    private let failureNumber: Int
+    private var reads = 0
+
+    init(account: String, failureNumber: Int) { self.account = account; self.failureNumber = failureNumber }
+
+    func readSecret(account: String) throws -> String? {
+        let fails = lock.withLock {
+            guard account == self.account else { return false }
+            reads += 1
+            return reads == failureNumber
+        }
+        if fails { throw KeychainError.unhandledStatus(-25308) }
+        return try storage.readSecret(account: account)
+    }
+
+    func saveSecret(_ secret: String, account: String) throws { try storage.saveSecret(secret, account: account) }
+    func deleteSecret(account: String) throws { try storage.deleteSecret(account: account) }
 }
