@@ -131,6 +131,7 @@ final class UITestFixtures {
         }
         refreshService = UsageRefreshService(providers: Self.providersForPlanPills(providers, scenario: scenario, suiteName: suite), initialResults: results)
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
+            || scenario?.hasPrefix("subscription-renewals") == true
             || (greptile && environment["CODEXBAR_UI_TEST_MORE_INFORMATION"] == "1")
             || scenario?.hasPrefix("grok-cursor-parity") == true
             || Self.isCursorSessionScenario(scenario) {
@@ -202,7 +203,13 @@ final class UITestFixtures {
             return ProviderUsageResult(accountID: configuration.id, providerID: .openCodeZen, title: configuration.displayName,
                                        subtitle: "Waiting for synthetic Console response", bars: [], fetchedAt: Date())
         }
-        if scenario?.hasPrefix("subscription-renewals") == true { return renewalResult(for: configuration, scenario: scenario) }
+        if scenario?.hasPrefix("subscription-renewals") == true {
+            if configuration.providerID == .cursor {
+                return ProviderUsageResult(accountID: configuration.id, providerID: .cursor, title: configuration.displayName,
+                                           subtitle: "Waiting for synthetic Cursor billing response", bars: [], fetchedAt: Date())
+            }
+            return renewalResult(for: configuration, scenario: scenario)
+        }
         if scenario?.hasPrefix("google-plan-") == true {
             return googlePlanResult(for: configuration)
         }
@@ -281,7 +288,9 @@ final class UITestFixtures {
             return [UITestOpenCodeRenewalProvider(secretStore: UITestSecretStore(suite: suiteName))]
         }
         if scenario?.hasPrefix("subscription-renewals") == true {
-            return [ProviderID.codex, .claude, .grok, .gemini, .openCodeZen].map { UITestRenewalProvider(providerID: $0, scenario: scenario) }
+            return [ProviderID.codex, .claude, .grok, .cursor, .gemini, .openCodeZen].map {
+                UITestRenewalProvider(providerID: $0, scenario: scenario, suiteName: suiteName)
+            }
         }
         if scenario?.hasPrefix("google-plan-") == true {
             return [UITestGooglePlanProvider(providerID: .gemini), UITestGooglePlanProvider(providerID: .openCodeZen)]
@@ -303,12 +312,14 @@ final class UITestFixtures {
         for (id, provider, title) in [("monthly", ProviderID.codex, "Personal Codex"), ("annual", .codex, "Work Codex"),
                                       ("google", .gemini, "Personal Google"), ("go", .openCodeZen, "OpenCode Go + Zen"),
                                       ("claude", .claude, "Personal Claude"), ("grok", .grok, "Personal Grok"),
+                                      ("cursor", .cursor, "Personal Cursor"), ("cursor-annual", .cursor, "Annual Cursor"),
         ] {
+            if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_CURSOR_ONLY"] == "1", provider != .cursor { continue }
             var account = ProviderAccountConfiguration(id: id, providerID: provider, accountLabel: title, authMethod: .browserSession)
             if provider == .openCodeZen { account.openCodeWorkspaceId = "fixture-workspace" }
             _ = store.update(account)
             let secret = provider == .grok ? (try? Self.planPillGrokCredential.encoded()) ?? "invalid-synthetic-credential" : "ui-test-credential"
-            precondition(store.saveSecret(secret, for: account))
+            precondition(store.saveSecret(provider == .cursor ? UITestCursorBillingFixture.credential : secret, for: account))
         }
     }
 
@@ -1455,7 +1466,8 @@ private struct UITestSecretStore: SecretStore {
         let codex = ["personal", "work", "pro", "prolite", "promax", "future-plan", "plus", "free"].contains {
             secret == UITestFixtures.codexCredential(for: $0)
         }
-        let cursor = [false, true].contains { secret == UITestFixtures.cursorSessionCredential(expired: $0) }
+        let cursor = secret == UITestCursorBillingFixture.credential
+            || [false, true].contains { secret == UITestFixtures.cursorSessionCredential(expired: $0) }
         let greptile = GreptileSessionCredentials.parse(secret) == UITestFixtures.greptileCredential
         let grok = GrokCredential.parse(secret) == UITestFixtures.planPillGrokCredential
         let billing = SubscriptionBillingSession.parse(secret)
@@ -1922,8 +1934,17 @@ private class UITestCodexPlanURLProtocol: URLProtocol, @unchecked Sendable {
 private struct UITestRenewalProvider: UsageProvider {
     let providerID: ProviderID
     let scenario: String?
+    let suiteName: String
     func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
-        UITestFixtures.renewalResult(for: configuration, scenario: scenario)
+        guard providerID == .cursor else { return UITestFixtures.renewalResult(for: configuration, scenario: scenario) }
+        let session = UITestCursorBillingProtocol.session(scenario: (scenario ?? "") + (configuration.id == "cursor-annual" ? "-annual" : ""))
+        defer { session.invalidateAndCancel() }
+        var result = try await CursorUsageProvider(secretStore: UITestSecretStore(suite: suiteName), session: session).fetchUsage(for: configuration)
+        if scenario == "subscription-renewals-stale", let renewal = result.subscriptionRenewal {
+            result.subscriptionRenewal = SubscriptionRenewal(accountID: configuration.id, providerID: .cursor,
+                                                            state: renewal.state, date: renewal.date, observedAt: Date().addingTimeInterval(-90_000))
+        }
+        return result
     }
 }
 

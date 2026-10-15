@@ -15,7 +15,7 @@ private client source proves the fields that client consumes, not live iOS acces
 
 | Product | Verified evidence | Remaining gate | Classification |
 | --- | --- | --- | --- |
-| Cursor | Official client reads a cancellation date and subscription status; its plan-info response distinguishes Stripe and Apple ownership. | Actual next charge, affirmative renewal state, billing-owner binding and full response schema. | Partial private contract; no renewal implementation authorized. |
+| Cursor | Native sign-in successfully reached the authenticated web profile and customer-bound Stripe portal subscription on October 15, 2026. | Franz's phone sign-in and live date comparison; unsupported subscription variants remain unavailable. | Private contract acquired and implemented in [#456](https://github.com/hemsoft-dev/codexbar-ios/issues/456), with [current evidence](CURSOR-BILLING.md). |
 | Google AI / One | Consumer billing pages and store/partner distinctions; publisher and reseller API access boundaries. | Consumer response, account/payer binding and a supported phone authorization-to-data flow. | Private consumer contract unverified; published publisher/reseller APIs inapplicable to this lookup. |
 | Personal Copilot | Personal billing UI, cancellation semantics and public personal usage APIs. | Product-specific next charge and cancellation response tied to the authenticated GitHub user. | Private consumer contract unverified; documented usage/seat APIs insufficient. |
 | OpenCode Go / Go Plus | Current console read schema, workspace bearer middleware, subscriber ID, explicit cancellation, paid period and recovery state. | Franz's separate live compatibility check. | Implemented private client contract in [#451](https://github.com/hemsoft-dev/codexbar-ios/issues/451); synthetic production-client coverage, live account compatibility pending. |
@@ -27,6 +27,10 @@ still need the exact evidence described below; no speculative integration issues
 were opened for them.
 
 ## Cursor
+
+The initial findings below record the earlier desktop-only investigation. The
+October 15 API probe closed its owner and billing-state gaps. The implemented
+route and current limits are documented in [Cursor subscription billing](CURSOR-BILLING.md).
 
 ### Source revision and acquisition
 

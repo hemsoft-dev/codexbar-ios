@@ -307,6 +307,59 @@ final class CodexCreditsPoolUITests: XCTestCase {
         exerciseSubscriptionBillingConnections()
     }
 
+    private func exerciseCursorRenewals() {
+        for dark in [false, true] {
+            let appearance = dark ? "dark-large" : "light-default"
+            let app = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "subscription-renewals", cursorOnly: true)
+            for title in ["Personal Cursor", "Annual Cursor"] {
+                let header = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", title + ", Pro")).firstMatch
+                reveal(header, in: app)
+                XCTAssertTrue(header.label.contains("Renews in"), header.label)
+                keep("cursor-\(title)-\(appearance)-expanded", app: app)
+                header.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.4)).tap()
+                XCTAssertEqual(header.value as? String, "Collapsed")
+                XCTAssertTrue(header.label.contains("Renews in"), header.label)
+                keep("cursor-\(title)-\(appearance)-collapsed", app: app)
+                tap(app.buttons["More options for \(title)"], in: app)
+                tap(app.buttons["More information for \(title)"], in: app)
+                XCTAssertTrue(app.staticTexts["Next subscription renewal"].waitForExistence(timeout: 5), app.debugDescription)
+                keep("cursor-\(title)-\(appearance)-exact", app: app)
+                tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
+            }
+            tap(app.buttons["Open settings"].firstMatch, in: app)
+            tap(app.descendants(matching: .any)["settings-dashboard"], in: app)
+            let toggle = app.switches["settings-show-subscription-renewals"]
+            XCTAssertEqual(toggle.value as? String, "1")
+            toggle.switches.firstMatch.tap()
+            keep("cursor-\(appearance)-setting-off", app: app)
+            tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
+            let cursor = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Cursor, Pro")).firstMatch
+            reveal(cursor, in: app)
+            XCTAssertFalse(cursor.label.contains("Renews in"))
+            keep("cursor-\(appearance)-hidden", app: app)
+            app.terminate()
+            app.launchEnvironment["CODEXBAR_UI_TEST_RESET"] = "0"
+            app.launch()
+            reveal(cursor, in: app)
+            XCTAssertFalse(cursor.label.contains("Renews in"))
+            keep("cursor-\(appearance)-hidden-persisted", app: app)
+            app.terminate()
+            for state in ["canceled", "unknown", "stale", "past"] {
+                let stateApp = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "subscription-renewals-\(state)", cursorOnly: true)
+                let header = stateApp.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Cursor, Pro")).firstMatch
+                reveal(header, in: stateApp)
+                XCTAssertFalse(header.label.contains("Renews in"), header.label)
+                tap(stateApp.buttons["More options for Personal Cursor"], in: stateApp)
+                tap(stateApp.buttons["More information for Personal Cursor"], in: stateApp)
+                let expected = state == "canceled" ? "Does not renew" : state == "unknown" ? "Renewal date unavailable"
+                    : state == "stale" ? "Last known billing date" : "Billing date passed"
+                XCTAssertTrue(stateApp.staticTexts[expected].waitForExistence(timeout: 5), stateApp.debugDescription)
+                keep("cursor-\(appearance)-\(state)", app: stateApp)
+                stateApp.terminate()
+            }
+        }
+    }
+
     private func exerciseSubscriptionBillingConnections() {
         let app = launchSpacingFixture(defaultText: true, dark: false, scenario: "subscription-renewals")
         for title in ["Personal Claude", "Personal Grok"] {
@@ -382,11 +435,16 @@ final class CodexCreditsPoolUITests: XCTestCase {
 
     func testCompactCardHeadersAndIndependentControls() {
         continueAfterFailure = false
+        if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SUBJOURNEY"] == "cursor-renewals" {
+            exerciseCursorRenewals()
+            return
+        }
         if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SUBJOURNEY"] == "billing" {
             exerciseSubscriptionBillingConnections()
             return
         }
         exerciseSubscriptionRenewals()
+        exerciseCursorRenewals()
         // Routine issue validation may select this subjourney; release runs keep every scenario.
         if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SUBJOURNEY"] == "renewals" { return }
         exerciseGoogleAndOpenCodePlanPills()
@@ -471,13 +529,14 @@ final class CodexCreditsPoolUITests: XCTestCase {
         )).firstMatch
     }
 
-    private func launchSpacingFixture(defaultText: Bool, dark: Bool, scenario: String = "codex-credits") -> XCUIApplication {
+    private func launchSpacingFixture(defaultText: Bool, dark: Bool, scenario: String = "codex-credits", cursorOnly: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment = [
             "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
             "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": scenario,
             "CODEXBAR_UI_TEST_DEFAULT_TEXT": defaultText ? "1" : "0",
             "CODEXBAR_UI_TEST_DARK": dark ? "1" : "0",
+            "CODEXBAR_UI_TEST_CURSOR_ONLY": cursorOnly ? "1" : "0",
         ]
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-AppleInterfaceStyle", dark ? "Dark" : "Light"]
         app.launch()

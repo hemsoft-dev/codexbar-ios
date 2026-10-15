@@ -30,10 +30,10 @@ final class CursorTransportRegressionTests: XCTestCase, @unchecked Sendable {
             XCTAssertEqual(result.bars.first { $0.stableKey == "grok-bot-weekly" }?.resetsAt,
                            ISO8601DateFormatter().date(from: "2026-10-02T00:00:00Z"))
             let requests = CursorReplayProtocol.state.requests
-            XCTAssertEqual(requests.count, 2)
+            XCTAssertEqual(requests.count, 3)
             XCTAssertEqual(Set(requests.compactMap { $0.url?.host }), ["api2.cursor.sh"])
             XCTAssertEqual(Set(requests.compactMap { $0.url?.lastPathComponent }), [
-                "GetCurrentPeriodUsage", "GetSandUsageStatus",
+                "GetCurrentPeriodUsage", "GetSandUsageStatus", "full_stripe_profile",
             ])
             XCTAssertTrue(requests.allSatisfy {
                 $0.value(forHTTPHeaderField: "Authorization") == "Bearer fixture-\(identity)"

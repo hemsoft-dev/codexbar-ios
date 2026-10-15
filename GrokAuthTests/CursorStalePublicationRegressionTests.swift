@@ -72,10 +72,12 @@ final class CursorStalePublicationRegressionTests: XCTestCase {
         XCTAssertTrue(fixture.store.saveSecret(first.storedCredential, for: fixture.account))
         let credential = try XCTUnwrap(CursorSessionCredential(storedSecret: first.storedCredential))
         let measuredAt = Date(timeIntervalSince1970: 1_790_000_000)
-        let good = try XCTUnwrap(CursorUsageProvider.parseUsage(
+        var good = try XCTUnwrap(CursorUsageProvider.parseUsage(
             Data(#"{"planUsage":{"autoPercentUsed":0.1,"apiPercentUsed":13}}"#.utf8),
             configuration: fixture.account, fetchedAt: measuredAt, cacheIdentity: credential.cacheIdentity
         ))
+        good.subscriptionRenewal = SubscriptionRenewal(accountID: fixture.account.id, providerID: .cursor, state: .renewing,
+                                                       date: Date().addingTimeInterval(259_200), observedAt: Date())
         let failed = ProviderUsageResult(accountID: fixture.account.id, providerID: .cursor,
             title: "Synthetic", subtitle: "Unavailable", bars: [], failureMessage: "Unavailable",
             cacheIdentity: credential.cacheIdentity, fetchedAt: Date())
@@ -87,10 +89,12 @@ final class CursorStalePublicationRegressionTests: XCTestCase {
         defer { changed.cancel(); sameIdentity.cancel() }
         let renewed = CursorWebAuthResult(accessToken: "synthetic-b", refreshToken: nil, authID: "owner-a", userID: nil)
         XCTAssertNotNil(fixture.store.connectCursorAccount(fixture.account, credential: renewed.storedCredential))
+        XCTAssertNil(service.results.first?.subscriptionRenewal, "Reconnect retains usage, never an unverified billing observation")
         await service.refresh(configurations: [fixture.account])
         XCTAssertEqual(service.results.first?.bars.map(\.used), [0.1, 13])
         XCTAssertEqual(service.results.first?.fetchedAt, measuredAt)
         XCTAssertFalse(service.results.first?.hasCurrentBars == true)
+        XCTAssertNil(service.results.first?.subscriptionRenewal)
     }
 
     func testSameIdentityReconnectDiscardsInflightOldQuotaWithoutPurgingCache() async throws {

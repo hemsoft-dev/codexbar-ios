@@ -20,6 +20,17 @@ attachments and the accessibility hierarchy from the result bundle. Open the
 
 ## Journeys
 
+For focused Cursor renewal validation, set
+`CODEXBAR_UI_TEST_SUBJOURNEY=cursor-renewals` on the existing
+`CodexCreditsPoolUITests.testCompactCardHeadersAndIndependentControls` test
+runner. It uses the production Cursor provider with intercepted native, web and
+Stripe responses. Captures cover monthly/annual, expanded/collapsed, exact dates,
+canceled/unavailable/stale/past details and persisted Dashboard hiding in both
+light/default and dark/accessibility text on iPhone and iPad. This remains a
+local/manual journey and adds no automatic CI work. Use an `.xctestrun` test
+configuration's `EnvironmentVariables` to pass the selector when using
+`test-without-building`.
+
 Each test starts with a new UUID storage namespace and uses accessibility text
 size 2, English labels, and the US locale. Navigation uses the real views and
 actions. Tests wait for settings destinations, keep text fields inside the

@@ -1,5 +1,10 @@
 # Cursor subscription names
 
+Subscription renewal acquisition now uses an account-bound Stripe portal read
+through the existing sign-in. See [Cursor subscription billing](CURSOR-BILLING.md)
+for its verified contract, cancellation rules and unsupported states. The usage
+membership lookup described below remains independent of optional billing.
+
 Cursor's current-period usage response carries counters, not a subscription
 identity. CodexBar uses an optional, account-scoped
 `GET https://api2.cursor.sh/auth/full_stripe_profile` request with the same
