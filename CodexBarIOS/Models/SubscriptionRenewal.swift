@@ -184,8 +184,8 @@ extension ProviderUsageResult {
             return "Connect Billing in this Grok account's settings to verify its subscription date. If already connected, reconnect "
                 + "billing and refresh. X and API billing remain separate."
         case .cursor:
-            return "Cursor reports usage cycles and membership, but not a verified next charge with cancellation status. Check Manage "
-                + "Subscription in Cursor Billing."
+            return "Cursor billing did not provide a verified subscription date. Refresh or reconnect this account to try again. "
+                + "Team, trial, payment recovery and unsupported subscriptions do not show an assumed renewal."
         case .gemini:
             return "Google AI billing is managed by Google One, Google payments or the store where you subscribed. The current "
                 + "connection does not expose a verified next charge and renewal status."

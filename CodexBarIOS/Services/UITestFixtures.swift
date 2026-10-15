@@ -281,7 +281,9 @@ final class UITestFixtures {
             return [UITestOpenCodeRenewalProvider(secretStore: UITestSecretStore(suite: suiteName))]
         }
         if scenario?.hasPrefix("subscription-renewals") == true {
-            return [ProviderID.codex, .claude, .grok, .gemini, .openCodeZen].map { UITestRenewalProvider(providerID: $0, scenario: scenario) }
+            return [ProviderID.codex, .claude, .grok, .cursor, .gemini, .openCodeZen].map {
+                UITestRenewalProvider(providerID: $0, scenario: scenario, suiteName: suiteName)
+            }
         }
         if scenario?.hasPrefix("google-plan-") == true {
             return [UITestGooglePlanProvider(providerID: .gemini), UITestGooglePlanProvider(providerID: .openCodeZen)]
@@ -303,12 +305,13 @@ final class UITestFixtures {
         for (id, provider, title) in [("monthly", ProviderID.codex, "Personal Codex"), ("annual", .codex, "Work Codex"),
                                       ("google", .gemini, "Personal Google"), ("go", .openCodeZen, "OpenCode Go + Zen"),
                                       ("claude", .claude, "Personal Claude"), ("grok", .grok, "Personal Grok"),
+                                      ("cursor", .cursor, "Personal Cursor"), ("cursor-annual", .cursor, "Annual Cursor"),
         ] {
             var account = ProviderAccountConfiguration(id: id, providerID: provider, accountLabel: title, authMethod: .browserSession)
             if provider == .openCodeZen { account.openCodeWorkspaceId = "fixture-workspace" }
             _ = store.update(account)
             let secret = provider == .grok ? (try? Self.planPillGrokCredential.encoded()) ?? "invalid-synthetic-credential" : "ui-test-credential"
-            precondition(store.saveSecret(secret, for: account))
+            precondition(store.saveSecret(provider == .cursor ? UITestCursorBillingFixture.credential : secret, for: account))
         }
     }
 
@@ -1922,8 +1925,17 @@ private class UITestCodexPlanURLProtocol: URLProtocol, @unchecked Sendable {
 private struct UITestRenewalProvider: UsageProvider {
     let providerID: ProviderID
     let scenario: String?
+    let suiteName: String
     func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
-        UITestFixtures.renewalResult(for: configuration, scenario: scenario)
+        guard providerID == .cursor else { return UITestFixtures.renewalResult(for: configuration, scenario: scenario) }
+        let session = UITestCursorBillingProtocol.session(scenario: (scenario ?? "") + (configuration.id == "cursor-annual" ? "-annual" : ""))
+        defer { session.invalidateAndCancel() }
+        var result = try await CursorUsageProvider(secretStore: UITestSecretStore(suite: suiteName), session: session).fetchUsage(for: configuration)
+        if scenario == "subscription-renewals-stale", let renewal = result.subscriptionRenewal {
+            result.subscriptionRenewal = SubscriptionRenewal(accountID: configuration.id, providerID: .cursor,
+                                                            state: renewal.state, date: renewal.date, observedAt: Date().addingTimeInterval(-90_000))
+        }
+        return result
     }
 }
 

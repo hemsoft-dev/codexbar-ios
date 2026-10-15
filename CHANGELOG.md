@@ -8,6 +8,11 @@ building, testing, or releasing the app.
 
 ### Added
 
+- See verified Cursor subscription renewal countdowns using your existing sign-in,
+  with exact dates in card details. Canceled plans show when access ends, and
+  unavailable billing never replaces working usage or becomes a guessed date.
+  ([#456](https://github.com/hemsoft-dev/codexbar-ios/issues/456))
+
 - See verified OpenCode Go and Go Plus renewal countdowns, with the exact billing
   date in card details. Canceled plans show when access ends; payment recovery
   and subscriptions belonging to another workspace member never show an assumed

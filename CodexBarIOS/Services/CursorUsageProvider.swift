@@ -174,11 +174,17 @@ public final class CursorUsageProvider: UsageProvider {
         if credential.needsRenewal(at: Date()) { throw CursorSessionFailure.needsRenewal }
         guard try secretStore.readSecret(account: ProviderConfigurationStore.keychainAccount(for: configuration))
                 == credential.storedSecret else { throw CursorSessionFailure.changed }
-        guard let result = Self.parseUsage(
+        guard var result = Self.parseUsage(
             data, grokBotUsageData: optional.data, configuration: configuration,
             membershipData: membership,
             grokBotFailureReason: optional.unavailableReason, cacheIdentity: credential.cacheIdentity
         ) else { throw URLError(.cannotParseResponse) }
+        result.subscriptionRenewal = try await CursorSubscriptionBillingClient(session: session).fetch(
+            configuration: configuration, credential: credential, secretStore: secretStore, at: Date()
+        )
+        try Task.checkCancellation()
+        guard try secretStore.readSecret(account: ProviderConfigurationStore.keychainAccount(for: configuration))
+                == credential.storedSecret else { throw CursorSessionFailure.changed }
         return result
     }
 
