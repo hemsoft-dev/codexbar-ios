@@ -333,7 +333,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
             toggle.switches.firstMatch.tap()
             keep("cursor-\(appearance)-setting-off", app: app)
             tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
-            let cursor = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Cursor, ")).firstMatch
+            let cursor = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Cursor, Pro")).firstMatch
             reveal(cursor, in: app)
             XCTAssertFalse(cursor.label.contains("Renews in"))
             keep("cursor-\(appearance)-hidden", app: app)
@@ -346,7 +346,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
             app.terminate()
             for state in ["canceled", "unknown", "stale", "past"] {
                 let stateApp = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "subscription-renewals-\(state)", cursorOnly: true)
-                let header = stateApp.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Cursor, ")).firstMatch
+                let header = stateApp.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Cursor, Pro")).firstMatch
                 reveal(header, in: stateApp)
                 XCTAssertFalse(header.label.contains("Renews in"), header.label)
                 tap(stateApp.buttons["More options for Personal Cursor"], in: stateApp)

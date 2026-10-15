@@ -131,6 +131,7 @@ final class UITestFixtures {
         }
         refreshService = UsageRefreshService(providers: Self.providersForPlanPills(providers, scenario: scenario, suiteName: suite), initialResults: results)
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
+            || scenario?.hasPrefix("subscription-renewals") == true
             || (greptile && environment["CODEXBAR_UI_TEST_MORE_INFORMATION"] == "1")
             || scenario?.hasPrefix("grok-cursor-parity") == true
             || Self.isCursorSessionScenario(scenario) {
@@ -202,7 +203,13 @@ final class UITestFixtures {
             return ProviderUsageResult(accountID: configuration.id, providerID: .openCodeZen, title: configuration.displayName,
                                        subtitle: "Waiting for synthetic Console response", bars: [], fetchedAt: Date())
         }
-        if scenario?.hasPrefix("subscription-renewals") == true { return renewalResult(for: configuration, scenario: scenario) }
+        if scenario?.hasPrefix("subscription-renewals") == true {
+            if configuration.providerID == .cursor {
+                return ProviderUsageResult(accountID: configuration.id, providerID: .cursor, title: configuration.displayName,
+                                           subtitle: "Waiting for synthetic Cursor billing response", bars: [], fetchedAt: Date())
+            }
+            return renewalResult(for: configuration, scenario: scenario)
+        }
         if scenario?.hasPrefix("google-plan-") == true {
             return googlePlanResult(for: configuration)
         }
