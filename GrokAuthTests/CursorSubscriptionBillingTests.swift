@@ -35,6 +35,19 @@ final class CursorSubscriptionBillingTests: XCTestCase, @unchecked Sendable {
         }
     }
 
+    func testCancellationBeyondCurrentPaidPeriodDoesNotInventAccessEnd() throws {
+        let profile = try XCTUnwrap(CursorSubscriptionBilling.Profile(Data(UITestCursorBillingFixture.profile().utf8)))
+        let end = now.addingTimeInterval(259_200).timeIntervalSince1970
+        for canceled in [false, true] {
+            let base = UITestCursorBillingFixture.subscriptions(end: end, canceled: canceled)
+            let futureStop = base.replacingOccurrences(of: "\"cancel_at\":null", with: "\"cancel_at\":\(end + 259_200)")
+            XCTAssertNil(CursorSubscriptionBilling.observation(Data(futureStop.utf8), profile: profile, configuration: account, at: now))
+            let currentStop = base.replacingOccurrences(of: "\"cancel_at\":null", with: "\"cancel_at\":\(end)")
+            XCTAssertEqual(CursorSubscriptionBilling.observation(Data(currentStop.utf8), profile: profile,
+                                                               configuration: account, at: now)?.state, .nonRenewing)
+        }
+    }
+
     func testMissingMalformedRecoveryTrialScheduleAndAmbiguousSubscriptionsAreRejected() throws {
         let profile = try XCTUnwrap(CursorSubscriptionBilling.Profile(Data(UITestCursorBillingFixture.profile().utf8)))
         let base = UITestCursorBillingFixture.subscriptions(end: now.addingTimeInterval(259_200).timeIntervalSince1970)

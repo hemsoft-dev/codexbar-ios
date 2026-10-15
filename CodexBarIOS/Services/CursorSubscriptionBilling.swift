@@ -115,6 +115,8 @@ enum CursorSubscriptionBilling {
         let cancelDate = timestamp(subscription["cancel_at"])
         if !absent(subscription["cancel_at"]), cancelDate == nil { return nil }
         if canceled || cancelDate != nil {
+            // A stop scheduled after another charge does not establish the next access-end date.
+            guard cancelDate.map({ $0 <= end }) ?? true else { return nil }
             return SubscriptionRenewal(accountID: configuration.id, providerID: .cursor, state: .nonRenewing,
                                        date: min(end, cancelDate ?? end), observedAt: now)
         }
