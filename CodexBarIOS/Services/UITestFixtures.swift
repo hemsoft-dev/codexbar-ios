@@ -1458,7 +1458,8 @@ private struct UITestSecretStore: SecretStore {
         let codex = ["personal", "work", "pro", "prolite", "promax", "future-plan", "plus", "free"].contains {
             secret == UITestFixtures.codexCredential(for: $0)
         }
-        let cursor = [false, true].contains { secret == UITestFixtures.cursorSessionCredential(expired: $0) }
+        let cursor = secret == UITestCursorBillingFixture.credential
+            || [false, true].contains { secret == UITestFixtures.cursorSessionCredential(expired: $0) }
         let greptile = GreptileSessionCredentials.parse(secret) == UITestFixtures.greptileCredential
         let grok = GrokCredential.parse(secret) == UITestFixtures.planPillGrokCredential
         let billing = SubscriptionBillingSession.parse(secret)
