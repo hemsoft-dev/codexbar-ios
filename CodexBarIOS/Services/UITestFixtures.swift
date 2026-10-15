@@ -307,6 +307,7 @@ final class UITestFixtures {
                                       ("claude", .claude, "Personal Claude"), ("grok", .grok, "Personal Grok"),
                                       ("cursor", .cursor, "Personal Cursor"), ("cursor-annual", .cursor, "Annual Cursor"),
         ] {
+            if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_CURSOR_ONLY"] == "1", provider != .cursor { continue }
             var account = ProviderAccountConfiguration(id: id, providerID: provider, accountLabel: title, authMethod: .browserSession)
             if provider == .openCodeZen { account.openCodeWorkspaceId = "fixture-workspace" }
             _ = store.update(account)

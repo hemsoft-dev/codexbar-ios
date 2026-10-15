@@ -310,7 +310,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
     private func exerciseCursorRenewals() {
         for dark in [false, true] {
             let appearance = dark ? "dark-large" : "light-default"
-            let app = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "subscription-renewals")
+            let app = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "subscription-renewals", cursorOnly: true)
             for title in ["Personal Cursor", "Annual Cursor"] {
                 let header = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", title + ", Pro")).firstMatch
                 reveal(header, in: app)
@@ -345,7 +345,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
             keep("cursor-\(appearance)-hidden-persisted", app: app)
             app.terminate()
             for state in ["canceled", "unknown", "stale", "past"] {
-                let stateApp = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "subscription-renewals-\(state)")
+                let stateApp = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "subscription-renewals-\(state)", cursorOnly: true)
                 let header = stateApp.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Cursor, ")).firstMatch
                 reveal(header, in: stateApp)
                 XCTAssertFalse(header.label.contains("Renews in"), header.label)
@@ -529,13 +529,14 @@ final class CodexCreditsPoolUITests: XCTestCase {
         )).firstMatch
     }
 
-    private func launchSpacingFixture(defaultText: Bool, dark: Bool, scenario: String = "codex-credits") -> XCUIApplication {
+    private func launchSpacingFixture(defaultText: Bool, dark: Bool, scenario: String = "codex-credits", cursorOnly: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment = [
             "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
             "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": scenario,
             "CODEXBAR_UI_TEST_DEFAULT_TEXT": defaultText ? "1" : "0",
             "CODEXBAR_UI_TEST_DARK": dark ? "1" : "0",
+            "CODEXBAR_UI_TEST_CURSOR_ONLY": cursorOnly ? "1" : "0",
         ]
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-AppleInterfaceStyle", dark ? "Dark" : "Light"]
         app.launch()
