@@ -306,6 +306,33 @@ public extension DemoUsageProvider {
                 subtitle: "Synthetic Grok subscription usage"
             ),
             DemoUsageProvider(
+                providerID: .xSubscription,
+                plan: .make(providerPrefix: "xSubscription", identifier: "premium", label: "Premium", displayLabel: "Premium"),
+                bars: [
+                    UsageBar(
+                        stableKey: "weekly-pool", label: "Weekly shared pool",
+                        used: 38, limit: 100, resetDescription: "Resets Thursday"
+                    ),
+                ],
+                monetaryMetrics: [
+                    ProviderMonetaryMetric(
+                        kind: .balance, label: "Extra Usage Credits", minorUnits: 1_250,
+                        currencyCode: "USD", decimalPlaces: 2
+                    ),
+                ],
+                cardInformationSections: [
+                    ProviderCardInformationSection(
+                        id: "xSubscription.product-usage", title: "Weekly pool by product",
+                        items: [
+                            ProviderCardInformationItem(id: "xSubscription.product-usage.product_cursor", label: "Cursor", detail: "21%"),
+                            ProviderCardInformationItem(id: "xSubscription.product-usage.product_grok_chat", label: "Grok chat", detail: "12%"),
+                            ProviderCardInformationItem(id: "xSubscription.product-usage.product_grok_bot", label: "Grok Bot", detail: "5%"),
+                        ]
+                    ),
+                ],
+                subtitle: "Synthetic X Subscription weekly pool"
+            ),
+            DemoUsageProvider(
                 providerID: .openRouter,
                 bars: [],
                 creditsRemaining: 18.72,

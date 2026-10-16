@@ -183,6 +183,9 @@ extension ProviderUsageResult {
         case .grok:
             return "Connect Billing in this Grok account's settings to verify its subscription date. If already connected, reconnect "
                 + "billing and refresh. X and API billing remain separate."
+        case .xSubscription:
+            return "Renewal dates aren't available for X Subscription accounts yet. The weekly pool reset shown on this card is "
+                + "separate from billing."
         case .cursor:
             return "Cursor billing did not provide a verified subscription date. Refresh or reconnect this account to try again. "
                 + "Team, trial, payment recovery and unsupported subscriptions do not show an assumed renewal."

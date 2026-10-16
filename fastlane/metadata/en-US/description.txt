@@ -9,6 +9,7 @@ Supported providers:
 - GitHub Billing
 - Claude
 - Grok
+- X Subscription
 - Cursor
 - OpenRouter
 - OpenCode Go + Zen
@@ -22,6 +23,7 @@ What you can track:
 - GitHub personal and organization billing, included allowances, budgets, and spending projections where supported
 - Gemini Apps and coding limits in one account, with separate five-hour and weekly metrics
 - Grok paid weekly usage and Extra Usage Credits where available, separately from Cursor's Grok Bot allowance
+- X Subscription shared weekly pool, its reset, per-product detail and Extra Usage Credits where available, with one xAI sign-in
 - Greptile completed-review activity and provider-returned free-allowance renewal dates, kept distinct from pull requests and billing credit balances
 - Multiple accounts and provider groups, so work and personal configurations stay organized
 - Up to 90 days of daily usage history alongside recent detailed samples

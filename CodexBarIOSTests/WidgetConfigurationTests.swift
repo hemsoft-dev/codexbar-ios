@@ -10,6 +10,7 @@ final class WidgetConfigurationTests: XCTestCase {
             (.copilot, "copilot"),
             (.claude, "claude"),
             (.grok, "grok"),
+            (.xSubscription, "xSubscription"),
             (.cursor, "cursor"),
             (.moonshot, "moonshot"),
             (.openCodeZen, "openCodeZen"),

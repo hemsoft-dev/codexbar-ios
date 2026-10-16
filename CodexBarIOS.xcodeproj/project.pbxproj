@@ -116,6 +116,7 @@
 		A35300000000000000000401 /* OpenCodeConsoleUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35300000000000000000402 /* OpenCodeConsoleUsageProvider.swift */; };
 		A35500000000000000000101 /* GrokDeviceAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35500000000000000000102 /* GrokDeviceAuthService.swift */; };
 		A35500000000000000000201 /* GrokUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35500000000000000000202 /* GrokUsageProvider.swift */; };
+		A45800000000000000000101 /* XSubscriptionUsageParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45800000000000000000102 /* XSubscriptionUsageParser.swift */; };
 		A35300000000000000000201 /* OpenCodeBrowserSessionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35300000000000000000202 /* OpenCodeBrowserSessionPolicy.swift */; };
 		A29900000000000000000001 /* GeminiBrowserSessionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29900000000000000000002 /* GeminiBrowserSessionPolicy.swift */; };
 		A37400000000000000000001 /* GeminiBrowserInspectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A37400000000000000000002 /* GeminiBrowserInspectionState.swift */; };
@@ -379,6 +380,7 @@
 		A35300000000000000000402 /* OpenCodeConsoleUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeConsoleUsageProvider.swift; sourceTree = "<group>"; };
 		A35500000000000000000102 /* GrokDeviceAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokDeviceAuthService.swift; sourceTree = "<group>"; };
 		A35500000000000000000202 /* GrokUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokUsageProvider.swift; sourceTree = "<group>"; };
+		A45800000000000000000102 /* XSubscriptionUsageParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XSubscriptionUsageParser.swift; sourceTree = "<group>"; };
 		A35300000000000000000202 /* OpenCodeBrowserSessionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeBrowserSessionPolicy.swift; sourceTree = "<group>"; };
 		A29900000000000000000002 /* GeminiBrowserSessionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiBrowserSessionPolicy.swift; sourceTree = "<group>"; };
 		A37400000000000000000002 /* GeminiBrowserInspectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiBrowserInspectionState.swift; sourceTree = "<group>"; };
@@ -637,6 +639,7 @@
 				A45100000000000000000202 /* UITestOpenCodeRenewalProvider.swift */,
 				A35500000000000000000102 /* GrokDeviceAuthService.swift */,
 				A35500000000000000000202 /* GrokUsageProvider.swift */,
+				A45800000000000000000102 /* XSubscriptionUsageParser.swift */,
 				20000000000000000000003F /* MoonshotUsageProvider.swift */,
 				200000000000000000000040 /* TokenEndpointErrorFormatter.swift */,
 				200000000000000000000041 /* ProviderAuthSupport.swift */,
@@ -1168,6 +1171,7 @@
 				A45100000000000000000201 /* UITestOpenCodeRenewalProvider.swift in Sources */,
 				A35500000000000000000101 /* GrokDeviceAuthService.swift in Sources */,
 				A35500000000000000000201 /* GrokUsageProvider.swift in Sources */,
+				A45800000000000000000101 /* XSubscriptionUsageParser.swift in Sources */,
 				10000000000000000000003F /* MoonshotUsageProvider.swift in Sources */,
 				100000000000000000000040 /* TokenEndpointErrorFormatter.swift in Sources */,
 				100000000000000000000041 /* ProviderAuthSupport.swift in Sources */,

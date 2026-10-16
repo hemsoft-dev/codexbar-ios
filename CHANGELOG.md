@@ -8,6 +8,14 @@ building, testing, or releasing the app.
 
 ### Added
 
+- Add an X Subscription account with one xAI sign-in on your phone to see the
+  shared weekly pool and its reset once, a per-product breakdown of the pool
+  when xAI reports it, and your Extra Usage Credits balance. Recognized plan
+  names show on the card; missing values stay unavailable. Existing Grok and
+  Cursor accounts keep working unchanged and suggest adding an X Subscription
+  account when they report a unified plan.
+  ([#458](https://github.com/hemsoft-dev/codexbar-ios/issues/458))
+
 - See verified Cursor subscription renewal countdowns using your existing sign-in,
   with exact dates in card details. Canceled plans show when access ends, and
   unavailable billing never replaces working usage or becomes a guessed date.

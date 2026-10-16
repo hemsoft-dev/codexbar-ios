@@ -183,6 +183,7 @@ enum CodexBarWidgetFocus: String, AppEnum {
     case copilot
     case claude
     case grok
+    case xSubscription
     case cursor
     case moonshot
     case openCodeZen
@@ -194,7 +195,7 @@ enum CodexBarWidgetFocus: String, AppEnum {
     // Keep saved Antigravity values decodable while offering only current account choices.
     // WidgetConfigurationTests checks this list against every display representation.
     static var allCases: [Self] {
-        [.dashboardOrder, .codex, .copilot, .claude, .grok, .cursor, .moonshot, .openCodeZen, .openRouter, .greptile, .gemini]
+        [.dashboardOrder, .codex, .copilot, .claude, .grok, .xSubscription, .cursor, .moonshot, .openCodeZen, .openRouter, .greptile, .gemini]
     }
 
     static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Focus")
@@ -204,6 +205,7 @@ enum CodexBarWidgetFocus: String, AppEnum {
         .copilot: "GitHub Copilot",
         .claude: "Claude",
         .grok: "Grok",
+        .xSubscription: "X Subscription",
         .cursor: "Cursor",
         .moonshot: "Moonshot (Kimi)",
         .openCodeZen: "OpenCode Go + Zen",
@@ -225,6 +227,8 @@ enum CodexBarWidgetFocus: String, AppEnum {
             "claude"
         case .grok:
             "grok"
+        case .xSubscription:
+            "xSubscription"
         case .cursor:
             "cursor"
         case .moonshot:

@@ -317,6 +317,7 @@ public final class CursorUsageProvider: UsageProvider {
             unavailableUsageMetrics: unavailableMetrics(
                 usage, grokBotData: grokBotUsageData, bars: bars, grokBotFailureReason: grokBotFailureReason
             ),
+            usageMessages: reportsUnifiedAccount(grokBotUsageData) ? [unifiedAccountPointer] : [],
             cardInformationSections: buildUsageInformationSections(usage.planUsage),
             cacheIdentity: cacheIdentity,
             fetchedAt: fetchedAt
@@ -476,6 +477,18 @@ public final class CursorUsageProvider: UsageProvider {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return (try? decoder.decode(CursorSpendingSettings.self, from: data))?.onDemandSettings?.enabled
+    }
+
+    /// A pointer only. Every Cursor metric stays as reported; the saved account is never moved or deleted.
+    static let unifiedAccountPointer = "Cursor reports this account as part of an X Subscription. Add an X Subscription "
+        + "account to see the shared weekly pool and Extra Usage Credits."
+
+    /// `GetSandUsageStatus.is_unified` must be explicitly true; absent, false or malformed keeps today's card.
+    private static func reportsUnifiedAccount(_ data: Data?) -> Bool {
+        guard let data else { return false }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return (try? decoder.decode(CursorUnifiedStatus.self, from: data))?.isUnified == true
     }
 
     private static func grokBotUnavailableReason(_ data: Data?) -> String {
@@ -773,6 +786,10 @@ private struct CursorSpendingSettings: Decodable {
 
 private struct CursorOnDemandSettings: Decodable {
     let enabled: Bool?
+}
+
+private struct CursorUnifiedStatus: Decodable {
+    let isUnified: Bool?
 }
 
 private struct CursorGrokBotUsage: Decodable {

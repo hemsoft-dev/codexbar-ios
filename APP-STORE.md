@@ -163,7 +163,7 @@ submission unless a version-specific note says otherwise.
 
 | Product-page claim | Verified source or constraint | App Store wording guidance |
 | --- | --- | --- |
-| Tracks ChatGPT / Codex, GitHub Copilot, GitHub Billing, Claude, Grok, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot (Kimi), Greptile, and Google Gemini | Current provider list used by the app; metrics vary by account and service | Name exactly these providers; do not imply official affiliation or complete metric availability. |
+| Tracks ChatGPT / Codex, GitHub Copilot, GitHub Billing, Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot (Kimi), Greptile, and Google Gemini | Current provider list used by the app; metrics vary by account and service | Name exactly these providers; do not imply official affiliation or complete metric availability. |
 | Shows usage, limits, balances, reset timing, refresh state, alerts, and history | Provider data varies by API/account type | Say metrics appear where each provider makes them available. |
 | Supports multiple accounts and provider groups | Current app configuration model | Say multiple accounts/groups, not team management or shared org administration. |
 | Offers Home Screen and Lock Screen widgets | Widget extension and configurable widget surfaces | Say configurable widgets; do not promise real-time refresh because iOS controls widget timing. |
@@ -310,7 +310,7 @@ to the App Store Connect version 1.1 submission on 2026-07-11:
   neutral in-app icon.
 - [ ] Re-check non-affiliation disclaimers before the next submission.
 - [ ] Re-confirm provider-name wording (Codex, Copilot, GitHub Billing, Claude,
-  Grok, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot (Kimi), Greptile,
+  Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot (Kimi), Greptile,
   Google Gemini) before the next submission.
 
 The completed content-rights declaration in Final Submission records the 1.1

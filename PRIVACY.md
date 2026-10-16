@@ -31,7 +31,7 @@ snapshot locally so it can remain useful during a temporary disconnection.
 
 ## Third-Party Provider Requests
 
-When you connect a provider, CodexBar uses the credentials you provide to request usage, balance, or review-activity data for the configured account or organization directly from that provider. Depending on what you configure, this may include services such as OpenAI/ChatGPT, Anthropic Claude, GitHub Copilot, Grok, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot AI (Kimi), Greptile, and Google Gemini.
+When you connect a provider, CodexBar uses the credentials you provide to request usage, balance, or review-activity data for the configured account or organization directly from that provider. Depending on what you configure, this may include services such as OpenAI/ChatGPT, Anthropic Claude, GitHub Copilot, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot AI (Kimi), Greptile, and Google Gemini.
 
 Those requests are made to the provider's own APIs or web endpoints. The provider may process the request according to its own terms and privacy policy.
 
@@ -44,6 +44,12 @@ broader xAI API access, but CodexBar does not send inference requests, buy
 credits, or link subscriptions. It does not read grok.com browser cookies or
 send credentials to Cursor. Widgets and the Watch receive usage snapshots,
 never tokens. Disconnect removes the local token, not xAI's grant.
+
+X Subscription accounts use the same xAI device authorization and token
+handling as Grok. Each account's token is stored separately in the iOS
+Keychain and sent only to `auth.x.ai` and `cli-chat-proxy.grok.com` for
+read-only usage, credits and plan name. CodexBar does not sign in to Cursor
+for this account or read billing pages.
 
 For Google Gemini, CodexBar opens Google's website in a new nonpersistent
 browser store for each sign-in attempt. You enter your password on Google's
