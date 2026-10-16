@@ -12,16 +12,19 @@ public final class GrokUsageProvider: UsageProvider {
         case reconnect
     }
 
-    public let providerID = ProviderID.grok
+    /// Grok and X Subscription accounts share this xAI transport; each result follows its account's provider.
+    public let providerID: ProviderID
     private let secretStore: SecretStore
     private let session: URLSession
     private let auth: GrokDeviceAuthService
 
     public init(
+        providerID: ProviderID = .grok,
         secretStore: SecretStore = KeychainService(),
         session: URLSession? = nil
     ) {
         let session = session ?? GrokDeviceAuthService.makeSession()
+        self.providerID = providerID
         self.secretStore = secretStore
         self.session = session
         self.auth = GrokDeviceAuthService(session: session)
@@ -31,13 +34,17 @@ public final class GrokUsageProvider: UsageProvider {
         let account = ProviderConfigurationStore.keychainAccount(for: configuration)
         guard let stored = try secretStore.readSecret(account: account),
               let candidate = GrokCredential.parse(stored) else {
-            return failure("Sign in with Grok to see consumer usage.", configuration: configuration)
+            let message = configuration.providerID == .xSubscription
+                ? "Sign in with xAI to see X Subscription usage." : "Sign in with Grok to see consumer usage."
+            return failure(message, configuration: configuration)
         }
         let state = await currentCredential(candidate, keychainAccount: account)
         guard case .ready(let credential) = state else { return credentialFailure(state, configuration: configuration, subject: candidate.subject) }
         do {
             var result = try await fetchCandidate(credential, for: configuration)
-            if let usageSecret = try? secretStore.readSecret(account: account), GrokCredential.parse(usageSecret) == credential {
+            // SuperGrok commerce billing never describes an X Subscription; its parser rejects X-derived plans.
+            if configuration.providerID == .grok,
+               let usageSecret = try? secretStore.readSecret(account: account), GrokCredential.parse(usageSecret) == credential {
                 result.subscriptionRenewal = try await SubscriptionBillingClient(session: session).fetch(
                     configuration: configuration, usageSecret: usageSecret, secretStore: secretStore, at: Date()
                 )
@@ -52,34 +59,43 @@ public final class GrokUsageProvider: UsageProvider {
         }
     }
 
+    /// Names used in failure copy: the product whose usage is read and the identity provider that signs in.
+    private static func names(_ providerID: ProviderID) -> (usage: String, auth: String) {
+        providerID == .xSubscription ? ("X Subscription", "xAI") : ("Grok", "Grok")
+    }
+
     private func credentialFailure(
         _ state: CredentialState, configuration: ProviderAccountConfiguration, subject: String
     ) -> ProviderUsageResult {
+        let names = Self.names(configuration.providerID)
         switch state {
-        case .ready: failure("Grok usage could not be verified.", configuration: configuration)
-        case .retry: failure(
-            "Grok usage is temporarily unavailable. Try refreshing again.",
+        case .ready: return failure("\(names.usage) usage could not be verified.", configuration: configuration)
+        case .retry: return failure(
+            "\(names.usage) usage is temporarily unavailable. Try refreshing again.",
             configuration: configuration, recoveryAction: .retryRefresh, cacheIdentity: Self.identityHash(subject)
         )
-        case .reconnect: failure(
-            "Grok authorization expired or was removed. Reconnect in account settings.",
+        case .reconnect: return failure(
+            "\(names.auth) authorization expired or was removed. Reconnect in account settings.",
             configuration: configuration
         )
         }
     }
 
     private func usageFailure(_ error: Error, configuration: ProviderAccountConfiguration, subject: String) -> ProviderUsageResult {
+        let names = Self.names(configuration.providerID)
         if error as? GrokAuthError == .unauthorized {
-            return failure("Grok authorization was rejected. Reconnect in account settings.", configuration: configuration)
+            return failure("\(names.auth) authorization was rejected. Reconnect in account settings.", configuration: configuration)
         }
         if error as? GrokAuthError == .unsupportedAccount {
             return failure(
-                "Grok subscription usage is not available for this account.",
+                configuration.providerID == .xSubscription
+                    ? "X Subscription usage is not available for this account."
+                    : "Grok subscription usage is not available for this account.",
                 configuration: configuration, recoveryAction: .retryRefresh, allowsUnscopedCacheReuse: false
             )
         }
         return failure(
-            "Grok usage could not be verified. Try refreshing again.",
+            "\(names.usage) usage could not be verified. Try refreshing again.",
             configuration: configuration, recoveryAction: .retryRefresh, cacheIdentity: Self.identityHash(subject)
         )
     }
@@ -103,13 +119,24 @@ public final class GrokUsageProvider: UsageProvider {
         guard response.statusCode == 200 else { throw Self.billingError(for: response.statusCode) }
         // Do not read settings for a malformed billing response; retry billing first.
         let now = Date()
-        _ = try Self.parseCredits(data, configuration: configuration, subject: identity.sub, now: now)
+        let isXSubscription = configuration.providerID == .xSubscription
+        if isXSubscription {
+            _ = try Self.parseXSubscription(data, configuration: configuration, subject: identity.sub, now: now)
+        } else {
+            _ = try Self.parseCredits(data, configuration: configuration, subject: identity.sub, now: now)
+        }
         // Settings are optional. The CLI reads the tier here, not from the credits response.
         // A failed settings read must never turn a real usage response into a guessed plan.
         let tier = await fetchPlanName(accessToken: credential.accessToken)
+        if isXSubscription {
+            return try Self.parseXSubscription(
+                data, configuration: configuration, subject: identity.sub, now: now,
+                verifiedPlanName: tier.unifiedName, planLookupFailed: tier.isUnavailable
+            )
+        }
         return try Self.parseCredits(
             data, configuration: configuration, subject: identity.sub, now: now, verifiedPlanName: tier.name,
-            planLookupFailed: tier.isUnavailable
+            planLookupFailed: tier.isUnavailable, unifiedPlanName: tier.unifiedName
         )
     }
 
@@ -123,7 +150,10 @@ public final class GrokUsageProvider: UsageProvider {
     }
 
     private struct PlanLookup {
+        /// A recognized SuperGrok tier.
         let name: String?
+        /// A recognized unified X Subscription tier.
+        var unifiedName: String?
         let isUnavailable: Bool
     }
 
@@ -143,10 +173,14 @@ public final class GrokUsageProvider: UsageProvider {
               let settings = try? decoder.decode(GrokRemoteSettings.self, from: data) else {
             return PlanLookup(name: nil, isUnavailable: true)
         }
-        return PlanLookup(name: Self.knownPlan(settings.subscriptionTierDisplay) ?? Self.knownPlan(settings.subscriptionTier), isUnavailable: false)
+        return PlanLookup(
+            name: Self.knownPlan(settings.subscriptionTierDisplay) ?? Self.knownPlan(settings.subscriptionTier),
+            unifiedName: Self.unifiedPlan(settings.subscriptionTierDisplay) ?? Self.unifiedPlan(settings.subscriptionTier),
+            isUnavailable: false
+        )
     }
 
-    private static func knownPlan(_ value: String?) -> String? {
+    static func knownPlan(_ value: String?) -> String? {
         guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
         return ["SuperGrok Lite", "SuperGrok", "SuperGrok Plus", "SuperGrok Heavy"].first {
             $0.caseInsensitiveCompare(value) == .orderedSame
@@ -261,7 +295,7 @@ public final class GrokUsageProvider: UsageProvider {
         cacheIdentity: String? = nil
     ) -> ProviderUsageResult {
         ProviderUsageResult(
-            accountID: configuration.id, providerID: .grok, title: configuration.displayName,
+            accountID: configuration.id, providerID: configuration.providerID, title: configuration.displayName,
             subtitle: message, bars: [], failureMessage: message, recoveryAction: recoveryAction,
             cacheIdentity: cacheIdentity, allowsUnscopedCacheReuse: allowsUnscopedCacheReuse,
             fetchedAt: Date()
@@ -270,7 +304,7 @@ public final class GrokUsageProvider: UsageProvider {
 
     static func parseCredits(
         _ data: Data, configuration: ProviderAccountConfiguration, subject: String, now: Date,
-        verifiedPlanName: String? = nil, planLookupFailed: Bool = false
+        verifiedPlanName: String? = nil, planLookupFailed: Bool = false, unifiedPlanName: String? = nil
     ) throws -> ProviderUsageResult {
         guard let response = try? JSONDecoder().decode(GrokCreditsResponse.self, from: data),
               let config = response.config else { throw GrokAuthError.invalidResponse }
@@ -281,7 +315,7 @@ public final class GrokUsageProvider: UsageProvider {
         let activePeriod = supportedPeriod && start != nil && end != nil
             && start! <= now && end! > now
         let percent = config.creditUsagePercent
-        let hasPercent = percent != nil && percent!.isFinite && percent! >= 0
+        let hasPercent = reportedPercent(percent) != nil
         // The first-party CLI renders an omitted percent as zero. Restrict that fallback to a
         // verified paid tier and an active shared weekly pool with no other reported usage.
         let inferredZero = !hasPercent && knownPlan(verifiedPlanName) != nil
@@ -309,8 +343,9 @@ public final class GrokUsageProvider: UsageProvider {
             subtitle: bar == nil ? reason : inferredZero ? "No included usage reported by Grok." : "Direct Grok subscription usage",
             bars: bar.map { [$0] } ?? [],
             monetaryMetrics: [balance].compactMap { $0 },
-            usageMessages: bar == nil ? [reason] : inferredZero
-                ? ["Inferred zero from Grok's CLI convention, not a reported measurement."] : [],
+            usageMessages: (bar == nil ? [reason] : inferredZero
+                ? ["Inferred zero from Grok's CLI convention, not a reported measurement."] : [])
+                + (unifiedPlan(unifiedPlanName) == nil ? [] : [unifiedAccountPointer]),
             cardInformationSections: [
                 ProviderCardInformationSection(
                     id: "grok.consumer-source", title: "Billing source",
@@ -326,7 +361,20 @@ public final class GrokUsageProvider: UsageProvider {
         )
     }
 
-    private static func identityHash(_ subject: String) -> String {
+    /// A saved Grok account keeps its data; CodexBar never moves or deletes it on its own.
+    static let unifiedAccountPointer = "This xAI account reports an X Subscription plan. Add an X Subscription account "
+        + "to see its shared weekly pool once."
+
+    /// Accepts a usage percentage only within a renderable range. Oversized finite values such as `1e100`
+    /// would trap when a bar rounds them to `Int`, so they stay unavailable instead of becoming a meter.
+    static func reportedPercent(_ value: Double?) -> Double? {
+        guard let value, value.isFinite, value >= 0, value <= maximumReportedPercent else { return nil }
+        return value
+    }
+
+    static let maximumReportedPercent: Double = 10_000
+
+    static func identityHash(_ subject: String) -> String {
         Data(SHA256.hash(data: Data(subject.utf8))).base64EncodedString()
     }
 
@@ -342,23 +390,26 @@ public final class GrokUsageProvider: UsageProvider {
 
     static func retainingVerifiedPlan(_ name: String?, for incoming: ProviderUsageResult) -> ProviderUsageResult {
         var result = incoming
-        result.verifiedGrokPlanName = knownPlan(name)
+        let isXSubscription = incoming.providerID == .xSubscription
+        result.verifiedGrokPlanName = isXSubscription ? unifiedPlan(name) : knownPlan(name)
         guard result.verifiedGrokPlanName != nil, incoming.bars.isEmpty,
               let bar = incoming.grokInferredZeroCandidate else { return result }
         // This candidate comes only from fresh billing; cached bars never supply its period or value.
         return ProviderUsageResult(
-            accountID: incoming.accountID, providerID: .grok, title: incoming.title,
+            accountID: incoming.accountID, providerID: incoming.providerID, title: incoming.title,
             verifiedGrokPlanName: result.verifiedGrokPlanName, grokPlanLookupFailed: incoming.grokPlanLookupFailed,
-            subtitle: "No included usage reported by Grok.", bars: [bar],
+            subtitle: isXSubscription ? XSubscriptionCopy.inferredSubtitle : "No included usage reported by Grok.", bars: [bar],
             monetaryMetrics: incoming.monetaryMetrics,
-            usageMessages: ["Inferred zero from Grok's CLI convention, not a reported measurement."],
+            usageMessages: isXSubscription
+                ? incoming.usageMessages.filter { $0 != XSubscriptionCopy.unavailableReason } + [XSubscriptionCopy.inferredMessage]
+                : ["Inferred zero from Grok's CLI convention, not a reported measurement."],
             cardInformationSections: incoming.cardInformationSections,
             subscriptionRenewal: incoming.subscriptionRenewal,
             cacheIdentity: incoming.cacheIdentity, cacheScope: incoming.cacheScope, fetchedAt: incoming.fetchedAt
         )
     }
 
-    private static func omitsUsage(_ data: Data) -> Bool {
+    static func omitsUsage(_ data: Data) -> Bool {
         guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let config = object["config"] as? [String: Any] else { return false }
         return ["creditUsagePercent", "productUsage", "used", "totalUsed", "monthlyLimit"]
@@ -374,7 +425,7 @@ public final class GrokUsageProvider: UsageProvider {
         return "Grok did not report included usage."
     }
 
-    private static func date(_ text: String) -> Date? {
+    static func date(_ text: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let date = formatter.date(from: text) { return date }
@@ -382,7 +433,7 @@ public final class GrokUsageProvider: UsageProvider {
         return formatter.date(from: text)
     }
 
-    private static func money(
+    static func money(
         _ amount: GrokCreditsAmount?, kind: ProviderMonetaryMetricKind, label: String
     ) -> ProviderMonetaryMetric? {
         guard let cents = amount?.val, cents >= 0 else { return nil }
@@ -405,13 +456,13 @@ private struct GrokCreditsConfig: Decodable {
     let prepaidBalance: GrokCreditsAmount?
 }
 
-private struct GrokCreditsPeriod: Decodable {
+struct GrokCreditsPeriod: Decodable {
     let type: String?
     let start: String?
     let end: String?
 }
 
-private struct GrokCreditsAmount: Decodable {
+struct GrokCreditsAmount: Decodable {
     let val: Decimal?
 
     init(from decoder: Decoder) throws {

@@ -109,6 +109,7 @@ final class UITestFixtures {
                 Self.seedSavedGrokLayout(in: configurationStore, scenario: scenario)
             }
         }
+        Self.seedXSubscriptionAccounts(in: configurationStore, scenario: scenario)
         let results = Self.initialResults(in: configurationStore, scenario: scenario, googleSources: googleSources, defaults: defaults)
         let providers: [any UsageProvider]
         if google {
@@ -127,7 +128,10 @@ final class UITestFixtures {
                 UITestCursorProvider(scenario: scenario, secretStore: UITestSecretStore(suite: suite)),
             ]
         } else {
-            providers = [UITestUsageProvider(failsFirstRefresh: recovery), UITestGrokProvider(scenario: scenario)]
+            providers = [
+                UITestUsageProvider(failsFirstRefresh: recovery), UITestGrokProvider(scenario: scenario),
+                UITestXSubscriptionProvider(providerID: .xSubscription, scenario: scenario),
+            ]
         }
         refreshService = UsageRefreshService(providers: Self.providersForPlanPills(providers, scenario: scenario, suiteName: suite), initialResults: results)
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
@@ -253,6 +257,9 @@ final class UITestFixtures {
                 ? grokResult(for: configuration, scenario: scenario)
                 : cursorResult(for: configuration, scenario: scenario)
         }
+        if scenario?.hasPrefix("x-subscription") == true {
+            return xSubscriptionScenarioResult(for: configuration, scenario: scenario)
+        }
         return result(for: configuration, balance: configuration.id.hasPrefix("ui-navigation-") ? 90 : 25)
     }
 
@@ -286,6 +293,9 @@ final class UITestFixtures {
     ) -> [any UsageProvider] {
         if scenario?.hasPrefix("opencode-renewal-") == true {
             return [UITestOpenCodeRenewalProvider(secretStore: UITestSecretStore(suite: suiteName))]
+        }
+        if scenario?.hasPrefix("x-subscription") == true {
+            return [ProviderID.xSubscription, .grok, .cursor].map { UITestXSubscriptionProvider(providerID: $0, scenario: scenario) }
         }
         if scenario?.hasPrefix("subscription-renewals") == true {
             return [ProviderID.codex, .claude, .grok, .cursor, .gemini, .openCodeZen].map {
@@ -770,6 +780,80 @@ final class UITestFixtures {
                 accountID: account.id, providerID: .grok, title: account.displayName,
                 subtitle: "Synthetic Grok usage unavailable", bars: [], fetchedAt: now
             )
+    }
+
+    /// `x-subscription` shows a connected account, `x-subscription-unavailable` its unavailable values, and
+    /// `x-subscription-legacy-pointers` saved Grok and Cursor accounts that report a unified plan.
+    private static func seedXSubscriptionAccounts(in store: ProviderConfigurationStore, scenario: String?) {
+        guard scenario?.hasPrefix("x-subscription") == true, store.configurations.isEmpty else { return }
+        let accounts = scenario == "x-subscription-legacy-pointers"
+            ? [
+                ProviderAccountConfiguration(id: "ui-grok-unified", providerID: .grok, accountLabel: "Sample Grok",
+                                             authMethod: .browserSession),
+                ProviderAccountConfiguration(id: "ui-cursor-unified", providerID: .cursor, accountLabel: "Sample Cursor",
+                                             authMethod: .browserSession),
+            ]
+            : [
+                ProviderAccountConfiguration(id: "ui-x-subscription", providerID: .xSubscription, accountLabel: "X Subscription",
+                                             grokGeneratedLabel: "X Subscription", authMethod: .browserSession),
+            ]
+        for account in accounts {
+            _ = store.update(account)
+            _ = store.saveSecret("ui-test-credential", for: account)
+        }
+    }
+
+    nonisolated static func xSubscriptionScenarioResult(
+        for account: ProviderAccountConfiguration, scenario: String?
+    ) -> ProviderUsageResult {
+        let now = Date()
+        let start = ISO8601DateFormatter().string(from: now.addingTimeInterval(-3 * 86_400))
+        let end = ISO8601DateFormatter().string(from: now.addingTimeInterval(4 * 86_400))
+        switch account.providerID {
+        case .grok:
+            let data = Data("""
+                {"config":{"isUnifiedBillingUser":true,"creditUsagePercent":31,
+                "currentPeriod":{"type":"USAGE_PERIOD_TYPE_WEEKLY","start":"\(start)","end":"\(end)"},
+                "prepaidBalance":{"val":500}}}
+                """.utf8)
+            return (try? GrokUsageProvider.parseCredits(
+                data, configuration: account, subject: "synthetic-user", now: now, unifiedPlanName: "Premium"
+            )) ?? ProviderUsageResult(accountID: account.id, providerID: .grok, title: account.displayName,
+                                      subtitle: "Synthetic Grok usage unavailable", bars: [], fetchedAt: now)
+        case .cursor:
+            let primary = Data(#"{"planUsage":{"autoPercentUsed":21,"apiPercentUsed":4}}"#.utf8)
+            let weekly = Data(#"{"hasNonZeroIncludedLimit":true,"usagePercent":42,"nextResetTimestampUtc":"\#(end)","isUnified":true}"#.utf8)
+            return CursorUsageProvider.parseUsage(primary, grokBotUsageData: weekly, configuration: account, fetchedAt: now)
+                ?? ProviderUsageResult(accountID: account.id, providerID: .cursor, title: account.displayName,
+                                       subtitle: "Synthetic replay unavailable", bars: [], fetchedAt: now)
+        default:
+            return xSubscriptionResult(for: account, scenario: scenario)
+        }
+    }
+
+    nonisolated static func xSubscriptionResult(
+        for account: ProviderAccountConfiguration, scenario: String? = nil
+    ) -> ProviderUsageResult {
+        let now = Date()
+        let start = ISO8601DateFormatter().string(from: now.addingTimeInterval(-3 * 86_400))
+        let end = ISO8601DateFormatter().string(from: now.addingTimeInterval(4 * 86_400))
+        let unavailable = scenario == "x-subscription-unavailable"
+        let usage = unavailable
+            ? #""creditUsagePercent":null,"prepaidBalance":null,"#
+            : #"""
+                "creditUsagePercent":38,"prepaidBalance":{"val":1250},
+                "productUsage":[{"product":"PRODUCT_CURSOR","usagePercent":21},
+                {"product":"PRODUCT_GROK_CHAT","usagePercent":12},{"product":"PRODUCT_GROK_BOT","usagePercent":5}],
+                """#
+        let data = Data("""
+            {"config":{\(usage)
+            "currentPeriod":{"type":"USAGE_PERIOD_TYPE_WEEKLY","start":"\(start)","end":"\(end)"}}}
+            """.utf8)
+        return (try? GrokUsageProvider.parseXSubscription(
+            data, configuration: account, subject: "synthetic-user", now: now,
+            verifiedPlanName: unavailable ? nil : "Premium", planLookupFailed: unavailable
+        )) ?? ProviderUsageResult(accountID: account.id, providerID: .xSubscription, title: account.displayName,
+                                  subtitle: "Synthetic X Subscription usage unavailable", bars: [], fetchedAt: now)
     }
 
     nonisolated static func cursorSessionToken(expired: Bool) -> String {
@@ -1612,6 +1696,18 @@ private actor UITestGrokProvider: UsageProvider {
     init(scenario: String?) { self.scenario = scenario }
     func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
         UITestFixtures.grokResult(for: configuration, scenario: scenario)
+    }
+}
+
+private actor UITestXSubscriptionProvider: UsageProvider {
+    nonisolated let providerID: ProviderID
+    private let scenario: String?
+    init(providerID: ProviderID, scenario: String?) {
+        self.providerID = providerID
+        self.scenario = scenario
+    }
+    func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
+        UITestFixtures.xSubscriptionScenarioResult(for: configuration, scenario: scenario)
     }
 }
 

@@ -1504,7 +1504,7 @@ final class AppAndWidgetTests: XCTestCase {
             ),
             [
                 .codex: "ChatGPT / Codex",
-                .claude: "Claude", .grok: "Grok",
+                .claude: "Claude", .grok: "Grok", .xSubscription: "X Subscription",
                 .cursor: "Cursor",
                 .copilot: "GitHub Copilot", .githubBilling: "GitHub Billing",
                 .openRouter: "OpenRouter",

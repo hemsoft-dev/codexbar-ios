@@ -44,6 +44,38 @@ final class GrokSignInUITests: XCTestCase {
         keep("Grok local removal", app: app)
     }
 
+    func testXSubscriptionGuidedSetupUsesOneXAISignIn() {
+        let app = launch(scenario: "empty")
+        XCTAssertTrue(app.buttons["dashboard-add-account"].waitForExistence(timeout: 10))
+        app.buttons["dashboard-add-account"].tap()
+        let provider = app.buttons["X Subscription"]
+        XCTAssertTrue(provider.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Grok"].exists, "Grok stays available for legacy plans")
+        XCTAssertTrue(app.buttons["Cursor"].exists, "Cursor stays available for legacy plans")
+        keep("X Subscription Add Account", app: app)
+        provider.tap()
+        let signIn = app.buttons["x-subscription-sign-in"]
+        XCTAssertTrue(signIn.waitForExistence(timeout: 10))
+        XCTAssertEqual(signIn.label, "Sign in with xAI")
+        XCTAssertEqual(app.secureTextFields.count, 0)
+        keep("X Subscription disconnected settings", app: app)
+        signIn.tap()
+        XCTAssertTrue(app.buttons["Approve sample account"].waitForExistence(timeout: 5))
+        keep("X Subscription sample approval", app: app)
+        app.buttons["Decline"].tap()
+        XCTAssertTrue(signIn.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Disconnect xAI"].exists)
+        signIn.tap()
+        XCTAssertTrue(app.buttons["Approve sample account"].waitForExistence(timeout: 5))
+        app.buttons["Approve sample account"].tap()
+        XCTAssertTrue(app.buttons["Return to X Subscription settings"].waitForExistence(timeout: 5))
+        keep("X Subscription sample account connected", app: app)
+        app.buttons["Return to X Subscription settings"].tap()
+        XCTAssertTrue(app.buttons["Disconnect xAI"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons["x-subscription-sign-in"].label, "Reconnect xAI")
+        keep("X Subscription connected settings", app: app)
+    }
+
     func testGrokAndCursorMetersStaySeparateAndNoAllowanceIsUnavailable() {
         let app = launch(scenario: "grok")
         let grok = app.buttons["dashboard-metric-grok.included-usage"]

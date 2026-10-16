@@ -46,6 +46,8 @@ body:
       options:
         - ChatGPT / Codex
         - Claude
+        - Grok
+        - X Subscription
         - Cursor
         - GitHub Copilot
         - GitHub Billing

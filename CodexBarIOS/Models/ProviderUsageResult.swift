@@ -216,9 +216,9 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
     /// Presentation fallback only. Never infers a subscription from usage or account labels.
     public var cardPlan: ProviderPlanDescriptor {
         if let plan { return plan }
-        if providerID == .grok, let name = verifiedGrokPlanName {
+        if providerID.usesXAIConsumerAuth, let name = verifiedGrokPlanName {
             return .make(
-                providerPrefix: "grok", identifier: name.lowercased().replacingOccurrences(of: " ", with: "-"),
+                providerPrefix: providerID.rawValue, identifier: name.lowercased().replacingOccurrences(of: " ", with: "-"),
                 label: name, displayLabel: name
             )
         }
@@ -238,7 +238,8 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
             )
         }
     }
-    /// Plan verified through the same Grok subject as this usage response; never a usage metric.
+    /// Plan verified through the same xAI subject as this usage response; never a usage metric.
+    /// Grok accounts hold SuperGrok names; X Subscription accounts hold unified plan names.
     public var verifiedGrokPlanName: String?
     /// The optional Grok tier read failed; a matching verified subject may retain its known tier.
     public let grokPlanLookupFailed: Bool
@@ -311,8 +312,8 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
         self.title = title
         self.plan = plan
         self.verifiedGrokPlanName = verifiedGrokPlanName
-        self.grokPlanLookupFailed = providerID == .grok && grokPlanLookupFailed
-        self.grokInferredZeroCandidate = providerID == .grok && grokPlanLookupFailed ? grokInferredZeroCandidate : nil
+        self.grokPlanLookupFailed = providerID.usesXAIConsumerAuth && grokPlanLookupFailed
+        self.grokInferredZeroCandidate = providerID.usesXAIConsumerAuth && grokPlanLookupFailed ? grokInferredZeroCandidate : nil
         self.subtitle = subtitle
         self.bars = bars
         self.barsFetchedAt = bars.isEmpty ? nil : (barsFetchedAt ?? fetchedAt)

@@ -6,6 +6,7 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
     case githubBilling
     case claude
     case grok
+    case xSubscription
     case openRouter
     case openCodeZen
     case moonshot
@@ -30,6 +31,8 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
             "Claude"
         case .grok:
             "Grok"
+        case .xSubscription:
+            "X Subscription"
         case .openRouter:
             "OpenRouter"
         case .openCodeZen:
@@ -49,10 +52,16 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
 
     public var supportsPlanBadge: Bool {
         switch self {
-        case .codex, .copilot, .githubBilling, .claude, .grok:
+        case .codex, .copilot, .githubBilling, .claude, .grok, .xSubscription:
             true
         case .openRouter, .openCodeZen, .moonshot, .cursor, .greptile, .gemini, .antigravity:
             false
         }
+    }
+
+    /// Providers signed in through xAI's Grok CLI device authorization. They share the credential
+    /// format, Keychain lock, subject verification and generated-label rules, but not billing reads.
+    public var usesXAIConsumerAuth: Bool {
+        self == .grok || self == .xSubscription
     }
 }

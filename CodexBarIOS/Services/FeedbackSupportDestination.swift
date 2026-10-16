@@ -390,6 +390,8 @@ extension ProviderID {
             "Claude"
         case .grok:
             "Grok"
+        case .xSubscription:
+            "X Subscription"
         case .openRouter:
             "OpenRouter"
         case .openCodeZen:

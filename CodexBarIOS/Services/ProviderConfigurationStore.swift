@@ -711,7 +711,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             configuration.copilotAccountScope = copilotScope
         }
         configuration.accountLabel = suggestedAccountLabel(for: providerID)
-        if providerID == .grok { configuration.grokGeneratedLabel = configuration.accountLabel }
+        if providerID.usesXAIConsumerAuth { configuration.grokGeneratedLabel = configuration.accountLabel }
         guard allowConfigurationMutation() else {
             return configuration
         }
@@ -740,7 +740,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             configuration,
             validGroupIDs: Set(groups.map(\.id))
         )
-        if normalized.providerID == .grok, normalized.grokGeneratedLabel != nil,
+        if normalized.providerID.usesXAIConsumerAuth, normalized.grokGeneratedLabel != nil,
            normalized.accountLabel != normalized.grokGeneratedLabel {
             normalized.grokGeneratedLabel = nil
         }
@@ -800,7 +800,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             let data = try JSONEncoder().encode(updatedConfigurations)
             let greptileIdentityChanged = try greptileCredentialChangesIdentity(credential, for: normalized)
             try writeAccountSecret(credential, for: normalized)
-            if [ProviderID.gemini, .grok, .claude, .openCodeZen].contains(normalized.providerID) {
+            if [ProviderID.gemini, .grok, .xSubscription, .claude, .openCodeZen].contains(normalized.providerID) {
                 credentialChanges.send(normalized.id)
             }
             defaults.set(data, forKey: configurationsKey)
@@ -846,7 +846,7 @@ public final class ProviderConfigurationStore: ObservableObject {
                     credentialChanges.send(configuration.id)
                 }
                 try writeAccountSecret(nil, for: configuration)
-                if [ProviderID.grok, .claude, .openCodeZen].contains(configuration.providerID) { credentialChanges.send(configuration.id) }
+                if [ProviderID.grok, .xSubscription, .claude, .openCodeZen].contains(configuration.providerID) { credentialChanges.send(configuration.id) }
                 configurations.removeAll { $0.id == configuration.id }
                 removedAccountIDs.insert(configuration.id)
                 removedAnyAccount = true
@@ -1561,7 +1561,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         do {
             try writeAccountSecret(secret, for: configuration)
 
-            if [ProviderID.gemini, .grok, .claude, .openCodeZen].contains(configuration.providerID) {
+            if [ProviderID.gemini, .grok, .xSubscription, .claude, .openCodeZen].contains(configuration.providerID) {
                 credentialChanges.send(configuration.id)
             }
             lastError = nil
@@ -1590,8 +1590,8 @@ public final class ProviderConfigurationStore: ObservableObject {
     /// The generated-label marker prevents a refresh from replacing a user's rename.
     @discardableResult
     func applyVerifiedGrokPlan(_ result: ProviderUsageResult) -> Bool {
-        guard result.providerID == .grok, result.failureMessage == nil,
-              let current = configuration(accountID: result.accountID), current.providerID == .grok,
+        guard result.providerID.usesXAIConsumerAuth, result.failureMessage == nil,
+              let current = configuration(accountID: result.accountID), current.providerID == result.providerID,
               let credential = try? GrokCredentialLock.withLock({
                   GrokCredential.parse(try secretStore.readSecret(account: Self.keychainAccount(for: current)))
               }),
@@ -1599,20 +1599,21 @@ public final class ProviderConfigurationStore: ObservableObject {
               let generated = current.grokGeneratedLabel, current.accountLabel == generated else { return false }
         var candidate = current
         var suffix = 1
+        let base = current.providerID.displayName
         repeat {
-            candidate.accountLabel = suffix == 1 ? "Grok" : "Grok \(suffix)"
+            candidate.accountLabel = suffix == 1 ? base : "\(base) \(suffix)"
             suffix += 1
         } while !isAccountNameUnique(candidate)
         // A neutral generated name is stable even when an earlier number becomes free.
-        let generatedNumber = Int(generated.dropFirst(5)) ?? 0
-        guard candidate.accountLabel != current.accountLabel, generated != "Grok",
-              !(generated.hasPrefix("Grok ") && generatedNumber >= 2) else { return true }
+        let generatedNumber = Int(generated.dropFirst(base.count + 1)) ?? 0
+        guard candidate.accountLabel != current.accountLabel, generated != base,
+              !(generated.hasPrefix("\(base) ") && generatedNumber >= 2) else { return true }
         candidate.grokGeneratedLabel = candidate.accountLabel
         return update(candidate)
     }
 
     func canReconnectGrok(_ candidate: GrokCredential, accountID: String) -> Bool {
-        guard let current = configuration(accountID: accountID), current.providerID == .grok else { return false }
+        guard let current = configuration(accountID: accountID), current.providerID.usesXAIConsumerAuth else { return false }
         do {
             let stored = try secretStore.readSecret(account: Self.keychainAccount(for: current))
             guard let stored else { return true }
@@ -1735,7 +1736,8 @@ public final class ProviderConfigurationStore: ObservableObject {
                 && !configuration.openCodeWorkspaceId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
 
-        if configuration.requiresSecret || [.codex, .claude, .cursor, .gemini, .grok, .greptile].contains(configuration.providerID) {
+        if configuration.requiresSecret
+            || [.codex, .claude, .cursor, .gemini, .grok, .xSubscription, .greptile].contains(configuration.providerID) {
             return hasSecret(for: configuration)
         }
 
@@ -2396,7 +2398,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         }
 
         switch configuration.providerID {
-        case .codex, .githubBilling, .cursor, .gemini, .grok:
+        case .codex, .githubBilling, .cursor, .gemini, .grok, .xSubscription:
             normalized.authMethod = .browserSession
         case .antigravity:
             normalized.authMethod = .cliToken
@@ -2539,6 +2541,13 @@ public extension ProviderConfigurationStore {
                 id: AppStoreScreenshotFixtureID.grokAccount,
                 providerID: .grok,
                 accountLabel: "Sample Grok",
+                groupID: usageGroup.id,
+                authMethod: .browserSession
+            ),
+            ProviderAccountConfiguration(
+                id: AppStoreScreenshotFixtureID.xSubscriptionAccount,
+                providerID: .xSubscription,
+                accountLabel: "X Subscription",
                 groupID: usageGroup.id,
                 authMethod: .browserSession
             ),
@@ -2894,8 +2903,8 @@ extension ProviderConfigurationStore {
         var seenKeychainAccounts = Set<String>()
         let codingAccounts = configurations.filter { $0.providerID == .gemini }
             .map { Self.geminiCodingKeychainAccount(accountID: $0.id) }
-        let grokAccounts = Set(configurations.filter { $0.providerID == .grok }.map { keychainAccount(for: $0) })
-            .union([keychainAccount(for: .grok)])
+        let grokAccounts = Set(configurations.filter(\.providerID.usesXAIConsumerAuth).map { keychainAccount(for: $0) })
+            .union([keychainAccount(for: .grok), keychainAccount(for: .xSubscription)])
         for account in configurations.map({ keychainAccount(for: $0) })
             + ProviderID.allCases.map({ keychainAccount(for: $0) })
             + codingAccounts
@@ -2911,14 +2920,17 @@ extension ProviderConfigurationStore {
             do {
                 try deleteAccountSecret(account, grokAccounts: grokAccounts)
                 if let configuration = configurations.first(where: {
-                    [ProviderID.gemini, .grok, .claude, .openCodeZen].contains($0.providerID)
+                    [ProviderID.gemini, .grok, .xSubscription, .claude, .openCodeZen].contains($0.providerID)
                         && (keychainAccount(for: $0) == account
                             || Self.geminiCodingKeychainAccount(accountID: $0.id) == account
                             || ([.claude, .grok].contains($0.providerID)
                                 && SubscriptionBillingSession.keychainAccount($0) == account))
                 }) {
                     credentialChanges.send(configuration.id)
-                    if configuration.providerID == .grok { grokHistoryInvalidations.send(configuration.id) }
+                    // Clear history once, when the usage credential itself is deleted.
+                    if configuration.providerID.usesXAIConsumerAuth, keychainAccount(for: configuration) == account {
+                        grokHistoryInvalidations.send(configuration.id)
+                    }
                 }
                 removedAccountIDs.formUnion(
                     configurations
@@ -3049,8 +3061,9 @@ extension ProviderConfigurationStore {
         let write = {
             let account = self.keychainAccount(for: configuration)
             let hasBilling = [.claude, .grok].contains(configuration.providerID)
-            let previous = hasBilling ? try self.secretStore.readSecret(account: account) : nil
-            if configuration.providerID == .grok {
+            let usesXAI = configuration.providerID.usesXAIConsumerAuth
+            let previous = hasBilling || usesXAI ? try self.secretStore.readSecret(account: account) : nil
+            if usesXAI {
                 let oldSubject = GrokCredential.parse(previous)?.subject
                 changedGrokSubject = oldSubject != nil && oldSubject != GrokCredential.parse(value)?.subject
             }
@@ -3064,13 +3077,13 @@ extension ProviderConfigurationStore {
                     try self.replaceSecret(previous, account: account)
                 } catch {
                     self.credentialChanges.send(configuration.id)
-                    if configuration.providerID == .grok { self.grokHistoryInvalidations.send(configuration.id) }
+                    if usesXAI { self.grokHistoryInvalidations.send(configuration.id) }
                     throw error
                 }
                 throw deletionError
             }
         }
-        if configuration.providerID == .grok {
+        if configuration.providerID.usesXAIConsumerAuth {
             try GrokCredentialLock.withLock(write)
             if changedGrokSubject { grokHistoryInvalidations.send(configuration.id) }
         } else {

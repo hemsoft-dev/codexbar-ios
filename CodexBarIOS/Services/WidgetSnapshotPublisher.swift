@@ -27,7 +27,7 @@ enum WidgetSnapshotPublisher {
                     accountID: result.accountID,
                     providerID: result.providerID.rawValue,
                     legacyAccountIDs: configurationStore.linkedGoogleAccountIDs(for: result.accountID),
-                    title: result.providerID == .grok ? (configuration?.displayName ?? result.title) : result.title,
+                    title: result.providerID.usesXAIConsumerAuth ? (configuration?.displayName ?? result.title) : result.title,
                     subtitle: statusText(for: result, configurationStore: configurationStore),
                     planIdentifier: plan?.identifier,
                     planDisplayLabel: plan?.displayLabel,

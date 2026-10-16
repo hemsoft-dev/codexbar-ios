@@ -31,9 +31,9 @@ public final class UsageRefreshService: ObservableObject {
         self.results = initialResults
     }
 
-    /// Keep cached Grok observations in step with a newly verified account label.
+    /// Keep cached xAI observations in step with a newly verified account label.
     func updateGrokResultTitle(_ title: String, accountID: String) {
-        guard let index = results.firstIndex(where: { $0.accountID == accountID && $0.providerID == .grok }),
+        guard let index = results.firstIndex(where: { $0.accountID == accountID && $0.providerID.usesXAIConsumerAuth }),
               results[index].title != title else { return }
         results[index].title = title
     }
@@ -435,7 +435,7 @@ public final class UsageRefreshService: ObservableObject {
     }
 
     private func preservingVerifiedGrokPlan(_ incoming: ProviderUsageResult) -> ProviderUsageResult {
-        guard incoming.providerID == .grok, incoming.failureMessage == nil, incoming.grokPlanLookupFailed,
+        guard incoming.providerID.usesXAIConsumerAuth, incoming.failureMessage == nil, incoming.grokPlanLookupFailed,
               incoming.verifiedGrokPlanName == nil,
               let identity = incoming.cacheIdentity,
               let cached = results.first(where: { $0.accountID == incoming.accountID && $0.cacheIdentity == identity })
@@ -544,8 +544,9 @@ public final class UsageRefreshService: ObservableObject {
             recoveryAction: failureResult.recoveryAction,
             preserveCachedBarsOnFailure: failureResult.preserveCachedBarsOnFailure,
             preserveCachedCreditsOnFailure: failureResult.preserveCachedCreditsOnFailure,
-            cacheIdentity: failureResult.cacheIdentity ?? (failureResult.providerID == .grok ? cachedResult?.cacheIdentity : nil),
-            cacheScope: failureResult.cacheScope ?? (failureResult.providerID == .grok ? cachedResult?.cacheScope : nil),
+            cacheIdentity: failureResult.cacheIdentity
+                ?? (failureResult.providerID.usesXAIConsumerAuth ? cachedResult?.cacheIdentity : nil),
+            cacheScope: failureResult.cacheScope ?? (failureResult.providerID.usesXAIConsumerAuth ? cachedResult?.cacheScope : nil),
             allowsUnscopedCacheReuse: failureResult.allowsUnscopedCacheReuse,
             hasSuccessfulRefreshHistory: failureResult.hasSuccessfulRefreshHistory
                 || cachedResult?.hasSuccessfulRefreshHistory == true,
@@ -560,7 +561,7 @@ public final class UsageRefreshService: ObservableObject {
         if failureResult.providerID == .greptile {
             return cachedResult.cacheIdentity == failureResult.cacheIdentity
         }
-        if [.grok, .codex].contains(failureResult.providerID)
+        if [.grok, .xSubscription, .codex].contains(failureResult.providerID)
             && (failureResult.recoveryAction == .reauthenticate || !failureResult.allowsUnscopedCacheReuse) {
             return false
         }
@@ -770,6 +771,7 @@ public extension UsageRefreshService {
                 GitHubBillingUsageProvider(),
                 ClaudeUsageProvider(),
                 GrokUsageProvider(),
+                GrokUsageProvider(providerID: .xSubscription),
                 OpenRouterUsageProvider(),
                 OpenCodeZenUsageProvider(),
                 MoonshotUsageProvider(),

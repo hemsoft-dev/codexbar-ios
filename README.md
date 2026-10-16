@@ -11,8 +11,8 @@ The Windows reference implementation is checked out beside this repo at:
 ## Current Scope
 
 - SwiftUI dashboard with account-scoped usage cards for Codex, GitHub Copilot,
-  GitHub Billing, Claude, Grok, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot
-  (Kimi), Greptile, and Google Gemini
+  GitHub Billing, Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode
+  Go + Zen, Moonshot (Kimi), Greptile, and Google Gemini
 - Live provider adapters and settings for enabling accounts, choosing supported
   authentication methods, labeling accounts, and storing credentials in Keychain
 - Usage history and charts, configurable usage alerts, and home-screen and
@@ -122,6 +122,22 @@ removes only this device's saved credential. The Grok Build CLI client and
 credits endpoint are first-party CLI contracts, not a published third-party
 API; see [the provider contract](GROK-CONSUMER-CONTRACT.md). Live sign-in and
 quota comparison are pending with the account owner.
+
+## X Subscription sign-in
+
+An X Subscription account uses the same guided xAI approval as Grok: one
+browser sign-in, no Cursor sign-in and no pasted tokens. The card shows the
+shared weekly pool once, with its exact reset, plus Extra Usage Credits as a
+separate balance. When xAI reports a per-product split, it appears as detail
+rows under "Weekly pool by product", never as extra meters or a second pool. A
+recognized unified plan name (Plus, Premium, Super or Ultra) sets the plan
+pill; any other tier, including a SuperGrok name, leaves the pill unavailable
+without hiding the pool. Missing or malformed values stay unavailable. Existing
+Grok and Cursor accounts keep their metrics; when they report a unified plan,
+their cards point to the X Subscription account and nothing is moved or
+deleted. Third-party model spending in Cursor is not reported separately. See
+[the X Subscription contract](X-SUBSCRIPTION-CONTRACT.md). The live comparison
+with grok.com on a unified account is pending with the account owner.
 
 ## GitHub Copilot Sign-In
 
@@ -321,6 +337,7 @@ remaining live comparison checks.
 
 Grok uses a separate verified tier pill and generated Grok account names, preserving
 custom account names and verified tier metadata through reusable refresh failures.
+X Subscription follows the same rules with its unified plan names.
 
 Every account card shows its verified plan or product type in the header,
 including when collapsed. Codex `pro` and `prolite` identify the Pro family;

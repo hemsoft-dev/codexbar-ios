@@ -450,7 +450,7 @@ final class DashboardOrchestrator: ObservableObject {
         preserving preservedAccountIDs: Set<String>
     ) async {
         let titledResults = results.map { result in
-            guard result.providerID == .grok else { return result }
+            guard result.providerID.usesXAIConsumerAuth else { return result }
             configurationStore.applyVerifiedGrokPlan(result)
             var titled = result
             titled.title = configurationStore.configuration(accountID: result.accountID)?.displayName ?? result.title
@@ -690,7 +690,7 @@ struct DashboardProviderCardItem: Identifiable, Equatable {
         errorMessage: String?
     ) -> ProviderUsageResult? {
         let definitions = GoogleUsageMetricCatalog.definitions(for: configuration.providerID)
-        if configuration.providerID == .grok, var observed {
+        if configuration.providerID.usesXAIConsumerAuth, var observed {
             observed.title = configuration.displayName
             return observed
         }

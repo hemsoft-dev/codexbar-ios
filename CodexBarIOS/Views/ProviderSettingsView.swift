@@ -348,24 +348,30 @@ struct ProviderSettingsView: View {
                         Text(claudeAuthError)
                             .foregroundStyle(.red)
                     }
-                } else if providerID == .grok {
-                    Button(configurationStore.hasSecret(for: configuration) ? "Reconnect Grok" : "Sign in with Grok") {
+                } else if providerID.usesXAIConsumerAuth {
+                    let isXSubscription = providerID == .xSubscription
+                    let signInName = isXSubscription ? "xAI" : "Grok"
+                    Button(configurationStore.hasSecret(for: configuration) ? "Reconnect \(signInName)" : "Sign in with \(signInName)") {
                         viewModel.startGrokSignIn()
                     }
                     .disabled(viewModel.isSigningInWithGrok)
-                    .accessibilityIdentifier("grok-sign-in")
+                    .accessibilityIdentifier(isXSubscription ? "x-subscription-sign-in" : "grok-sign-in")
 
                     if viewModel.isSigningInWithGrok {
-                        ProgressView("Waiting for Grok approval...")
+                        ProgressView("Waiting for \(signInName) approval...")
                         Button("Cancel Sign-In") { viewModel.cancelGrokSignIn() }
                     }
-                    Text("Choose your Grok account in the browser. CodexBar reads consumer usage only; "
-                        + "it never purchases credits or links accounts. Tokens stay on this device in Keychain. "
-                        + "Grok Bot usage from Cursor remains separate.")
+                    Text(isXSubscription
+                        ? "Choose the xAI account that has your X Subscription in the browser. One sign-in shows the shared "
+                            + "weekly pool for Grok, Grok Bot and Cursor, plus Extra Usage Credits. CodexBar reads usage only; "
+                            + "it never purchases credits or links accounts. Tokens stay on this device in Keychain."
+                        : "Choose your Grok account in the browser. CodexBar reads consumer usage only; "
+                            + "it never purchases credits or links accounts. Tokens stay on this device in Keychain. "
+                            + "Grok Bot usage from Cursor remains separate.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     if configurationStore.hasSecret(for: configuration) {
-                        Button("Disconnect Grok", role: .destructive) {
+                        Button("Disconnect \(signInName)", role: .destructive) {
                             viewModel.removeSavedCredential()
                         }
                     }
@@ -630,7 +636,7 @@ struct ProviderSettingsView: View {
         }
         .sheet(item: $viewModel.grokFixtureStage) { stage in
             GrokSyntheticApprovalView(
-                stage: stage,
+                stage: stage, name: providerID == .xSubscription ? "xAI" : "Grok",
                 approve: { viewModel.completeSyntheticGrokSignIn() },
                 reject: { viewModel.rejectSyntheticGrokSignIn() },
                 finish: { viewModel.finishSyntheticGrokSignIn() }
@@ -846,6 +852,7 @@ struct CursorStaleUsageNotice: View {
 #if DEBUG
 private struct GrokSyntheticApprovalView: View {
     let stage: GrokFixtureStage
+    let name: String
     let approve: () -> Void
     let reject: () -> Void
     let finish: () -> Void
@@ -854,7 +861,7 @@ private struct GrokSyntheticApprovalView: View {
         NavigationStack {
             VStack(spacing: 20) {
                 Image(systemName: "safari").font(.largeTitle)
-                Text(stage == .approval ? "Choose a Grok account" : "Grok account connected")
+                Text(stage == .approval ? "Choose a \(name) account" : "\(name) account connected")
                     .font(.headline)
                 Text("Synthetic approval. No live account, browser request, or credentials.")
                     .font(.footnote)
@@ -863,12 +870,12 @@ private struct GrokSyntheticApprovalView: View {
                         .buttonStyle(.borderedProminent)
                     Button("Decline", action: reject)
                 } else {
-                    Button("Return to Grok settings", action: finish)
+                    Button(name == "xAI" ? "Return to X Subscription settings" : "Return to Grok settings", action: finish)
                         .buttonStyle(.borderedProminent)
                 }
             }
             .padding()
-            .navigationTitle("Grok sign-in")
+            .navigationTitle("\(name) sign-in")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { reject() }

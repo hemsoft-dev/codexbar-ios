@@ -1580,6 +1580,8 @@ extension ProviderID {
             "text.bubble"
         case .grok:
             "sparkle.magnifyingglass"
+        case .xSubscription:
+            "x.square"
         case .openRouter:
             "network"
         case .openCodeZen:

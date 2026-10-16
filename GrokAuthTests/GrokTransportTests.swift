@@ -134,6 +134,54 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
         })
     }
 
+    @MainActor
+    func testXSubscriptionReadsTheSameVerifiedEndpointsWithoutBillingSignIn() async throws {
+        let suite = "GrokAuthTests.\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let secrets = GrokTestSecrets()
+        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = store.addAccount(for: .xSubscription)
+        let credential = GrokCredential(
+            kind: "grok-oauth-v1", accessToken: "access", refreshToken: "refresh",
+            expiresAt: Date().addingTimeInterval(3600), subject: "subject-one", email: nil
+        )
+        XCTAssertTrue(store.replaceCredential(try credential.encoded(), for: account))
+        let formatter = ISO8601DateFormatter()
+        let start = formatter.string(from: Date().addingTimeInterval(-86_400))
+        let end = formatter.string(from: Date().addingTimeInterval(86_400))
+        let billing = """
+            {"config":{"creditUsagePercent":38,"prepaidBalance":{"val":1250},
+            "currentPeriod":{"type":"USAGE_PERIOD_TYPE_WEEKLY","start":"\(start)","end":"\(end)"},
+            "productUsage":[{"product":"PRODUCT_CURSOR","usagePercent":21}]}}
+            """
+        for (settings, plan, hasPool) in [
+            (#"{"subscription_tier_display":"Premium"}"#, "Premium", true),
+            (#"{"subscription_tier_display":"X Premium+"}"#, nil, true),
+            // A unified account may still report a legacy tier; it never hides the pool.
+            (#"{"subscription_tier":"SuperGrok"}"#, nil, true),
+        ] as [(String, String?, Bool)] {
+            let session = makeSession([(200, #"{"sub":"subject-one"}"#), (200, billing), (200, settings)])
+            defer { session.invalidateAndCancel() }
+            let provider = GrokUsageProvider(providerID: .xSubscription, secretStore: secrets, session: session)
+            XCTAssertEqual(provider.providerID, .xSubscription)
+            let result = try await provider.fetchUsage(for: account)
+            XCTAssertNil(result.failureMessage, settings)
+            XCTAssertEqual(result.providerID, .xSubscription)
+            XCTAssertEqual(result.verifiedGrokPlanName, plan, settings)
+            XCTAssertEqual(result.bars.first?.used, hasPool ? 38 : nil, settings)
+            XCTAssertEqual(result.bars.first?.resetsAt, hasPool ? formatter.date(from: end) : nil, settings)
+            XCTAssertNil(result.subscriptionRenewal)
+            XCTAssertEqual(GrokTestProtocol.state.requests.map { $0.url?.path }, [
+                "/oauth2/userinfo", "/v1/billing", "/v1/settings",
+            ])
+        }
+        let missing = store.addAccount(for: .xSubscription)
+        let signIn = try await GrokUsageProvider(providerID: .xSubscription, secretStore: secrets).fetchUsage(for: missing)
+        XCTAssertEqual(signIn.failureMessage, "Sign in with xAI to see X Subscription usage.")
+        XCTAssertEqual(signIn.providerID, .xSubscription)
+    }
+
     func testCandidateVerificationDoesNotRetryAChangedIdentity() async throws {
         let credential = GrokCredential(
             kind: "grok-oauth-v1", accessToken: "issued-token", refreshToken: "issued-refresh",
@@ -393,7 +441,8 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
             .fetchUsage(for: account)
         XCTAssertEqual(retryNearExpiry.recoveryAction, .retryRefresh)
         XCTAssertEqual(GrokTestProtocol.state.requests.count, 1)
-        XCTAssertEqual(try secrets.readSecret(account: key), try nearExpiry.encoded())
+        // Compare decoded credentials; JSONEncoder key order is not stable between calls.
+        XCTAssertEqual(GrokCredential.parse(try secrets.readSecret(account: key)), nearExpiry)
         nearExpiryOutage.invalidateAndCancel()
 
         let expired = GrokCredential(

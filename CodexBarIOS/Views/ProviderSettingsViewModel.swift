@@ -246,7 +246,7 @@ final class ProviderSettingsViewModel: ObservableObject {
         switch providerID {
         case .greptile:
             configuration.authMethod == .apiKey && configurationStore.hasSecret(for: configuration) ? [.apiKey] : [.browserSession]
-        case .codex, .claude, .grok, .cursor, .gemini, .githubBilling, .openCodeZen:
+        case .codex, .claude, .grok, .xSubscription, .cursor, .gemini, .githubBilling, .openCodeZen:
             [.browserSession]
         case .antigravity:
             [.cliToken]
@@ -611,7 +611,7 @@ final class ProviderSettingsViewModel: ObservableObject {
 
     func removeSavedCredential(message: String? = nil) {
         if providerID == .greptile { cancelGreptileSignIn() }
-        if providerID == .grok { cancelGrokSignIn() }
+        if providerID.usesXAIConsumerAuth { cancelGrokSignIn() }
         if providerID == .openCodeZen { cancelOpenCodeSignIn() }
         if providerID == .gemini { cancelGeminiSignIn() }
         if providerID == .githubBilling { cancelAuthentication() }
@@ -1248,8 +1248,12 @@ final class ProviderSettingsViewModel: ObservableObject {
         }
     }
 
+    /// Grok keeps its existing copy; X Subscription signs in to xAI and reads its own pool.
+    private var xAISignInName: String { providerID == .xSubscription ? "xAI" : "Grok" }
+    private var xAIUsageName: String { providerID == .xSubscription ? "X Subscription" : "Grok" }
+
     func startGrokSignIn() {
-        guard providerID == .grok, grokAttemptID == nil else { return }
+        guard providerID.usesXAIConsumerAuth, grokAttemptID == nil else { return }
         #if DEBUG
         if UITestFixtures.current != nil {
             grokAttemptID = UUID()
@@ -1260,7 +1264,7 @@ final class ProviderSettingsViewModel: ObservableObject {
         }
         #endif
         flushPendingChanges()
-        grokMessage = "Starting Grok sign-in..."
+        grokMessage = "Starting \(xAISignInName) sign-in..."
         isSigningInWithGrok = true
         let attempt = UUID()
         grokAttemptID = attempt
@@ -1277,7 +1281,7 @@ final class ProviderSettingsViewModel: ObservableObject {
         grokAuthPresenter.finish()
         grokFixtureStage = nil
         isSigningInWithGrok = false
-        grokMessage = "Grok sign-in canceled. The saved account was not changed."
+        grokMessage = "\(xAISignInName) sign-in canceled. The saved account was not changed."
     }
 
     #if DEBUG
@@ -1289,9 +1293,10 @@ final class ProviderSettingsViewModel: ObservableObject {
             return
         }
         grokFixtureStage = .connected
-        grokMessage = "Synthetic Grok account connected. No live provider was accessed."
+        grokMessage = "Synthetic \(xAIUsageName) account connected. No live provider was accessed."
         credentialsDidChange()
-        acceptUsageResult(UITestFixtures.grokResult(for: configuration))
+        acceptUsageResult(providerID == .xSubscription
+            ? UITestFixtures.xSubscriptionResult(for: configuration) : UITestFixtures.grokResult(for: configuration))
     }
 
     func rejectSyntheticGrokSignIn() {
@@ -1319,7 +1324,7 @@ final class ProviderSettingsViewModel: ObservableObject {
             try await verifyAndSaveGrok(credential, attempt: attempt)
         } catch {
             if grokAttemptID == attempt {
-                grokMessage = error is CancellationError ? "Grok sign-in canceled." : error.localizedDescription
+                grokMessage = error is CancellationError ? "\(xAISignInName) sign-in canceled." : error.localizedDescription
             }
         }
         if grokAttemptID == attempt { grokAuthPresenter.finish() }
@@ -1332,11 +1337,11 @@ final class ProviderSettingsViewModel: ObservableObject {
             url: challenge.approvalURL, prefersEphemeralSession: false,
             onCancel: { [weak self] in
                 if self?.grokAttemptID == attempt {
-                    self?.grokMessage = "Checking Grok approval. Cancel here if you did not approve."
+                    self?.grokMessage = "Checking \(self?.xAISignInName ?? "Grok") approval. Cancel here if you did not approve."
                 }
             }
         ) else { throw GrokAuthError.invalidResponse }
-        grokMessage = "Choose your Grok account and approve sign-in in the browser. Waiting for approval..."
+        grokMessage = "Choose your \(xAISignInName) account and approve sign-in in the browser. Waiting for approval..."
         let credential = try await grokAuthService.authorize(challenge)
         guard grokAttemptID == attempt, !Task.isCancelled else { return nil }
         grokAuthPresenter.finish()
@@ -1344,24 +1349,26 @@ final class ProviderSettingsViewModel: ObservableObject {
     }
 
     private func verifyAndSaveGrok(_ credential: GrokCredential, attempt: UUID) async throws {
-        grokMessage = "Checking Grok consumer usage. Temporary outages may take up to two minutes to retry..."
+        grokMessage = providerID == .xSubscription
+            ? "Checking X Subscription usage. Temporary outages may take up to two minutes to retry..."
+            : "Checking Grok consumer usage. Temporary outages may take up to two minutes to retry..."
         let result = try await grokUsageProvider.verifyCandidate(
             credential, for: configuration, retryUntil: Date().addingTimeInterval(120)
         )
         guard grokAttemptID == attempt, !Task.isCancelled else { return }
         guard configurationStore.canReconnectGrok(credential, accountID: accountID) else {
-            grokMessage = "This entry belongs to another Grok account. Add a separate account to track this identity."
+            grokMessage = "This entry belongs to another \(xAISignInName) account. Add a separate account to track this identity."
             return
         }
         var updated = configuration
         updated.authMethod = .browserSession
         guard persistCredential(try credential.encoded(), with: updated) else {
-            grokMessage = configurationStore.lastError ?? "Grok authorization could not be saved securely."
+            grokMessage = configurationStore.lastError ?? "\(xAISignInName) authorization could not be saved securely."
             return
         }
         configurationStore.applyVerifiedGrokPlan(result)
         configuration = configurationStore.configuration(accountID: accountID) ?? updated
-        grokMessage = "Grok account connected."
+        grokMessage = "\(xAIUsageName) account connected."
         credentialsDidChange()
         var titledResult = result
         titledResult.title = configuration.displayName
@@ -1763,7 +1770,7 @@ final class ProviderSettingsViewModel: ObservableObject {
 
     private func normalizedConfiguration(_ configuration: ProviderAccountConfiguration) -> ProviderAccountConfiguration {
         var normalized = configuration
-        if [.codex, .githubBilling, .claude, .grok, .cursor, .gemini, .openCodeZen].contains(configuration.providerID) {
+        if [.codex, .githubBilling, .claude, .grok, .xSubscription, .cursor, .gemini, .openCodeZen].contains(configuration.providerID) {
             normalized.authMethod = .browserSession
         }
         return normalized
