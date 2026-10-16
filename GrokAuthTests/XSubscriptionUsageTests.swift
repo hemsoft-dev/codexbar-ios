@@ -50,13 +50,31 @@ final class XSubscriptionUsageTests: XCTestCase, @unchecked Sendable {
     }
 
     func testMissingNullOrNegativePercentStaysUnavailable() throws {
-        for field in ["", #""creditUsagePercent":null,"#, #""creditUsagePercent":-1,"#] {
+        for field in [
+            "", #""creditUsagePercent":null,"#, #""creditUsagePercent":-1,"#,
+            #""creditUsagePercent":1e100,"#, #""creditUsagePercent":10001,"#,
+        ] {
             let result = try parse(#"{"config":{\#(field)\#(weekly),"prepaidBalance":{"val":10}}}"#)
             XCTAssertTrue(result.bars.isEmpty, field)
             XCTAssertEqual(result.subtitle, "xAI did not report weekly pool usage.", field)
             XCTAssertEqual(result.monetaryMetrics.map(\.minorUnits), [10], field)
             XCTAssertNil(result.verifiedGrokPlanName)
         }
+    }
+
+    func testOversizedGrokPercentStaysUnavailableInsteadOfTrapping() throws {
+        // A finite but oversized percent would trap when a bar rounds it to Int.
+        let grok = ProviderAccountConfiguration.defaultConfiguration(for: .grok)
+        for percent in ["1e100", "10001"] {
+            let result = try GrokUsageProvider.parseCredits(
+                Data(#"{"config":{"creditUsagePercent":\#(percent),"isUnifiedBillingUser":true,\#(weekly)}}"#.utf8),
+                configuration: grok, subject: "verified-user", now: now, verifiedPlanName: "SuperGrok"
+            )
+            XCTAssertTrue(result.bars.isEmpty, percent)
+            XCTAssertEqual(result.subtitle, "Grok did not report included usage.", percent)
+        }
+        let edge = try parse(#"{"config":{"creditUsagePercent":10000,\#(weekly)}}"#)
+        XCTAssertEqual(edge.bars.first?.usageText, "10000%")
     }
 
     func testInactiveMonthlyOrUnspecifiedPeriodIsNotAWeeklyPool() throws {
@@ -107,7 +125,7 @@ final class XSubscriptionUsageTests: XCTestCase, @unchecked Sendable {
             {"product":"PRODUCT_UNSPECIFIED","usagePercent":5},{"product":"PRODUCT_FUTURE","usagePercent":5},
             {"product":42,"usagePercent":5},{"product":"PRODUCT_API","usagePercent":-3},
             {"product":"PRODUCT_GROK_VOICE","usagePercent":"bad"},{"usagePercent":5},null,7,
-            {"product":"PRODUCT_GROK_IMAGINE","usagePercent":1e999}]
+            {"product":"PRODUCT_GROK_IMAGINE","usagePercent":1e999},{"product":"PRODUCT_GROK_TASKS","usagePercent":1e100}]
             """#
         let result = try parse(#"{"config":{"creditUsagePercent":30,\#(weekly),"productUsage":\#(products)}}"#)
         XCTAssertEqual(result.bars.count, 1)

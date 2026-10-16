@@ -36,7 +36,7 @@ extension GrokUsageProvider {
         // report a SuperGrok tier. Such a tier only leaves the plan pill unavailable; it never blocks the pool.
         let plan = unifiedPlan(verifiedPlanName)
         let window = activeWeeklyWindow(config.currentPeriod, now: now)
-        let percent = config.creditUsagePercent.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
+        let percent = reportedPercent(config.creditUsagePercent)
         // Same first-party CLI convention as Grok, restricted to a verified unified plan.
         let inferredZero = percent == nil && plan != nil && window != nil && omitsUsage(data)
         let bar = window.flatMap { window in
@@ -92,7 +92,7 @@ extension GrokUsageProvider {
         var seen = Set<String>()
         return entries.compactMap { entry in
             guard let product = entry.product, let name = productNames[product], seen.insert(product).inserted,
-                  let percent = entry.usagePercent, percent.isFinite, percent > 0 else { return nil }
+                  let percent = reportedPercent(entry.usagePercent), percent > 0 else { return nil }
             let displayed = percent < 1 ? 1 : percent
             return ProviderCardInformationItem(
                 id: "\(XSubscriptionCopy.productSectionID).\(product.lowercased())",

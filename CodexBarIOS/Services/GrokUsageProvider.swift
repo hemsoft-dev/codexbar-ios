@@ -315,7 +315,7 @@ public final class GrokUsageProvider: UsageProvider {
         let activePeriod = supportedPeriod && start != nil && end != nil
             && start! <= now && end! > now
         let percent = config.creditUsagePercent
-        let hasPercent = percent != nil && percent!.isFinite && percent! >= 0
+        let hasPercent = reportedPercent(percent) != nil
         // The first-party CLI renders an omitted percent as zero. Restrict that fallback to a
         // verified paid tier and an active shared weekly pool with no other reported usage.
         let inferredZero = !hasPercent && knownPlan(verifiedPlanName) != nil
@@ -364,6 +364,15 @@ public final class GrokUsageProvider: UsageProvider {
     /// A saved Grok account keeps its data; CodexBar never moves or deletes it on its own.
     static let unifiedAccountPointer = "This xAI account reports an X Subscription plan. Add an X Subscription account "
         + "to see its shared weekly pool once."
+
+    /// Accepts a usage percentage only within a renderable range. Oversized finite values such as `1e100`
+    /// would trap when a bar rounds them to `Int`, so they stay unavailable instead of becoming a meter.
+    static func reportedPercent(_ value: Double?) -> Double? {
+        guard let value, value.isFinite, value >= 0, value <= maximumReportedPercent else { return nil }
+        return value
+    }
+
+    static let maximumReportedPercent: Double = 10_000
 
     static func identityHash(_ subject: String) -> String {
         Data(SHA256.hash(data: Data(subject.utf8))).base64EncodedString()
