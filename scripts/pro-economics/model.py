@@ -7,6 +7,7 @@ the decided US base prices; all other defaults are labeled estimates in the plan
 Run: python3 scripts/pro-economics/model.py --scenario all
 """
 import argparse
+import math
 
 PRICES = {"monthly": 1.99, "yearly": 14.99, "lifetime": 29.99}  # Decided US base prices.
 
@@ -50,9 +51,18 @@ def main():
     parser.add_argument("--commission", type=float, default=0.15, help="Apple commission: 0.15 SBP, 0.30 standard.")
     args = parser.parse_args()
 
-    shares = [float(value) for value in args.mix.split(",")]
-    if len(shares) != 3 or abs(sum(shares) - 1.0) > 1e-9 or min(shares) < 0:
-        parser.error("--mix needs three non-negative shares that sum to 1")
+    try:
+        shares = [float(value) for value in args.mix.split(",")]
+    except ValueError:
+        parser.error("--mix needs three numbers, for example 0.40,0.45,0.15")
+    if len(shares) != 3 or not all(math.isfinite(v) and v >= 0 for v in shares) or abs(sum(shares) - 1.0) > 1e-9:
+        parser.error("--mix needs three finite, non-negative shares that sum to 1")
+    if args.downloads is not None and not (math.isfinite(args.downloads) and args.downloads >= 0):
+        parser.error("--downloads must be a finite, non-negative count")
+    for name, value in [("--conversion", args.conversion), ("--monthly-churn", args.monthly_churn),
+                        ("--commission", args.commission)]:
+        if value is not None and not (math.isfinite(value) and 0 <= value <= 1):
+            parser.error(f"{name} must be a fraction between 0 and 1, for example 0.15 for 15%")
     mix = dict(zip(["monthly", "yearly", "lifetime"], shares))
     names = list(SCENARIOS) if args.scenario == "all" else [args.scenario]
 

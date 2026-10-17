@@ -31,7 +31,7 @@ Apple claims link to official Apple pages, checked on October 16, 2026. Where Ap
 | Pro | Unlimited providers and accounts, widgets, the watch app, full history and alerts. |
 | Prices (US base) | US$1.99/month, US$14.99/year, US$29.99 one-time lifetime unlock. |
 | Trial | 7-day free trial on the yearly plan only. |
-| Original purchasers | Lifetime Pro, including Family Sharing members of the original paid app. |
+| Original purchasers | Lifetime Pro, including Family Sharing members of the original paid app. This plan narrows the family promise to members who install before the cutover `T`, pending Franz's approval (decision 6). |
 | Family Sharing on new Pro products | Off at launch. |
 | Downgrade | Accounts beyond the free limit stop refreshing. Credentials and settings are kept, and the user picks the active account. |
 | Release | Version 2.0.0, as soon as implementation and App Store setup are ready. |
@@ -40,11 +40,14 @@ Apple claims link to official Apple pages, checked on October 16, 2026. Where Ap
 
 ## Entitlement model
 
-CodexBar has no server, so every Pro check runs on the device with StoreKit 2. There are three sources:
+CodexBar has no server, so every Pro check runs on the device with StoreKit 2. There are four sources:
 
 1. **`AppTransaction`**: proves the original download and identifies original purchasers ([AppTransaction](https://developer.apple.com/documentation/storekit/apptransaction)).
 2. **`Transaction.currentEntitlements`**: the active subscription or lifetime unlock. It lists non-consumables and subscriptions that are subscribed or in billing grace, and leaves out refunded or revoked products ([currentEntitlements](https://developer.apple.com/documentation/storekit/transaction/currententitlements)).
 3. **`Transaction.updates`**: a listener started at launch that applies renewals, refunds, revocations and purchases made on another device ([updates](https://developer.apple.com/documentation/storekit/transaction/updates)).
+4. **`Product.SubscriptionInfo.Status`** for the subscription group: the renewal state, read at launch and observed through its status update sequence ([Subscription status](https://developer.apple.com/documentation/storekit/product/subscriptioninfo/status-swift.struct)). Its verified `renewalInfo` is the only source for billing retry, the grace-period end and `willAutoRenew`. `currentEntitlements` shows access but not why, so it can't tell a grace-period subscriber from an ordinary one.
+
+Every verified transaction is **finished** with `Transaction.finish()` once the entitlement has been saved to the cache and published. This applies to transactions from `Product.purchase()` and from the updates listener. StoreKit redelivers unfinished transactions at every launch ([finish()](https://developer.apple.com/documentation/storekit/transaction/finish%28%29)). Unverified transactions are never finished as granted.
 
 Only **verified** results grant Pro. StoreKit checks the JWS signature on the device without a network connection ([WWDC21: Meet StoreKit 2](https://developer.apple.com/videos/play/wwdc2021/10114/)). An unverified result never grants Pro and offers a restore button, following Apple's guidance ([WWDC22: What's new with in-app purchase](https://developer.apple.com/videos/play/wwdc2022/10007/)).
 
@@ -66,8 +69,8 @@ It is cached in the App Group (`group.com.hemsoft.CodexBarIOS`) so widgets and t
 | Yearly | Active yearly entitlement | Yes | Pro; renewal date in Settings |
 | Lifetime | Verified lifetime non-consumable | Yes | Pro, with no renewal |
 | Original purchaser | `AppTransaction` qualifies (see next section) | Yes, permanently | Pro, plus a one-time "Thanks for buying CodexBar: you have lifetime Pro" notice |
-| Billing grace | Renewal info shows billing retry with a `gracePeriodExpirationDate` in the future ([isInBillingRetry](https://developer.apple.com/documentation/storekit/product/subscriptioninfo/renewalinfo/isinbillingretry)) | Yes, until the grace period ends | Pro, plus a banner that links to Apple's subscription management to fix the payment |
-| Billing retry without grace | Billing retry and no grace date | No | Free tier, plus the same payment banner. Pro returns automatically if Apple recovers the payment. |
+| Billing grace | Subscription status is `.inGracePeriod`, or its renewal info shows billing retry with a `gracePeriodExpirationDate` in the future ([isInBillingRetry](https://developer.apple.com/documentation/storekit/product/subscriptioninfo/renewalinfo/isinbillingretry)) | Yes, until the grace period ends | Pro, plus a banner that links to Apple's subscription management to fix the payment |
+| Billing retry without grace | Subscription status is `.inBillingRetryPeriod`, with no grace date | No | Free tier, plus the same payment banner. Pro returns automatically if Apple recovers the payment. |
 | Expired | Subscription past `expirationDate` and not renewed | No | Free tier; downgrade rules apply |
 | Refunded or revoked | Product drops out of `currentEntitlements`, or `Transaction.updates` delivers a `revocationDate` | No, from the next update | Free tier; downgrade rules apply. Original-purchaser status is lost only if Apple revokes the original app purchase. |
 | Offline startup | StoreKit cannot refresh | See below | Last verified state, within limits |
@@ -89,7 +92,11 @@ StoreKit keeps signed transactions on the device. How long they stay readable wi
 - Nobody can be charged twice:
   - The paywall hides the lifetime purchase and the subscriptions while the user already has Pro for any reason.
   - Monthly and yearly are in one subscription group, so Apple allows only one active subscription in it.
-  - Buying lifetime while subscribed is allowed only from the Settings "Switch to lifetime" row. That row first explains how to cancel the subscription in Apple's settings.
+  - A subscriber can buy lifetime only from the Settings "Switch to lifetime" row, and only once the subscription will not renew: the verified `renewalInfo.willAutoRenew` is `false`.
+    - While auto-renew is still on, the row's buy button is disabled. It says "Turn off auto-renew first" and opens Apple's subscription management sheet.
+    - When auto-renew is off, the row shows the date the subscription ends and states that the paid period isn't refunded. Only then can the user buy lifetime.
+
+    The worst case is overlapping access for time that was already paid, never another subscription charge after the lifetime purchase.
 
 ## Recognizing original purchasers
 
@@ -112,8 +119,9 @@ On iOS, `originalAppVersion` is the **build number** (`CFBundleVersion`), not th
 A user is an original purchaser when all of these hold:
 
 1. `AppTransaction.shared` is **verified**.
-2. `environment == .production`. In the sandbox, which also covers TestFlight and App Review, `originalAppVersion` is always `1.0` and `originalPurchaseDate` is always 2013-08-01. Without this check every tester and reviewer would get lifetime Pro and nobody could test the paywall.
-3. **Either** check passes:
+2. The app transaction has **no `revocationDate`**. A refunded or revoked app purchase never qualifies.
+3. `environment == .production`. In the sandbox, which also covers TestFlight and App Review, `originalAppVersion` is always `1.0` and `originalPurchaseDate` is always 2013-08-01. Without this check every tester and reviewer would get lifetime Pro and nobody could test the paywall.
+4. **Either** check passes:
    - **Build:** `originalAppVersion`, parsed as an integer, is `≤ 4`. Compare numbers, not strings: Apple's sample compares strings, which would put `"10"` before `"4"`.
    - **Date:** `originalPurchaseDate` is before the **cutover instant** compiled into 2.0. That instant is the end of the paid era (see the next section).
 
@@ -136,11 +144,19 @@ A version string that isn't a plain integer, such as a marketing-style `1.4.0`, 
 | Bought 1.x, reinstalls or moves to a new device | Original purchaser. The purchase date and original version survive a reinstall. |
 | Bought 2.0 at US$3.99 before the price change | Original purchaser, through the date check. |
 | Free download of 2.0 | Not an original purchaser; free tier. |
-| Original purchase refunded | If the `AppTransaction` shows a revocation, Pro is removed. Whether Apple surfaces app-purchase refunds this way is **unverified**; without a revocation the user keeps Pro. Being generous here costs one user, while being strict could lock out a paying customer. |
-| Family Sharing member of the original paid app | Intended: lifetime Pro. **Unverified:** whether a family member's `AppTransaction` carries the organizer's purchase date or their own download date. The safest assumption is their own download date, and Franz confirms with a family account after launch. A member who downloaded before the cutover qualifies through either check. A member who first downloads after the price change does not, and support can send a lifetime offer code (below). |
+| Original purchase refunded | The rule requires no `revocationDate`, so a revoked app transaction never qualifies, and Pro is removed when StoreKit reports the revocation. Whether Apple sets `revocationDate` for every app-purchase refund is **unverified**. If it doesn't, the user keeps Pro: being generous here costs one user, while being strict could lock out a paying customer. |
+| Family Sharing member of the original paid app | Lifetime Pro, **for members who install CodexBar before `T`**. **Unverified:** whether a family member's `AppTransaction` carries the organizer's purchase date or their own download date. The plan assumes their own download date. After the price change, a family member's free download can't be told apart from anyone else's on the device, and CodexBar has no server to check family membership. So the plan closes the gap before `T` instead (see [Family Sharing members](#family-sharing-members)). A member who first installs after `T` gets the free tier unless support sends a lifetime offer code. Franz must accept this narrowed promise (see [Decisions still needed](#decisions-still-needed-from-franz)). |
 | Sandbox, TestFlight, Xcode or App Review | Never an original purchaser. Debug builds get a developer-only override for testing. |
 | Mac or Vision Pro install of the iPhone app | Same rule. Original version strings that aren't integers go through the marketing-version comparison. |
 | `AppTransaction` unavailable (signed out, offline on first launch) | Free tier, plus "Restore Purchases" to call `refresh()`. A cached verified decision still applies. |
+
+### Family Sharing members
+
+Members who install CodexBar through Family Sharing before `T` pass the date check, and also the build check if they installed 1.x. To get as many members as possible to install in time:
+
+- The one-time 2.0 thank-you notice for original purchasers says: "Family members can get lifetime Pro too: have them install CodexBar from the App Store before <T, local date>."
+- The 2.0 What's New text and the App Store promotional text repeat this until `T`.
+- `SUPPORT.md` explains the cutoff and the offer-code route for members who missed it.
 
 ### Support fallback
 
@@ -160,7 +176,7 @@ So the sequence keeps the paid price until 2.0 is live everywhere, then drops th
    - Set the release option to **Manual release**.
    - Turn phased release **off**. Phased release only delays automatic updates, and new downloads always get the current version ([phased release](https://developer.apple.com/help/app-store-connect/update-your-app/release-a-version-update-in-phases/)).
    - Keep the price at US$3.99.
-3. **When 2.0 is approved,** release it manually. Wait at least **48 hours**, and confirm in several storefronts that the App Store serves 2.0.
+3. **When 2.0 is approved,** release it manually, but only if at least **6 days** remain before `T`. That leaves 48 hours for the release to reach every storefront, 72 hours for the price change, and a day of margin. Wait the 48 hours, and confirm in several storefronts that the App Store serves 2.0.
 4. **Schedule the price change to Free** to take effect **before `T` in every storefront**. Recommendation: about 72 hours before `T`, so the latest-starting region is also free well before `T`.
    - Paid downloads in that window pass the date check and get Pro.
    - Free downloads in that window also pass the date check. That's a deliberate, short giveaway, and much cheaper than refusing a paying customer.
@@ -168,11 +184,17 @@ So the sequence keeps the paid price until 2.0 is live everywhere, then drops th
    - Verify the free download path, the paywall, the trial and Restore on a production device.
    - Franz confirms that an existing 1.x purchase on his device shows lifetime Pro.
 
-**If 2.0 isn't live at least 5 days before `T`,** don't change the price. Ship 2.0.1 with a later `T` first. The price must never go free while the App Store is still serving 1.4.0, and it must never go free after `T`.
+**If approval comes too late,** with fewer than 6 days left before `T`, don't release 2.0. Reject the approved build while it is Pending Developer Release, upload a build of 2.0 with a later `T`, and resubmit. Apple requires a version to be Ready for Distribution before a new version can be created ([create a new version](https://developer.apple.com/help/app-store-connect/update-your-app/create-a-new-version)), so this has to be a replacement build of 2.0, not a 2.0.1.
+
+Because releasing 2.0 and changing the price are both manual, three rules close the sequence:
+
+- **The price never goes free while the App Store still serves 1.4.0.** The 48-hour wait and storefront checks cover this.
+- **The price never goes free after `T`.** The price change is always scheduled before `T`.
+- **2.0 is never sold at US$3.99 after `T`.** Releasing only with at least 6 days left keeps paid 2.0 buyers on the date check.
 
 ### Rollback
 
-- **Before the price change:** keep the US$3.99 price. 2.0 already treats every buyer as an original purchaser, so nothing is lost. A blocking bug can be fixed with 2.0.1, or by removing 2.0 from sale and re-releasing.
+- **Before the price change:** paid 2.0 buyers qualify through the date check until `T`, so nothing is lost before then. If the price change has to be postponed past `T`, stop selling at `T`: remove the app from sale until a 2.0.1 with a later `T` is live. Otherwise, people who pay for 2.0 after `T` would fail both checks. A blocking bug can be fixed with 2.0.1, because 2.0 is then Ready for Distribution.
 - **After the price change:**
   - Pricing can return to US$3.99, but people who downloaded for free stay free-tier users. That is correct, because they never paid.
   - If original purchasers are wrongly denied, ship a fix and send a free lifetime offer code to anyone who writes to support.
@@ -228,7 +250,9 @@ There are no launch-time interstitials and no repeated nags.
 
 - **Subscription group** "CodexBar Pro", with two subscriptions:
   - `com.hemsoft.CodexBarIOS.pro.yearly`: level 1, US$14.99, 7-day free introductory offer;
-  - `com.hemsoft.CodexBarIOS.pro.monthly`: level 2, US$1.99.
+  - `com.hemsoft.CodexBarIOS.pro.monthly`: also level 1, US$1.99.
+
+  Both unlock the same features, so they share one level. Switching between them is a crossgrade that takes effect at the next renewal, not an upgrade or downgrade ([auto-renewable subscription information](https://developer.apple.com/help/app-store-connect/reference/in-app-purchases-and-subscriptions/auto-renewable-subscription-information/)).
 
   A customer can redeem one introductory offer per group, so the yearly-only trial works as decided ([introductory offers](https://developer.apple.com/help/app-store-connect/manage-subscriptions/set-up-introductory-offers-for-auto-renewable-subscriptions/)). The app checks `isEligibleForIntroOffer` and shows trial wording only when it returns true.
 - **Non-consumable** `com.hemsoft.CodexBarIOS.pro.lifetime`: US$29.99. Subscriptions can be offered alongside one-time purchases (guideline 3.1.2(a)).
@@ -253,7 +277,7 @@ There are no launch-time interstitials and no repeated nags.
 | `PRIVACY.md` | New "Purchases" section: Apple processes payments, and CodexBar only checks entitlements on the device. Its App Group cache holds the plan state, not purchase or account identifiers. There is no server, analytics or ads. |
 | App Privacy label | Stays **Data Not Collected**. Data processed only on the device isn't "collected", and developers aren't responsible for disclosing data Apple collects ([App Privacy Details](https://developer.apple.com/app-store/app-privacy-details/)). |
 | `CHANGELOG.md` | `2.0.0 - Unreleased` describes the free tier, CodexBar Pro, and lifetime Pro for original purchasers. Add it only when it ships, never as a promise. |
-| Original purchasers | A one-time in-app notice on first 2.0 launch: "Thanks for buying CodexBar. You have lifetime Pro: nothing to do." The 2.0 What's New text says the same. |
+| Original purchasers | A one-time in-app notice on first 2.0 launch: "Thanks for buying CodexBar. You have lifetime Pro: nothing to do." Until `T`, it also asks them to have family members install CodexBar before the cutover date. The 2.0 What's New text says the same. |
 | `SUPPORT.md` | How to restore, how original purchasers are recognized, and how to ask for help if Pro is missing |
 
 ## Economics
@@ -333,8 +357,8 @@ Measured from App Store Connect (App Analytics, Sales and Trends, subscription r
 
 Each is a bounded issue with its own PR. The arrows show dependencies.
 
-1. **StoreKit 2 entitlement service:** `ProEntitlement` state, verification, `Transaction.updates` listener, App Group cache, offline rules, debug override, and a StoreKit configuration file for local tests. Unit tests use an injected transaction source, because the sandbox can't produce production `AppTransaction` values.
-2. **Original-purchaser detection** (→1): the build-or-date rule, the production-only check, integer and marketing-version parsing, the compiled cutover instant, and the one-time thank-you notice.
+1. **StoreKit 2 entitlement service:** `ProEntitlement` state, verification, the `Transaction.updates` listener and the subscription status updates listener, `Transaction.finish()` after the entitlement is saved and published, App Group cache, offline rules, debug override, and a StoreKit configuration file for local tests. Unit tests use an injected transaction source, because the sandbox can't produce production `AppTransaction` values.
+2. **Original-purchaser detection** (→1): the build-or-date rule, the non-revoked and production-only checks, integer and marketing-version parsing, the compiled cutover instant, and the one-time thank-you notice, including the Family Sharing install-before-`T` message.
 3. **Free-tier limits and downgrade** (→1):
    - the account limit at Add Account;
    - the refresh predicate and the "paused by plan" state with `freeActiveAccountID`;
@@ -365,7 +389,8 @@ UI issues (3, 4 and 5) need current-head screenshots in their PRs of the free, P
 3. **Offline allowance:** 3 days past a subscription's signed expiry is proposed.
 4. **GitHub status notices:** stay free, as proposed. Say if they should be Pro.
 5. **codexbar.net:** register and publish before launch, or leave it out of 2.0.
-6. **Family Sharing check:** after launch, confirm with a family member's device that original-purchaser Pro carries over. This check is pending for Franz.
+6. **Family Sharing promise:** accept that lifetime Pro for family members of original purchasers covers **members who install CodexBar before `T`**, with offer codes from support for anyone who misses it. On the device, after the price change, a family member's free download looks the same as any other free download, and CodexBar has no server to check family membership.
+7. **Family Sharing check:** after launch, confirm with a family member's device that original-purchaser Pro carries over. This check is pending for Franz.
 
 ## Sources
 
@@ -376,11 +401,12 @@ Apple, checked October 16, 2026:
   - [Supporting business model changes by using the app transaction](https://developer.apple.com/documentation/storekit/supporting-business-model-changes-by-using-the-app-transaction)
   - [Transaction.currentEntitlements](https://developer.apple.com/documentation/storekit/transaction/currententitlements), [Transaction.updates](https://developer.apple.com/documentation/storekit/transaction/updates)
   - [RenewalInfo.isInBillingRetry](https://developer.apple.com/documentation/storekit/product/subscriptioninfo/renewalinfo/isinbillingretry), [isEligibleForIntroOffer](https://developer.apple.com/documentation/storekit/product/subscriptioninfo/iseligibleforintrooffer)
+  - [Subscription status](https://developer.apple.com/documentation/storekit/product/subscriptioninfo/status-swift.struct), [Transaction.finish()](https://developer.apple.com/documentation/storekit/transaction/finish%28%29)
   - [AppStore.sync()](https://developer.apple.com/documentation/storekit/appstore/sync()), [Supporting Family Sharing in your app](https://developer.apple.com/documentation/storekit/supporting-family-sharing-in-your-app)
 - App Store Connect Help
   - Pricing: [Schedule price changes](https://developer.apple.com/help/app-store-connect/manage-app-pricing/schedule-price-changes-for-apps/), [regional start times](https://developer.apple.com/help/app-store-connect/reference/app-store-pricing-and-availability-start-times-by-region/), [Set a price](https://developer.apple.com/help/app-store-connect/manage-app-pricing/set-a-price)
-  - Releases: [release options](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/select-an-app-store-version-release-option/), [phased release](https://developer.apple.com/help/app-store-connect/update-your-app/release-a-version-update-in-phases/)
-  - Subscriptions: [introductory offers](https://developer.apple.com/help/app-store-connect/manage-subscriptions/set-up-introductory-offers-for-auto-renewable-subscriptions/), [billing grace period](https://developer.apple.com/help/app-store-connect/manage-subscriptions/enable-billing-grace-period-for-auto-renewable-subscriptions), [subscription pricing](https://developer.apple.com/help/app-store-connect/manage-subscriptions/manage-pricing-for-auto-renewable-subscriptions/)
+  - Releases: [create a new version](https://developer.apple.com/help/app-store-connect/update-your-app/create-a-new-version), [release options](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/select-an-app-store-version-release-option/), [phased release](https://developer.apple.com/help/app-store-connect/update-your-app/release-a-version-update-in-phases/)
+  - Subscriptions: [auto-renewable subscription information](https://developer.apple.com/help/app-store-connect/reference/in-app-purchases-and-subscriptions/auto-renewable-subscription-information/), [introductory offers](https://developer.apple.com/help/app-store-connect/manage-subscriptions/set-up-introductory-offers-for-auto-renewable-subscriptions/), [billing grace period](https://developer.apple.com/help/app-store-connect/manage-subscriptions/enable-billing-grace-period-for-auto-renewable-subscriptions), [subscription pricing](https://developer.apple.com/help/app-store-connect/manage-subscriptions/manage-pricing-for-auto-renewable-subscriptions/)
   - In-app purchases: [Family Sharing](https://developer.apple.com/help/app-store-connect/configure-in-app-purchase-settings/turn-on-family-sharing-for-in-app-purchases/), [submit an in-app purchase](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-in-app-purchase/), [in-app purchase information](https://developer.apple.com/help/app-store-connect/reference/in-app-purchases-and-subscriptions/in-app-purchase-information)
 - Policy
   - [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/) (3.1.1, 3.1.2, 2.5.18)
