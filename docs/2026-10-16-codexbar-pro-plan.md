@@ -36,7 +36,7 @@ Apple claims link to official Apple pages, checked on October 16, 2026. Where Ap
 | Downgrade | Accounts beyond the free limit stop refreshing. Credentials and settings are kept, and the user picks the active account. |
 | Release | Version 2.0.0, as soon as implementation and App Store setup are ready. |
 | Terms | Apple's standard EULA. |
-| Small Business Program | Franz publishes as an individual, which qualifies. Enroll before 2.0 ships. |
+| Small Business Program | Franz publishes as an individual, and individual developers can enroll. Eligibility itself is **unresolved**: it depends on proceeds of US$1M or less in the prior calendar year across the account and every associated developer account, plus the other program terms. Franz confirms eligibility and enrolls before 2.0 ships. Until then, the economics show both commission rates. |
 
 ## Entitlement model
 
@@ -119,7 +119,7 @@ On iOS, `originalAppVersion` is the **build number** (`CFBundleVersion`), not th
 A user is an original purchaser when all of these hold:
 
 1. `AppTransaction.shared` is **verified**.
-2. The app transaction has **no `revocationDate`**. A refunded or revoked app purchase never qualifies.
+2. The app transaction has **no [`revocationDate`](https://developer.apple.com/documentation/storekit/apptransaction/revocationdate)** ("The revocation date of the app purchase", iOS 16+). A refunded or revoked app purchase never qualifies.
 3. `environment == .production`. In the sandbox, which also covers TestFlight and App Review, `originalAppVersion` is always `1.0` and `originalPurchaseDate` is always 2013-08-01. Without this check every tester and reviewer would get lifetime Pro and nobody could test the paywall.
 4. **Either** check passes:
    - **Build:** `originalAppVersion`, parsed as an integer, is `≤ 4`. Compare numbers, not strings: Apple's sample compares strings, which would put `"10"` before `"4"`.
@@ -154,7 +154,7 @@ A version string that isn't a plain integer, such as a marketing-style `1.4.0`, 
 
 Members who install CodexBar through Family Sharing before `T` pass the date check, and also the build check if they installed 1.x. To get as many members as possible to install in time:
 
-- The one-time 2.0 thank-you notice for original purchasers says: "Family members can get lifetime Pro too: have them install CodexBar from the App Store before <T, local date>."
+- The one-time 2.0 thank-you notice for original purchasers says: "Family members can get lifetime Pro too: have them install CodexBar from the App Store before <T as local date, time and time zone, for example "Friday, November 6 at 7:00 PM EST">." `T` at 00:00 UTC falls partway through the local day in most time zones, so a date alone would be ambiguous.
 - The 2.0 What's New text and the App Store promotional text repeat this until `T`.
 - `SUPPORT.md` explains the cutoff and the offer-code route for members who missed it.
 
@@ -396,7 +396,7 @@ UI issues (3, 4 and 5) need current-head screenshots in their PRs of the free, P
 
 ## Decisions still needed from Franz
 
-1. **Small Business Program:** confirm enrollment, or apply as Account Holder.
+1. **Small Business Program:** confirm eligibility (US$1M or less in prior-year proceeds across this and any associated developer accounts) and enrollment, or apply as Account Holder. Until confirmed, the 30% table is the conservative case.
 2. **Cutover instant `T`:** pick it once a submission date is known. The default is submission plus about 10 days, at 00:00 UTC.
 3. **Offline allowance:** 3 days past a subscription's signed expiry is proposed.
 4. **GitHub status notices:** stay free, as proposed. Say if they should be Pro.
