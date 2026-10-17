@@ -194,9 +194,9 @@ Because releasing 2.0 and changing the price are both manual, three rules close 
 
 ### Rollback
 
-- **Before the price change:** paid 2.0 buyers qualify through the date check until `T`, so nothing is lost before then. If the price change has to be postponed past `T`, stop selling at `T`: remove the app from sale until a 2.0.1 with a later `T` is live. Otherwise, people who pay for 2.0 after `T` would fail both checks. A blocking bug can be fixed with 2.0.1, because 2.0 is then Ready for Distribution.
+- **Before the price change:** paid 2.0 buyers qualify through the date check until `T`, so nothing is lost before then. If the price change has to be postponed past `T`, **remove the app from sale at least 48 hours before `T`**. Removal can take up to 24 hours to take effect ([manage availability](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store)), so confirm in several storefronts that the app can't be bought before `T` arrives. Keep it off sale until a 2.0.1 with a later `T` is live. Otherwise, people who pay for 2.0 after `T` would fail both checks. A blocking bug can be fixed with 2.0.1, because 2.0 is then Ready for Distribution.
 - **After the price change:**
-  - Pricing can return to US$3.99, but people who downloaded for free stay free-tier users. That is correct, because they never paid.
+  - Pricing can return to US$3.99, but grants that already happened stay. Free downloads before `T` passed the date check and keep lifetime Pro, the deliberate giveaway from step 4. Free downloads after `T` stay free-tier users. Paid downloads after `T` are only possible if the price went back up after `T`, so a price restore after `T` also needs a 2.0.1 with a later `T`, or else those buyers get a support offer code.
   - If original purchasers are wrongly denied, ship a fix and send a free lifetime offer code to anyone who writes to support.
   - Pro products can be removed from sale. Existing subscribers keep access until expiry; Apple handles that.
 
@@ -209,9 +209,9 @@ Because releasing 2.0 and changing the price are both manual, three rules close 
 | Accounts | One active account, of any provider, chosen by the user | Unlimited | `ProviderConfigurationStore.addAccount` and the Add Account flow (`SettingsView` `AddAccountFlowState.select`, the Greptile add path), plus one refresh predicate in `UsageRefreshService` (`performRefresh`, `refresh(configuration:)`, `updateCurrentConfigurations`) |
 | Dashboard and cards | Yes | Yes | Not gated |
 | History | Last 7 days | Full: Today, 3D, 7D, 1M, 3M | `UsageHistoryRange` picker and `filtered(to:)`. 1M and 3M show as locked segments. Stored data isn't deleted, so upgrading shows it right away. |
-| Widgets | Locked placeholder: "Unlock widgets with CodexBar Pro" | Live | The phone publisher writes a locked flag to the App Group, and `CodexBarWidgetView` renders the locked state. The gallery preview stays as it is. |
-| Watch app and complications | Locked state: "Unlock the watch app with CodexBar Pro on iPhone" | Live | `WatchSnapshotPublisher` sends an explicit locked snapshot. It doesn't simply stop sending, which would leave stale data on the watch. |
-| Usage alerts | Off; the toggle opens the Pro screen | Yes | `DashboardOrchestrator.processUsageAlerts` |
+| Widgets | Locked placeholder: "Unlock widgets with CodexBar Pro" | Live | The phone publisher writes a locked flag and the same `proAccessEndsAt` to the App Group. `CodexBarWidgetView` renders the locked state, and the timeline adds a locked entry at `proAccessEndsAt` so the widget locks on time without the app. The gallery preview stays as it is. |
+| Watch app and complications | Locked state: "Unlock the watch app with CodexBar Pro on iPhone" | Live | `WatchSnapshotPublisher` sends an explicit locked snapshot. It doesn't simply stop sending, which would leave stale data on the watch. Every Pro snapshot also carries the entitlement's access end (`proAccessEndsAt`: the subscription or trial expiry plus any grace period, or none for lifetime and original purchasers). The watch switches to the locked state on its own when that time passes, even if the iPhone app never runs again. |
+| Usage alerts | Off; the toggle opens the Pro screen | Yes | Both alert paths: `DashboardOrchestrator.processUsageAlerts` (notifications) and `currentUsageAlertsByAccountID` (in-app alert badges). The user's saved alert settings are kept for a later upgrade. |
 | GitHub status notices | Yes | Yes | Not gated. These are service-health notices, not usage features. |
 | Subscription renewal pills and resets | Yes, for the active account | Yes | Not gated |
 
@@ -223,6 +223,12 @@ Downgrade happens when Pro ends: on expiry, refund or revocation, or the end of 
 
 - Use a **separate, derived "paused by plan" state**. Never write the account's `isEnabled` flag. The user's own Enabled choices must survive a downgrade and an upgrade unchanged.
 - A new stored value, `freeActiveAccountID`, records the user's choice. If it isn't set, the first visible enabled account in dashboard order is the default.
+- `freeActiveAccountID` is checked again after every account is removed, reset or disabled (`removeAccounts`, `resetAccounts`, the Enabled toggle). If it no longer names a visible enabled account:
+  - with one candidate left, that account becomes active automatically;
+  - with several, the chooser sheet opens again, and the first visible enabled account refreshes until the user chooses;
+  - with none, nothing refreshes and Add Account works normally.
+
+  A free user always has an active account whenever one is eligible.
 - The next time the app opens after a downgrade, a one-time sheet asks the user to **choose the account that keeps refreshing**. It lists every account with its last known values.
 - Paused accounts:
   - keep their credentials, metric choices, order and history;
@@ -364,8 +370,9 @@ Each is a bounded issue with its own PR. The arrows show dependencies.
    - the refresh predicate and the "paused by plan" state with `freeActiveAccountID`;
    - the account chooser sheet;
    - the history range lock;
-   - the alerts gate.
-4. **Widget and watch Pro states** (→1): the locked widget view and the locked watch snapshot and view, with the gallery preview unchanged.
+   - the alerts gate on both notifications and in-app alert badges;
+   - revalidating `freeActiveAccountID` after account removal, reset or disabling.
+4. **Widget and watch Pro states** (→1): the locked widget view and the locked watch snapshot and view, with the gallery preview unchanged. Both carry `proAccessEndsAt` and lock on their own when it passes.
 5. **Pro screen, restore and Settings** (→1):
    - the Pro screen with the three products;
    - trial eligibility and the required disclosures;

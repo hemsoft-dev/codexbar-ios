@@ -41,6 +41,11 @@ def simulate(downloads, conversion, mix, monthly_churn, commission, months=12):
     return total, final_month
 
 
+def number(value):
+    """Whole values print without decimals; fractional inputs keep up to two decimals."""
+    return f"{value:,.0f}" if float(value).is_integer() else f"{value:,.2f}".rstrip("0").rstrip(".")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--scenario", choices=[*SCENARIOS, "all"], default="all")
@@ -75,7 +80,7 @@ def main():
         conversion = args.conversion if args.conversion is not None else conversion
         total, final = simulate(downloads, conversion, mix, args.monthly_churn, args.commission)
         print(
-            f"| {name} | {downloads:,.0f} | {conversion:.0%} | {downloads * conversion:,.0f} "
+            f"| {name} | {number(downloads)} | {number(conversion * 100)}% | {number(downloads * conversion)} "
             f"| US${total:,.0f} | US${final:,.0f} |"
         )
 
