@@ -89,14 +89,16 @@ StoreKit keeps signed transactions on the device. How long they stay readable wi
 
 - On reinstall or a new device, transactions are available automatically at first launch ([AppStore.sync](https://developer.apple.com/documentation/storekit/appstore/sync())). The `AppTransaction` purchase date also survives a reinstall ([originalPurchaseDate](https://developer.apple.com/documentation/storekit/apptransaction/originalpurchasedate)).
 - Settings and the paywall have a **Restore Purchases** button, as guideline 3.1.1 requires. It calls `AppStore.sync()`. If the `AppTransaction` is missing or unverified, it also calls `AppTransaction.refresh()`, which may show a sign-in prompt. Both are called only after the user taps the button, as Apple instructs ([refresh](https://developer.apple.com/documentation/storekit/apptransaction/refresh())).
-- Nobody can be charged twice:
+- CodexBar never sells a second Pro product to someone who already has Pro:
   - The paywall hides the lifetime purchase and the subscriptions while the user already has Pro for any reason.
   - Monthly and yearly are in one subscription group, so Apple allows only one active subscription in it.
   - A subscriber can buy lifetime only from the Settings "Switch to lifetime" row, and only once the subscription will not renew: the verified `renewalInfo.willAutoRenew` is `false`.
     - While auto-renew is still on, the row's buy button is disabled. It says "Turn off auto-renew first" and opens Apple's subscription management sheet.
     - When auto-renew is off, the row shows the date the subscription ends and states that the paid period isn't refunded. Only then can the user buy lifetime.
 
-    The worst case is overlapping access for time that was already paid, never another subscription charge after the lifetime purchase.
+    This prevents an overlapping charge at the moment of purchase. It can't prevent one later, because Apple lets people change or renew subscriptions in their Apple Account settings, outside CodexBar. So:
+    - Before the lifetime purchase, the confirmation text warns: "If you later restart a CodexBar Pro subscription in your Apple Account settings, Apple will charge for it even though you have lifetime Pro."
+    - After it, whenever StoreKit shows a lifetime unlock alongside a subscription set to auto-renew, Settings > CodexBar Pro shows a banner. The banner says the subscription is no longer needed and opens Apple's subscription management sheet so the user can cancel it. The same banner covers original purchasers who subscribe.
 
 ## Recognizing original purchasers
 
@@ -209,7 +211,7 @@ Because releasing 2.0 and changing the price are both manual, three rules close 
 | --- | --- | --- | --- |
 | Accounts | One active account, of any provider, chosen by the user | Unlimited | `ProviderConfigurationStore.addAccount` and the Add Account flow (`SettingsView` `AddAccountFlowState.select`, the Greptile add path), plus one refresh predicate in `UsageRefreshService` (`performRefresh`, `refresh(configuration:)`, `updateCurrentConfigurations`) |
 | Dashboard and cards | Yes | Yes | Not gated |
-| History | Last 7 days | Full: Today, 3D, 7D, 1M, 3M | `UsageHistoryRange` picker and `filtered(to:)`. 1M and 3M show as locked segments. Stored data isn't deleted, so upgrading shows it right away. |
+| History | Last 7 days | Full: Today, 3D, 7D, 1M, 3M | One entitlement-aware cutoff, applied wherever history is read for display, not only in the picker. That covers the history detail view (`UsageHistoryRange` picker and `filtered(to:)`, where 1M and 3M show as locked segments), the dashboard card sparkline and trend (`ContentView` `historyStore.historySeries`), and the metric detail charts (`ProviderUsageCard.metricDetailHistorySeries`). Stored data isn't deleted, so upgrading shows it right away. |
 | Widgets | Locked placeholder: "Unlock widgets with CodexBar Pro" | Live | The phone publisher writes a locked flag and the same `proAccessEndsAt` to the App Group. `CodexBarWidgetView` renders the locked state, and the timeline adds a locked entry at `proAccessEndsAt` so the widget locks on time without the app. The gallery preview stays as it is. |
 | Watch app and complications | Locked state: "Unlock the watch app with CodexBar Pro on iPhone" | Live | `WatchSnapshotPublisher` sends an explicit locked snapshot. It doesn't simply stop sending, which would leave stale data on the watch. Every Pro snapshot also carries `proAccessEndsAt`. This is the same deadline the app enforces: the subscription or trial expiry, plus any grace period, plus the offline allowance. Lifetime and original purchasers have no deadline. The watch switches to the locked state on its own when that time passes, even if the iPhone app never runs again. |
 | Usage alerts | Off; the toggle opens the Pro screen | Yes | Both alert paths: `DashboardOrchestrator.processUsageAlerts` (notifications) and `currentUsageAlertsByAccountID` (in-app alert badges). The user's saved alert settings are kept for a later upgrade. |
@@ -231,6 +233,7 @@ Downgrade happens when Pro ends: on expiry, refund or revocation, or the end of 
 
   A free user always has an active account whenever one is eligible.
 - The next time the app opens after a downgrade, a one-time sheet asks the user to **choose the account that keeps refreshing**. It lists every account with its last known values.
+- The user can change the choice at any time without deleting or disabling anything. Two places open the same chooser: a **"Change active account"** row in Settings > Accounts, and a **"Make active"** action on any paused card.
 - Paused accounts:
   - keep their credentials, metric choices, order and history;
   - stop refreshing;
@@ -370,13 +373,14 @@ Each is a bounded issue with its own PR. The arrows show dependencies.
 3. **Free-tier limits and downgrade** (→1):
    - the account limit at Add Account;
    - the refresh predicate and the "paused by plan" state with `freeActiveAccountID`;
-   - the account chooser sheet;
-   - the history range lock;
+   - the account chooser sheet, reachable again from Settings > Accounts and from paused cards;
+   - the 7-day history cutoff on every history surface (detail view, dashboard sparkline and trend, metric detail charts);
    - the alerts gate on both notifications and in-app alert badges;
    - revalidating `freeActiveAccountID` after account removal, reset or disabling.
 4. **Widget and watch Pro states** (→1): the locked widget view and the locked watch snapshot and view, with the gallery preview unchanged. Both carry `proAccessEndsAt` and lock on their own when it passes.
 5. **Pro screen, restore and Settings** (→1):
    - the Pro screen with the three products;
+   - the lifetime-plus-subscription warning and the cancel banner;
    - trial eligibility and the required disclosures;
    - Restore Purchases and Manage Subscription;
    - the billing-problem banner;
