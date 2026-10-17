@@ -134,7 +134,7 @@ The two checks are combined with **OR** on purpose:
 
 A free download can't pass either check:
 
-- It always arrives after the price change, so it fails the date check.
+- From `T` on, it fails the date check. Free downloads **between the price change and `T`** do pass it and get lifetime Pro: that is the deliberate giveaway from launch step 4.
 - It always gets build 5 or later, because the launch sequence keeps the price at US$3.99 until 2.0 is the build being served everywhere.
 
 A version string that isn't a plain integer, such as a marketing-style `1.4.0`, is compared as a marketing version below `2.0`. This matters because the app is also available on Mac (Apple silicon) and Vision Pro. On macOS, Apple documents `originalAppVersion` as the marketing version, and it is **unverified** what an iPhone app running on a Mac reports.
@@ -145,7 +145,7 @@ A version string that isn't a plain integer, such as a marketing-style `1.4.0`, 
 | --- | --- |
 | Bought 1.x, reinstalls or moves to a new device | Original purchaser. The purchase date and original version survive a reinstall. |
 | Bought 2.0 at US$3.99 before the price change | Original purchaser, through the date check. |
-| Free download of 2.0 | Not an original purchaser; free tier. |
+| Free download of 2.0 | At or after `T`: not an original purchaser; free tier. Between the price change and `T`: lifetime Pro through the date check, the deliberate giveaway from launch step 4. |
 | Original purchase refunded | The rule requires no `revocationDate`, so a revoked app transaction never qualifies, and Pro is removed when StoreKit reports the revocation. Whether Apple sets `revocationDate` for every app-purchase refund is **unverified**. If it doesn't, the user keeps Pro: being generous here costs one user, while being strict could lock out a paying customer. |
 | Family Sharing member of the original paid app | Lifetime Pro, **for members who install CodexBar before `T`**. **Unverified:** whether a family member's `AppTransaction` carries the organizer's purchase date or their own download date. The plan assumes their own download date. After the price change, a family member's free download can't be told apart from anyone else's on the device, and CodexBar has no server to check family membership. So the plan closes the gap before `T` instead (see [Family Sharing members](#family-sharing-members)). A member who first installs after `T` gets the free tier unless support sends a lifetime offer code. Franz must accept this narrowed promise (see [Decisions still needed](#decisions-still-needed-from-franz)). |
 | Sandbox, TestFlight, Xcode or App Review | Never an original purchaser. Debug builds get a developer-only override for testing. |
@@ -209,7 +209,7 @@ Because releasing 2.0 and changing the price are both manual, three rules close 
 
 | Feature | Free | Pro | Where it is enforced |
 | --- | --- | --- | --- |
-| Accounts | One active account, of any provider, chosen by the user | Unlimited | `ProviderConfigurationStore.addAccount` and the Add Account flow (`SettingsView` `AddAccountFlowState.select`, the Greptile add path), plus one refresh predicate in `UsageRefreshService` (`performRefresh`, `refresh(configuration:)`, `updateCurrentConfigurations`) |
+| Accounts | One active account, of any provider, chosen by the user | Unlimited | One store-level check for every new-account insertion in `ProviderConfigurationStore`: `addAccount`, and the new-account branch of `update`, which importers such as `OpenCodeZenBootstrapImporter.importPayload` use. Above the limit it refuses the insertion and the UI opens the Pro screen. The Add Account flow (`SettingsView` `AddAccountFlowState.select`, the Greptile add path) checks first for a good experience. One refresh predicate in `UsageRefreshService` (`performRefresh`, `refresh(configuration:)`, `updateCurrentConfigurations`) backs this up. |
 | Dashboard and cards | Yes | Yes | Not gated |
 | History | Last 7 days | Full: Today, 3D, 7D, 1M, 3M | One entitlement-aware cutoff, applied wherever history is read for display, not only in the picker. That covers the history detail view (`UsageHistoryRange` picker and `filtered(to:)`, where 1M and 3M show as locked segments), the dashboard card sparkline and trend (`ContentView` `historyStore.historySeries`), and the metric detail charts (`ProviderUsageCard.metricDetailHistorySeries`). Stored data isn't deleted, so upgrading shows it right away. |
 | Widgets | Locked placeholder: "Unlock widgets with CodexBar Pro" | Live | The phone publisher writes a locked flag and the same `proAccessEndsAt` to the App Group. `CodexBarWidgetView` renders the locked state, and the timeline adds a locked entry at `proAccessEndsAt` so the widget locks on time without the app. The gallery preview stays as it is. |
@@ -337,7 +337,13 @@ At 30% commission (`--commission 0.30`):
 | base | US$1,452 | US$133 |
 | high | US$7,258 | US$663 |
 
-Even the low scenario beats the US$197 earned so far. Enrolling in the Small Business Program is worth about 21% more proceeds in every scenario. Download volume and conversion are the inputs to measure first.
+Compare monthly rates, not totals. The paid app has been on sale for about three months: 1.0 build 1 was uploaded on 2026-07-05, and 1.1 went public on 2026-07-16. The US$197 is therefore about **US$60–66 per month**. At 15% commission, the scenarios average US$25 (low), US$147 (base) and US$734 (high) per month over the first year:
+
+- **Low is worse than the paid era.** It's the case to watch for, and a reason to revisit the free-tier limits.
+- **Base is roughly 2.2× the paid era.**
+- **High is about 11×.**
+
+Enrolling in the Small Business Program is worth about 21% more proceeds in every scenario. Download volume and conversion are the inputs to measure first.
 
 ## codexbar.net at launch
 
@@ -371,7 +377,7 @@ Each is a bounded issue with its own PR. The arrows show dependencies.
 1. **StoreKit 2 entitlement service:** `ProEntitlement` state, verification, the `Transaction.updates` listener and the subscription status updates listener, `Transaction.finish()` after the entitlement is saved and published, App Group cache, offline rules, debug override, and a StoreKit configuration file for local tests. Unit tests use an injected transaction source, because the sandbox can't produce production `AppTransaction` values.
 2. **Original-purchaser detection** (→1): the build-or-date rule, the non-revoked and production-only checks, integer and marketing-version parsing, the compiled cutover instant, and the one-time thank-you notice, including the Family Sharing install-before-`T` message.
 3. **Free-tier limits and downgrade** (→1):
-   - the account limit at Add Account;
+   - the account limit enforced in the store for every new-account insertion (`addAccount` and the new-account branch of `update`, including importers), with the Add Account UI checking first;
    - the refresh predicate and the "paused by plan" state with `freeActiveAccountID`;
    - the account chooser sheet, reachable again from Settings > Accounts and from paused cards;
    - the 7-day history cutoff on every history surface (detail view, dashboard sparkline and trend, metric detail charts);
