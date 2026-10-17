@@ -6,15 +6,19 @@ Status last reviewed: 2026-10-07
 
 ## Current Status
 
-- Version `1.3 (3)` remains the distributed release at the final submission check.
+- Version `1.3 (3)` was the distributed release at the final submission check.
 - Version `1.4.0 (4)` was submitted for App Review on October 7, 2026 at 4:56 PM EDT under
   [release issue #373](https://github.com/hemsoft-dev/codexbar-ios/issues/373).
-  Apple reports `WAITING_FOR_REVIEW`. Submission is complete; public distribution
-  remains pending Apple's review. Apple displays no review-time estimate.
-- Shipping source is immutable commit `54b2a489cadf38af0c741a3553249e9411fca0be`, frozen as
-  `release/1.4.0-rc-54b2a48`. [PR #415](https://github.com/hemsoft-dev/codexbar-ios/pull/415)
+  Apple approved it, and it has been live on the App Store since October 8, 2026 at
+  15:14 UTC. Apple's public lookup (`https://itunes.apple.com/lookup?id=6787769891`)
+  reports version `1.4.0` with `currentVersionReleaseDate` `2026-10-08T15:14:44Z`,
+  checked on October 16, 2026 ([#471](https://github.com/hemsoft-dev/codexbar-ios/issues/471)).
+- Shipping source is immutable commit `54b2a489cadf38af0c741a3553249e9411fca0be`, tagged
+  [`v1.4.0`](https://github.com/hemsoft-dev/codexbar-ios/releases/tag/v1.4.0). The frozen
+  `release/1.4.0-rc-54b2a48` branch was deleted on October 16, 2026 after the tag replaced it. [PR #415](https://github.com/hemsoft-dev/codexbar-ios/pull/415)
   merged the dated, consolidated 1.4.0 changelog before this archive was built.
-  The next `1.5.0 - Unreleased` section starts after that release cut.
+  The next `1.5.0 - Unreleased` section started after that release cut; it was renamed
+  `2.0.0 - Unreleased` on October 16, 2026 ([#460](https://github.com/hemsoft-dev/codexbar-ios/issues/460)).
 - All seven local gates passed with 711 iOS and 61 Watch tests. All five required
   CI jobs and the complete 28-test iPhone and iPad UI suites passed for the shipping
   SHA in [run 37661183114](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/37661183114).
@@ -384,7 +388,9 @@ Version 1.4.0 submission status:
 - [x] Record accepted TestFlight/physical-device omissions, unresolved runtime warnings,
   original failures and source-equivalent security/performance evidence honestly.
 - [x] Start the next 1.5.0 Unreleased changelog section through the reviewed PR path.
-- [ ] Confirm App Review approval and public distribution when Apple completes review.
+- [x] Confirm App Review approval and public distribution when Apple completes review.
+  Live since 2026-10-08 15:14 UTC per Apple's public lookup; recorded in
+  [#471](https://github.com/hemsoft-dev/codexbar-ios/issues/471).
 
 Version 1.3 submission status:
 

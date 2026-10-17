@@ -112,7 +112,7 @@ On iOS, `originalAppVersion` is the **build number** (`CFBundleVersion`), not th
 | 1.1 | 1 | US$3.99 |
 | 1.2 | 2 | US$3.99 |
 | 1.3 | 3 | US$3.99 |
-| 1.4.0 | 4 | US$3.99 (waiting for review) |
+| 1.4.0 | 4 | US$3.99 (live since 2026-10-08) |
 
 `CURRENT_PROJECT_VERSION` is still `4` on `main`. **2.0.0 must ship as build 5 or higher.** Otherwise a 2.0 download would carry the same build number as a 1.4.0 purchase.
 
