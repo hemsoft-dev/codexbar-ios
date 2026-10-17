@@ -46,7 +46,7 @@ The Windows reference implementation is checked out beside this repo at:
 
 Version 1.4.0 build 4 is the current App Store release. Apple approved it after
 the October 7, 2026 submission, and it has been live since October 8, 2026. Its
-shipping source is tagged [`v1.4.0`](https://github.com/hemsoft-dev/codexbar-ios/releases/tag/v1.4.0).
+shipping source is tagged [`v1.4.0`](https://github.com/hemsoft-dev/codexbar-ios/tree/v1.4.0).
 See the [App Store tracker](APP-STORE.md) and
 [1.4.0 preparation record](release-assets/1.4.0/README.md) for the source
 boundary, release copy, validation and submission identifiers. The next release

@@ -2,7 +2,7 @@
 
 This document tracks the work required to ship CodexBar for iOS and iPadOS through TestFlight and App Store review.
 
-Status last reviewed: 2026-10-07
+Status last reviewed: 2026-10-16
 
 ## Current Status
 
@@ -14,7 +14,7 @@ Status last reviewed: 2026-10-07
   reports version `1.4.0` with `currentVersionReleaseDate` `2026-10-08T15:14:44Z`,
   checked on October 16, 2026 ([#471](https://github.com/hemsoft-dev/codexbar-ios/issues/471)).
 - Shipping source is immutable commit `54b2a489cadf38af0c741a3553249e9411fca0be`, tagged
-  [`v1.4.0`](https://github.com/hemsoft-dev/codexbar-ios/releases/tag/v1.4.0). The frozen
+  [`v1.4.0`](https://github.com/hemsoft-dev/codexbar-ios/tree/v1.4.0). The frozen
   `release/1.4.0-rc-54b2a48` branch was deleted on October 16, 2026 after the tag replaced it. [PR #415](https://github.com/hemsoft-dev/codexbar-ios/pull/415)
   merged the dated, consolidated 1.4.0 changelog before this archive was built.
   The next `1.5.0 - Unreleased` section started after that release cut; it was renamed
@@ -51,7 +51,9 @@ Status last reviewed: 2026-10-07
   preserved alongside the complete local passing comparison under unchanged policy;
   security/performance provenance is explicit source equivalence, not fresh analysis.
 - [#405](https://github.com/hemsoft-dev/codexbar-ios/issues/405) and
-  [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) remain deferred to V1.5.
+  [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) were deferred to V1.5.
+  #405 has since been completed. #409 moved to V2.0 when the next release became 2.0.0
+  ([#460](https://github.com/hemsoft-dev/codexbar-ios/issues/460)) and is still blocked on Greptile.
   The release and review copy disclose the Greptile Google-backed billing sign-in
   limitation. The complete local artifact ledger is
   `DerivedData/ReleasePreparation/1.4.0-54b2a48/release-status.md`, with Apple write
