@@ -31,7 +31,7 @@ Apple claims link to official Apple pages, checked on October 16, 2026. Where Ap
 | Pro | Unlimited providers and accounts, widgets, the watch app, full history and alerts. |
 | Prices (US base) | US$1.99/month, US$14.99/year, US$29.99 one-time lifetime unlock. |
 | Trial | 7-day free trial on the yearly plan only. |
-| Original purchasers | Lifetime Pro, including Family Sharing members of the original paid app. This plan narrows the family promise to members who install before the cutover `T`, pending Franz's approval (decision 6). |
+| Original purchasers | Lifetime Pro, including Family Sharing members of the original paid app. Narrowed by decision 6 to members who install before the cutover `T`. |
 | Family Sharing on new Pro products | Off at launch. |
 | Downgrade | Accounts beyond the free limit stop refreshing. Credentials and settings are kept, and the user picks the active account. |
 | Release | Version 2.0.0, as soon as implementation and App Store setup are ready. |
@@ -168,7 +168,7 @@ Apple can't tie a price change to the release of a version. A price change start
 
 So the sequence keeps the paid price until 2.0 is live everywhere, then drops the price comfortably before the cutover instant compiled into the app.
 
-1. **Before submitting 2.0.** Pick the cutover instant `T`. Recommendation: about 10 days after the planned submission, at 00:00 UTC.
+1. **Before submitting 2.0.** Set the cutover instant `T` to **two weeks after the planned submission, at 00:00 UTC** (decision 2).
    - Compile `T` into 2.0.
    - Set the build number to 5 or higher.
    - Check that the 1.4.0 review has finished, so 2.0 doesn't queue behind it.
@@ -338,9 +338,9 @@ Even the low scenario beats the US$197 earned so far. Enrolling in the Small Bus
 
 ## codexbar.net at launch
 
-`codexbar.net` doesn't resolve today: it has no DNS records as of October 16, 2026. **2.0 must not depend on it.** The App Store privacy and support URLs stay on GitHub (`PRIVACY.md` and `SUPPORT.md`), and the Terms of Use link points to Apple's standard EULA.
+`codexbar.net` is registered with Cloudflare (since 2026-10-10) but has no DNS records as of October 16, 2026. The site is built in its own repository, [hemsoft-dev/codexbar-site](https://github.com/hemsoft-dev/codexbar-site), because it covers every CodexBar platform ([codexbar-site#1](https://github.com/hemsoft-dev/codexbar-site/issues/1)). **2.0 must not depend on it.** The App Store privacy and support URLs stay on GitHub (`PRIVACY.md` and `SUPPORT.md`), and the Terms of Use link points to Apple's standard EULA.
 
-If Franz registers and publishes the domain before launch, it holds:
+When the site is live, it holds:
 
 - a one-page product site with App Store download links;
 - a pricing table matching the decided prices;
@@ -396,13 +396,17 @@ UI issues (3, 4 and 5) need current-head screenshots in their PRs of the free, P
 
 ## Decisions still needed from Franz
 
-1. **Small Business Program:** confirm eligibility (US$1M or less in prior-year proceeds across this and any associated developer accounts) and enrollment, or apply as Account Holder. Until confirmed, the 30% table is the conservative case.
-2. **Cutover instant `T`:** pick it once a submission date is known. The default is submission plus about 10 days, at 00:00 UTC.
-3. **Offline allowance:** 3 days past a subscription's signed expiry is proposed.
-4. **GitHub status notices:** stay free, as proposed. Say if they should be Pro.
-5. **codexbar.net:** register and publish before launch, or leave it out of 2.0.
-6. **Family Sharing promise:** accept that lifetime Pro for family members of original purchasers covers **members who install CodexBar before `T`**, with offer codes from support for anyone who misses it. On the device, after the price change, a family member's free download looks the same as any other free download, and CodexBar has no server to check family membership.
-7. **Family Sharing check:** after launch, confirm with a family member's device that original-purchaser Pro carries over. This check is pending for Franz.
+Franz answered these on 2026-10-16:
+
+| # | Topic | Decision |
+| --- | --- | --- |
+| 1 | Small Business Program | Optional, but worth about 21% more proceeds. Franz enrolls as Account Holder before 2.0 ships. Total proceeds are US$197 so far, so the US$1M limit isn't a concern, unless an associated developer account changes that. Until enrollment is approved, the 30% table is the conservative case. |
+| 2 | Cutover instant `T` | **Two weeks after the 2.0 submission, at 00:00 UTC.** `T` is compiled into 2.0 and must be at least 6 days after the release, so it's fixed when 2.0 is submitted. If 2.0 were submitted today, `T` would be 2026-10-30 00:00 UTC. |
+| 3 | Offline allowance | **3 days** past a subscription's signed expiry and any grace period. |
+| 4 | GitHub status notices | **Stay free.** These come from "Monitor GitHub Service Status" in Settings > Alerts: an in-app banner plus incident and recovery notifications when githubstatus.com reports degraded GitHub components. They aren't usage alerts, and a free user should still hear when a service they rely on is down. |
+| 5 | codexbar.net | A **separate repository**, [hemsoft-dev/codexbar-site](https://github.com/hemsoft-dev/codexbar-site), defined by [hemsoft-dev/codexbar-site#1](https://github.com/hemsoft-dev/codexbar-site/issues/1). 2.0 still doesn't depend on it. |
+| 6 | Family Sharing promise | **Accepted:** lifetime Pro for family members of original purchasers who install CodexBar before `T`, with offer codes from support for anyone who misses it. |
+| 7 | Family Sharing check | Franz confirms with a family member's device after launch. This check is pending for Franz. |
 
 ## Sources
 
