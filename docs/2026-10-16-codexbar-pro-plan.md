@@ -196,7 +196,8 @@ Because releasing 2.0 and changing the price are both manual, three rules close 
 
 - **Before the price change:** paid 2.0 buyers qualify through the date check until `T`, so nothing is lost before then. If the price change has to be postponed past `T`, **remove the app from sale at least 48 hours before `T`**. Removal can take up to 24 hours to take effect ([manage availability](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store)), so confirm in several storefronts that the app can't be bought before `T` arrives. Keep it off sale until a 2.0.1 with a later `T` is live. Otherwise, people who pay for 2.0 after `T` would fail both checks. A blocking bug can be fixed with 2.0.1, because 2.0 is then Ready for Distribution.
 - **After the price change:**
-  - Pricing can return to US$3.99, but grants that already happened stay. Free downloads before `T` passed the date check and keep lifetime Pro, the deliberate giveaway from step 4. Free downloads after `T` stay free-tier users. Paid downloads after `T` are only possible if the price went back up after `T`, so a price restore after `T` also needs a 2.0.1 with a later `T`, or else those buyers get a support offer code.
+  - Grants that already happened stay. Free downloads before `T` passed the date check and keep lifetime Pro, the deliberate giveaway from step 4. Free downloads after `T` stay free-tier users.
+  - **Never raise the app price again after `T`.** People who pay for it would fail both checks. A 2.0.1 with a later `T` wouldn't help either: it would also turn every free download since the original `T` into lifetime Pro. If the app has to stop being acquired, remove it from sale instead.
   - If original purchasers are wrongly denied, ship a fix and send a free lifetime offer code to anyone who writes to support.
   - Pro products can be removed from sale. Existing subscribers keep access until expiry; Apple handles that.
 
@@ -210,7 +211,7 @@ Because releasing 2.0 and changing the price are both manual, three rules close 
 | Dashboard and cards | Yes | Yes | Not gated |
 | History | Last 7 days | Full: Today, 3D, 7D, 1M, 3M | `UsageHistoryRange` picker and `filtered(to:)`. 1M and 3M show as locked segments. Stored data isn't deleted, so upgrading shows it right away. |
 | Widgets | Locked placeholder: "Unlock widgets with CodexBar Pro" | Live | The phone publisher writes a locked flag and the same `proAccessEndsAt` to the App Group. `CodexBarWidgetView` renders the locked state, and the timeline adds a locked entry at `proAccessEndsAt` so the widget locks on time without the app. The gallery preview stays as it is. |
-| Watch app and complications | Locked state: "Unlock the watch app with CodexBar Pro on iPhone" | Live | `WatchSnapshotPublisher` sends an explicit locked snapshot. It doesn't simply stop sending, which would leave stale data on the watch. Every Pro snapshot also carries the entitlement's access end (`proAccessEndsAt`: the subscription or trial expiry plus any grace period, or none for lifetime and original purchasers). The watch switches to the locked state on its own when that time passes, even if the iPhone app never runs again. |
+| Watch app and complications | Locked state: "Unlock the watch app with CodexBar Pro on iPhone" | Live | `WatchSnapshotPublisher` sends an explicit locked snapshot. It doesn't simply stop sending, which would leave stale data on the watch. Every Pro snapshot also carries `proAccessEndsAt`. This is the same deadline the app enforces: the subscription or trial expiry, plus any grace period, plus the offline allowance. Lifetime and original purchasers have no deadline. The watch switches to the locked state on its own when that time passes, even if the iPhone app never runs again. |
 | Usage alerts | Off; the toggle opens the Pro screen | Yes | Both alert paths: `DashboardOrchestrator.processUsageAlerts` (notifications) and `currentUsageAlertsByAccountID` (in-app alert badges). The user's saved alert settings are kept for a later upgrade. |
 | GitHub status notices | Yes | Yes | Not gated. These are service-health notices, not usage features. |
 | Subscription renewal pills and resets | Yes, for the active account | Yes | Not gated |
@@ -276,13 +277,14 @@ There are no launch-time interstitials and no repeated nags.
 
 | Item | Change |
 | --- | --- |
-| Pro screen in the app | Product title, length and price. The billed amount is the most prominent price. Trial wording states the 7-day length and the US$14.99/year price after the trial. Links to the Privacy Policy and Terms of Use (Apple's standard EULA) on the purchase screen ([guideline 3.1.2](https://developer.apple.com/app-store/review/guidelines/#subscriptions), [DPLA Schedule 2 §3.8(b)](https://developer.apple.com/support/terms/apple-developer-program-license-agreement/), [subscription guidance](https://developer.apple.com/app-store/subscriptions/)) |
+| Pro screen in the app | Product title, length and price. The billed amount is the most prominent price. Trial wording states the 7-day length and the yearly price after the trial. Every price on the screen comes from the live product's storefront-localized [`displayPrice`](https://developer.apple.com/documentation/storekit/product/displayprice), never a hard-coded US$ amount, so it matches the actual charge in every storefront. Links to the Privacy Policy and Terms of Use (Apple's standard EULA) on the purchase screen ([guideline 3.1.2](https://developer.apple.com/app-store/review/guidelines/#subscriptions), [DPLA Schedule 2 §3.8(b)](https://developer.apple.com/support/terms/apple-developer-program-license-agreement/), [subscription guidance](https://developer.apple.com/app-store/subscriptions/)) |
 | Settings > CodexBar Pro | Current plan, renewal or expiry date, Manage Subscription (Apple's sheet), Restore Purchases, Privacy Policy, Terms of Use |
 | App Store description | Free tier and Pro features. A line linking the Terms of Use (Apple's standard EULA URL) and the Privacy Policy, which Apple requires in metadata for subscription apps |
 | `APP-STORE.md` | Replace the US$3.99 release policy with the free and Pro pricing. Add the launch sequence and the cutover instant. |
 | `PRIVACY.md` | New "Purchases" section: Apple processes payments, and CodexBar only checks entitlements on the device. Its App Group cache holds the plan state, not purchase or account identifiers. There is no server, analytics or ads. |
 | App Privacy label | Stays **Data Not Collected**. Data processed only on the device isn't "collected", and developers aren't responsible for disclosing data Apple collects ([App Privacy Details](https://developer.apple.com/app-store/app-privacy-details/)). |
-| `CHANGELOG.md` | `2.0.0 - Unreleased` describes the free tier, CodexBar Pro, and lifetime Pro for original purchasers. Add it only when it ships, never as a promise. |
+| `CHANGELOG.md` | Each user-visible follow-up PR adds its observable behavior to the existing `2.0.0 - Unreleased` section in the same PR, as `AGENTS.md` requires. Examples: the free-tier limits, the Pro screen, widget and watch locking, and lifetime Pro for original purchasers. Nothing is added before it's merged, and nothing is reconstructed at release time. |
+| App Store product page | The existing screenshot set shows widgets, multiple accounts and long history, which become Pro features (`APP-STORE.md` scene list), and the promotional text advertises widgets and 90 days of history. Before the price change: refresh the promotional text, and add captions or replace screenshots so that Pro-only features are labeled "CodexBar Pro" and the free tier is shown accurately. |
 | Original purchasers | A one-time in-app notice on first 2.0 launch: "Thanks for buying CodexBar. You have lifetime Pro: nothing to do." Until `T`, it also asks them to have family members install CodexBar before the cutover date. The 2.0 What's New text says the same. |
 | `SUPPORT.md` | How to restore, how original purchasers are recognized, and how to ask for help if Pro is missing |
 
@@ -379,12 +381,15 @@ Each is a bounded issue with its own PR. The arrows show dependencies.
    - Restore Purchases and Manage Subscription;
    - the billing-problem banner;
    - Settings > CodexBar Pro.
-6. **App Store Connect setup, disclosures and changelog** (→2, 3, 4, 5):
+6. **App Store Connect setup and disclosures** (→2, 3, 4, 5):
    - the products, group, grace period and review screenshots;
    - updates to `APP-STORE.md`, `PRIVACY.md` and `SUPPORT.md`;
-   - the App Store description;
-   - the 2.0.0 changelog entry;
+   - the App Store description and promotional text;
+   - product-page screenshots or captions that label Pro-only features;
+   - a final check that `2.0.0 - Unreleased` matches what ships;
    - build number 5 or higher.
+
+Every user-visible follow-up (2 to 5) adds its own entry to `CHANGELOG.md` `2.0.0 - Unreleased` in the same PR.
 7. **2.0 release and price change** (→6): carry out the launch sequence above with the release skill, and record `T` and every timestamp in `APP-STORE.md`.
 
 UI issues (3, 4 and 5) need current-head screenshots in their PRs of the free, Pro, limit, restore, expired or offline, and original-purchaser states, plus a purchase-and-restore recording on a StoreKit-configured simulator.

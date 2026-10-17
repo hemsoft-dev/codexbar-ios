@@ -71,7 +71,7 @@ def main():
     mix = dict(zip(["monthly", "yearly", "lifetime"], shares))
     names = list(SCENARIOS) if args.scenario == "all" else [args.scenario]
 
-    print(f"commission={args.commission:.0%} mix={args.mix} monthly_churn={args.monthly_churn:.0%}")
+    print(f"commission={number(args.commission * 100)}% mix={args.mix} monthly_churn={number(args.monthly_churn * 100)}%")
     print("| Scenario | Downloads/month | Conversion | Payers/month | Proceeds, first 12 months | Proceeds, month 12 |")
     print("| --- | ---: | ---: | ---: | ---: | ---: |")
     for name in names:
