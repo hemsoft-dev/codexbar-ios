@@ -11,15 +11,18 @@ struct CodexBarIOSApp: App {
     @StateObject private var appUpdateController: AppUpdateController
     @StateObject private var githubStatusPreferences: GitHubStatusPreferences
     @StateObject private var githubStatusMonitor: GitHubStatusMonitor
+    @StateObject private var originalPurchaserNotice: OriginalPurchaserNotice
     #if DEBUG
     private let screenshotConfiguration = AppStoreScreenshotConfiguration.current
     @State private var debugProviderSettingsProviderID = DebugLaunchRoute.providerSettingsProviderID
     #endif
 
     init() {
-        _proEntitlement = StateObject(wrappedValue: ProEntitlement.live())
         #if DEBUG
         if let fixtures = UITestFixtures.current {
+            _proEntitlement = StateObject(wrappedValue: fixtures.originalPurchaserFixture?.entitlement ?? ProEntitlement.live())
+            _originalPurchaserNotice = StateObject(wrappedValue: fixtures.originalPurchaserFixture?.notice
+                ?? OriginalPurchaserNotice(defaults: fixtures.defaults))
             _refreshService = StateObject(wrappedValue: fixtures.refreshService)
             _configurationStore = StateObject(wrappedValue: fixtures.configurationStore)
             _historyStore = StateObject(wrappedValue: fixtures.historyStore)
@@ -29,6 +32,8 @@ struct CodexBarIOSApp: App {
             return
         }
         #endif
+        _proEntitlement = StateObject(wrappedValue: ProEntitlement.live())
+        _originalPurchaserNotice = StateObject(wrappedValue: OriginalPurchaserNotice())
         _appUpdateController = StateObject(wrappedValue: AppUpdateController())
         let statusPreferences = GitHubStatusPreferences()
         _githubStatusPreferences = StateObject(wrappedValue: statusPreferences)
@@ -93,10 +98,15 @@ struct CodexBarIOSApp: App {
         WindowGroup {
             rootView
                 .environmentObject(proEntitlement)
+                .environment(\.originalPurchaserNotice, originalPurchaserNotice)
                 .preferredColorScheme(configurationStore.appAppearance.colorScheme)
                 .task {
                     #if DEBUG
-                    if UITestFixtures.current != nil || screenshotConfiguration != nil { return }
+                    if let fixtures = UITestFixtures.current {
+                        await fixtures.originalPurchaserFixture?.entitlement.start()
+                        return
+                    }
+                    if screenshotConfiguration != nil { return }
                     #endif
                     await proEntitlement.start()
                 }

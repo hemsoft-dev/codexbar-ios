@@ -15,6 +15,7 @@ struct ContentView: View {
     @StateObject private var orchestrator: DashboardOrchestrator
     @StateObject private var claudeAuthenticationController: DashboardClaudeAuthenticationController
     private let performsLifecycleWork: Bool
+    @Environment(\.originalPurchaserNotice) private var originalPurchaserNotice
 
     @Environment(\.requestReview) private var requestReview
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -98,6 +99,9 @@ struct ContentView: View {
                 ScrollViewReader { scrollProxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 14) {
+                            if emptyState == .hidden, let originalPurchaserNotice {
+                                OriginalPurchaserNoticeView(notice: originalPurchaserNotice)
+                            }
                             if let historyError = historyStore.lastError {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Label(historyError, systemImage: "exclamationmark.triangle.fill")
@@ -321,17 +325,25 @@ struct ContentView: View {
             }
             .overlay {
                 if emptyState != .hidden {
-                    VStack(spacing: 16) {
-                        if let release = appUpdateController.dashboardRelease {
-                            AppUpdateNotice(
-                                release: release,
-                                onDismiss: appUpdateController.dismissDashboardNotice
-                            )
-                        }
+                    GeometryReader { geometry in
+                        ScrollView {
+                            VStack(spacing: 16) {
+                                if let originalPurchaserNotice {
+                                    OriginalPurchaserNoticeView(notice: originalPurchaserNotice)
+                                }
+                                if let release = appUpdateController.dashboardRelease {
+                                    AppUpdateNotice(
+                                        release: release,
+                                        onDismiss: appUpdateController.dismissDashboardNotice
+                                    )
+                                }
 
-                        dashboardEmptyStateView(emptyState)
+                                dashboardEmptyStateView(emptyState)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+                        }
                     }
-                    .padding()
                 }
             }
         }

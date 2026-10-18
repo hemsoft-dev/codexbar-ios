@@ -42,7 +42,7 @@ final class ProEntitlementResolverTests: XCTestCase {
             XCTAssertEqual(value.hasAccess(at: testProClock(instant)), expected)
         }
         let app = ProAppPurchase(originalVersion: "4", originalPurchaseDate: instant, environment: .production, revoked: false)
-        XCTAssertEqual(resolve(ProStoreSnapshot(appPurchase: .verified(app))).reason, .none)
+        XCTAssertEqual(resolve(ProStoreSnapshot(appPurchase: .verified(app))).reason, .originalPurchaser)
     }
 
     func testPermanentCacheSurvivesUnavailableEvidenceButNotExplicitRevocation() {

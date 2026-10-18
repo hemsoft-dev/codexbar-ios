@@ -118,8 +118,3 @@ protocol ProStoreSource: AnyObject {
     func purchase(_ product: ProProductID) async throws -> ProPurchaseOutcome
     func restore(refreshAppTransaction: Bool) async throws
 }
-
-/// Recognition is supplied by the original-purchaser rollout, independently of IAP verification.
-struct ProOriginalPurchaserPolicy: Sendable {
-    var qualifies: @Sendable (ProAppPurchase) -> Bool = { _ in false }
-}
