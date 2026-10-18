@@ -859,6 +859,7 @@ struct SelectivelyFailingUsageProvider: UsageProvider {
 
 struct ReturningFailureUsageProvider: UsageProvider {
     let providerID: ProviderID
+    var allowsUnscopedCacheReuse = false
 
     func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
         ProviderUsageResult(
@@ -868,6 +869,7 @@ struct ReturningFailureUsageProvider: UsageProvider {
             subtitle: "Credential expired",
             bars: [],
             failureMessage: "Credential expired",
+            allowsUnscopedCacheReuse: allowsUnscopedCacheReuse,
             fetchedAt: Date()
         )
     }
@@ -875,6 +877,7 @@ struct ReturningFailureUsageProvider: UsageProvider {
 
 struct ReturningPartialFailureUsageProvider: UsageProvider {
     let providerID: ProviderID
+    var allowsUnscopedCacheReuse = false
 
     func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
         ProviderUsageResult(
@@ -884,6 +887,7 @@ struct ReturningPartialFailureUsageProvider: UsageProvider {
             subtitle: "Partial refresh failed",
             bars: [UsageBar(label: "Latest usage", used: 25, limit: 100)],
             failureMessage: "Partial refresh failed",
+            allowsUnscopedCacheReuse: allowsUnscopedCacheReuse,
             fetchedAt: Date()
         )
     }

@@ -236,7 +236,8 @@ enum WatchSnapshotPublisher {
             uniqueKeysWithValues: results.map { ($0.accountID, $0) }
         )
         let displayable: [ProviderUsageResult] = configurationStore.configurations.compactMap { configuration in
-            guard configurationStore.shouldDisplayOnDashboard(configuration) else {
+            guard configurationStore.shouldDisplayOnDashboard(configuration),
+                  !configurationStore.accountAccess.isPaused(accountID: configuration.id) else {
                 return nil
             }
             return resultsByAccountID[configuration.id]
@@ -367,6 +368,9 @@ final class WatchSnapshotCoordinator {
         refreshService.$results.dropFirst().sink { [weak self] _ in
             self?.scheduleSnapshotPublish()
         }.store(in: &cancellables)
+        configurationStore.$accountAccess.dropFirst().sink { [weak self] _ in
+            self?.scheduleSnapshotPublish()
+        }.store(in: &cancellables)
         configurationStore.$configurations.dropFirst().sink { [weak self] _ in
             self?.scheduleSnapshotPublish()
         }.store(in: &cancellables)
@@ -397,7 +401,10 @@ final class WatchSnapshotCoordinator {
     }
 
     func publishCurrentSnapshot(force: Bool = false) {
-        let awaitsInitialResults = refreshService.results.isEmpty
+        // Free access must remove previously sent Pro accounts even if the active provider is still loading.
+        let hasResolvedFreeAccess = configurationStore.accountAccess.isResolved
+            && !configurationStore.accountAccess.hasProAccess
+        let awaitsInitialResults = !hasResolvedFreeAccess && refreshService.results.isEmpty
             && configurationStore.configurations.contains(
                 where: configurationStore.shouldDisplayOnDashboard
             )

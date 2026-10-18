@@ -18,9 +18,13 @@ public final class UsageRefreshService: ObservableObject {
     private var batchRefreshCompletionWaiters: [CheckedContinuation<Void, Never>] = []
     private var hasCurrentConfigurationSnapshot = false
     private var currentConfigurationsByAccountID: [String: ProviderAccountConfiguration] = [:]
+    private var retainedConfigurationsByAccountID: [String: ProviderAccountConfiguration] = [:]
+    private var configurationSnapshot: [ProviderAccountConfiguration] = []
+    // Standalone provider tests may omit a plan; the app binds its policy before any refresh.
+    private var accountAccess: AccountPlanAccess?
     private var refreshGenerationsByAccountID: [String: UUID] = [:]
     private var codexResetAttempts: [String: CodexResetAttempt] = [:]
-    private var claudeResetAccounts: Set<String> = []
+    private var claudeResetValidationsByAccountID: [String: ClaudeResetValidation] = [:]
     private var codexResetTasks: [String: Task<CodexBankedResetConsumptionOutcome, Error>] = [:]
 
     public init(
@@ -44,7 +48,8 @@ public final class UsageRefreshService: ObservableObject {
 
     public var successfulRefreshResults: [ProviderUsageResult] {
         results.filter { result in
-            guard !refreshingAccountIDs.contains(result.accountID) else {
+            guard !refreshingAccountIDs.contains(result.accountID),
+                  accountAccess == nil || currentConfigurationsByAccountID[result.accountID].map(canRefresh) == true else {
                 return false
             }
             return refreshErrorsByAccountID[result.accountID] == nil
@@ -79,6 +84,7 @@ public final class UsageRefreshService: ObservableObject {
 
     /// Invalidate credential-dependent values before a replacement or disconnect can start another refresh.
     public func invalidateCredentials(accountID: String, preserveCachedResult: Bool = false) {
+        claudeResetValidationsByAccountID[accountID]?.wasInvalidated = true
         if currentConfigurationsByAccountID[accountID] != nil || refreshingAccountIDs.contains(accountID) {
             refreshGenerationsByAccountID[accountID] = UUID()
         }
@@ -152,15 +158,14 @@ public final class UsageRefreshService: ObservableObject {
     }
 
     private func performRefresh(configurations: [ProviderAccountConfiguration]) async {
-        let enabledConfigurations = configurations.filter { $0.isEnabled && $0.providerID != .antigravity }
+        let enabledConfigurations = configurations.filter(canRefresh)
         while let refreshingAccountID = enabledConfigurations.lazy
             .map(\.id)
             .first(where: refreshingAccountIDs.contains) {
             await waitForRefreshToFinish(accountID: refreshingAccountID)
         }
 
-        let enabledAccountIDs = Set(enabledConfigurations.map(\.id))
-        pruneCachedState(to: enabledAccountIDs)
+        pruneCachedState(to: Set(retainedConfigurationsByAccountID.keys))
 
         var requests: [(ProviderAccountConfiguration, any UsageProvider)] = []
         for configuration in enabledConfigurations {
@@ -242,7 +247,7 @@ public final class UsageRefreshService: ObservableObject {
             }
         }
 
-        lastRefreshError = enabledConfigurations.lazy
+        lastRefreshError = enabledConfigurations.filter(canRefresh).lazy
             .compactMap { self.refreshErrorsByAccountID[$0.id] }
             .first
     }
@@ -250,8 +255,7 @@ public final class UsageRefreshService: ObservableObject {
     @discardableResult
     public func refresh(configuration: ProviderAccountConfiguration) async -> ProviderUsageResult? {
         guard
-            configuration.isEnabled,
-            configuration.providerID != .antigravity,
+            canRefresh(configuration),
             let provider = providers.first(where: { $0.providerID == configuration.providerID })
         else {
             return nil
@@ -342,13 +346,17 @@ public final class UsageRefreshService: ObservableObject {
               inventory.credentialBinding == credentialBinding,
               confirmedGrant.id == grantID, inventory.matchesConfirmation(grant: confirmedGrant, binding: credentialBinding, at: Date())
         else { throw ClaudeUsageResetError.unavailable }
-        guard claudeResetAccounts.insert(configuration.id).inserted else { throw ClaudeUsageResetError.inProgress }
-        defer { claudeResetAccounts.remove(configuration.id) }
-        let generation = registerCurrentConfiguration(configuration)
+        guard claudeResetValidationsByAccountID[configuration.id] == nil else { throw ClaudeUsageResetError.inProgress }
+        claudeResetValidationsByAccountID[configuration.id] = ClaudeResetValidation(configuration: configuration)
+        defer { claudeResetValidationsByAccountID.removeValue(forKey: configuration.id) }
         let outcome = try await provider.consumeClaudeReset(
             for: configuration, grantID: grantID, confirmedGrant: confirmedGrant, credentialBinding: credentialBinding
         )
-        guard isCurrent(configuration, generation: generation) else { throw ClaudeUsageResetError.credentialChanged }
+        // A plan pause cannot undo a confirmed provider action. Only an actual account
+        // or credential change invalidates this completion; follow-up refresh keeps its own access gate.
+        guard claudeResetValidationsByAccountID[configuration.id]?.wasInvalidated == false else {
+            throw ClaudeUsageResetError.credentialChanged
+        }
         return outcome
     }
 
@@ -363,6 +371,9 @@ public final class UsageRefreshService: ObservableObject {
             throw CodexBankedResetConsumptionError.unsupported
         }
 
+        guard canRefresh(configuration), !hasCurrentConfigurationSnapshot || isCurrent(configuration) else {
+            throw CodexBankedResetConsumptionError.notConfigured
+        }
         if let activeTask = codexResetTasks[configuration.id] {
             return try await activeTask.value
         }
@@ -385,6 +396,8 @@ public final class UsageRefreshService: ObservableObject {
             let outcome = try await task.value
             codexResetTasks[configuration.id] = nil
             codexResetAttempts[configuration.id] = nil
+            // A confirmed reset has already happened at the provider. Keep that outcome
+            // truthful; refresh eligibility separately prevents follow-up work for stale accounts.
             return outcome
         } catch {
             codexResetTasks[configuration.id] = nil
@@ -610,46 +623,52 @@ public final class UsageRefreshService: ObservableObject {
         }
     }
 
-    func updateCurrentConfigurations(
-        _ configurations: [ProviderAccountConfiguration]
-    ) {
-        let hadCurrentConfigurationSnapshot = hasCurrentConfigurationSnapshot
+    /// The same predicate protects batch work, individual requests and reconciliation.
+    func canRefresh(_ configuration: ProviderAccountConfiguration) -> Bool {
+        configuration.isEnabled && configuration.providerID != .antigravity
+            && (accountAccess?.permitsRefresh(configuration) ?? true)
+    }
+
+    func updateAccountAccess(_ access: AccountPlanAccess) {
+        guard accountAccess != access else { return }
+        accountAccess = access
+        updateCurrentConfigurations(configurationSnapshot)
+    }
+
+    func updateCurrentConfigurations(_ configurations: [ProviderAccountConfiguration]) {
+        let hadSnapshot = hasCurrentConfigurationSnapshot
         hasCurrentConfigurationSnapshot = true
-        let enabledConfigurations = configurations.filter { $0.isEnabled && $0.providerID != .antigravity }
-        let nextConfigurations = Dictionary(
-            uniqueKeysWithValues: enabledConfigurations.map { ($0.id, $0) }
-        )
-        let accountIDs = Set(currentConfigurationsByAccountID.keys)
-            .union(nextConfigurations.keys)
-        var invalidatedAccountIDs: Set<String> = []
+        configurationSnapshot = configurations
+        let retained = Dictionary(uniqueKeysWithValues: configurations.filter {
+            $0.isEnabled && $0.providerID != .antigravity
+        }.map { ($0.id, $0) })
+        for (accountID, validation) in claudeResetValidationsByAccountID
+            where refreshInputsChanged(from: validation.configuration, to: retained[accountID]) {
+            claudeResetValidationsByAccountID[accountID]?.wasInvalidated = true
+        }
+        let eligible = Dictionary(uniqueKeysWithValues: configurations.filter(canRefresh).map { ($0.id, $0) })
+        let accountIDs = Set(currentConfigurationsByAccountID.keys).union(eligible.keys)
         for accountID in accountIDs {
-            let currentConfiguration = currentConfigurationsByAccountID[accountID]
-            let nextConfiguration = nextConfigurations[accountID]
-            guard currentConfiguration != nextConfiguration else {
-                continue
-            }
-            guard refreshInputsChanged(from: currentConfiguration, to: nextConfiguration) else {
-                continue
-            }
-            invalidatedAccountIDs.insert(accountID)
-            if nextConfiguration == nil,
-               !refreshingAccountIDs.contains(accountID) {
+            let previous = currentConfigurationsByAccountID[accountID]
+            let next = eligible[accountID]
+            guard refreshInputsChanged(from: previous, to: next) else { continue }
+            if next == nil && !refreshingAccountIDs.contains(accountID) {
                 refreshGenerationsByAccountID.removeValue(forKey: accountID)
             } else {
                 refreshGenerationsByAccountID[accountID] = UUID()
             }
         }
-        currentConfigurationsByAccountID = nextConfigurations
-
-        let enabledAccountIDs = Set(nextConfigurations.keys)
-        let evictedAccountIDs = hadCurrentConfigurationSnapshot ? invalidatedAccountIDs : []
-        pruneCachedState(to: enabledAccountIDs.subtracting(evictedAccountIDs))
-        let nextLastRefreshError = enabledConfigurations.lazy
-            .compactMap { self.refreshErrorsByAccountID[$0.id] }
-            .first
-        if nextLastRefreshError != lastRefreshError {
-            lastRefreshError = nextLastRefreshError
-        }
+        // A plan pause invalidates requests but retains observations. Credential/configuration
+        // changes and disabling still discard results through their existing invalidation path.
+        let changedInputs = Set(retained.keys.filter { accountID in
+            guard let previous = retainedConfigurationsByAccountID[accountID] else { return false }
+            return refreshInputsChanged(from: previous, to: retained[accountID])
+        })
+        currentConfigurationsByAccountID = eligible
+        retainedConfigurationsByAccountID = retained
+        pruneCachedState(to: Set(retained.keys).subtracting(hadSnapshot ? changedInputs : []))
+        let nextError = configurations.filter(canRefresh).lazy.compactMap { self.refreshErrorsByAccountID[$0.id] }.first
+        if nextError != lastRefreshError { lastRefreshError = nextError }
     }
 
     private func pruneCachedState(to enabledAccountIDs: Set<String>) {
@@ -676,6 +695,10 @@ public final class UsageRefreshService: ObservableObject {
     private func registerCurrentConfiguration(
         _ configuration: ProviderAccountConfiguration
     ) -> UUID {
+        if let validation = claudeResetValidationsByAccountID[configuration.id],
+           !hasSameRefreshInputs(validation.configuration, configuration) {
+            claudeResetValidationsByAccountID[configuration.id]?.wasInvalidated = true
+        }
         if currentConfigurationsByAccountID[configuration.id] != configuration {
             currentConfigurationsByAccountID[configuration.id] = configuration
             refreshGenerationsByAccountID[configuration.id] = UUID()
@@ -686,14 +709,14 @@ public final class UsageRefreshService: ObservableObject {
     }
 
     private func isCurrent(_ configuration: ProviderAccountConfiguration) -> Bool {
-        currentConfigurationsByAccountID[configuration.id] == configuration
+        canRefresh(configuration) && currentConfigurationsByAccountID[configuration.id] == configuration
     }
 
     private func isCurrent(
         _ configuration: ProviderAccountConfiguration,
         generation: UUID
     ) -> Bool {
-        guard let currentConfiguration = currentConfigurationsByAccountID[configuration.id] else {
+        guard canRefresh(configuration), let currentConfiguration = currentConfigurationsByAccountID[configuration.id] else {
             return false
         }
         return !refreshInputsChanged(from: configuration, to: currentConfiguration)
@@ -710,6 +733,11 @@ public final class UsageRefreshService: ObservableObject {
             waiter.resume()
         }
     }
+}
+
+private struct ClaudeResetValidation {
+    let configuration: ProviderAccountConfiguration
+    var wasInvalidated = false
 }
 
 private struct RefreshInputs: Equatable {

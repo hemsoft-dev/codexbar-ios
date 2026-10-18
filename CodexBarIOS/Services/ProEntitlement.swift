@@ -3,9 +3,15 @@ import Foundation
 
 @MainActor
 public final class ProEntitlement: ObservableObject {
-    @Published public private(set) var value: ProEntitlementValue
+    @Published public private(set) var value: ProEntitlementValue {
+        didSet { accessChanges.send(accessState) }
+    }
     @Published public private(set) var statusMessage: String?
-    @Published public private(set) var isResolved = false
+    @Published public private(set) var isResolved = false {
+        didSet { accessChanges.send(accessState) }
+    }
+    /// Unlike @Published, this delivers after the evidence and resolution flag are committed.
+    let accessChanges = PassthroughSubject<ProAccessState, Never>()
     @Published private(set) var subscription: ProSubscriptionEvidence?
     private(set) var appPurchase: ProVerification<ProAppPurchase> = .unavailable
 
@@ -57,6 +63,8 @@ public final class ProEntitlement: ObservableObject {
 
     public var hasAccess: Bool { value.hasAccess(at: clock(now())) }
 
+    var accessState: ProAccessState { ProAccessState(hasAccess: hasAccess, isResolved: isResolved) }
+
     /// Attach both listeners before the first snapshot so launch cannot miss a delivery.
     public func start() async {
         guard !started else { return }
@@ -80,6 +88,7 @@ public final class ProEntitlement: ObservableObject {
     }
 
     public func refresh() async {
+        reevaluateLocalAccess()
         refreshRequest += 1
         let request = refreshRequest
         while !Task.isCancelled {
@@ -304,17 +313,24 @@ public final class ProEntitlement: ObservableObject {
             do { try await Task.sleep(for: .seconds(delay)) } catch { return }
             guard let self else { return }
             self.boundaryTask = nil
-            self.applyLocalBoundary()
+            self.reevaluateLocalAccess()
             await self.refresh()
         }
     }
 
-    private func applyLocalBoundary() {
-        guard !value.hasAccess(at: clock(now())) else { scheduleBoundary(); return }
-        let expired = value.withoutAccess(at: clock(now()))
-        // Expiration is already established locally; network latency must not extend visible access.
-        value = expired
-        try? cache.save(expired)
+    /// Commit clock changes before any StoreKit await so all dependent policies see the same access.
+    public func reevaluateLocalAccess() {
+        let sample = clock(now())
+        if !value.hasAccess(at: sample), value.clockAnchor?.effectiveDate(at: sample) != nil {
+            let expired = value.withoutAccess(at: sample)
+            if expired != value {
+                value = expired
+                try? cache.save(expired)
+            }
+        }
+        // Clock uncertainty denies access but preserves evidence for automatic recovery.
+        accessChanges.send(accessState)
+        scheduleBoundary()
     }
 
     #if DEBUG
@@ -324,4 +340,9 @@ public final class ProEntitlement: ObservableObject {
         boundaryTask?.cancel()
     }
     #endif
+}
+
+struct ProAccessState: Equatable {
+    let hasAccess: Bool
+    let isResolved: Bool
 }

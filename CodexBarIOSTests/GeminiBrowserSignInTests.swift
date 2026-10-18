@@ -213,7 +213,7 @@ final class GeminiBrowserSignInTests: XCTestCase {
     @MainActor
     func testLabelWithoutSavedSessionIsNotConfiguredAfterMigration() throws {
         let fixture = Fixture()
-        var account = fixture.store.addAccount(for: .gemini)
+        var account = try XCTUnwrap(fixture.store.addAccount(for: .gemini))
         account.accountLabel = "Personal Gemini"
         account.authMethod = .apiKey
         XCTAssertTrue(fixture.store.update(account))
@@ -226,7 +226,7 @@ final class GeminiBrowserSignInTests: XCTestCase {
     @MainActor
     func testReconnectPreservesMetadataAndOtherAccountAndDisconnectIsScoped() async throws {
         let fixture = Fixture()
-        var first = fixture.store.addAccount(for: .gemini)
+        var first = try XCTUnwrap(fixture.store.addAccount(for: .gemini))
         first.accountLabel = "Personal"
         first.groupID = try XCTUnwrap(fixture.store.addGroup(named: "Personal accounts")).id
         first.showsHistory = false
@@ -241,7 +241,7 @@ final class GeminiBrowserSignInTests: XCTestCase {
         history.record(results: [originalResult], now: originalResult.fetchedAt)
         let originalHistory = history.snapshots(for: first.id)
         XCTAssertFalse(originalHistory.isEmpty)
-        let second = fixture.store.addAccount(for: .gemini)
+        let second = try XCTUnwrap(fixture.store.addAccount(for: .gemini))
         XCTAssertTrue(fixture.store.saveSecret("__Secure-1PSID=old-first", for: first))
         XCTAssertTrue(fixture.store.saveSecret("__Secure-1PSID=second", for: second))
         let model = ProviderSettingsViewModel(configurationStore: fixture.store, accountID: first.id)
@@ -258,7 +258,7 @@ final class GeminiBrowserSignInTests: XCTestCase {
         XCTAssertEqual(saved.id, first.id)
         XCTAssertEqual(saved.authMethod, .browserSession)
         XCTAssertTrue(try XCTUnwrap(fixture.secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: first))).contains("new-first"))
-        let reloaded = ProviderConfigurationStore(defaults: fixture.defaults, secretStore: fixture.secrets)
+        let reloaded = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: fixture.defaults, secretStore: fixture.secrets)
         XCTAssertTrue(reloaded.hasSecret(for: saved))
         XCTAssertFalse(reloaded.isMetricVisible(accountID: first.id, metricID: metricID))
         XCTAssertTrue(reloaded.isDashboardCardCollapsed(accountID: first.id))
@@ -273,7 +273,7 @@ final class GeminiBrowserSignInTests: XCTestCase {
     @MainActor
     func testCanceledOrFailedBrowserSignInPreservesExistingCredentialAndAllowsRetry() async throws {
         let fixture = Fixture()
-        let account = fixture.store.addAccount(for: .gemini)
+        let account = try XCTUnwrap(fixture.store.addAccount(for: .gemini))
         XCTAssertTrue(fixture.store.saveSecret("__Secure-1PSID=original", for: account))
         let model = ProviderSettingsViewModel(configurationStore: fixture.store, accountID: account.id)
         model.startGeminiSignIn()
@@ -291,9 +291,9 @@ final class GeminiBrowserSignInTests: XCTestCase {
     }
 
     @MainActor
-    func testMissingMetersResetOrWrongAccountNeverPersistsCredentials() async {
+    func testMissingMetersResetOrWrongAccountNeverPersistsCredentials() async throws {
         let fixture = Fixture()
-        let account = fixture.store.addAccount(for: .gemini)
+        let account = try XCTUnwrap(fixture.store.addAccount(for: .gemini))
         let model = ProviderSettingsViewModel(configurationStore: fixture.store, accountID: account.id)
         for result in [
             validResult(for: account, keys: []),
@@ -313,7 +313,7 @@ final class GeminiBrowserSignInTests: XCTestCase {
     @MainActor
     func testCancelDuringValidationIgnoresLateSuccessAfterDisconnect() async throws {
         let fixture = Fixture()
-        let account = fixture.store.addAccount(for: .gemini)
+        let account = try XCTUnwrap(fixture.store.addAccount(for: .gemini))
         let validator = SuspendedValidator(result: validResult(for: account))
         let model = ProviderSettingsViewModel(configurationStore: fixture.store, accountID: account.id)
         model.geminiSessionValidator = validator
@@ -335,8 +335,8 @@ final class GeminiBrowserSignInTests: XCTestCase {
     func testKeychainFailureDoesNotReportSuccessOrReplaceAccount() async throws {
         let fixture = Fixture()
         let failingSecrets = GeminiFailingWriteSecretStore()
-        let store = ProviderConfigurationStore(defaults: fixture.defaults, secretStore: failingSecrets)
-        let account = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: fixture.defaults, secretStore: failingSecrets)
+        let account = try XCTUnwrap(store.addAccount(for: .gemini))
         let model = ProviderSettingsViewModel(configurationStore: store, accountID: account.id)
         model.geminiSessionValidator = StubValidator(result: validResult(for: account))
         model.startGeminiSignIn()
@@ -351,7 +351,7 @@ final class GeminiBrowserSignInTests: XCTestCase {
     @MainActor
     func testCodingImportRequiresConfirmationAndTypedCredentialsAndInvalidatesRefresh() throws {
         let fixture = Fixture()
-        let account = fixture.store.addAccount(for: .gemini)
+        let account = try XCTUnwrap(fixture.store.addAccount(for: .gemini))
         XCTAssertTrue(fixture.store.saveSecret("__Secure-1PSID=apps", for: account))
         var credentialChanges = 0
         let model = ProviderSettingsViewModel(
@@ -381,7 +381,7 @@ final class GeminiBrowserSignInTests: XCTestCase {
     @MainActor
     func testReconnectWithCodingRequiresSameAccountConfirmationAndPreservesBothSources() async throws {
         let fixture = Fixture()
-        let account = fixture.store.addAccount(for: .gemini)
+        let account = try XCTUnwrap(fixture.store.addAccount(for: .gemini))
         XCTAssertTrue(fixture.store.saveSecret("__Secure-1PSID=original", for: account))
         XCTAssertTrue(fixture.store.saveGeminiCodingSecret(
             #"{"access_token":"coding","expiry":"2030-01-01T00:00:00Z"}"#,
@@ -416,8 +416,8 @@ final class GeminiBrowserSignInTests: XCTestCase {
     @MainActor
     func testLegacyCodingLinkRequiresConfirmationAndRemovesStandaloneAccountChoice() throws {
         let fixture = Fixture()
-        let gemini = fixture.store.addAccount(for: .gemini)
-        let legacy = fixture.store.addAccount(for: .antigravity)
+        let gemini = try XCTUnwrap(fixture.store.addAccount(for: .gemini))
+        let legacy = try XCTUnwrap(fixture.store.addAccount(for: .antigravity))
         XCTAssertTrue(fixture.store.saveSecret(
             #"{"access_token":"legacy-coding","expiry":"2030-01-01T00:00:00Z"}"#, for: legacy
         ))
@@ -528,7 +528,7 @@ private final class Fixture {
     let store: ProviderConfigurationStore
     init() {
         defaults = UserDefaults(suiteName: suiteName)!
-        store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
     }
     deinit { defaults.removePersistentDomain(forName: suiteName) }
 }

@@ -10,8 +10,8 @@ final class GrokAccountTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let account = store.addAccount(for: .grok)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = try XCTUnwrap(store.addAccount(for: .grok))
         var changed: [String] = []
         let subscription = store.credentialChanges.sink { changed.append($0) }
         var clearedHistory: [String] = []
@@ -41,9 +41,10 @@ final class GrokAccountTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults, secretStore: GrokTestSecrets(), widgetSnapshotDefaults: defaults
         )
-        let account = store.addAccount(for: .grok)
+        let account = try XCTUnwrap(store.addAccount(for: .grok))
         var clearedHistory: [String] = []
         let subscription = store.grokHistoryInvalidations.sink { clearedHistory.append($0) }
         defer { subscription.cancel() }
@@ -59,8 +60,8 @@ final class GrokAccountTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let account = store.addAccount(for: .grok)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = try XCTUnwrap(store.addAccount(for: .grok))
         var changed: [String] = []
         let subscription = store.credentialChanges.sink { changed.append($0) }
         defer { subscription.cancel() }
@@ -82,10 +83,11 @@ final class GrokAccountTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults, secretStore: GrokTestSecrets(), widgetSnapshotDefaults: defaults
         )
-        let first = store.addAccount(for: .grok)
-        let second = store.addAccount(for: .grok)
+        let first = try XCTUnwrap(store.addAccount(for: .grok))
+        let second = try XCTUnwrap(store.addAccount(for: .grok))
         XCTAssertTrue(store.replaceCredential(try credential(subject: "one").encoded(), for: first))
         XCTAssertTrue(store.replaceCredential(try credential(subject: "two").encoded(), for: second))
         var formerlyGenerated = first
@@ -127,9 +129,10 @@ final class GrokAccountTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults, secretStore: GrokTestSecrets(), widgetSnapshotDefaults: defaults
         )
-        let account = store.addAccount(for: .grok)
+        let account = try XCTUnwrap(store.addAccount(for: .grok))
         XCTAssertTrue(store.replaceCredential(try credential(subject: "one").encoded(), for: account))
         let result = try GrokUsageProvider.parseCredits(
             Data(#"{"config":{"isUnifiedBillingUser":true,"prepaidBalance":{"val":0}}}"#.utf8),
@@ -154,7 +157,7 @@ final class GrokAccountTests: XCTestCase {
         let account = "grok.saved"
         let other = "cursor.saved"
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         _ = store.reconcileMetricLayout(accountID: account, availableMetricIDs: [credits])
         store.updateMetricVisibility(false, accountID: account, metricID: credits)
         store.updateMetricWidth(.half, accountID: account, metricID: credits)
@@ -168,7 +171,7 @@ final class GrokAccountTests: XCTestCase {
         var legacy = try XCTUnwrap(store.metricLayouts[account])
         legacy.orderedMetricIDs = [credits, weekly]
         store.replaceMetricLayout(legacy, accountID: account)
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         XCTAssertEqual(restored.metricOrder(accountID: account, availableMetricIDs: [weekly, credits]), [weekly, credits])
         XCTAssertEqual(restored.metricLayouts[account]?.preferences[credits], creditsPreference)
         XCTAssertEqual(restored.metricLayouts[other], otherLayout)
@@ -184,11 +187,11 @@ final class GrokAccountTests: XCTestCase {
         let weekly = "grok.included-usage"
         let account = "grok.saved"
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         _ = store.reconcileMetricLayout(accountID: account, availableMetricIDs: [weekly, credits])
         store.updateMetricOrder([credits, weekly], accountID: account)
         store.updateMetricWidth(.full, accountID: account, metricID: weekly)
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         XCTAssertTrue(try XCTUnwrap(restored.metricLayouts[account]).hasCustomMetricOrder)
         XCTAssertEqual(restored.metricOrder(accountID: account, availableMetricIDs: [weekly, credits]), [credits, weekly])
         XCTAssertEqual(restored.metricWidth(accountID: account, metricID: weekly), .full)
@@ -202,14 +205,14 @@ final class GrokAccountTests: XCTestCase {
         let weekly = "grok.included-usage"
         let credits = "grok.monetary.balance.usd"
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         _ = store.reconcileMetricLayout(accountID: "grok.source", availableMetricIDs: [weekly, credits])
         store.updateMetricOrder([credits, weekly], accountID: "grok.source")
         store.copyMetricLayout(
             from: "grok.source", to: "grok.destination",
             destinationAvailableMetricIDs: [weekly, credits]
         )
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         XCTAssertTrue(try XCTUnwrap(restored.metricLayouts["grok.destination"]).hasCustomMetricOrder)
         XCTAssertEqual(
             restored.metricOrder(accountID: "grok.destination", availableMetricIDs: [weekly, credits]),

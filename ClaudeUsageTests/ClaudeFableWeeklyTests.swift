@@ -79,9 +79,9 @@ final class ClaudeFableWeeklyTests: XCTestCase {
         let suite = "ClaudeFableWeeklyTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        var store = ProviderConfigurationStore(defaults: defaults, secretStore: FableFixtureSecretStore())
-        let first = store.addAccount(for: .claude)
-        let second = store.addAccount(for: .claude)
+        var store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: FableFixtureSecretStore())
+        let first = try XCTUnwrap(store.addAccount(for: .claude))
+        let second = try XCTUnwrap(store.addAccount(for: .claude))
         XCTAssertTrue(store.saveSecret("synthetic", for: first))
         XCTAssertTrue(store.saveSecret("synthetic", for: second))
         let original = bound(try parse(limits: [limit(name: "Fable", percent: 21)]), to: first)
@@ -96,7 +96,7 @@ final class ClaudeFableWeeklyTests: XCTestCase {
         store.updateMetricVisibility(false, accountID: first.id, metricID: olderID)
         store.updateMetricOrder(["claude.session", olderID, "claude.weekly-all"], accountID: first.id)
         // Decode the persisted older choice before exercising actual store reconciliation.
-        store = ProviderConfigurationStore(defaults: defaults, secretStore: FableFixtureSecretStore())
+        store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: FableFixtureSecretStore())
         XCTAssertFalse(store.isMetricVisible(accountID: first.id, metricID: olderID))
         _ = store.reconcileMetricLayout(accountID: first.id, availableMetricIDs: original.availableMetrics.map(\.id))
         XCTAssertFalse(store.isMetricVisible(accountID: first.id, metricID: id))
@@ -114,12 +114,12 @@ final class ClaudeFableWeeklyTests: XCTestCase {
         let layout = store.metricLayouts[first.id]
         _ = store.reconcileMetricLayout(accountID: first.id, availableMetricIDs: changedName.availableMetrics.map(\.id))
         XCTAssertEqual(store.metricLayouts[first.id], layout)
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: FableFixtureSecretStore())
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: FableFixtureSecretStore())
         XCTAssertEqual(restored.metricLayouts[first.id], layout)
         XCTAssertFalse(restored.isMetricVisible(accountID: first.id, metricID: id))
         XCTAssertTrue(restored.isMetricVisible(accountID: second.id, metricID: id))
         restored.updateMetricVisibility(true, accountID: first.id, metricID: id)
-        let shown = ProviderConfigurationStore(defaults: defaults, secretStore: FableFixtureSecretStore())
+        let shown = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: FableFixtureSecretStore())
         XCTAssertTrue(shown.isMetricVisible(accountID: first.id, metricID: id))
         XCTAssertEqual(shown.metricLayouts[first.id]?.preferences[id]?.width, .full)
         XCTAssertEqual(shown.visualizationStyle(accountID: first.id, metricID: id), .circularRing)

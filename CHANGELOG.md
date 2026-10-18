@@ -56,6 +56,12 @@ building, testing, or releasing the app.
 
 ### Changed
 
+- Use CodexBar free with one active account and seven days of history. If Pro
+  ends, choose which account keeps refreshing while the others show their last
+  values. Saved accounts, credentials, history, and alert preferences remain on
+  your device and become available again when Pro returns.
+  ([#466](https://github.com/hemsoft-dev/codexbar-ios/issues/466))
+
 - Show only the green number beneath Codex's Credits pool heading, removing the
   repeated "credits" suffix from dashboard tiles and customization previews.
   ([#449](https://github.com/hemsoft-dev/codexbar-ios/issues/449))

@@ -646,14 +646,19 @@ public struct UsageHistorySeries: Equatable, Sendable {
 
     public func filtered(
         to range: UsageHistoryRange,
+        accessPolicy: HistoryAccessPolicy = .pro,
         now: Date = Date(),
         calendar: Calendar = .autoupdatingCurrent
     ) -> UsageHistorySeries {
-        UsageHistorySeries(
+        let requestedStart = range.startDate(now: now, calendar: calendar)
+        let start = accessPolicy.effectiveStart(
+            since: requestedStart,
+            now: now,
+            calendar: calendar
+        ) ?? requestedStart
+        return UsageHistorySeries(
             accountID: accountID,
-            points: points.filter {
-                $0.capturedAt >= range.startDate(now: now, calendar: calendar)
-            },
+            points: points.filter { $0.capturedAt >= start },
             isBalance: isBalance,
             isCount: isCount,
             currencyCode: currencyCode,
@@ -737,6 +742,7 @@ public final class UsageHistoryStore: ObservableObject {
     @Published public private(set) var dailySnapshots: [UsageHistorySnapshot]
     @Published public private(set) var lastError: String?
     @Published public private(set) var requiresRecovery: Bool
+    @Published public private(set) var accessPolicy: HistoryAccessPolicy
 
     private let defaults: UserDefaults
     private let retention: TimeInterval
@@ -751,9 +757,11 @@ public final class UsageHistoryStore: ObservableObject {
         defaults: UserDefaults = .standard,
         retentionDays: Int = 30,
         dailyRetentionDays: Int = 90,
-        maxSnapshotsPerAccount: Int = 240
+        maxSnapshotsPerAccount: Int = 240,
+        accessPolicy: HistoryAccessPolicy = .pro
     ) {
         self.defaults = defaults
+        self.accessPolicy = accessPolicy
         self.retention = TimeInterval(max(retentionDays, 1) * 24 * 60 * 60)
         self.dailyRetentionDays = max(dailyRetentionDays, 90)
         self.maxSnapshotsPerAccount = max(maxSnapshotsPerAccount, 1)
@@ -771,6 +779,12 @@ public final class UsageHistoryStore: ObservableObject {
             self.lastError = Self.loadErrorMessage
             self.requiresRecovery = true
         }
+    }
+
+    public func applyHistoryAccess(hasProAccess: Bool) {
+        let policy = HistoryAccessPolicy(hasProAccess: hasProAccess)
+        guard accessPolicy != policy else { return }
+        accessPolicy = policy
     }
 
     public func record(
@@ -883,23 +897,79 @@ public final class UsageHistoryStore: ObservableObject {
         lastError = nil
     }
 
-    public func snapshots(for accountID: String, since start: Date? = nil) -> [UsageHistorySnapshot] {
-        snapshots
+    public func snapshots(
+        for accountID: String,
+        since start: Date? = nil,
+        now: Date = Date(),
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [UsageHistorySnapshot] {
+        let start = accessPolicy.effectiveStart(since: start, now: now, calendar: calendar)
+        return snapshots
             .filter { snapshot in
                 snapshot.accountID == accountID && start.map { snapshot.capturedAt >= $0 } != false
             }
             .sorted { $0.capturedAt < $1.capturedAt }
     }
 
+    /// A cold-start display fallback, never a refresh completion. Keep it out of
+    /// successful-refresh caches, history recording, notifications and device publishing.
+    /// The chart cutoff does not hide an account's last known current value.
+    public func lastStoredResult(for configuration: ProviderAccountConfiguration) -> ProviderUsageResult? {
+        let observations = (snapshots + dailySnapshots).filter {
+            $0.accountID == configuration.id && $0.providerID == configuration.providerID
+        }
+        guard let latest = observations.max(by: { $0.capturedAt < $1.capturedAt }) else { return nil }
+        let latestObservations = observations.filter { $0.capturedAt == latest.capturedAt }
+        var barIdentities: Set<String> = []
+        let bars = latestObservations.flatMap(\.bars).filter {
+            barIdentities.insert(DailyUsageHistoryComponent.barIdentity($0, providerID: configuration.providerID)).inserted
+        }.map { bar in
+            UsageBar(
+                stableKey: bar.stableKey,
+                label: bar.label,
+                used: bar.used,
+                limit: bar.limit,
+                fractionlessUsageText: bar.limit <= 0 ? bar.used.formatted() : nil
+            )
+        }
+        var monetaryIdentities: Set<String> = []
+        let monetaryMetrics = latestObservations.flatMap { $0.monetaryMetrics ?? [] }.filter {
+            monetaryIdentities.insert("\($0.kind.rawValue).\($0.currencyCode)").inserted
+        }.map { metric in
+            ProviderMonetaryMetric(
+                kind: metric.kind,
+                label: metric.label,
+                minorUnits: metric.minorUnits,
+                currencyCode: metric.currencyCode,
+                decimalPlaces: metric.decimalPlaces
+            )
+        }
+        return ProviderUsageResult(
+            accountID: configuration.id,
+            providerID: configuration.providerID,
+            title: configuration.displayName,
+            subtitle: latest.subtitle,
+            bars: bars,
+            creditsRemaining: latestObservations.compactMap(\.creditsRemaining).first,
+            monetaryMetrics: monetaryMetrics,
+            hasSuccessfulRefreshHistory: true,
+            fetchedAt: latest.capturedAt
+        )
+    }
+
     public func historySeries(
         for result: ProviderUsageResult,
         since start: Date? = nil,
-        severityThresholds: UsageSeverityThresholds = .default
+        severityThresholds: UsageSeverityThresholds = .default,
+        now: Date = Date(),
+        calendar: Calendar = .autoupdatingCurrent
     ) -> UsageHistorySeries {
         let accountSnapshots = presentationSnapshots(
             for: result,
             since: start,
-            severityThresholds: severityThresholds
+            severityThresholds: severityThresholds,
+            now: now,
+            calendar: calendar
         )
         let hasUsageHistory = accountSnapshots.contains { !$0.bars.isEmpty }
         let currentUsageBars = result.usageHistoryBars()
@@ -1284,12 +1354,16 @@ public final class UsageHistoryStore: ObservableObject {
     public func historySeriesOptions(
         for result: ProviderUsageResult,
         since start: Date? = nil,
-        severityThresholds: UsageSeverityThresholds = .default
+        severityThresholds: UsageSeverityThresholds = .default,
+        now: Date = Date(),
+        calendar: Calendar = .autoupdatingCurrent
     ) -> [UsageHistorySeriesOption] {
         let accountSnapshots = presentationSnapshots(
             for: result,
             since: start,
-            severityThresholds: severityThresholds
+            severityThresholds: severityThresholds,
+            now: now,
+            calendar: calendar
         )
         var options: [UsageHistorySeriesOption] = []
 
@@ -1399,7 +1473,9 @@ public final class UsageHistoryStore: ObservableObject {
                     series: historySeries(
                         for: result,
                         since: start,
-                        severityThresholds: severityThresholds
+                        severityThresholds: severityThresholds,
+                        now: now,
+                        calendar: calendar
                     )
                 ),
             ]
@@ -1409,8 +1485,11 @@ public final class UsageHistoryStore: ObservableObject {
     private func presentationSnapshots(
         for result: ProviderUsageResult,
         since start: Date?,
-        severityThresholds: UsageSeverityThresholds
+        severityThresholds: UsageSeverityThresholds,
+        now: Date,
+        calendar: Calendar
     ) -> [UsageHistorySnapshot] {
+        let start = accessPolicy.effectiveStart(since: start, now: now, calendar: calendar)
         var accountSnapshots = storedPresentationSnapshots(
             for: result.accountID,
             since: start
@@ -1450,12 +1529,15 @@ public final class UsageHistoryStore: ObservableObject {
     public func trendSummary(
         for result: ProviderUsageResult,
         now: Date = Date(),
-        severityThresholds: UsageSeverityThresholds = .default
+        severityThresholds: UsageSeverityThresholds = .default,
+        calendar: Calendar = .autoupdatingCurrent
     ) -> UsageTrendSummary? {
         let series = historySeries(
             for: result,
-            since: now.addingTimeInterval(-7 * 24 * 60 * 60),
-            severityThresholds: severityThresholds
+            since: UsageHistoryRange.sevenDays.startDate(now: now, calendar: calendar),
+            severityThresholds: severityThresholds,
+            now: now,
+            calendar: calendar
         )
         guard
             series.points.count >= 2,

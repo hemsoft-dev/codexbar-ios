@@ -5,6 +5,8 @@ import SwiftUI
 struct CodexBarIOSApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var proEntitlement: ProEntitlement
+    @StateObject private var planAccessCoordinator: PlanAccessCoordinator
+    @StateObject private var bootstrapCoordinator: OpenCodeZenBootstrapCoordinator
     @StateObject private var refreshService: UsageRefreshService
     @StateObject private var configurationStore: ProviderConfigurationStore
     @StateObject private var historyStore: UsageHistoryStore
@@ -20,7 +22,15 @@ struct CodexBarIOSApp: App {
     init() {
         #if DEBUG
         if let fixtures = UITestFixtures.current {
-            _proEntitlement = StateObject(wrappedValue: fixtures.originalPurchaserFixture?.entitlement ?? ProEntitlement.live())
+            _proEntitlement = StateObject(wrappedValue: fixtures.entitlement)
+            let coordinator = PlanAccessCoordinator(
+                entitlement: fixtures.entitlement, configurationStore: fixtures.configurationStore,
+                refreshService: fixtures.refreshService, historyStore: fixtures.historyStore
+            )
+            _planAccessCoordinator = StateObject(wrappedValue: coordinator)
+            _bootstrapCoordinator = StateObject(wrappedValue: OpenCodeZenBootstrapCoordinator(
+                configurationStore: fixtures.configurationStore
+            ))
             _originalPurchaserNotice = StateObject(wrappedValue: fixtures.originalPurchaserFixture?.notice
                 ?? OriginalPurchaserNotice(defaults: fixtures.defaults))
             _refreshService = StateObject(wrappedValue: fixtures.refreshService)
@@ -32,7 +42,12 @@ struct CodexBarIOSApp: App {
             return
         }
         #endif
-        _proEntitlement = StateObject(wrappedValue: ProEntitlement.live())
+        #if DEBUG
+        let entitlement = screenshotConfiguration != nil ? PlanAccessFixture().entitlement : ProEntitlement.live()
+        #else
+        let entitlement = ProEntitlement.live()
+        #endif
+        _proEntitlement = StateObject(wrappedValue: entitlement)
         _originalPurchaserNotice = StateObject(wrappedValue: OriginalPurchaserNotice())
         _appUpdateController = StateObject(wrappedValue: AppUpdateController())
         let statusPreferences = GitHubStatusPreferences()
@@ -77,21 +92,36 @@ struct CodexBarIOSApp: App {
                 results: results,
                 configurationStore: configurationStore
             )
-            _refreshService = StateObject(
-                wrappedValue: UsageRefreshService(
-                    providers: DemoUsageProvider.samples,
-                    initialResults: results
-                )
+            let refreshService = UsageRefreshService(providers: DemoUsageProvider.samples, initialResults: results)
+            _refreshService = StateObject(wrappedValue: refreshService)
+            let coordinator = PlanAccessCoordinator(
+                entitlement: entitlement, configurationStore: configurationStore,
+                refreshService: refreshService, historyStore: historyStore
             )
+            _planAccessCoordinator = StateObject(wrappedValue: coordinator)
+            _bootstrapCoordinator = StateObject(wrappedValue: OpenCodeZenBootstrapCoordinator(
+                configurationStore: configurationStore
+            ))
             _configurationStore = StateObject(wrappedValue: configurationStore)
             _historyStore = StateObject(wrappedValue: historyStore)
             return
         }
         #endif
 
-        _refreshService = StateObject(wrappedValue: UsageRefreshService.live())
-        _configurationStore = StateObject(wrappedValue: ProviderConfigurationStore())
-        _historyStore = StateObject(wrappedValue: UsageHistoryStore())
+        let refreshService = UsageRefreshService.live()
+        let configurationStore = ProviderConfigurationStore()
+        let historyStore = UsageHistoryStore()
+        _refreshService = StateObject(wrappedValue: refreshService)
+        _configurationStore = StateObject(wrappedValue: configurationStore)
+        _historyStore = StateObject(wrappedValue: historyStore)
+        let coordinator = PlanAccessCoordinator(
+            entitlement: entitlement, configurationStore: configurationStore,
+            refreshService: refreshService, historyStore: historyStore
+        )
+        _planAccessCoordinator = StateObject(wrappedValue: coordinator)
+        _bootstrapCoordinator = StateObject(wrappedValue: OpenCodeZenBootstrapCoordinator(
+            configurationStore: configurationStore
+        ))
     }
 
     var body: some Scene {
@@ -103,7 +133,7 @@ struct CodexBarIOSApp: App {
                 .task {
                     #if DEBUG
                     if let fixtures = UITestFixtures.current {
-                        await fixtures.originalPurchaserFixture?.entitlement.start()
+                        await fixtures.entitlement.start()
                         return
                     }
                     if screenshotConfiguration != nil { return }
@@ -112,10 +142,13 @@ struct CodexBarIOSApp: App {
                 }
                 .onChange(of: scenePhase) { _, phase in
                     guard phase == .active else { return }
-                    #if DEBUG
-                    if UITestFixtures.current != nil || screenshotConfiguration != nil { return }
-                    #endif
-                    Task { await proEntitlement.refresh() }
+                    refreshPlanAccess()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+                    refreshPlanAccess()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                    refreshPlanAccess()
                 }
                 .task {
                     #if DEBUG
@@ -130,10 +163,10 @@ struct CodexBarIOSApp: App {
                         try? await Task.sleep(nanoseconds: settleNanoseconds)
                         AppStoreScreenshotFixtures.markReady(scene: screenshotConfiguration.scene)
                     } else {
-                        OpenCodeZenBootstrapImporter.importIfNeeded(configurationStore: configurationStore)
+                        bootstrapCoordinator.start()
                     }
                     #else
-                    OpenCodeZenBootstrapImporter.importIfNeeded(configurationStore: configurationStore)
+                    bootstrapCoordinator.start()
                     #endif
                 }
         }
@@ -142,6 +175,14 @@ struct CodexBarIOSApp: App {
         ) {
             await githubStatusMonitor.performBackgroundRefresh()
         }
+    }
+
+    private func refreshPlanAccess() {
+        #if DEBUG
+        if UITestFixtures.current != nil || screenshotConfiguration != nil { return }
+        #endif
+        proEntitlement.reevaluateLocalAccess()
+        Task { await proEntitlement.refresh() }
     }
 
     @ViewBuilder
@@ -189,14 +230,31 @@ struct CodexBarIOSApp: App {
     }
 
     #if DEBUG
+    private func isolatedScreenshotContentView() -> some View {
+        ContentView(
+            refreshService: refreshService, configurationStore: configurationStore, historyStore: historyStore,
+            appUpdateController: appUpdateController, githubStatusPreferences: githubStatusPreferences,
+            githubStatusMonitor: githubStatusMonitor, usageAlertNotifier: IsolatedPlanFixtureEffects(),
+            performsLifecycleWork: false,
+            widgetSnapshotCoordinator: WidgetSnapshotCoordinator(
+                refreshService: refreshService, configurationStore: configurationStore,
+                publishSnapshot: { _, _ in }, publishSettings: { _ in }
+            ),
+            watchSnapshotCoordinator: WatchSnapshotCoordinator(
+                refreshService: refreshService, configurationStore: configurationStore,
+                sender: IsolatedPlanFixtureEffects(), publishSnapshot: { _, _, _ in }
+            )
+        )
+    }
+
     @ViewBuilder
     private func screenshotRootView(for scene: AppStoreScreenshotScene) -> some View {
         switch scene {
         case .dashboardOverview, .dashboardDark, .gemini, .grok, .githubBilling:
-            mainContentView(performsLifecycleWork: false)
+            isolatedScreenshotContentView()
         case .widgetBuilder:
             NavigationStack {
-                WidgetBuilderView()
+                WidgetBuilderView(defaults: AppStoreScreenshotFixtures.widgetDefaults)
             }
         case .accounts:
             SettingsView(
@@ -217,13 +275,8 @@ struct CodexBarIOSApp: App {
             }
         case .history:
             if let result = refreshService.results.first(where: { $0.providerID == .codex }) {
-                ProviderUsageHistoryDetailView(
-                    result: result,
-                    seriesOptions: historyStore.historySeriesOptions(
-                        for: result,
-                        severityThresholds:
-                            configurationStore.usageAlertSettings.severityThresholds
-                    )
+                LiveProviderUsageHistoryDetailView(
+                    result: result, historyStore: historyStore, configurationStore: configurationStore
                 )
             } else {
                 ContentUnavailableView("No History", systemImage: "chart.xyaxis.line")

@@ -325,6 +325,12 @@ struct SettingsView: View {
                     + "account. Saved accounts and Keychain credentials are not deleted."
             )
         }
+        .accountPlanPresentation(
+            configurationStore: configurationStore,
+            usageResultForAccount: usageResultForAccount,
+            isActive: addAccountFlowRequest == nil && selectedAccountID == nil
+        )
+        .environment(\.accountLastResultProvider, usageResultForAccount)
         .interactiveDismissDisabled(pendingGroupChanges.hasChanges)
         .onChange(of: focusedGroupID) { oldValue, newValue in
             if let oldValue, oldValue != newValue {
@@ -359,6 +365,14 @@ struct SettingsView: View {
         let layout = SettingsHomeLayout(requiresAttention: recoveryState.requiresAttention)
 
         return List(selection: $selectedDestination) {
+            Section {
+                Button {
+                    configurationStore.requestProPresentation()
+                } label: {
+                    Label("CodexBar Pro", systemImage: "sparkles")
+                }
+                .accessibilityIdentifier("settings-codexbar-pro")
+            }
             if let attentionDestination = layout.attentionDestination {
                 Section("Needs Attention") {
                     settingsCategoryLink(attentionDestination)
@@ -468,7 +482,7 @@ struct SettingsView: View {
             )
         case .alerts:
             SettingsCategorySummary.alerts(
-                isEnabled: configurationStore.usageAlertSettings.isEnabled,
+                isEnabled: configurationStore.accountAccess.hasProAccess && configurationStore.usageAlertSettings.isEnabled,
                 githubStatusEnabled: githubStatusPreferences.settings.isEnabled,
                 warningThreshold: configurationStore.usageAlertSettings.warningThreshold,
                 criticalThreshold: configurationStore.usageAlertSettings.criticalThreshold
@@ -519,6 +533,10 @@ struct SettingsView: View {
                     switch row {
                     case .addAccount:
                         Button {
+                            guard configurationStore.canAddAccount(for: .codex) else {
+                                configurationStore.requestProPresentation()
+                                return
+                            }
                             addAccountFlowRequest = AddAccountFlowRequest()
                         } label: {
                             Label("Add Account", systemImage: "plus.circle")
@@ -547,6 +565,7 @@ struct SettingsView: View {
                                     ProviderSettingsRow(
                                         configuration: configuration,
                                         isConfigured: configurationStore.isConfigured(configuration),
+                                        isPausedByPlan: configurationStore.accountAccess.isPaused(accountID: configuration.id),
                                         groupName: configurationStore.group(
                                             for: configuration.groupID
                                         )?.name
@@ -566,6 +585,7 @@ struct SettingsView: View {
                                 ProviderSettingsRow.accessibilityValue(
                                     configuration: configuration,
                                     isConfigured: configurationStore.isConfigured(configuration),
+                                    isPausedByPlan: configurationStore.accountAccess.isPaused(accountID: configuration.id),
                                     groupName: configurationStore.group(
                                         for: configuration.groupID
                                     )?.name
@@ -576,6 +596,13 @@ struct SettingsView: View {
                     }
                 }
                 .onDelete(perform: deleteAccountRows)
+                if !configurationStore.accountAccess.hasProAccess,
+                   !configurationStore.visibleConfigurations.isEmpty {
+                    Button("Change active account", systemImage: "person.crop.circle.badge.checkmark") {
+                        configurationStore.requestActiveAccountChoice()
+                    }
+                    .accessibilityIdentifier("settings-change-active-account")
+                }
             }
 
             Section("Groups") {
@@ -704,6 +731,12 @@ struct SettingsView: View {
         List {
             Section {
                 Toggle("Usage Alerts", isOn: usageAlertsEnabledBinding)
+                    .accessibilityIdentifier("usage-alerts-toggle")
+                if !configurationStore.accountAccess.hasProAccess {
+                    Label("Usage alerts require CodexBar Pro. Your saved alert settings are kept.", systemImage: "lock.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
 
                 Stepper(
                     value: usageAlertWarningPercentBinding,
@@ -712,7 +745,7 @@ struct SettingsView: View {
                 ) {
                     Text("Warning \(Int(usageAlertWarningPercent.rounded()))%")
                 }
-                .disabled(!configurationStore.usageAlertSettings.isEnabled)
+                .disabled(!usageAlertsEnabledBinding.wrappedValue)
                 .accessibilityLabel("Warning threshold")
                 .accessibilityValue("\(Int(usageAlertWarningPercent.rounded())) percent")
                 .accessibilityHint("Must remain below the Critical Alert threshold.")
@@ -724,7 +757,7 @@ struct SettingsView: View {
                 ) {
                     Text("Critical Alert \(Int(usageAlertCriticalPercent.rounded()))%")
                 }
-                .disabled(!configurationStore.usageAlertSettings.isEnabled)
+                .disabled(!usageAlertsEnabledBinding.wrappedValue)
                 .accessibilityLabel("Critical Alert threshold")
                 .accessibilityValue("\(Int(usageAlertCriticalPercent.rounded())) percent")
                 .accessibilityHint("Must remain above the Warning threshold.")
@@ -732,7 +765,7 @@ struct SettingsView: View {
                 Stepper(value: usageAlertBalanceBinding, in: 1...100, step: 1) {
                     Text("Balance below \(formattedBalanceThreshold)")
                 }
-                .disabled(!configurationStore.usageAlertSettings.isEnabled)
+                .disabled(!usageAlertsEnabledBinding.wrappedValue)
 
                 if let alertPermissionMessage {
                     Text(alertPermissionMessage)
@@ -1001,11 +1034,16 @@ struct SettingsView: View {
 
     private var usageAlertsEnabledBinding: Binding<Bool> {
         Binding(
-            get: { configurationStore.usageAlertSettings.isEnabled },
+            get: { configurationStore.accountAccess.hasProAccess && configurationStore.usageAlertSettings.isEnabled },
             set: { isEnabled in
+                guard configurationStore.accountAccess.hasProAccess else {
+                    configurationStore.requestProPresentation()
+                    return
+                }
                 if isEnabled {
                     Task {
                         let granted = await onAlertAuthorizationRequest()
+                        guard configurationStore.accountAccess.hasProAccess else { return }
                         configurationStore.updateUsageAlertsEnabled(granted)
                         alertPermissionMessage = granted ? nil : "Notifications are disabled for CodexBar."
                     }
@@ -1306,6 +1344,7 @@ struct SettingsView: View {
 struct ProviderSettingsRow: View {
     let configuration: ProviderAccountConfiguration
     let isConfigured: Bool
+    var isPausedByPlan = false
     let groupName: String?
 
     var body: some View {
@@ -1329,6 +1368,7 @@ struct ProviderSettingsRow: View {
     }
 
     private var statusIcon: String {
+        if isPausedByPlan { return "lock.fill" }
         if !configuration.isEnabled {
             return "pause.circle"
         }
@@ -1337,7 +1377,7 @@ struct ProviderSettingsRow: View {
     }
 
     private var statusTint: Color {
-        if !configuration.isEnabled {
+        if isPausedByPlan || !configuration.isEnabled {
             return .secondary
         }
 
@@ -1345,15 +1385,16 @@ struct ProviderSettingsRow: View {
     }
 
     private var statusText: String {
-        Self.statusText(configuration: configuration, isConfigured: isConfigured)
+        isPausedByPlan ? "Paused: CodexBar Pro" : Self.statusText(configuration: configuration, isConfigured: isConfigured)
     }
 
     static func accessibilityValue(
         configuration: ProviderAccountConfiguration,
         isConfigured: Bool,
+        isPausedByPlan: Bool = false,
         groupName: String?
     ) -> String {
-        let status = statusText(configuration: configuration, isConfigured: isConfigured)
+        let status = isPausedByPlan ? "Paused: CodexBar Pro" : statusText(configuration: configuration, isConfigured: isConfigured)
         guard let groupName else {
             return status
         }
@@ -1463,8 +1504,12 @@ struct AddAccountFlowState: Equatable {
             return nil
         }
 
-        let configuration = configurationStore.addAccount(for: providerID)
-        guard configurationStore.configuration(accountID: configuration.id) != nil else {
+        guard configurationStore.canAddAccount(for: providerID) else {
+            configurationStore.requestProPresentation()
+            return nil
+        }
+        guard let configuration = configurationStore.addAccount(for: providerID),
+              configurationStore.configuration(accountID: configuration.id) != nil else {
             return nil
         }
         accountID = configuration.id
@@ -1545,6 +1590,7 @@ struct AddAccountSetupFlow: View {
                 }
             }
         }
+        .accountPlanPresentation(configurationStore: configurationStore, isActive: flowState.accountID == nil)
         .task {
             guard let initialProviderID, flowState.accountID == nil else {
                 return

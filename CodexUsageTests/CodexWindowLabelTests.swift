@@ -41,8 +41,8 @@ final class CodexWindowLabelTests: XCTestCase {
         let suite = "CodexWindowLabelTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: WindowLabelSecretStore())
-        let account = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: WindowLabelSecretStore())
+        let account = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("synthetic", for: account))
         let parsed = try parse(plan: "free")
         let bar = try XCTUnwrap(parsed.bars.last)
@@ -59,7 +59,7 @@ final class CodexWindowLabelTests: XCTestCase {
         store.updateMetricVisibility(false, accountID: account.id, metricID: metricID)
         _ = store.reconcileMetricLayout(accountID: account.id, availableMetricIDs: [metricID])
         XCTAssertFalse(store.isMetricVisible(accountID: account.id, metricID: metricID))
-        let reloaded = ProviderConfigurationStore(defaults: defaults, secretStore: WindowLabelSecretStore())
+        let reloaded = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: WindowLabelSecretStore())
         XCTAssertFalse(reloaded.isMetricVisible(accountID: account.id, metricID: metricID))
         WidgetSnapshotPublisher.publish(results: [current], configurationStore: reloaded, snapshotDefaults: defaults, now: now)
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)

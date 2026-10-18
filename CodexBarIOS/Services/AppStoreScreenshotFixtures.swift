@@ -88,6 +88,15 @@ struct AppStoreScreenshotConfiguration {
 @MainActor
 enum AppStoreScreenshotFixtures {
     private static let captureDate = Date()
+    static let widgetDefaults = isolatedDefaults()
+
+    private static func isolatedDefaults() -> UserDefaults {
+        let suite = "com.hemsoft.CodexBarIOS.screenshot.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suite) else {
+            preconditionFailure("Cannot create isolated screenshot storage")
+        }
+        return defaults
+    }
 
     static func featureAccount(for scene: AppStoreScreenshotScene, in store: ProviderConfigurationStore) {
         switch scene {
@@ -159,11 +168,7 @@ enum AppStoreScreenshotFixtures {
         for results: [ProviderUsageResult],
         extendedRange: Bool = false
     ) -> UsageHistoryStore {
-        let suiteName = "com.hemsoft.CodexBarIOS.appStoreScreenshotHistory"
-        let defaults = UserDefaults(suiteName: suiteName) ?? .standard
-        defaults.removePersistentDomain(forName: suiteName)
-
-        let store = UsageHistoryStore(defaults: defaults)
+        let store = UsageHistoryStore(defaults: isolatedDefaults())
         guard let result = results.first(where: { $0.providerID == .codex }) else {
             return store
         }
@@ -204,11 +209,7 @@ enum AppStoreScreenshotFixtures {
         results: [ProviderUsageResult],
         configurationStore: ProviderConfigurationStore
     ) {
-        guard let defaults = WidgetSnapshotStore.userDefaults() else {
-            return
-        }
-
-        defaults.removePersistentDomain(forName: CodexBarWidgetConstants.appGroupIdentifier)
+        let defaults = widgetDefaults
         WidgetSnapshotPublisher.publish(
             results: results,
             configurationStore: configurationStore,

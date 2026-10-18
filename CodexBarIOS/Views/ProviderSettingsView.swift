@@ -412,7 +412,11 @@ struct ProviderSettingsView: View {
                         Text("Keep this API-key account's review history. Add a separate account to sign in to Greptile.")
                             .font(.footnote).foregroundStyle(.secondary)
                         Button("Add Greptile account") {
-                            let account = configurationStore.addAccount(for: .greptile)
+                            guard configurationStore.canAddAccount(for: .greptile) else {
+                                configurationStore.requestProPresentation()
+                                return
+                            }
+                            guard let account = configurationStore.addAccount(for: .greptile) else { return }
                             if configurationStore.configuration(accountID: account.id) != nil { newGreptileAccountID = account.id }
                         }
                     } else {
@@ -597,6 +601,15 @@ struct ProviderSettingsView: View {
                 Text("Current Status")
             }
         }
+        .accountPlanPresentation(
+            configurationStore: configurationStore,
+            usageResultForAccount: { accountID in
+                accountID == viewModel.configuration.id ? viewModel.usageResult : nil
+            },
+            isActive: newGreptileAccountID == nil && viewModel.authURL == nil
+                && viewModel.greptileBrowserSession == nil && viewModel.geminiBrowserSession == nil
+                && viewModel.openCodeBrowserSession == nil && viewModel.subscriptionBillingSession == nil
+        )
         .accessibilityIdentifier("provider-account-settings-form")
         .navigationTitle(configuration.displayName)
         .navigationBarTitleDisplayMode(.inline)

@@ -78,7 +78,7 @@ final class CodexCreditsPoolTests: XCTestCase {
         let suite = "CodexCreditsPoolTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: CreditsFixtureSecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: CreditsFixtureSecretStore())
         let ids = ["codex.window-18000", "codex.window-604800", metricID]
         XCTAssertFalse(store.isMetricVisible(accountID: "one", metricID: metricID))
         XCTAssertTrue(store.isMetricVisible(accountID: "one", metricID: ids[0]))
@@ -92,7 +92,7 @@ final class CodexCreditsPoolTests: XCTestCase {
         store.updateMetricOrder(Array(ids.reversed()), accountID: "one")
         _ = store.reconcileMetricLayout(accountID: "one", availableMetricIDs: Array(ids.dropLast()))
         _ = store.reconcileMetricLayout(accountID: "one", availableMetricIDs: ids)
-        let reloaded = ProviderConfigurationStore(defaults: defaults, secretStore: CreditsFixtureSecretStore())
+        let reloaded = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: CreditsFixtureSecretStore())
         XCTAssertTrue(reloaded.isMetricVisible(accountID: "one", metricID: metricID))
         XCTAssertFalse(reloaded.isMetricVisible(accountID: "two", metricID: metricID))
         XCTAssertEqual(reloaded.metricOrder(accountID: "one", availableMetricIDs: ids), Array(ids.reversed()))
@@ -106,7 +106,7 @@ final class CodexCreditsPoolTests: XCTestCase {
         let suite = "CodexCreditsPoolTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: CreditsFixtureSecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: CreditsFixtureSecretStore())
         _ = store.reconcileMetricLayout(accountID: "one", availableMetricIDs: [metricID])
         XCTAssertFalse(store.isMetricLayoutCustomized(accountID: "one", availableMetricIDs: [metricID]))
         XCTAssertTrue(GoogleUsageMetricCatalog.layoutCopyMetricIDs(for: .codex, result: nil).isEmpty)
@@ -130,8 +130,8 @@ final class CodexCreditsPoolTests: XCTestCase {
         let suite = "CodexCreditsPoolTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: CreditsFixtureSecretStore())
-        let account = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: CreditsFixtureSecretStore())
+        let account = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("synthetic", for: account))
         let parsed = try parse(credits: ["has_credits": true, "unlimited": false, "balance": "62500.75"])
         let result = ProviderUsageResult(accountID: account.id, providerID: .codex, title: account.displayName,
@@ -189,8 +189,8 @@ final class CodexCreditsPoolTests: XCTestCase {
         let suite = "CodexCreditsWatch.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: CreditsFixtureSecretStore())
-        let account = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: CreditsFixtureSecretStore())
+        let account = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("synthetic", for: account))
         for (unlimited, expected) in [(true, "Unlimited credits"), (false, "Credits unavailable")] {
             let parsed = try parse(credits: ["has_credits": unlimited, "unlimited": unlimited, "balance": NSNull()])

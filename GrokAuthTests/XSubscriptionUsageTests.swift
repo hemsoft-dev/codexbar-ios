@@ -282,13 +282,14 @@ final class XSubscriptionAccountTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults, secretStore: GrokTestSecrets(), widgetSnapshotDefaults: defaults
         )
         var clearedHistory: [String] = []
         let subscription = store.grokHistoryInvalidations.sink { clearedHistory.append($0) }
         defer { subscription.cancel() }
-        let first = store.addAccount(for: .xSubscription)
-        let second = store.addAccount(for: .xSubscription)
+        let first = try XCTUnwrap(store.addAccount(for: .xSubscription))
+        let second = try XCTUnwrap(store.addAccount(for: .xSubscription))
         XCTAssertEqual(first.accountLabel, "X Subscription 1")
         XCTAssertEqual(first.grokGeneratedLabel, first.accountLabel)
         XCTAssertFalse(store.isConfigured(first))
@@ -327,9 +328,10 @@ final class XSubscriptionAccountTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults, secretStore: GrokTestSecrets(), widgetSnapshotDefaults: defaults
         )
-        let account = store.addAccount(for: .xSubscription)
+        let account = try XCTUnwrap(store.addAccount(for: .xSubscription))
         XCTAssertTrue(store.replaceCredential(try credential("one").encoded(), for: account))
         let formatter = ISO8601DateFormatter()
         let now = Date()
@@ -362,9 +364,10 @@ final class XSubscriptionAccountTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults, secretStore: GrokTestSecrets(), widgetSnapshotDefaults: defaults
         )
-        let account = store.addAccount(for: .xSubscription)
+        let account = try XCTUnwrap(store.addAccount(for: .xSubscription))
         XCTAssertTrue(store.replaceCredential(try credential("one").encoded(), for: account))
         let grokResult = try GrokUsageProvider.parseCredits(
             Data(#"{"config":{}}"#.utf8), configuration: account, subject: "one", now: Date()

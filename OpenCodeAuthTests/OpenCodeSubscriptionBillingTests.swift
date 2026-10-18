@@ -210,7 +210,7 @@ final class OpenCodeSubscriptionBillingTests: XCTestCase, @unchecked Sendable {
             let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
             defer { defaults.removePersistentDomain(forName: suite) }
             let secrets = OpenCodeTestSecrets()
-            let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+            let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
             let first = configuration()
             var second = ProviderAccountConfiguration(id: "second", providerID: .openCodeZen,
                                                       accountLabel: "Second account", authMethod: .browserSession)

@@ -45,8 +45,8 @@ final class OpenCodeBrowserChoiceTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = OpenCodeTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        var account = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        var account = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         account.openCodeWorkspaceId = "wrk_one"
         let original = try credential().encoded()
         XCTAssertTrue(store.canReconnectOpenCodeSession(original, workspaceID: "wrk_one", accountID: account.id))
@@ -60,7 +60,7 @@ final class OpenCodeBrowserChoiceTests: XCTestCase {
         XCTAssertEqual(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: account)), otherUser)
         XCTAssertTrue(store.removeAccount(account))
         XCTAssertFalse(store.canReconnectOpenCodeSession(original, workspaceID: "wrk_one", accountID: account.id))
-        let cursor = store.addAccount(for: .cursor)
+        let cursor = try XCTUnwrap(store.addAccount(for: .cursor))
         XCTAssertFalse(store.canReconnectOpenCodeSession(original, workspaceID: "wrk_one", accountID: cursor.id))
     }
 
@@ -69,8 +69,10 @@ final class OpenCodeBrowserChoiceTests: XCTestCase {
         let suite = "OpenCodeAuthTests.\(UUID())"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: UnreadableSecrets(), widgetSnapshotDefaults: defaults)
-        let account = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
+            defaults: defaults, secretStore: UnreadableSecrets(), widgetSnapshotDefaults: defaults)
+        let account = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         XCTAssertFalse(store.canReconnectOpenCodeSession(
             try credential().encoded(), workspaceID: "wrk_one", accountID: account.id
         ))

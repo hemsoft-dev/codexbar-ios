@@ -137,7 +137,9 @@ final class CursorStalePublicationRegressionTests: XCTestCase {
     ) {
         let suite = "CursorSession.\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: GrokTestSecrets(), widgetSnapshotDefaults: defaults)
+        let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
+            defaults: defaults, secretStore: GrokTestSecrets(), widgetSnapshotDefaults: defaults)
         let account = ProviderAccountConfiguration(
             id: "cursor-stale-publication", providerID: .cursor, accountLabel: "Synthetic Cursor", authMethod: .browserSession
         )

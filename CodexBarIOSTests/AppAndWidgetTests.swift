@@ -249,7 +249,7 @@ final class AppAndWidgetTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let store = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: MemorySecretStore()
         )
         var flow = AddAccountFlowState()
@@ -624,10 +624,10 @@ final class AppAndWidgetTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let store = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        let existingAccount = store.addAccount(for: .codex)
+        let existingAccount = try XCTUnwrap(store.addAccount(for: .codex))
         var flow = AddAccountFlowState()
 
         let addedAccountID = try XCTUnwrap(
@@ -1970,7 +1970,7 @@ final class AppAndWidgetTests: XCTestCase {
         }
 
         let store = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore(),
             widgetSnapshotDefaults: defaults
         )
@@ -1979,7 +1979,7 @@ final class AppAndWidgetTests: XCTestCase {
         store.updateAutoRefreshInterval(.fiveMinutes)
 
         let reloadedStore = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore(),
             widgetSnapshotDefaults: defaults
         )
@@ -1995,7 +1995,7 @@ final class AppAndWidgetTests: XCTestCase {
         }
 
         let store = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore(),
             widgetSnapshotDefaults: defaults
         )
@@ -2004,7 +2004,7 @@ final class AppAndWidgetTests: XCTestCase {
         store.updateHistorySamplingInterval(.fourHours)
 
         let reloadedStore = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore(),
             widgetSnapshotDefaults: defaults
         )
@@ -2020,7 +2020,7 @@ final class AppAndWidgetTests: XCTestCase {
         }
 
         let store = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore(),
             widgetSnapshotDefaults: defaults
         )
@@ -2029,7 +2029,7 @@ final class AppAndWidgetTests: XCTestCase {
         store.updateWidgetRefreshInterval(.oneHour)
 
         let reloadedStore = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore(),
             widgetSnapshotDefaults: defaults
         )
@@ -2309,9 +2309,9 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
         let generatedAt = Date(timeIntervalSince1970: 1_788_475_200)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         let group = try XCTUnwrap(store.addGroup(named: "Work"))
-        var configuration = store.addAccount(for: .openCodeZen)
+        var configuration = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         configuration.groupID = group.id
         configuration.openCodeWorkspaceId = "workspace"
         XCTAssertTrue(store.update(configuration))
@@ -2355,13 +2355,13 @@ final class AppAndWidgetTests: XCTestCase {
         }
         let fetchedAt = Date(timeIntervalSince1970: 1_788_475_200)
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        var highBalanceConfiguration = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        var highBalanceConfiguration = try XCTUnwrap(store.addAccount(for: .openRouter))
         highBalanceConfiguration.accountLabel = "High Balance"
         XCTAssertTrue(store.update(highBalanceConfiguration))
         store.saveSecret("openrouter-high", for: highBalanceConfiguration)
 
-        var lowBalanceConfiguration = store.addAccount(for: .openRouter)
+        var lowBalanceConfiguration = try XCTUnwrap(store.addAccount(for: .openRouter))
         lowBalanceConfiguration.accountLabel = "Low Balance"
         XCTAssertTrue(store.update(lowBalanceConfiguration))
         store.saveSecret("openrouter-low", for: lowBalanceConfiguration)
@@ -2404,9 +2404,9 @@ final class AppAndWidgetTests: XCTestCase {
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let claude = store.addAccount(for: .claude)
-        let openRouter = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let claude = try XCTUnwrap(store.addAccount(for: .claude))
+        let openRouter = try XCTUnwrap(store.addAccount(for: .openRouter))
         store.saveSecret("claude-token", for: claude)
         store.saveSecret("openrouter-key", for: openRouter)
         let fetchedAt = Date(timeIntervalSince1970: 1_788_475_200)
@@ -2446,8 +2446,8 @@ final class AppAndWidgetTests: XCTestCase {
         }
         let fetchedAt = Date(timeIntervalSince1970: 1_788_475_200)
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let configuration = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let configuration = try XCTUnwrap(store.addAccount(for: .claude))
         store.saveSecret("claude-token", for: configuration)
         let result = ProviderUsageResult(
             accountID: configuration.id,
@@ -2495,10 +2495,10 @@ final class AppAndWidgetTests: XCTestCase {
         }
         let fetchedAt = Date(timeIntervalSince1970: 1_784_980_800)
         let store = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        let configuration = store.addAccount(for: .openCodeZen)
+        let configuration = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         store.saveSecret("secret", for: configuration)
         let projectionBar = UsageBar(
             stableKey: "go.weekly",
@@ -2569,8 +2569,8 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
         let fetchedAt = Date(timeIntervalSince1970: 1_788_475_200)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         store.saveSecret("secret", for: configuration)
         let result = ProviderUsageResult(
             accountID: configuration.id,
@@ -2625,10 +2625,10 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         let group = try XCTUnwrap(store.addGroup(named: "Personal"))
-        var codex = store.addAccount(for: .codex)
-        let claude = store.addAccount(for: .claude)
+        var codex = try XCTUnwrap(store.addAccount(for: .codex))
+        let claude = try XCTUnwrap(store.addAccount(for: .claude))
 
         XCTAssertTrue(codex.showsHistory)
         XCTAssertTrue(claude.showsHistory)
@@ -2638,7 +2638,7 @@ final class AppAndWidgetTests: XCTestCase {
         codex.groupID = group.id
         XCTAssertTrue(store.update(codex))
 
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         let reloadedCodex = try XCTUnwrap(reloadedStore.configuration(accountID: codex.id))
         let reloadedClaude = try XCTUnwrap(reloadedStore.configuration(accountID: claude.id))
 
@@ -2699,12 +2699,12 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         XCTAssertEqual(store.appAppearance, .system)
 
         store.updateAppAppearance(.dark)
 
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         XCTAssertEqual(reloadedStore.appAppearance, .dark)
     }
 
@@ -2716,12 +2716,12 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         store.updateDashboardCardOrder(["claude", "codex", "claude", "copilot"])
 
         XCTAssertEqual(store.dashboardCardOrder, ["claude", "codex", "copilot"])
 
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         XCTAssertEqual(reloadedStore.dashboardCardOrder, ["claude", "codex", "copilot"])
     }
 
@@ -2733,12 +2733,12 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         XCTAssertEqual(store.dashboardOrderingMode, .manual)
 
         store.updateDashboardOrderingMode(.smart)
 
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         XCTAssertEqual(reloadedStore.dashboardOrderingMode, .smart)
     }
 
@@ -3145,21 +3145,21 @@ final class AppAndWidgetTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderGroupsPersistAndAssignAccounts() {
+    func testProviderGroupsPersistAndAssignAccounts() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         let group = store.addGroup(named: " Work ")
-        var account = store.addAccount(for: .codex)
+        var account = try XCTUnwrap(store.addAccount(for: .codex))
         account.groupID = group?.id
 
         XCTAssertTrue(store.update(account))
 
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         XCTAssertEqual(reloadedStore.groups.map(\.name), ["Work"])
         XCTAssertEqual(reloadedStore.configuration(accountID: account.id)?.groupID, group?.id)
     }
@@ -3172,9 +3172,9 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         let group = try XCTUnwrap(store.addGroup(named: "Relias"))
-        var account = store.addAccount(for: .copilot)
+        var account = try XCTUnwrap(store.addAccount(for: .copilot))
         account.groupID = group.id
         XCTAssertTrue(store.update(account))
 
@@ -3183,7 +3183,7 @@ final class AppAndWidgetTests: XCTestCase {
         XCTAssertTrue(store.groups.isEmpty)
         XCTAssertNil(store.configuration(accountID: account.id)?.groupID)
 
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         XCTAssertNil(reloadedStore.configuration(accountID: account.id)?.groupID)
     }
 
@@ -3195,7 +3195,7 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
 
         XCTAssertNotNil(store.addGroup(named: "Engineering"))
         XCTAssertNil(store.addGroup(named: " engineering "))
@@ -3216,12 +3216,12 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         let beta = try XCTUnwrap(store.addGroup(named: "Beta"))
         let alpha = try XCTUnwrap(store.addGroup(named: "Alpha"))
-        let ungrouped = store.addAccount(for: .openRouter)
-        var betaAccount = store.addAccount(for: .codex)
-        var alphaAccount = store.addAccount(for: .claude)
+        let ungrouped = try XCTUnwrap(store.addAccount(for: .openRouter))
+        var betaAccount = try XCTUnwrap(store.addAccount(for: .codex))
+        var alphaAccount = try XCTUnwrap(store.addAccount(for: .claude))
         betaAccount.groupID = beta.id
         alphaAccount.groupID = alpha.id
 
@@ -3889,16 +3889,16 @@ final class AppAndWidgetTests: XCTestCase {
     }
 
     @MainActor
-    func testMetricVisualizationPreferencesPersistPerAccountAndStableMetric() {
+    func testMetricVisualizationPreferencesPersistPerAccountAndStableMetric() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let firstAccount = store.addAccount(for: .codex)
-        let secondAccount = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let firstAccount = try XCTUnwrap(store.addAccount(for: .codex))
+        let secondAccount = try XCTUnwrap(store.addAccount(for: .codex))
         let firstMetric = UsageBar(
             stableKey: "window-18000",
             label: "Localized label A",
@@ -3926,7 +3926,7 @@ final class AppAndWidgetTests: XCTestCase {
             metricIDs: [metricID, "codex.window-604800"]
         )
 
-        let reloaded = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let reloaded = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         XCTAssertEqual(reloaded.visualizationStyle(accountID: firstAccount.id, metricID: metricID), .segmentedBar)
         XCTAssertEqual(
             reloaded.visualizationStyle(accountID: firstAccount.id, metricID: "codex.window-604800"),
@@ -3961,7 +3961,7 @@ final class AppAndWidgetTests: XCTestCase {
         )
 
         let migrated = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
         XCTAssertEqual(
@@ -3984,7 +3984,7 @@ final class AppAndWidgetTests: XCTestCase {
         )
 
         let reloaded = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
         XCTAssertFalse(reloaded.isMetricVisible(accountID: firstAccountID, metricID: metricID))
@@ -4026,7 +4026,7 @@ final class AppAndWidgetTests: XCTestCase {
         )
 
         let migrated = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
 
@@ -4111,7 +4111,7 @@ final class AppAndWidgetTests: XCTestCase {
         let missingID = "codex.temporarily-missing"
         let weeklyID = "codex.weekly"
         let newID = "codex.monthly"
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
 
         XCTAssertEqual(
             store.metricOrder(
@@ -4132,7 +4132,7 @@ final class AppAndWidgetTests: XCTestCase {
         store.updateVisualizationStyle(.circularRing, accountID: accountID, metricID: missingID)
 
         let reloaded = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
         XCTAssertEqual(reloaded.metricWidth(accountID: accountID, metricID: weeklyID), .half)
@@ -4168,7 +4168,7 @@ final class AppAndWidgetTests: XCTestCase {
 
         reloaded.markMetricsSeen([newID], accountID: accountID)
         let seenReloaded = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
         XCTAssertFalse(
@@ -4236,7 +4236,7 @@ final class AppAndWidgetTests: XCTestCase {
             forKey: "metricVisualizationPreferences"
         )
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         let order = store.metricOrder(
             accountID: accountID,
             availableMetricIDs: [minutesID, storageID, lfsStorageID]
@@ -4261,7 +4261,7 @@ final class AppAndWidgetTests: XCTestCase {
         let firstID = "codex.session"
         let secondID = "codex.weekly"
         let temporarilyMissingID = "codex.temporarily-missing"
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         _ = store.reconcileMetricLayout(
             accountID: accountID,
             availableMetricIDs: [firstID, secondID, temporarilyMissingID]
@@ -4302,7 +4302,7 @@ final class AppAndWidgetTests: XCTestCase {
         XCTAssertTrue(reset.preferences.values.allSatisfy { $0.watchVisibility == .inherit })
         XCTAssertTrue(reset.preferences.values.allSatisfy { !$0.isNewlyDiscovered })
 
-        let reloaded = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let reloaded = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         XCTAssertEqual(reloaded.metricLayouts[accountID], reset)
     }
 
@@ -4321,7 +4321,7 @@ final class AppAndWidgetTests: XCTestCase {
         let destinationOnlyID = "claude.monthly"
         let temporarilyMissingSharedID = "claude.shared-temporarily-missing"
         let temporarilyMissingDestinationID = "claude.temporarily-missing"
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         _ = store.reconcileMetricLayout(
             accountID: sourceAccountID,
             availableMetricIDs: [sourceOnlyID, sharedID, temporarilyMissingSharedID]
@@ -4406,7 +4406,7 @@ final class AppAndWidgetTests: XCTestCase {
         let accountID = "codex.copy-target"
         let metricIDs = ["codex.session", "codex.weekly"]
         let temporarilyMissingID = "codex.temporarily-missing"
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         _ = store.reconcileMetricLayout(
             accountID: accountID,
             availableMetricIDs: metricIDs + [temporarilyMissingID]
@@ -4467,13 +4467,13 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         var imported = ProviderAccountConfiguration.defaultConfiguration(for: .openCodeZen)
         imported.openCodeWorkspaceId = "workspace"
         XCTAssertTrue(store.update(imported))
 
         let reloaded = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
         let metricID = "openCodeZen.go-weekly"
@@ -4497,12 +4497,12 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         let configuration = ProviderAccountConfiguration.defaultConfiguration(for: .codex)
         XCTAssertTrue(store.replaceCredential("token", for: configuration))
 
         let reloaded = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
         let metricID = "codex.session"
@@ -4530,14 +4530,14 @@ final class AppAndWidgetTests: XCTestCase {
         }
 
         let original = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
-        let existingAccount = original.addAccount(for: .codex)
+        let existingAccount = try XCTUnwrap(original.addAccount(for: .codex))
         defaults.removeObject(forKey: "metricVisualizationPreferences")
 
         let migrated = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
         let metricID = "codex.session"
@@ -4585,7 +4585,7 @@ final class AppAndWidgetTests: XCTestCase {
             forKey: "metricVisualizationPreferences"
         )
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         _ = store.addAccount(for: .claude)
 
         let persistedData = try XCTUnwrap(
@@ -4639,17 +4639,17 @@ final class AppAndWidgetTests: XCTestCase {
         }
 
         let originalStore = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
-        let existingAccount = originalStore.addAccount(for: .codex)
+        let existingAccount = try XCTUnwrap(originalStore.addAccount(for: .codex))
         let opaqueData = Data(
             #"{"futureEnvelope":{"schema":2,"accounts":[]}}"#.utf8
         )
         defaults.set(opaqueData, forKey: "metricVisualizationPreferences")
 
         let preservingStore = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
         XCTAssertEqual(
@@ -4691,17 +4691,17 @@ final class AppAndWidgetTests: XCTestCase {
         }
 
         let originalStore = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
-        let existingAccount = originalStore.addAccount(for: .codex)
+        let existingAccount = try XCTUnwrap(originalStore.addAccount(for: .codex))
         defaults.set(
             Data(#"{"futureEnvelope":{"schema":2,"accounts":[]}}"#.utf8),
             forKey: "metricVisualizationPreferences"
         )
 
         let preservingStore = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: EmptySecretStore()
         )
         preservingStore.resetVisualizationStyles(
@@ -4778,11 +4778,11 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
         let store = ProviderConfigurationStore(
-            defaults: defaults,
+            initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .codex)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("widget-test-secret", for: configuration))
         let bars = [
             UsageBar(stableKey: "session", label: "Session", used: 20, limit: 100),
@@ -4815,15 +4815,15 @@ final class AppAndWidgetTests: XCTestCase {
     }
 
     @MainActor
-    func testRemovingAndResettingAccountsCleanUpMetricLayouts() {
+    func testRemovingAndResettingAccountsCleanUpMetricLayouts() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let account = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let account = try XCTUnwrap(store.addAccount(for: .codex))
         store.updateVisualizationStyle(
             .largeNumeric,
             accountID: account.id,
@@ -4834,7 +4834,7 @@ final class AppAndWidgetTests: XCTestCase {
         XCTAssertNil(store.metricVisualizationPreferences[account.id])
         XCTAssertNil(store.metricLayouts[account.id])
 
-        let resetAccount = store.addAccount(for: .claude)
+        let resetAccount = try XCTUnwrap(store.addAccount(for: .claude))
         store.updateMetricWidth(
             .half,
             accountID: resetAccount.id,
@@ -4853,8 +4853,8 @@ final class AppAndWidgetTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        var configuration = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        var configuration = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         configuration.openCodeWorkspaceId = "workspace"
         XCTAssertTrue(store.update(configuration))
 

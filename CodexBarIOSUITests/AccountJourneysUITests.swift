@@ -523,19 +523,17 @@ final class AccountJourneysUITests: XCTestCase {
             "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL",
         ]
         app.launch()
-        addTeardownBlock { [weak self] in
+        addTeardownBlock { @MainActor [weak self] () async throws in
             guard let self else { return }
-            await MainActor.run {
-                guard (self.testRun?.failureCount ?? 0) > 0 else { return }
-                let screenshot = XCTAttachment(screenshot: app.screenshot())
-                screenshot.name = "Failed journey"
-                screenshot.lifetime = .keepAlways
-                self.add(screenshot)
-                let hierarchy = XCTAttachment(string: app.debugDescription)
-                hierarchy.name = "Accessibility hierarchy"
-                hierarchy.lifetime = .keepAlways
-                self.add(hierarchy)
-            }
+            guard (self.testRun?.failureCount ?? 0) > 0 else { return }
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = "Failed journey"
+            screenshot.lifetime = .keepAlways
+            self.add(screenshot)
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "Accessibility hierarchy"
+            hierarchy.lifetime = .keepAlways
+            self.add(hierarchy)
         }
         return app
     }

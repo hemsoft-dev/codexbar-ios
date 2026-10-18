@@ -36,10 +36,11 @@ final class WidgetConfigurationTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        let configuration = store.addAccount(for: .greptile)
+        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
         XCTAssertTrue(store.saveSecret("greptile-widget-key", for: configuration))
         let result = ProviderUsageResult(
             accountID: configuration.id,
@@ -110,10 +111,11 @@ final class WidgetConfigurationTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defer { defaults.removePersistentDomain(forName: #function) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        let configuration = store.addAccount(for: .cursor)
+        let configuration = try XCTUnwrap(store.addAccount(for: .cursor))
         XCTAssertTrue(store.saveSecret("cursor-watch-key", for: configuration))
         let result = ProviderUsageResult(
             accountID: configuration.id,
@@ -142,10 +144,11 @@ final class WidgetConfigurationTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        let configuration = store.addAccount(for: .greptile)
+        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
         XCTAssertTrue(store.saveSecret("greptile-widget-key", for: configuration))
         let completedResult = ProviderUsageResult(
             accountID: configuration.id,
@@ -217,10 +220,11 @@ final class WidgetConfigurationTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        let configuration = store.addAccount(for: .cursor)
+        let configuration = try XCTUnwrap(store.addAccount(for: .cursor))
         XCTAssertTrue(store.saveSecret("cursor-widget-key", for: configuration))
         let result = ProviderUsageResult(
             accountID: configuration.id,
@@ -282,10 +286,11 @@ final class WidgetConfigurationTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        let configuration = store.addAccount(for: .codex)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("codex-widget-key", for: configuration))
 
         func publish(label: String) throws -> CodexBarWidgetSnapshot {

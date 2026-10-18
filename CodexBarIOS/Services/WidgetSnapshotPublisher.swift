@@ -133,7 +133,8 @@ enum WidgetSnapshotPublisher {
             uniqueKeysWithValues: results.map { ($0.accountID, $0) }
         )
         let displayable: [ProviderUsageResult] = configurationStore.configurations.compactMap { configuration in
-            guard configurationStore.shouldDisplayOnDashboard(configuration) else {
+            guard configurationStore.shouldDisplayOnDashboard(configuration),
+                  !configurationStore.accountAccess.isPaused(accountID: configuration.id) else {
                 return nil
             }
             return resultsByAccountID[configuration.id]

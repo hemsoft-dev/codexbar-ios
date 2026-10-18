@@ -140,8 +140,8 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let account = store.addAccount(for: .xSubscription)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = try XCTUnwrap(store.addAccount(for: .xSubscription))
         let credential = GrokCredential(
             kind: "grok-oauth-v1", accessToken: "access", refreshToken: "refresh",
             expiresAt: Date().addingTimeInterval(3600), subject: "subject-one", email: nil
@@ -176,7 +176,7 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
                 "/oauth2/userinfo", "/v1/billing", "/v1/settings",
             ])
         }
-        let missing = store.addAccount(for: .xSubscription)
+        let missing = try XCTUnwrap(store.addAccount(for: .xSubscription))
         let signIn = try await GrokUsageProvider(providerID: .xSubscription, secretStore: secrets).fetchUsage(for: missing)
         XCTAssertEqual(signIn.failureMessage, "Sign in with xAI to see X Subscription usage.")
         XCTAssertEqual(signIn.providerID, .xSubscription)
@@ -408,8 +408,8 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let account = store.addAccount(for: .grok)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = try XCTUnwrap(store.addAccount(for: .grok))
         let key = ProviderConfigurationStore.keychainAccount(for: account)
         let credential = GrokCredential(
             kind: "grok-oauth-v1", accessToken: "access", refreshToken: "refresh",
@@ -486,8 +486,8 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let account = store.addAccount(for: .grok)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = try XCTUnwrap(store.addAccount(for: .grok))
         let key = ProviderConfigurationStore.keychainAccount(for: account)
         let old = GrokCredential(
             kind: "grok-oauth-v1", accessToken: "old-access", refreshToken: "old-refresh",
@@ -526,8 +526,8 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let account = store.addAccount(for: .grok)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = try XCTUnwrap(store.addAccount(for: .grok))
         let key = ProviderConfigurationStore.keychainAccount(for: account)
         let old = GrokCredential(
             kind: "grok-oauth-v1", accessToken: "old-access", refreshToken: "old-refresh",
@@ -558,8 +558,8 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let account = store.addAccount(for: .grok)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = try XCTUnwrap(store.addAccount(for: .grok))
         let stored = GrokCredential(
             kind: "grok-oauth-v1", accessToken: "old-access", refreshToken: "old-refresh",
             expiresAt: Date().addingTimeInterval(3600), subject: "subject-one", email: nil
@@ -605,8 +605,8 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let account = store.addAccount(for: .grok)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = try XCTUnwrap(store.addAccount(for: .grok))
         var clearedHistory: [String] = []
         let subscription = store.grokHistoryInvalidations.sink { clearedHistory.append($0) }
         defer { subscription.cancel() }

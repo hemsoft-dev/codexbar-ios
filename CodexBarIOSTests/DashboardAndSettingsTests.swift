@@ -89,11 +89,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testAccountSettingsReportsOnlyProviderRefreshInputChanges() {
+    func testAccountSettingsReportsOnlyProviderRefreshInputChanges() throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         var refreshInputChangeCount = 0
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
@@ -221,13 +221,13 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testUnconfiguredClaudeAccountRemainsAvailableForDashboardSignIn() {
+    func testUnconfiguredClaudeAccountRemainsAvailableForDashboardSignIn() throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         defer { defaults.removePersistentDomain(forName: #function) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let claude = store.addAccount(for: .claude)
-        let openRouter = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let claude = try XCTUnwrap(store.addAccount(for: .claude))
+        let openRouter = try XCTUnwrap(store.addAccount(for: .openRouter))
 
         XCTAssertTrue(store.shouldDisplayOnDashboard(claude))
         XCTAssertFalse(store.shouldDisplayOnDashboard(openRouter))
@@ -311,12 +311,12 @@ final class DashboardAndSettingsTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        var first = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        var first = try XCTUnwrap(store.addAccount(for: .claude))
         first.accountLabel = "Work Claude"
         first.showsHistory = false
         XCTAssertTrue(store.update(first))
-        var second = store.addAccount(for: .claude)
+        var second = try XCTUnwrap(store.addAccount(for: .claude))
         second.accountLabel = "Personal Claude"
         XCTAssertTrue(store.update(second))
         XCTAssertTrue(store.saveSecret("first-old-credential", for: first))
@@ -383,8 +383,8 @@ final class DashboardAndSettingsTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let claude = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let claude = try XCTUnwrap(store.addAccount(for: .claude))
         XCTAssertTrue(store.saveSecret("existing-credential", for: claude))
         var refreshCount = 0
         let controller = DashboardClaudeAuthenticationController(
@@ -418,8 +418,8 @@ final class DashboardAndSettingsTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let secretStore = FailingSaveSecretStore(secret: "existing-credential")
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let claude = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let claude = try XCTUnwrap(store.addAccount(for: .claude))
         var refreshCount = 0
         let controller = DashboardClaudeAuthenticationController(
             configurationStore: store,
@@ -454,8 +454,8 @@ final class DashboardAndSettingsTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let claude = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let claude = try XCTUnwrap(store.addAccount(for: .claude))
         XCTAssertTrue(store.saveSecret("existing-credential", for: claude))
         let controller = DashboardClaudeAuthenticationController(
             configurationStore: store,
@@ -493,8 +493,8 @@ final class DashboardAndSettingsTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let claude = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let claude = try XCTUnwrap(store.addAccount(for: .claude))
         XCTAssertTrue(store.saveSecret("existing-credential", for: claude))
         let exchangeGate = UsageProviderGate()
         var refreshCount = 0
@@ -1179,11 +1179,14 @@ final class DashboardAndSettingsTests: XCTestCase {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         let configurationStore = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = configurationStore.addAccount(for: .codex)
+        guard let configuration = configurationStore.addAccount(for: .codex) else {
+            preconditionFailure("The explicit Pro fixture must accept an account.")
+        }
         configurationStore.updateUsageAlertsEnabled(true)
         let cachedResult = makeHistoryResult(
             accountID: configuration.id,
@@ -1338,7 +1341,7 @@ final class DashboardAndSettingsTests: XCTestCase {
             used: 75
         )
         let service = UsageRefreshService(
-            providers: [ReturningFailureUsageProvider(providerID: .codex)],
+            providers: [ReturningFailureUsageProvider(providerID: .codex, allowsUnscopedCacheReuse: true)],
             initialResults: [cachedResult]
         )
 
@@ -1388,7 +1391,7 @@ final class DashboardAndSettingsTests: XCTestCase {
             fetchedAt: Date().addingTimeInterval(-300)
         )
         let service = UsageRefreshService(
-            providers: [ReturningPartialFailureUsageProvider(providerID: .codex)],
+            providers: [ReturningPartialFailureUsageProvider(providerID: .codex, allowsUnscopedCacheReuse: true)],
             initialResults: [cachedResult]
         )
 
@@ -1485,15 +1488,16 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testWidgetSnapshotCoordinatorPublishesStoreAndRefreshChangesReactively() async {
+    func testWidgetSnapshotCoordinatorPublishesStoreAndRefreshChangesReactively() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .codex)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         let service = UsageRefreshService(providers: [
             GatedUsageProvider(
                 providerID: .codex,
@@ -1539,11 +1543,12 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .codex)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("watch-must-never-see-this-secret", for: configuration))
         store.updateAutoRefreshInterval(.fiveMinutes)
 
@@ -1623,11 +1628,12 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .copilot)
+        let configuration = try XCTUnwrap(store.addAccount(for: .copilot))
         XCTAssertTrue(store.saveSecret("secret", for: configuration))
         let fetchedAt = Date(timeIntervalSince1970: 2_000_000_000)
         let result = ProviderUsageResult(
@@ -1672,12 +1678,13 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let first = store.addAccount(for: .codex)
-        let second = store.addAccount(for: .codex)
+        let first = try XCTUnwrap(store.addAccount(for: .codex))
+        let second = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("first-token", for: first))
         XCTAssertTrue(store.saveSecret("second-token", for: second))
         store.updateDashboardOrderingMode(.manual)
@@ -1818,6 +1825,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         let sparkWeeklyID = "codex.bucket-codex_5Fbengalfox.window-604800"
         let futureID = "codex.bucket-codex_5Ffuture.window-7200"
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -1853,6 +1861,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         )
 
         let reloaded = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -1870,11 +1879,12 @@ final class DashboardAndSettingsTests: XCTestCase {
             defaults.removePersistentDomain(forName: #function)
         }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .claude)
+        let configuration = try XCTUnwrap(store.addAccount(for: .claude))
         let session = UsageBar(
             stableKey: "session",
             label: "Current session",
@@ -1955,11 +1965,12 @@ final class DashboardAndSettingsTests: XCTestCase {
             defaults.removePersistentDomain(forName: #function)
         }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .claude)
+        let configuration = try XCTUnwrap(store.addAccount(for: .claude))
         let session = UsageBar(
             stableKey: "session",
             label: "Current session",
@@ -2032,11 +2043,12 @@ final class DashboardAndSettingsTests: XCTestCase {
             defaults.removePersistentDomain(forName: #function)
         }
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .openRouter)
+        let configuration = try XCTUnwrap(store.addAccount(for: .openRouter))
         XCTAssertTrue(store.saveSecret("openrouter-test-key", for: configuration))
         let result = ProviderUsageResult(
             accountID: configuration.id,
@@ -2094,11 +2106,12 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .claude)
+        let configuration = try XCTUnwrap(store.addAccount(for: .claude))
         XCTAssertTrue(store.saveSecret("secret", for: configuration))
         let barsFetchedAt = Date(timeIntervalSince1970: 2_000_000_000)
         let refreshedAt = barsFetchedAt.addingTimeInterval(30 * 60)
@@ -2144,11 +2157,12 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .claude)
+        let configuration = try XCTUnwrap(store.addAccount(for: .claude))
         XCTAssertTrue(store.saveSecret("secret", for: configuration))
         let fetchedAt = Date(timeIntervalSince1970: 2_000_000_000)
         let result = ProviderUsageResult(
@@ -2239,11 +2253,12 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .openCodeZen)
+        let configuration = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         XCTAssertTrue(store.saveSecret("secret", for: configuration))
         let fetchedAt = Date(timeIntervalSince1970: 2_000_000_000)
         let result = ProviderUsageResult(
@@ -2272,15 +2287,16 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testWatchSnapshotCoordinatorActivatesAndCoalescesRapidChanges() async {
+    func testWatchSnapshotCoordinatorActivatesAndCoalescesRapidChanges() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .codex)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("secret", for: configuration))
         let bar = UsageBar(stableKey: "window", label: "Usage", used: 4, limit: 10)
         let result = ProviderUsageResult(
@@ -2339,6 +2355,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         let retainedDefaults = UserDefaults(suiteName: "\(#function).retained")!
         retainedDefaults.removePersistentDomain(forName: "\(#function).retained")
         let retainedStore = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: retainedDefaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: retainedDefaults
@@ -2355,6 +2372,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         let transientDefaults = UserDefaults(suiteName: "\(#function).transient")!
         transientDefaults.removePersistentDomain(forName: "\(#function).transient")
         let transientStore = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: transientDefaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: transientDefaults
@@ -2376,15 +2394,16 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testWatchSnapshotCoordinatorPreservesLastWatchDataWhileInitialRefreshIsPending() async {
+    func testWatchSnapshotCoordinatorPreservesLastWatchDataWhileInitialRefreshIsPending() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .codex)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("secret", for: configuration))
         let service = UsageRefreshService(providers: [], initialResults: [])
         let sender = RecordingWatchSnapshotSender()
@@ -2408,6 +2427,104 @@ final class DashboardAndSettingsTests: XCTestCase {
         XCTAssertEqual(sender.snapshots.count, 1)
         XCTAssertTrue(sender.snapshots[0].accounts.isEmpty)
         withExtendedLifetime(coordinator) {}
+    }
+
+    @MainActor
+    func testWatchSnapshotCoordinatorClearsPausedAccountsWhenFreeResolvesBeforeInitialResults() async throws {
+        let defaults = UserDefaults(suiteName: #function)!
+        defaults.removePersistentDomain(forName: #function)
+        defer { defaults.removePersistentDomain(forName: #function) }
+        let (store, service, sender) = try makeWatchSnapshotAccessFixture(
+            defaults: defaults,
+            initialAccess: .unresolved
+        )
+        let coordinator = WatchSnapshotCoordinator(
+            refreshService: service,
+            configurationStore: store,
+            sender: sender,
+            coalescingDelay: .milliseconds(5)
+        )
+        coordinator.start()
+        sender.completeActivation()
+        XCTAssertEqual(sender.snapshots.count, 1, "Unresolved startup must preserve the previous snapshot")
+
+        let snapshotPublished = expectation(description: "Free access clears old watch accounts without provider results")
+        sender.onPublish = { snapshotPublished.fulfill() }
+        store.applyPlanAccess(hasProAccess: false, isResolved: true)
+        await fulfillment(of: [snapshotPublished], timeout: 1)
+
+        XCTAssertTrue(service.results.isEmpty)
+        XCTAssertEqual(store.accountAccess.pausedAccountIDs.count, 1)
+        XCTAssertEqual(sender.snapshots.count, 2)
+        XCTAssertTrue(try XCTUnwrap(sender.snapshots.last).accounts.isEmpty)
+        XCTAssertEqual(sender.publishedForces, [false, false])
+        XCTAssertEqual(store.configurations.count, 2)
+        XCTAssertTrue(store.configurations.allSatisfy { store.hasSecret(for: $0) })
+        withExtendedLifetime(coordinator) {}
+    }
+
+    @MainActor
+    func testWatchSnapshotCoordinatorClearsPausedAccountsOnFreeStartupBeforeInitialResults() throws {
+        let defaults = UserDefaults(suiteName: #function)!
+        defaults.removePersistentDomain(forName: #function)
+        defer { defaults.removePersistentDomain(forName: #function) }
+        let (store, service, sender) = try makeWatchSnapshotAccessFixture(
+            defaults: defaults,
+            initialAccess: .free
+        )
+        let coordinator = WatchSnapshotCoordinator(
+            refreshService: service,
+            configurationStore: store,
+            sender: sender
+        )
+
+        coordinator.start()
+        sender.completeActivation()
+
+        XCTAssertTrue(service.results.isEmpty)
+        XCTAssertEqual(store.accountAccess.pausedAccountIDs.count, 1)
+        XCTAssertEqual(sender.snapshots.count, 2)
+        XCTAssertTrue(try XCTUnwrap(sender.snapshots.last).accounts.isEmpty)
+        XCTAssertEqual(sender.publishedForces, [false, true])
+        XCTAssertEqual(store.configurations.count, 2)
+        XCTAssertTrue(store.configurations.allSatisfy { store.hasSecret(for: $0) })
+        withExtendedLifetime(coordinator) {}
+    }
+
+    @MainActor
+    private func makeWatchSnapshotAccessFixture(
+        defaults: UserDefaults,
+        initialAccess: AccountPlanAccess
+    ) throws -> (ProviderConfigurationStore, UsageRefreshService, RecordingWatchSnapshotSender) {
+        let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
+            defaults: defaults,
+            secretStore: MemorySecretStore(),
+            widgetSnapshotDefaults: defaults
+        )
+        let configurations = try (0..<2).map { _ in try XCTUnwrap(store.addAccount(for: .codex)) }
+        for configuration in configurations {
+            XCTAssertTrue(store.saveSecret("fixture-secret", for: configuration))
+        }
+        let fetchedAt = Date(timeIntervalSince1970: 2_000_000_000)
+        let previousResults = configurations.map { configuration in
+            ProviderUsageResult(
+                accountID: configuration.id,
+                providerID: .codex,
+                title: "Codex",
+                subtitle: "Saved Pro account",
+                bars: [UsageBar(stableKey: "window", label: "Usage", used: 4, limit: 10)],
+                fetchedAt: fetchedAt
+            )
+        }
+        let sender = RecordingWatchSnapshotSender()
+        _ = sender.publish(
+            WatchSnapshotPublisher.makeSnapshot(results: previousResults, configurationStore: store, now: fetchedAt),
+            force: false
+        )
+        XCTAssertEqual(sender.snapshots.last?.accounts.count, 2)
+        store.applyPlanAccess(hasProAccess: initialAccess.hasProAccess, isResolved: initialAccess.isResolved)
+        return (store, UsageRefreshService(providers: [], initialResults: []), sender)
     }
 
     @MainActor
@@ -2472,11 +2589,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderSettingsViewModelDebouncesTextChangesAndFlushesOnDismissal() {
+    func testProviderSettingsViewModelDebouncesTextChangesAndFlushesOnDismissal() throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let configuration = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .openRouter))
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
             accountID: configuration.id
@@ -2499,7 +2616,7 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testAccountSettingsToggleThreeCodexMetricsIndependentlyAndPersist() async {
+    func testAccountSettingsToggleThreeCodexMetricsIndependentlyAndPersist() async throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
@@ -2507,11 +2624,12 @@ final class DashboardAndSettingsTests: XCTestCase {
         }
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
-        let configuration = store.addAccount(for: .codex)
-        let otherConfiguration = store.addAccount(for: .codex)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
+        let otherConfiguration = try XCTUnwrap(store.addAccount(for: .codex))
         let result = ProviderUsageResult(
             accountID: configuration.id,
             providerID: .codex,
@@ -2579,6 +2697,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         )
 
         let reloadedStore = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -2617,9 +2736,9 @@ final class DashboardAndSettingsTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let configuration = store.addAccount(for: .cursor)
-        let otherConfiguration = store.addAccount(for: .cursor)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .cursor))
+        let otherConfiguration = try XCTUnwrap(store.addAccount(for: .cursor))
         let cursorModelsID = CursorUsageIdentity.cursorModelsMetricID
         let otherModelsID = CursorUsageIdentity.otherModelsMetricID
         let grokBotID = "cursor.grok-bot-weekly"
@@ -2703,7 +2822,7 @@ final class DashboardAndSettingsTests: XCTestCase {
             .show
         )
 
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         let reloadedViewModel = ProviderSettingsViewModel(
             configurationStore: reloadedStore,
             accountID: configuration.id,
@@ -2730,8 +2849,8 @@ final class DashboardAndSettingsTests: XCTestCase {
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let configuration = store.addAccount(for: .cursor)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .cursor))
         let metricID = "cursor.grok-bot-weekly"
         let result = ProviderUsageResult(
             accountID: configuration.id,
@@ -2763,18 +2882,18 @@ final class DashboardAndSettingsTests: XCTestCase {
         viewModel.setMetricVisibility(false, metricID: metricID)
 
         XCTAssertFalse(viewModel.isMetricVisible(metricID))
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         XCTAssertFalse(reloadedStore.isMetricVisible(accountID: configuration.id, metricID: metricID))
     }
 
     @MainActor
-    func testAccountSettingsLoadMetricsAfterFirstCredentialSave() async {
+    func testAccountSettingsLoadMetricsAfterFirstCredentialSave() async throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .openRouter))
         let refreshedResult = ProviderUsageResult(
             accountID: configuration.id,
             providerID: .openRouter,
@@ -2815,10 +2934,11 @@ final class DashboardAndSettingsTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        let configuration = store.addAccount(for: .greptile)
+        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
         let validatedResult = ProviderUsageResult(
             accountID: configuration.id,
             providerID: .greptile,
@@ -2871,13 +2991,13 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testGreptileCredentialSavedWhileDisabledValidatesWhenEnabled() async {
+    func testGreptileCredentialSavedWhileDisabledValidatesWhenEnabled() async throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        var configuration = store.addAccount(for: .greptile)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        var configuration = try XCTUnwrap(store.addAccount(for: .greptile))
         configuration.isEnabled = false
         XCTAssertTrue(store.update(configuration))
         let validatedResult = ProviderUsageResult(
@@ -2928,16 +3048,17 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testGreptileCredentialSaveReportsValidationFailureAndManualRetrySuccess() async {
+    func testGreptileCredentialSaveReportsValidationFailureAndManualRetrySuccess() async throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        let configuration = store.addAccount(for: .greptile)
+        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
         let rejectedResult = ProviderUsageResult(
             accountID: configuration.id,
             providerID: .greptile,
@@ -2987,13 +3108,13 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testGreptileTransientFailureDoesNotRejectOrUndoValidatedCredential() async {
+    func testGreptileTransientFailureDoesNotRejectOrUndoValidatedCredential() async throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = store.addAccount(for: .greptile)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
         let transientFailure = ProviderUsageResult(
             accountID: configuration.id,
             providerID: .greptile,
@@ -3048,13 +3169,13 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testGreptileCredentialRemovalWithoutRefreshResultDoesNotClaimKeyWasSaved() async {
+    func testGreptileCredentialRemovalWithoutRefreshResultDoesNotClaimKeyWasSaved() async throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = store.addAccount(for: .greptile)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
         XCTAssertTrue(store.saveSecret("greptile-key", for: configuration))
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
@@ -3073,13 +3194,13 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testAccountSettingsReplaceCachedMetricsAfterCredentialChange() async {
+    func testAccountSettingsReplaceCachedMetricsAfterCredentialChange() async throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .openRouter))
         XCTAssertTrue(store.saveSecret("old-key", for: configuration))
         let oldResult = ProviderUsageResult(
             accountID: configuration.id,
@@ -3130,7 +3251,7 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testAccountSettingsQueuesCredentialRefreshBehindInFlightMetricLoad() async {
+    func testAccountSettingsQueuesCredentialRefreshBehindInFlightMetricLoad() async throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
@@ -3138,10 +3259,11 @@ final class DashboardAndSettingsTests: XCTestCase {
         }
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        let configuration = store.addAccount(for: .openRouter)
+        let configuration = try XCTUnwrap(store.addAccount(for: .openRouter))
         XCTAssertTrue(store.saveSecret("old-key", for: configuration))
         let gate = UsageProviderGate()
         var refreshCount = 0
@@ -3195,8 +3317,8 @@ final class DashboardAndSettingsTests: XCTestCase {
     func testAccountSettingsKeepsSyncBlockedAcrossQueuedCredentialRefreshes() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .openRouter))
         let firstGate = UsageProviderGate()
         let secondGate = UsageProviderGate()
         var refreshCount = 0
@@ -3271,7 +3393,7 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testAccountSettingsDoNotOfferMetricRefreshWhileAccountIsDisabled() async {
+    func testAccountSettingsDoNotOfferMetricRefreshWhileAccountIsDisabled() async throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
@@ -3279,10 +3401,11 @@ final class DashboardAndSettingsTests: XCTestCase {
         }
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore()
         )
-        var configuration = store.addAccount(for: .openRouter)
+        var configuration = try XCTUnwrap(store.addAccount(for: .openRouter))
         XCTAssertTrue(store.saveSecret("management-key", for: configuration))
         configuration.isEnabled = false
         XCTAssertTrue(store.update(configuration))
@@ -3314,14 +3437,14 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testOpenRouterSettingsExplainManagementKeyRequirementsAndStorage() {
+    func testOpenRouterSettingsExplainManagementKeyRequirementsAndStorage() throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         defer {
             defaults.removePersistentDomain(forName: #function)
         }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let configuration = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .openRouter))
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
             accountID: configuration.id
@@ -3349,7 +3472,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
             accountID: ProviderID.openRouter.rawValue
@@ -3369,8 +3492,8 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let cursor = store.addAccount(for: .cursor)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let cursor = try XCTUnwrap(store.addAccount(for: .cursor))
         let connected = try XCTUnwrap(
             store.connectCursorAccount(cursor, credential: "cursor-token")
         )
@@ -3388,11 +3511,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderSettingsViewModelCancelsPendingEditsWhenSavingOpenCodeCredential() async {
+    func testProviderSettingsViewModelCancelsPendingEditsWhenSavingOpenCodeCredential() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let openCode = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let openCode = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         var discoveryRefreshCount = 0
         var credentialRefreshCount = 0
         var credentialsChangedCount = 0
@@ -3429,11 +3552,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testOpenCodeRefreshRejectsResultAfterCredentialRemoval() async {
+    func testOpenCodeRefreshRejectsResultAfterCredentialRemoval() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let openCode = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let openCode = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         XCTAssertTrue(store.saveSecret("old-token", for: openCode))
         let gate = UsageProviderGate()
         let viewModel = ProviderSettingsViewModel(
@@ -3477,11 +3600,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testCredentialRemovalFlushesPendingRefreshInputsBeforeRefreshing() async {
+    func testCredentialRemovalFlushesPendingRefreshInputsBeforeRefreshing() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let openCode = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let openCode = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         XCTAssertTrue(store.saveSecret("old-token", for: openCode))
         var storedWorkspaceDuringRefresh: String?
         let viewModel = ProviderSettingsViewModel(
@@ -3508,11 +3631,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderSettingsViewModelFlushesPendingWorkspaceBeforeRefresh() async {
+    func testProviderSettingsViewModelFlushesPendingWorkspaceBeforeRefresh() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let openCode = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let openCode = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         var refreshedConfiguration: ProviderAccountConfiguration?
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
@@ -3534,11 +3657,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderSettingsViewModelPreservesGoStatusWhenBalanceRefreshes() async {
+    func testProviderSettingsViewModelPreservesGoStatusWhenBalanceRefreshes() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let openCode = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let openCode = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
             accountID: openCode.id,
@@ -3565,11 +3688,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderSettingsViewModelReportsBalanceFailureAfterGoRefresh() async {
+    func testProviderSettingsViewModelReportsBalanceFailureAfterGoRefresh() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let openCode = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let openCode = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
             accountID: openCode.id,
@@ -3595,14 +3718,15 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderSettingsViewModelReportsCredentialSaveFailureWithoutCompleting() {
+    func testProviderSettingsViewModelReportsCredentialSaveFailureWithoutCompleting() throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: FailingSaveSecretStore(secret: "existing-token")
         )
-        let configuration = store.addAccount(for: .openRouter)
+        let configuration = try XCTUnwrap(store.addAccount(for: .openRouter))
         var credentialsChangedCount = 0
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
@@ -3640,8 +3764,8 @@ final class DashboardAndSettingsTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        var configuration = store.addAccount(for: .copilot)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        var configuration = try XCTUnwrap(store.addAccount(for: .copilot))
         configuration.accountLabel = "existing-user"
         configuration.authMethod = .browserSession
         XCTAssertTrue(store.update(configuration))
@@ -3660,7 +3784,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         XCTAssertNotNil(viewModel.copilotAuthError)
         XCTAssertEqual(viewModel.secret, "replacement-token")
         XCTAssertEqual(credentialsChangedCount, 0)
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         let reloaded = try XCTUnwrap(reloadedStore.configuration(accountID: configuration.id))
         XCTAssertEqual(reloaded.accountLabel, "existing-user")
         XCTAssertEqual(reloaded.authMethod, .browserSession)
@@ -3693,8 +3817,8 @@ final class DashboardAndSettingsTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        var configuration = store.addAccount(for: .copilot)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        var configuration = try XCTUnwrap(store.addAccount(for: .copilot))
         configuration.accountLabel = "existing-user"
         configuration.authMethod = .browserSession
         XCTAssertTrue(store.update(configuration))
@@ -3713,7 +3837,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         XCTAssertNil(viewModel.copilotAuthError)
         XCTAssertEqual(viewModel.secret, "")
         XCTAssertEqual(credentialsChangedCount, 1)
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         let reloaded = try XCTUnwrap(reloadedStore.configuration(accountID: configuration.id))
         XCTAssertEqual(reloaded.accountLabel, "replacement-user")
         XCTAssertEqual(reloaded.authMethod, .cliToken)
@@ -3738,8 +3862,8 @@ final class DashboardAndSettingsTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        var configuration = store.addAccount(for: .copilot)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        var configuration = try XCTUnwrap(store.addAccount(for: .copilot))
         configuration.accountLabel = "existing-user"
         configuration.authMethod = .cliToken
         XCTAssertTrue(store.update(configuration))
@@ -3768,7 +3892,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         XCTAssertNotNil(viewModel.copilotAuthError)
         XCTAssertEqual(credentialsChangedCount, 0)
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         let reloaded = try XCTUnwrap(reloadedStore.configuration(accountID: configuration.id))
         XCTAssertEqual(reloaded.accountLabel, "existing-user")
         XCTAssertEqual(reloaded.authMethod, .cliToken)
@@ -3790,8 +3914,8 @@ final class DashboardAndSettingsTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        var configuration = store.addAccount(for: .copilot)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        var configuration = try XCTUnwrap(store.addAccount(for: .copilot))
         configuration.accountLabel = "existing-user"
         configuration.authMethod = .cliToken
         XCTAssertTrue(store.update(configuration))
@@ -3818,7 +3942,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         XCTAssertNil(viewModel.copilotAuthError)
         XCTAssertEqual(credentialsChangedCount, 1)
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         let reloaded = try XCTUnwrap(reloadedStore.configuration(accountID: configuration.id))
         XCTAssertEqual(reloaded.accountLabel, "replacement-user")
         XCTAssertEqual(reloaded.authMethod, .browserSession)
@@ -3838,14 +3962,15 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderSettingsViewModelReportsCredentialRemovalFailureWithoutCompleting() {
+    func testProviderSettingsViewModelReportsCredentialRemovalFailureWithoutCompleting() throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: FailingDeleteSecretStore()
         )
-        let configuration = store.addAccount(for: .openRouter)
+        let configuration = try XCTUnwrap(store.addAccount(for: .openRouter))
         var credentialsChangedCount = 0
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
@@ -3897,14 +4022,15 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderSettingsViewModelClearsCredentialErrorWhenRetryingCodexSignIn() async {
+    func testProviderSettingsViewModelClearsCredentialErrorWhenRetryingCodexSignIn() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: FailingDeleteSecretStore()
         )
-        let configuration = store.addAccount(for: .codex)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         let presenter = StubCodexBrowserPresenter()
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
@@ -3928,9 +4054,9 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let first = store.addAccount(for: .codex)
-        let second = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let first = try XCTUnwrap(store.addAccount(for: .codex))
+        let second = try XCTUnwrap(store.addAccount(for: .codex))
         let firstPayload = #"{"https://api.openai.com/auth":{"chatgpt_account_id":"chatgpt-first"}}"#
             .base64URLEncodedForTest()
         let firstToken = "header.\(firstPayload).signature"
@@ -3987,8 +4113,8 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let configuration = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         let viewModel = ProviderSettingsViewModel(
             configurationStore: store,
             accountID: configuration.id,
@@ -4024,11 +4150,11 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        var first = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        var first = try XCTUnwrap(store.addAccount(for: .codex))
         first.accountLabel = "Personal Codex"
         XCTAssertTrue(store.update(first))
-        let second = store.addAccount(for: .codex)
+        let second = try XCTUnwrap(store.addAccount(for: .codex))
         let firstPayload = #"{"https://api.openai.com/auth":{"chatgpt_account_id":"private-provider-id"}}"#
             .base64URLEncodedForTest()
         let firstToken = "header.\(firstPayload).signature"
@@ -4078,8 +4204,8 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let configuration = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         let originalCredential = CodexCredentialsParser.storedCredential(
             from: CodexCredentials(accessToken: "original-token", accountID: "original-account")
         )
@@ -4107,9 +4233,9 @@ final class DashboardAndSettingsTests: XCTestCase {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let first = store.addAccount(for: .codex)
-        let second = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let first = try XCTUnwrap(store.addAccount(for: .codex))
+        let second = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("first-credential", for: first))
         XCTAssertTrue(store.saveSecret("second-credential", for: second))
 
@@ -4127,13 +4253,13 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderSettingsViewModelCompletesSuccessfulSaveDespiteUnrelatedReadFailure() {
+    func testProviderSettingsViewModelCompletesSuccessfulSaveDespiteUnrelatedReadFailure() throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
         let secretStore = SelectiveReadFailureSecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let unreadable = store.addAccount(for: .openRouter)
-        let target = store.addAccount(for: .moonshot)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let unreadable = try XCTUnwrap(store.addAccount(for: .openRouter))
+        let target = try XCTUnwrap(store.addAccount(for: .moonshot))
         secretStore.failingAccount = ProviderConfigurationStore.keychainAccount(for: unreadable)
         var credentialsChangedCount = 0
         let viewModel = ProviderSettingsViewModel(
@@ -4152,11 +4278,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testRetryableResetFailurePinsRetryToOriginalCredit() async {
+    func testRetryableResetFailurePinsRetryToOriginalCredit() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let configuration = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         let provider = ResetConsumptionTestProvider(
             outcome: .reset,
             fetchFails: false,
@@ -4204,11 +4330,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testResetConsumptionRefreshesAuthoritativeInventoryAfterSuccess() async {
+    func testResetConsumptionRefreshesAuthoritativeInventoryAfterSuccess() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let configuration = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         let cachedResult = ProviderUsageResult(
             accountID: configuration.id,
             providerID: .codex,
@@ -4253,11 +4379,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testResetConsumptionRefetchesAndPreservesVerifiedAvailabilityWhenRefreshFails() async {
+    func testResetConsumptionRefetchesAndPreservesVerifiedAvailabilityWhenRefreshFails() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let configuration = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         let cachedResult = ProviderUsageResult(
             accountID: configuration.id,
             providerID: .codex,
@@ -4304,11 +4430,11 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testNoCreditHidesPreservedResetActionWhenAuthoritativeRefreshFails() async {
+    func testNoCreditHidesPreservedResetActionWhenAuthoritativeRefreshFails() async throws {
         let defaults = UserDefaults(suiteName: #function)!
         defaults.removePersistentDomain(forName: #function)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let configuration = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         let cachedResult = ProviderUsageResult(
             accountID: configuration.id,
             providerID: .codex,

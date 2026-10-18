@@ -39,7 +39,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
             forKey: "providerConfigurations"
         )
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
 
         XCTAssertEqual(
             Dictionary(uniqueKeysWithValues: store.configurations.map { ($0.id, $0.authMethod) }),
@@ -65,7 +65,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
 
         XCTAssertTrue(store.configurations.isEmpty)
         XCTAssertFalse(store.isConfigurationRecoveryRequired)
@@ -83,7 +83,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         }
         defaults.set(try JSONEncoder().encode([savedAccount]), forKey: "providerConfigurations")
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
 
         XCTAssertTrue(store.groups.isEmpty)
         XCTAssertNil(store.configuration(accountID: savedAccount.id)?.groupID)
@@ -106,7 +106,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         defaults.set(malformedGroupData, forKey: "providerAccountGroups")
         defaults.set(configurationData, forKey: "providerConfigurations")
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
 
         XCTAssertTrue(store.groups.isEmpty)
         XCTAssertEqual(store.configuration(accountID: savedAccount.id)?.groupID, "preserved-group")
@@ -143,7 +143,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         defaults.set(Data("not-json".utf8), forKey: "providerAccountGroups")
         defaults.set(try JSONEncoder().encode([savedAccount]), forKey: "providerConfigurations")
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
 
         XCTAssertTrue(store.isGroupRecoveryRequired)
         XCTAssertEqual(
@@ -172,7 +172,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         }
         defaults.set(Data("not-json".utf8), forKey: "providerAccountGroups")
         defaults.set(try JSONEncoder().encode([savedAccount]), forKey: "providerConfigurations")
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
 
         XCTAssertTrue(store.replaceCorruptedGroups())
 
@@ -195,6 +195,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         XCTAssertTrue(store.update(regroupedAccount))
 
         let reloadedStore = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -221,7 +222,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         defaults.set(try JSONEncoder().encode([savedGroup]), forKey: "providerAccountGroups")
         try secretStore.saveSecret("preserved-secret", account: keychainAccount)
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
 
         XCTAssertTrue(store.configurations.isEmpty)
         XCTAssertEqual(store.groups, [savedGroup])
@@ -243,7 +244,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         XCTAssertFalse(store.updateGroup(attemptedGroupUpdate))
         XCTAssertTrue(store.configurations.isEmpty)
         XCTAssertEqual(store.groups, [savedGroup])
-        XCTAssertNil(store.configuration(accountID: attemptedAccount.id))
+        XCTAssertNil(attemptedAccount)
         XCTAssertEqual(defaults.data(forKey: "providerConfigurations"), malformedData)
         XCTAssertTrue(store.isConfigurationRecoveryRequired)
         XCTAssertNotNil(store.lastError)
@@ -269,6 +270,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.set(damagedData, forKey: "providerConfigurations")
 
             let store = ProviderConfigurationStore(
+                initialPlanAccess: .unrestricted,
                 defaults: defaults,
                 secretStore: EmptySecretStore()
             )
@@ -312,7 +314,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         defaults.set(try JSONEncoder().encode([savedGroup]), forKey: "providerAccountGroups")
         try secretStore.saveSecret("preserved-secret", account: keychainAccount)
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         let refreshService = UsageRefreshService(providers: [])
         let orchestrator = DashboardOrchestrator(
             refreshService: refreshService,
@@ -357,9 +359,9 @@ final class ConfigurationAndAuthTests: XCTestCase {
         )
         XCTAssertEqual(try secretStore.readSecret(account: keychainAccount), "preserved-secret")
 
-        let replacement = store.addAccount(for: .claude)
+        let replacement = try XCTUnwrap(store.addAccount(for: .claude))
         XCTAssertTrue(store.saveSecret("recovered-secret", for: replacement))
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
 
         XCTAssertEqual(reloadedStore.configurations, [replacement])
         XCTAssertTrue(reloadedStore.hasSecret(for: replacement))
@@ -392,6 +394,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         defaults.set(try JSONEncoder().encode([savedGroup]), forKey: "providerAccountGroups")
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -417,7 +420,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         }
         defaults.set(malformedData, forKey: "providerConfigurations")
         try secretStore.saveSecret("preserved-secret", account: keychainAccount)
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
 
         XCTAssertTrue(store.replaceCorruptedConfigurations())
 
@@ -432,8 +435,8 @@ final class ConfigurationAndAuthTests: XCTestCase {
         )
         XCTAssertEqual(try secretStore.readSecret(account: keychainAccount), "preserved-secret")
 
-        let replacement = store.addAccount(for: .claude)
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let replacement = try XCTUnwrap(store.addAccount(for: .claude))
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
 
         XCTAssertEqual(reloadedStore.configurations, [replacement])
         XCTAssertFalse(reloadedStore.isConfigurationRecoveryRequired)
@@ -456,13 +459,13 @@ final class ConfigurationAndAuthTests: XCTestCase {
         let data = try JSONEncoder().encode([oldCopilotConfiguration])
         defaults.set(data, forKey: "providerConfigurations")
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
 
         XCTAssertEqual(store.configuration(for: .copilot).authMethod, .browserSession)
     }
 
     @MainActor
-    func testProviderConfigurationStoreSupportsMultipleAccountsForProvider() {
+    func testProviderConfigurationStoreSupportsMultipleAccountsForProvider() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         let secretStore = MemorySecretStore()
@@ -470,9 +473,9 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let original = store.addAccount(for: .copilot)
-        let added = store.addAccount(for: .copilot)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let original = try XCTUnwrap(store.addAccount(for: .copilot))
+        let added = try XCTUnwrap(store.addAccount(for: .copilot))
 
         XCTAssertEqual(store.configurations(for: .copilot).count, 2)
         XCTAssertNotEqual(original.id, added.id)
@@ -487,15 +490,15 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testCursorIdentityChangeRemovesStaleEmailButPreservesCustomLabel() {
+    func testCursorIdentityChangeRemovesStaleEmailButPreservesCustomLabel() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        var cursor = store.addAccount(for: .cursor)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        var cursor = try XCTUnwrap(store.addAccount(for: .cursor))
         cursor.accountLabel = "franz_hemmer@hotmail.com"
         XCTAssertTrue(store.update(cursor))
 
@@ -517,8 +520,8 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        var cursor = store.addAccount(for: .cursor)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        var cursor = try XCTUnwrap(store.addAccount(for: .cursor))
         cursor.accountLabel = "old@example.com"
         XCTAssertTrue(store.update(cursor))
 
@@ -545,11 +548,11 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        var first = store.addAccount(for: .cursor)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        var first = try XCTUnwrap(store.addAccount(for: .cursor))
         first.accountLabel = "first@example.com"
         XCTAssertTrue(store.update(first))
-        let second = store.addAccount(for: .cursor)
+        let second = try XCTUnwrap(store.addAccount(for: .cursor))
         store.saveSecret("first-token", for: first)
         store.saveSecret("second-token", for: second)
 
@@ -574,8 +577,8 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        var cursor = store.addAccount(for: .cursor)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        var cursor = try XCTUnwrap(store.addAccount(for: .cursor))
         cursor.accountLabel = "existing@example.com"
         XCTAssertTrue(store.update(cursor))
 
@@ -588,7 +591,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderConfigurationStoreSurfacesSecretReadFailures() {
+    func testProviderConfigurationStoreSurfacesSecretReadFailures() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
@@ -596,10 +599,11 @@ final class ConfigurationAndAuthTests: XCTestCase {
         }
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: FailingReadSecretStore()
         )
-        let claude = store.addAccount(for: .claude)
+        let claude = try XCTUnwrap(store.addAccount(for: .claude))
 
         XCTAssertFalse(store.hasSecret(for: claude))
         XCTAssertEqual(
@@ -609,7 +613,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderConfigurationStoreRequiresClaudeSecretForBrowserSession() {
+    func testProviderConfigurationStoreRequiresClaudeSecretForBrowserSession() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         let secretStore = MemorySecretStore()
@@ -617,8 +621,8 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let claude = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let claude = try XCTUnwrap(store.addAccount(for: .claude))
 
         XCTAssertFalse(store.isConfigured(claude))
         XCTAssertEqual(store.statusText(for: claude), "Not configured - sign in with Claude")
@@ -630,15 +634,15 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderConfigurationStoreRequestsOpenRouterManagementAPIKey() {
+    func testProviderConfigurationStoreRequestsOpenRouterManagementAPIKey() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let openRouter = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let openRouter = try XCTUnwrap(store.addAccount(for: .openRouter))
 
         XCTAssertFalse(store.isConfigured(openRouter))
         XCTAssertEqual(
@@ -648,7 +652,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testOpenCodeZenDisplaysOnDashboardWhenKeyIsSavedBeforeWorkspace() {
+    func testOpenCodeZenDisplaysOnDashboardWhenKeyIsSavedBeforeWorkspace() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         let secretStore = MemorySecretStore()
@@ -656,8 +660,8 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let openCodeZen = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let openCodeZen = try XCTUnwrap(store.addAccount(for: .openCodeZen))
 
         XCTAssertEqual(openCodeZen.accountLabel, "OpenCode Go + Zen 1")
         XCTAssertFalse(openCodeZen.hasCustomAccountLabel)
@@ -679,19 +683,19 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderConfigurationStoreRejectsDuplicateAccountNames() {
+    func testProviderConfigurationStoreRejectsDuplicateAccountNames() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        var first = store.addAccount(for: .copilot)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        var first = try XCTUnwrap(store.addAccount(for: .copilot))
         first.accountLabel = "Work"
         store.update(first)
 
-        var second = store.addAccount(for: .codex)
+        var second = try XCTUnwrap(store.addAccount(for: .codex))
         second.accountLabel = "work"
         store.update(second)
 
@@ -700,18 +704,18 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderConfigurationStoreRejectsDuplicateFallbackDisplayNames() {
+    func testProviderConfigurationStoreRejectsDuplicateFallbackDisplayNames() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        var first = store.addAccount(for: .copilot)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        var first = try XCTUnwrap(store.addAccount(for: .copilot))
         first.accountLabel = "Work Copilot"
         store.update(first)
-        var second = store.addAccount(for: .copilot)
+        var second = try XCTUnwrap(store.addAccount(for: .copilot))
         second.accountLabel = "work copilot"
 
         XCTAssertFalse(store.update(second))
@@ -720,7 +724,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderConfigurationStoreResetRemovesAccountsAndSecrets() {
+    func testProviderConfigurationStoreResetRemovesAccountsAndSecrets() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         let secretStore = MemorySecretStore()
@@ -728,8 +732,8 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let account = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let account = try XCTUnwrap(store.addAccount(for: .claude))
         store.saveSecret("token", for: account)
         XCTAssertTrue(store.hasSecret(for: account))
 
@@ -749,8 +753,8 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let account = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let account = try XCTUnwrap(store.addAccount(for: .openRouter))
         let alertID = "balance.\(account.id)"
         store.updateDashboardCardOrder([account.id])
         store.updateUsageAlertActiveIDs([alertID])
@@ -767,7 +771,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         )
         XCTAssertNotNil(store.lastError)
 
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         XCTAssertEqual(reloadedStore.configuration(accountID: account.id), account)
         XCTAssertEqual(reloadedStore.dashboardCardOrder, [account.id])
         XCTAssertEqual(reloadedStore.usageAlertActiveIDs, [alertID])
@@ -783,7 +787,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         XCTAssertTrue(store.dashboardCardOrder.isEmpty)
         XCTAssertTrue(store.usageAlertActiveIDs.isEmpty)
 
-        let storeAfterRemoval = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let storeAfterRemoval = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         XCTAssertNil(storeAfterRemoval.configuration(accountID: account.id))
         XCTAssertTrue(storeAfterRemoval.dashboardCardOrder.isEmpty)
         XCTAssertTrue(storeAfterRemoval.usageAlertActiveIDs.isEmpty)
@@ -798,9 +802,9 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let failedAccount = store.addAccount(for: .openRouter)
-        let removedAccount = store.addAccount(for: .moonshot)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let failedAccount = try XCTUnwrap(store.addAccount(for: .openRouter))
+        let removedAccount = try XCTUnwrap(store.addAccount(for: .moonshot))
         XCTAssertTrue(store.saveSecret("failed-token", for: failedAccount))
         XCTAssertTrue(store.saveSecret("removed-token", for: removedAccount))
         secretStore.shouldFailDelete = false
@@ -821,7 +825,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testResetAccountsFailurePreservesAccountsAndDependentState() {
+    func testResetAccountsFailurePreservesAccountsAndDependentState() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
@@ -829,10 +833,11 @@ final class ConfigurationAndAuthTests: XCTestCase {
         }
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: FailingDeleteSecretStore()
         )
-        let account = store.addAccount(for: .openRouter)
+        let account = try XCTUnwrap(store.addAccount(for: .openRouter))
         let alertID = "balance.\(account.id)"
         store.updateDashboardCardOrder([account.id])
         store.updateUsageAlertActiveIDs([alertID])
@@ -854,18 +859,19 @@ final class ConfigurationAndAuthTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let removedAccount = store.addAccount(for: .claude)
-        let failedAccount = store.addAccount(for: .openRouter)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let removedAccount = try XCTUnwrap(store.addAccount(for: .claude))
+        let failedAccount = try XCTUnwrap(store.addAccount(for: .openRouter))
         let removedAlertID = "usage.\(removedAccount.id).window"
         let failedAlertID = "balance.\(failedAccount.id)"
         store.updateDashboardCardOrder([removedAccount.id, failedAccount.id])
         store.updateUsageAlertActiveIDs([removedAlertID, failedAlertID])
         store.updateVisualizationStyle(.circularRing, accountID: removedAccount.id, metricID: "usage")
         store.updateVisualizationStyle(.semicircularDial, accountID: failedAccount.id, metricID: "balance")
+        // Credential setup also clears Claude's billing session; inject deletion failure only for reset.
+        secretStore.shouldFailDelete = false
         XCTAssertTrue(store.saveSecret("removed-token", for: removedAccount))
         XCTAssertTrue(store.saveSecret("failed-token", for: failedAccount))
-        secretStore.shouldFailDelete = false
         secretStore.failingAccount = ProviderConfigurationStore.keychainAccount(for: failedAccount)
 
         XCTAssertFalse(store.resetAccounts())
@@ -893,7 +899,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         XCTAssertTrue(store.hasIncompleteAccountReset)
         XCTAssertNotNil(store.lastError)
 
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         XCTAssertNil(reloadedStore.configuration(accountID: removedAccount.id))
         XCTAssertEqual(reloadedStore.configuration(accountID: failedAccount.id), failedAccount)
         XCTAssertEqual(reloadedStore.dashboardCardOrder, [failedAccount.id])
@@ -934,7 +940,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         try secretStore.saveSecret("legacy-token", account: legacyAccount)
         secretStore.shouldFailDelete = false
         secretStore.failingAccount = legacyAccount
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
 
         XCTAssertFalse(store.resetAccounts())
 
@@ -947,7 +953,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         XCTAssertEqual(try secretStore.readSecret(account: legacyAccount), "legacy-token")
         XCTAssertNotNil(store.lastError)
 
-        let reloadedStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let reloadedStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         XCTAssertTrue(reloadedStore.configurations.isEmpty)
         XCTAssertTrue(reloadedStore.hasIncompleteAccountReset)
 
@@ -2525,16 +2531,16 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testDashboardCardCollapseStateDefaultsExpandedAndPersistsPerAccount() {
+    func testDashboardCardCollapseStateDefaultsExpandedAndPersistsPerAccount() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let collapsedAccount = store.addAccount(for: .codex)
-        let expandedAccount = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let collapsedAccount = try XCTUnwrap(store.addAccount(for: .codex))
+        let expandedAccount = try XCTUnwrap(store.addAccount(for: .claude))
 
         XCTAssertFalse(store.isDashboardCardCollapsed(accountID: collapsedAccount.id))
         XCTAssertFalse(store.isDashboardCardCollapsed(accountID: expandedAccount.id))
@@ -2542,6 +2548,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         store.updateDashboardCardCollapsed(true, accountID: collapsedAccount.id)
 
         let reloadedStore = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -2553,21 +2560,21 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testRemovingAndResettingAccountsCleanUpDashboardCardCollapseState() {
+    func testRemovingAndResettingAccountsCleanUpDashboardCardCollapseState() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let removedAccount = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let removedAccount = try XCTUnwrap(store.addAccount(for: .codex))
         store.updateDashboardCardCollapsed(true, accountID: removedAccount.id)
 
         XCTAssertTrue(store.removeAccount(removedAccount))
         XCTAssertFalse(store.isDashboardCardCollapsed(accountID: removedAccount.id))
 
-        let resetAccount = store.addAccount(for: .claude)
+        let resetAccount = try XCTUnwrap(store.addAccount(for: .claude))
         store.updateDashboardCardCollapsed(true, accountID: resetAccount.id)
         XCTAssertTrue(store.resetAccounts())
         XCTAssertTrue(store.collapsedDashboardAccountIDs.isEmpty)
@@ -2575,21 +2582,22 @@ final class ConfigurationAndAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testProviderConfigurationStorePrunesOrphanedCollapsedDashboardAccountIDs() {
+    func testProviderConfigurationStorePrunesOrphanedCollapsedDashboardAccountIDs() throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer {
             defaults.removePersistentDomain(forName: suiteName)
         }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
-        let account = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
+        let account = try XCTUnwrap(store.addAccount(for: .codex))
         defaults.set(
             [account.id, "codex.orphaned-account"].sorted(),
             forKey: "collapsedDashboardAccountIDs"
         )
 
         let reloadedStore = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
