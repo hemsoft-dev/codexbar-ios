@@ -14,6 +14,32 @@ final class ProEntitlementClockRecoveryTests: XCTestCase {
         try await checkTemporaryClockUncertainty(recoverOriginalMarker: false)
     }
 
+    func testFailedAtomicWriteDuringClockUncertaintyKeepsRecoverablePaidCache() async throws {
+        let folder = try makeFolder()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let url = folder.appendingPathComponent("decision.json")
+        let clock = RecoveryClock(sample(0))
+        try await persistPaidDecision(at: url, clock: clock)
+        let original = try Data(contentsOf: url)
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path)
+        XCTAssertThrowsError(try ProEntitlementCache(fileURL: url).save(.free))
+        clock.sample = ProEntitlementClockSample(wallDate: instant.addingTimeInterval(-60), continuousSeconds: 10, continuityID: nil)
+        let restarted = service(source: TestProSource(), cacheURL: url, clock: clock)
+
+        await restarted.refresh()
+
+        XCTAssertFalse(restarted.hasAccess)
+        XCTAssertNotNil(restarted.statusMessage)
+        XCTAssertEqual(restarted.value.reason, .monthly, "A storage failure is not a verified denial of this purchase")
+        XCTAssertEqual(try Data(contentsOf: url), original, "Temporary clock uncertainty must not overwrite the recoverable grant")
+        clock.sample = sample(30)
+        XCTAssertTrue(restarted.hasAccess)
+        XCTAssertTrue(service(source: TestProSource(), cacheURL: url, clock: clock).hasAccess)
+    }
+
     func testFutureClockExpiryRequiresFreshExplicitRestoreToLowerPersistedFloor() async throws {
         let folder = try makeFolder()
         defer { try? FileManager.default.removeItem(at: folder) }

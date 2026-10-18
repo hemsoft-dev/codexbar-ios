@@ -262,6 +262,7 @@ final class TestProSource: ProStoreSource {
     var next = ProStoreSnapshot()
     var calls: [String] = []
     var beforeSnapshot: (() async -> Void)?
+    var beforeRestore: ((Bool) async -> Void)?
     var purchaseOutcome: ProPurchaseOutcome = .cancelled
     var restoreRequests: [Bool] = []
     let transactions = AsyncStream<ProTransactionDelivery>.makeStream()
@@ -281,7 +282,10 @@ final class TestProSource: ProStoreSource {
         return statuses.stream
     }
     func purchase(_ product: ProProductID) async throws -> ProPurchaseOutcome { purchaseOutcome }
-    func restore(refreshAppTransaction: Bool) async throws { restoreRequests.append(refreshAppTransaction) }
+    func restore(refreshAppTransaction: Bool) async throws {
+        restoreRequests.append(refreshAppTransaction)
+        await beforeRestore?(refreshAppTransaction)
+    }
     func finishStreams() {
         transactions.continuation.finish()
         statuses.continuation.finish()

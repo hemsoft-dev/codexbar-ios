@@ -104,9 +104,12 @@ public final class ProEntitlement: ObservableObject {
     /// Called by an explicit Restore action, never by startup or foreground refresh.
     public func restore() async throws {
         let refreshAppTransaction: Bool
-        if case .verified = appPurchase {
+        if case let .verified(purchase) = appPurchase {
             let sample = clock(now())
-            refreshAppTransaction = value.clockAnchor.map {
+            let deniedAppPurchase = purchase.revoked || value.appPurchaseDeniedAt.map {
+                (purchase.signedAt ?? .distantPast) <= $0
+            } == true
+            refreshAppTransaction = deniedAppPurchase || value.clockAnchor.map {
                 $0.effectiveDate(at: sample) == nil || $0.knownDate > sample.wallDate
             } ?? false
         } else { refreshAppTransaction = true }
@@ -269,9 +272,11 @@ public final class ProEntitlement: ObservableObject {
         )
         let instant = now()
         let sample = clock(instant)
+        // A verified purchase can remain recoverable while timing is uncertain.
+        // Retain its metadata; hasAccess continues to deny until the clock recovers.
         return ProEntitlementResolver.resolve(
             current, cached: value, originalPolicy: originalPolicy, now: instant, clock: sample
-        ).hasAccess(at: sample)
+        ).reason != .none
     }
 
     private func remember(_ purchase: ProPurchaseEvidence) {

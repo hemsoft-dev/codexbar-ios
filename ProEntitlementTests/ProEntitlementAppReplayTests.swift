@@ -42,13 +42,7 @@ final class ProEntitlementAppReplayTests: XCTestCase {
             XCTAssertEqual(saved.appPurchaseDeniedAt, savedDenial.appPurchaseDeniedAt)
         }
 
-        // Missing app evidence makes explicit Restore request AppTransaction.refresh.
-        coldSource.next = ProStoreSnapshot()
-        await restarted.refresh()
-        coldSource.next = snapshot(signedOffset: 20)
-        coldSource.next.freshClockEvidence = ProFreshClockEvidence(
-            signedAt: instant.addingTimeInterval(20), environment: .production
-        )
+        prepareFreshAppRestore(coldSource)
         try await restarted.restore()
         XCTAssertEqual(coldSource.restoreRequests, [true])
         XCTAssertTrue(restarted.hasAccess)
@@ -58,6 +52,40 @@ final class ProEntitlementAppReplayTests: XCTestCase {
         XCTAssertEqual(savedGrant.appPurchaseDeniedAt, savedDenial.appPurchaseDeniedAt)
         XCTAssertEqual(savedGrant, restarted.value)
         XCTAssertTrue(service(TestProSource(), cacheURL: url).hasAccess, "The restored grant must survive another disk-backed cold start")
+
+        try await restarted.restore()
+        XCTAssertEqual(coldSource.restoreRequests, [true, false], "Newer positive app evidence must no longer force an app refresh")
+        XCTAssertTrue(restarted.hasAccess)
+    }
+
+    func testRestoreRefreshesVerifiedRevokedAppPurchaseWithHealthyClock() async throws {
+        let source = TestProSource()
+        defer { source.finishStreams() }
+        source.next = snapshot(signedOffset: 10, revoked: true)
+        let service = ProEntitlement(
+            source: source, cache: TestProCache(),
+            originalPolicy: ProOriginalPurchaserPolicy(qualifies: { _ in true }),
+            now: { self.instant.addingTimeInterval(30) }, clock: testProClock
+        )
+        await service.refresh()
+        XCTAssertFalse(service.hasAccess)
+        prepareFreshAppRestore(source)
+
+        try await service.restore()
+
+        XCTAssertEqual(source.restoreRequests, [true])
+        XCTAssertTrue(service.hasAccess)
+        XCTAssertEqual(service.value.reason, .originalPurchaser)
+    }
+
+    private func prepareFreshAppRestore(_ source: TestProSource) {
+        source.beforeRestore = { [weak source] refreshAppTransaction in
+            guard refreshAppTransaction, let source else { return }
+            source.next = self.snapshot(signedOffset: 20)
+            source.next.freshClockEvidence = ProFreshClockEvidence(
+                signedAt: self.instant.addingTimeInterval(20), environment: .production
+            )
+        }
     }
 
     private func service(_ source: TestProSource, cacheURL: URL) -> ProEntitlement {
