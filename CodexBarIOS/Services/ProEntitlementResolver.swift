@@ -15,22 +15,53 @@ enum ProEntitlementResolver {
         let value = resolveAtTime(
             snapshot, cached: cached, originalPolicy: originalPolicy, now: effectiveDate ?? now,
             timedAccess: effectiveDate != nil, cachedAccess: cached.hasAccess(at: sample)
-        ).withClockAnchor(anchor)
+        ).withClockAnchor(anchor).withPurchaseDenials(
+            denials(snapshot, cached: cached, now: effectiveDate ?? now),
+            appPurchaseDeniedAt: appDenial(snapshot.appPurchase, cached: cached)
+        )
         return value.reason == .none ? value.withoutAccess(at: sample) : value
     }
 
     private static func updatedAnchor(
         _ previous: ProEntitlementClockAnchor?, snapshot: ProStoreSnapshot, sample: ProEntitlementClockSample
     ) -> ProEntitlementClockAnchor? {
+        let previous = previous?.checkpoint(at: sample)
         guard let signedAt = snapshot.latestSignedAt, signedAt > (previous?.latestSignedAt ?? .distantPast),
-              let continuityID = sample.continuityID, !continuityID.isEmpty,
-              sample.continuousSeconds.isFinite, sample.continuousSeconds >= 0,
               sample.wallDate.timeIntervalSinceReferenceDate.isFinite else { return previous }
-        let knownDate = max(previous?.anchorDate ?? .distantPast, previous?.effectiveDate(at: sample) ?? .distantPast)
+        let validCounter = sample.continuousSeconds.isFinite && sample.continuousSeconds >= 0
+        let continuityID = validCounter ? sample.continuityID.flatMap { $0.isEmpty ? nil : $0 } : nil
+        let explicitReset = snapshot.freshClockEvidence.map {
+            $0.signedAt > (previous?.latestSignedAt ?? .distantPast)
+        } == true
+        let knownDate = explicitReset ? Date.distantPast : max(
+            previous?.knownDate ?? .distantPast, previous?.effectiveDate(at: sample) ?? .distantPast
+        )
         return ProEntitlementClockAnchor(
             anchorDate: max(sample.wallDate, max(signedAt, knownDate)),
-            continuousSeconds: sample.continuousSeconds, continuityID: continuityID, latestSignedAt: signedAt
+            continuousSeconds: validCounter ? sample.continuousSeconds : 0,
+            continuityID: continuityID ?? "unavailable", latestSignedAt: signedAt
         )
+    }
+
+    private static func denials(
+        _ snapshot: ProStoreSnapshot, cached: ProEntitlementValue, now: Date
+    ) -> [ProPurchaseDenial] {
+        var result = Dictionary(uniqueKeysWithValues: cached.purchaseDenials.map { ($0.product, $0) })
+        var incoming = snapshot.purchases.filter { $0.revoked || $0.upgraded }.map {
+            ProPurchaseDenial(product: $0.product, purchasedAt: $0.purchasedAt, signedAt: $0.signedAt)
+        }
+        incoming += snapshot.subscriptions.filter { $0.deniesAccess(at: now) }.map {
+            ProPurchaseDenial(
+                product: $0.purchase.product, purchasedAt: $0.purchase.purchasedAt,
+                signedAt: $0.renewalVerified ? max($0.signedAt, $0.purchase.signedAt) : $0.purchase.signedAt
+            )
+        }
+        for denial in incoming where denial.isValid {
+            if let existing = result[denial.product],
+               !existing.allows(purchasedAt: denial.purchasedAt, signedAt: denial.signedAt) { continue }
+            result[denial.product] = denial
+        }
+        return result.values.sorted { $0.product.rawValue < $1.product.rawValue }
     }
 
     private static func resolveAtTime(
@@ -53,6 +84,9 @@ enum ProEntitlementResolver {
             return best
         }
         if offline { return cached }
+        // Temporary timing uncertainty denies access through hasAccess, without destroying a verified purchase.
+        if !timedAccess, cached.isValidCacheValue, cached.reason != .none,
+           canUseOfflineSubscription(cached, snapshot: snapshot, now: now) { return cached }
         return ProEntitlementValue(
             reason: .none, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: now, environment: cached.environment
         )
@@ -66,12 +100,19 @@ enum ProEntitlementResolver {
     ) -> Bool {
         switch evidence {
         case let .verified(purchase):
+            if let denial = cached.appPurchaseDeniedAt, (purchase.signedAt ?? .distantPast) <= denial { return false }
             return purchase.isProduction && !purchase.revoked && policy.qualifies(purchase)
         case .unverified:
             return false
         case .unavailable:
             return cached.reason == .originalPurchaser && cached.hasAccess(at: now)
         }
+    }
+
+    private static func appDenial(_ evidence: ProVerification<ProAppPurchase>, cached: ProEntitlementValue) -> Date? {
+        guard case let .verified(purchase) = evidence, purchase.revoked, let signedAt = purchase.signedAt,
+              signedAt.timeIntervalSinceReferenceDate.isFinite else { return cached.appPurchaseDeniedAt }
+        return max(cached.appPurchaseDeniedAt ?? .distantPast, signedAt)
     }
 
     private static func lifetimeAccess(_ snapshot: ProStoreSnapshot, cached: ProEntitlementValue, now: Date) -> Bool {

@@ -44,11 +44,17 @@ be recovered through StoreKit's latest signed record after an app restart.
 
 The App Group cache contains the winning reason, expiry, access deadline,
 verification time, purchase date, environment and the known subscription product.
-It also stores a signed-time watermark, continuous-clock anchor and random local
-boot-continuity marker. It contains no transaction ID, Apple Account identifier,
+It also stores signed denial dates for each known product and the app purchase, a signed-time watermark,
+continuous-clock anchor, calendar floor and random local boot-continuity marker. It contains no transaction ID, Apple Account identifier,
 signed token or provider data. A successful atomic
 cache write and publication precede finishing a verified purchase or update.
 Failed writes and unverified purchases remain unfinished.
+If atomic replacement fails after a denial, the service writes that denial to
+the existing file directly, preserving its replay protection. If that also
+fails, it removes the stale cache. A failure of both fallback operations is
+reported explicitly; access stays denied in memory and the transaction remains
+unfinished for retry. No persistence claim is made while every disk mutation
+is unavailable.
 
 Production, sandbox and Xcode decisions use separate cache files. Only a
 production-verified decision may bootstrap access before StoreKit confirms the
@@ -63,12 +69,21 @@ or revocation overrides the allowance for the affected purchase. A continuous
 clock counts elapsed time through sleep. Re-reading the same signed StoreKit
 record never resets its anchor, so rolling the device clock backward cannot
 extend the deadline. App restarts and App Group readers share the same anchor.
-After a device reboot or unavailable boot-continuity evidence, subscriptions
-require newer signed StoreKit evidence before access resumes. Restore Purchases
-can explicitly refresh the app transaction; launch never prompts for it. The
-signed-time watermark survives expiration so replaying an old record cannot
-re-grant access. Independent
-permanent grants survive subscription loss. With no verified cache, startup is
+After a device reboot, a normally advancing calendar preserves the original
+access deadline. An observed calendar rollback denies access temporarily while
+retaining the verified purchase for recovery. Missing timing evidence does not
+erase that purchase. After correcting an accidentally advanced device clock,
+Restore Purchases can use the freshly verified response to an explicit app
+transaction refresh to recover the time anchor. Cached or unchanged signatures
+cannot lower the saved time floor, and launch never prompts for restore.
+
+The clock cannot prove time spent powered off when someone also changes the
+calendar to a value above its last saved floor. Continuous time protects the
+current boot; calendar checks preserve ordinary offline reboot support without
+claiming a trusted clock across power loss. The absolute access deadline is
+never extended. Saved product denial dates reject old refunded transactions
+after relaunch while allowing a newer repurchase. Independent permanent grants
+survive subscription loss. With no verified cache, startup is
 free. A timer expires access locally before waiting for StoreKit. Foreground
 refresh re-evaluates the complete decision without a relaunch.
 

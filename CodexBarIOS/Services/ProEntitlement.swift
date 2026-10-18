@@ -105,7 +105,10 @@ public final class ProEntitlement: ObservableObject {
     public func restore() async throws {
         let refreshAppTransaction: Bool
         if case .verified = appPurchase {
-            refreshAppTransaction = value.clockAnchor.map { $0.effectiveDate(at: clock(now())) == nil } ?? false
+            let sample = clock(now())
+            refreshAppTransaction = value.clockAnchor.map {
+                $0.effectiveDate(at: sample) == nil || $0.knownDate > sample.wallDate
+            } ?? false
         } else { refreshAppTransaction = true }
         try await source.restore(refreshAppTransaction: refreshAppTransaction)
         await refresh()
@@ -157,7 +160,8 @@ public final class ProEntitlement: ObservableObject {
         // Keep denial evidence even when saving fails, so unrelated later events cannot resurrect an old grant.
         appPurchase = incoming.appPurchase
         appVerificationEnvironment = incoming.appVerificationEnvironment
-        let verifiedProducts = Set(incoming.purchases.map(\.product)).subtracting(incoming.unverifiedProducts)
+        let verifiedProducts = Set(incoming.purchases.map(\.product) + incoming.subscriptions.map(\.purchase.product))
+            .subtracting(incoming.unverifiedProducts)
         unverifiedProducts.subtract(verifiedProducts)
         unverifiedProducts.formUnion(incoming.unverifiedProducts)
         snapshot.unverifiedPurchases = Set(unverifiedProducts.map {
@@ -176,9 +180,12 @@ public final class ProEntitlement: ObservableObject {
             try cache.save(resolved)
         } catch {
             statusMessage = "Purchase verification could not be saved. Try Restore Purchases."
-            // Never keep access in memory after an observed revocation, even if storage failed.
+            // A rejected grant must also be invalidated on disk before a cold start can read it.
             if !canRetainCurrentValue(snapshot) {
                 value = candidate.withoutAccess(at: clock(instant))
+                do { try cache.invalidate(with: value) } catch {
+                    statusMessage = "Purchase storage could not be updated or cleared. Try Restore Purchases."
+                }
             }
             return false
         }
@@ -196,7 +203,8 @@ public final class ProEntitlement: ObservableObject {
     private func preservingVerificationDate(_ candidate: ProEntitlementValue, incoming: ProStoreSnapshot) -> ProEntitlementValue {
         guard candidate.reason == value.reason, candidate.expiresAt == value.expiresAt,
               candidate.proAccessEndsAt == value.proAccessEndsAt, candidate.environment == value.environment,
-              candidate.purchasedAt == value.purchasedAt else { return candidate }
+              candidate.purchasedAt == value.purchasedAt, candidate.purchaseDenials == value.purchaseDenials,
+              candidate.appPurchaseDeniedAt == value.appPurchaseDeniedAt else { return candidate }
         let verified: Bool
         if candidate.reason == .originalPurchaser {
             if case .verified = incoming.appPurchase { verified = true } else { verified = false }
@@ -226,20 +234,27 @@ public final class ProEntitlement: ObservableObject {
             )
         }
         currentEnvironment = environment
+        if snapshot.freshClockEvidence?.environment != environment { snapshot.freshClockEvidence = nil }
         if case .unverified = incoming.appPurchase, incoming.appVerificationEnvironment != environment {
             snapshot.appPurchase = .unavailable
         }
         snapshot.purchases = incoming.purchases.filter { accepts($0, environment: environment) }
-        snapshot.subscriptions = incoming.subscriptions.filter { accepts($0.purchase, environment: environment) }
+        snapshot.subscriptions = incoming.subscriptions.filter {
+            accepts($0.purchase, environment: environment, statusSignedAt: $0.renewalVerified ? $0.signedAt : nil)
+        }
         snapshot.unverifiedPurchases = incoming.unverifiedPurchases.filter { $0.environment == environment }
         return snapshot
     }
 
-    private func accepts(_ purchase: ProPurchaseEvidence, environment: ProStoreEnvironment) -> Bool {
+    private func accepts(_ purchase: ProPurchaseEvidence, environment: ProStoreEnvironment, statusSignedAt: Date? = nil) -> Bool {
         guard purchase.environment == environment else { return false }
         let product = value.reason == .lifetime ? ProProductID.lifetime : value.subscriptionProduct
         if purchase.product == product, let grantedAt = value.purchasedAt, purchase.purchasedAt < grantedAt {
             return false
+        }
+        if let denial = value.purchaseDenials.first(where: { $0.product == purchase.product }),
+           !denial.allows(purchasedAt: purchase.purchasedAt, signedAt: max(purchase.signedAt, statusSignedAt ?? .distantPast)) {
+            return (purchase.revoked || purchase.upgraded) && purchase.purchasedAt == denial.purchasedAt
         }
         return true
     }

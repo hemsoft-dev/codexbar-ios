@@ -3,9 +3,12 @@ import StoreKit
 
 @MainActor
 final class StoreKitProStoreSource: ProStoreSource {
+    private var restoredClockEvidence: ProFreshClockEvidence?
+
     func snapshot() async -> ProStoreSnapshot {
         var snapshot = ProStoreSnapshot()
         await appendAppPurchase(to: &snapshot)
+        snapshot.freshClockEvidence = restoredClockEvidence
         for await result in Transaction.currentEntitlements { append(result, to: &snapshot) }
         // Latest signed records also expose revocations omitted by currentEntitlements, including after relaunch.
         for product in ProProductID.allCases {
@@ -83,8 +86,12 @@ final class StoreKitProStoreSource: ProStoreSource {
     }
 
     func restore(refreshAppTransaction: Bool) async throws {
+        restoredClockEvidence = nil
         try await AppStore.sync()
-        if refreshAppTransaction { _ = try await AppTransaction.refresh() }
+        if refreshAppTransaction, case let .verified(transaction) = try await AppTransaction.refresh(),
+           let environment = Self.environment(transaction.environment) {
+            restoredClockEvidence = ProFreshClockEvidence(signedAt: transaction.signedDate, environment: environment)
+        }
     }
 
     private func appendAppPurchase(to snapshot: inout ProStoreSnapshot) async {

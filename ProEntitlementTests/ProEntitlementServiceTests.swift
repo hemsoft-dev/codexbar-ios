@@ -195,7 +195,11 @@ final class ProEntitlementServiceTests: XCTestCase {
         let verified = service.value
         clock = instant.addingTimeInterval(30)
         await service.refresh()
-        XCTAssertEqual(service.value, verified)
+        XCTAssertEqual(service.value.reason, verified.reason)
+        XCTAssertEqual(service.value.expiresAt, verified.expiresAt)
+        XCTAssertEqual(service.value.proAccessEndsAt, verified.proAccessEndsAt)
+        XCTAssertEqual(service.value.verifiedAt, verified.verifiedAt)
+        XCTAssertEqual(cache.saved?.clockAnchor?.knownDate, clock)
         XCTAssertEqual(cache.saved?.verifiedAt, instant)
     }
 
@@ -246,6 +250,10 @@ final class TestProCache: ProEntitlementCaching {
         saved = value
         records[value.environment] = value
         onSave?(value)
+    }
+    func invalidate(with deniedValue: ProEntitlementValue) throws {
+        saved = deniedValue
+        records[deniedValue.environment] = deniedValue
     }
 }
 

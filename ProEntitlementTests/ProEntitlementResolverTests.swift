@@ -65,7 +65,14 @@ final class ProEntitlementResolverTests: XCTestCase {
             ProStoreSnapshot(), cached: cached, originalPolicy: ProOriginalPurchaserPolicy(), now: boundary.addingTimeInterval(-0.001),
             clock: testProClock(boundary.addingTimeInterval(-0.001))
         )
-        XCTAssertEqual(before, cached)
+        XCTAssertEqual(before.reason, .yearly)
+        XCTAssertEqual(before.expiresAt, cached.expiresAt)
+        XCTAssertEqual(before.proAccessEndsAt, boundary)
+        XCTAssertEqual(before.verifiedAt, cached.verifiedAt)
+        XCTAssertEqual(
+            before.clockAnchor?.knownDate.timeIntervalSince1970 ?? 0,
+            boundary.addingTimeInterval(-0.001).timeIntervalSince1970, accuracy: 0.000001
+        )
         XCTAssertTrue(before.hasAccess(at: testProClock(boundary.addingTimeInterval(-0.001))))
         XCTAssertFalse(before.hasAccess(at: testProClock(boundary)))
         let atBoundary = ProEntitlementResolver.resolve(
@@ -121,7 +128,11 @@ final class ProEntitlementResolverTests: XCTestCase {
         let value = resolve(ProStoreSnapshot(
             purchases: [monthly, yearly], subscriptions: [status(monthly, state: .revoked)]
         ), cached: cached)
-        XCTAssertEqual(value, cached)
+        XCTAssertEqual(value.reason, .yearly)
+        XCTAssertEqual(value.expiresAt, cached.expiresAt)
+        XCTAssertEqual(value.proAccessEndsAt, cached.proAccessEndsAt)
+        XCTAssertEqual(value.verifiedAt, cached.verifiedAt)
+        XCTAssertEqual(value.purchaseDenials.map(\.product), [.monthly])
     }
 
     func testRefundRevocationUpgradeAndUnverifiedResultsCannotGrant() {

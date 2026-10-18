@@ -31,7 +31,8 @@ final class ProEntitlementElapsedTimeTests: XCTestCase {
             sample = clock(elapsed: elapsed, wallOffset: 10)
             await service.refresh()
             XCTAssertTrue(service.hasAccess)
-            XCTAssertEqual(service.value.clockAnchor, original, "Re-verifying the same JWS must not reset elapsed time")
+            XCTAssertEqual(service.value.clockAnchor?.latestSignedAt, original?.latestSignedAt)
+            XCTAssertEqual(service.value.clockAnchor?.effectiveDate(at: sample), instant.addingTimeInterval(elapsed))
         }
         let relaunched = ProEntitlement(source: source, cache: cache, now: { sample.wallDate }, clock: { _ in sample })
         XCTAssertTrue(relaunched.hasAccess)
@@ -48,20 +49,39 @@ final class ProEntitlementElapsedTimeTests: XCTestCase {
         XCTAssertFalse(thirdLaunch.hasAccess, "Persisted free state must retain the signed-time watermark")
     }
 
-    func testNewBootOrMissingContinuityDeniesReplayRegardlessOfCounterDirection() {
+    func testOfflineRebootKeepsTheOriginalDeadlineWithEitherCounterDirection() {
         let initial = resolve(snapshot(), cached: .free, sample: clock(elapsed: 0))
         for counter: TimeInterval in [1, 1_000_000] {
             for boot: String? in ["new-boot", nil] {
                 let sample = ProEntitlementClockSample(
                     wallDate: instant.addingTimeInterval(10), continuousSeconds: counter, continuityID: boot
                 )
-                XCTAssertFalse(initial.hasAccess(at: sample))
-                let denied = resolve(snapshot(), cached: initial, sample: sample)
-                XCTAssertEqual(denied.reason, .none)
-                XCTAssertEqual(denied.clockAnchor, initial.clockAnchor)
-                XCTAssertFalse(resolve(snapshot(), cached: denied, sample: sample).hasAccess(at: sample))
+                XCTAssertTrue(initial.hasAccess(at: sample))
+                let offline = resolve(ProStoreSnapshot(), cached: initial, sample: sample)
+                XCTAssertEqual(offline.reason, .monthly)
+                XCTAssertEqual(offline.proAccessEndsAt, initial.proAccessEndsAt)
+                XCTAssertEqual(offline.verifiedAt, initial.verifiedAt)
+                let boundary = ProEntitlementClockSample(
+                    wallDate: instant.addingTimeInterval(262_800), continuousSeconds: counter + 262_790, continuityID: boot
+                )
+                XCTAssertFalse(offline.hasAccess(at: boundary))
             }
         }
+    }
+
+    func testObservedBackwardCalendarAfterRebootTemporarilyDeniesWithoutErasingPurchase() {
+        let initial = resolve(snapshot(), cached: .free, sample: clock(elapsed: 0))
+        let saved = resolve(ProStoreSnapshot(), cached: initial, sample: clock(elapsed: 100))
+        let backward = ProEntitlementClockSample(wallDate: instant, continuousSeconds: 1, continuityID: "new-boot")
+        XCTAssertFalse(saved.hasAccess(at: backward))
+        let retained = resolve(ProStoreSnapshot(), cached: saved, sample: backward)
+        XCTAssertEqual(retained.reason, .monthly)
+        XCTAssertEqual(retained.proAccessEndsAt, initial.proAccessEndsAt)
+        XCTAssertFalse(retained.hasAccess(at: backward))
+        let corrected = ProEntitlementClockSample(
+            wallDate: instant.addingTimeInterval(200), continuousSeconds: 2, continuityID: "new-boot"
+        )
+        XCTAssertTrue(resolve(ProStoreSnapshot(), cached: retained, sample: corrected).hasAccess(at: corrected))
     }
 
     func testNewerSignedEvidenceRestoresClockAfterRebootAndSleepCountsTowardDeadline() {
@@ -101,7 +121,7 @@ final class ProEntitlementElapsedTimeTests: XCTestCase {
         }
     }
 
-    func testRestoreRefreshesVerifiedAppTransactionAfterLostBootContinuity() async throws {
+    func testOfflineRebootDoesNotRequireInteractiveRestore() async throws {
         let source = TestProSource()
         source.next = snapshot()
         source.next.appPurchase = .verified(ProAppPurchase(
@@ -114,16 +134,11 @@ final class ProEntitlementElapsedTimeTests: XCTestCase {
         sample = ProEntitlementClockSample(wallDate: instant, continuousSeconds: 1, continuityID: "new-boot")
         let relaunched = ProEntitlement(source: source, cache: cache, now: { sample.wallDate }, clock: { _ in sample })
         await relaunched.refresh()
-        XCTAssertFalse(relaunched.hasAccess)
+        XCTAssertTrue(relaunched.hasAccess)
         XCTAssertEqual(source.restoreRequests, [], "Automatic refresh must never request interactive restore")
         try await relaunched.restore()
-        XCTAssertEqual(source.restoreRequests, [true])
-        source.next.appPurchase = .verified(ProAppPurchase(
-            originalVersion: "5", originalPurchaseDate: instant, environment: .production, revoked: false,
-            signedAt: instant.addingTimeInterval(100)
-        ))
-        await relaunched.refresh()
-        XCTAssertTrue(relaunched.hasAccess, "A newer signed app transaction can restore continuity for an existing subscription")
+        XCTAssertEqual(source.restoreRequests, [false])
+        XCTAssertTrue(relaunched.hasAccess)
     }
 
     func testLegacySubscriptionWithoutClockAnchorCannotBootstrapOfflineAccess() {

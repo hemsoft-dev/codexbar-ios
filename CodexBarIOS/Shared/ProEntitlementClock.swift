@@ -20,13 +20,19 @@ public struct ProEntitlementClockAnchor: Codable, Equatable, Sendable {
     public let continuousSeconds: TimeInterval
     public let continuityID: String
     public let latestSignedAt: Date
+    public let calendarFloor: Date?
 
-    public init(anchorDate: Date, continuousSeconds: TimeInterval, continuityID: String, latestSignedAt: Date) {
+    public init(
+        anchorDate: Date, continuousSeconds: TimeInterval, continuityID: String, latestSignedAt: Date, calendarFloor: Date? = nil
+    ) {
         self.anchorDate = anchorDate
         self.continuousSeconds = continuousSeconds
         self.continuityID = continuityID
         self.latestSignedAt = latestSignedAt
+        self.calendarFloor = calendarFloor
     }
+
+    public var knownDate: Date { max(anchorDate, calendarFloor ?? anchorDate) }
 
     public var isValid: Bool {
         anchorDate.timeIntervalSinceReferenceDate.isFinite
@@ -34,15 +40,37 @@ public struct ProEntitlementClockAnchor: Codable, Equatable, Sendable {
             && latestSignedAt <= anchorDate
             && continuousSeconds.isFinite && continuousSeconds >= 0
             && !continuityID.isEmpty
+            && calendarFloor.map { $0.timeIntervalSinceReferenceDate.isFinite && $0 >= anchorDate } != false
     }
 
     public func effectiveDate(at sample: ProEntitlementClockSample) -> Date? {
-        guard isValid, sample.wallDate.timeIntervalSinceReferenceDate.isFinite,
-              sample.continuousSeconds.isFinite, sample.continuousSeconds >= continuousSeconds,
-              sample.continuityID == continuityID else { return nil }
+        guard isValid, sample.wallDate.timeIntervalSinceReferenceDate.isFinite else { return nil }
+        // A reboot resets the continuous clock. Keep the fixed calendar deadline
+        // available offline, but reject a wall date earlier than the saved time floor.
+        guard sample.continuityID == continuityID else {
+            return sample.wallDate >= knownDate ? sample.wallDate : nil
+        }
+        guard sample.continuousSeconds.isFinite, sample.continuousSeconds >= continuousSeconds else { return nil }
         let elapsedDate = anchorDate.addingTimeInterval(sample.continuousSeconds - continuousSeconds)
         guard elapsedDate.timeIntervalSinceReferenceDate.isFinite else { return nil }
-        return max(sample.wallDate, elapsedDate)
+        return max(knownDate, max(sample.wallDate, elapsedDate))
+    }
+
+    public func checkpoint(at sample: ProEntitlementClockSample) -> Self {
+        guard let date = effectiveDate(at: sample) else { return self }
+        if let marker = sample.continuityID, !marker.isEmpty,
+           sample.continuousSeconds.isFinite, sample.continuousSeconds >= 0 {
+            return Self(
+                anchorDate: date, continuousSeconds: sample.continuousSeconds,
+                continuityID: marker, latestSignedAt: latestSignedAt
+            )
+        }
+        // A missing marker cannot establish which boot owns the counter. Retain
+        // its original elapsed-time origin and save only the observed calendar floor.
+        return Self(
+            anchorDate: anchorDate, continuousSeconds: continuousSeconds,
+            continuityID: continuityID, latestSignedAt: latestSignedAt, calendarFloor: max(knownDate, date)
+        )
     }
 }
 
@@ -108,7 +136,11 @@ public enum ProEntitlementSystemClock {
         return mappedNonce(descriptor: descriptor, initializing: true)
     }
 
-    private static func mappedNonce(descriptor: Int32, initializing: Bool) -> String? {
+    static func mappedNonce(descriptor: Int32, initializing: Bool) -> String? {
+        var metadata = stat()
+        // A descriptor can survive an initializer that exited before allocating
+        // storage. Never read or write a mapping beyond its reported capacity.
+        guard fstat(descriptor, &metadata) == 0, metadata.st_size >= off_t(markerLength) else { return nil }
         let protection = initializing ? PROT_READ | PROT_WRITE : PROT_READ
         guard let memory = mmap(nil, markerLength, protection, MAP_SHARED, descriptor, 0), memory != MAP_FAILED else { return nil }
         defer { munmap(memory, markerLength) }

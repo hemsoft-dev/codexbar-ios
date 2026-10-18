@@ -18,6 +18,21 @@ public enum ProEntitlementReason: String, Codable, Sendable {
     }
 }
 
+/// Signed denial ordering survives relaunch without retaining transaction identifiers.
+public struct ProPurchaseDenial: Codable, Equatable, Sendable {
+    public let product: ProProductID
+    public let purchasedAt: Date
+    public let signedAt: Date
+
+    var isValid: Bool {
+        purchasedAt.timeIntervalSinceReferenceDate.isFinite && signedAt.timeIntervalSinceReferenceDate.isFinite
+    }
+
+    func allows(purchasedAt: Date, signedAt: Date) -> Bool {
+        purchasedAt > self.purchasedAt || (purchasedAt == self.purchasedAt && signedAt > self.signedAt)
+    }
+}
+
 /// Only this decision and local timing evidence cross the App Group boundary.
 public struct ProEntitlementValue: Codable, Equatable, Sendable {
     public let reason: ProEntitlementReason
@@ -28,6 +43,8 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
     public let environment: ProStoreEnvironment
     public let purchasedAt: Date?
     public let clockAnchor: ProEntitlementClockAnchor?
+    public let purchaseDenials: [ProPurchaseDenial]
+    public let appPurchaseDeniedAt: Date?
 
     public static let free = ProEntitlementValue(
         reason: .none, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: nil
@@ -37,7 +54,8 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
     public init(
         reason: ProEntitlementReason, expiresAt: Date?, proAccessEndsAt: Date?, verifiedAt: Date?,
         subscriptionProduct: ProProductID? = nil, environment: ProStoreEnvironment = .production,
-        purchasedAt: Date? = nil, clockAnchor: ProEntitlementClockAnchor? = nil
+        purchasedAt: Date? = nil, clockAnchor: ProEntitlementClockAnchor? = nil,
+        purchaseDenials: [ProPurchaseDenial] = [], appPurchaseDeniedAt: Date? = nil
     ) {
         self.reason = reason
         self.expiresAt = expiresAt
@@ -47,6 +65,8 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
         self.environment = environment
         self.purchasedAt = purchasedAt
         self.clockAnchor = clockAnchor
+        self.purchaseDenials = purchaseDenials
+        self.appPurchaseDeniedAt = appPurchaseDeniedAt
     }
 
     public func hasAccess(at date: Date) -> Bool {
@@ -63,26 +83,31 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
     func withClockAnchor(_ anchor: ProEntitlementClockAnchor?) -> Self {
         Self(
             reason: reason, expiresAt: expiresAt, proAccessEndsAt: proAccessEndsAt, verifiedAt: verifiedAt,
-            subscriptionProduct: subscriptionProduct, environment: environment, purchasedAt: purchasedAt, clockAnchor: anchor
+            subscriptionProduct: subscriptionProduct, environment: environment, purchasedAt: purchasedAt, clockAnchor: anchor,
+            purchaseDenials: purchaseDenials, appPurchaseDeniedAt: appPurchaseDeniedAt
+        )
+    }
+
+    func withPurchaseDenials(_ denials: [ProPurchaseDenial], appPurchaseDeniedAt: Date?) -> Self {
+        Self(
+            reason: reason, expiresAt: expiresAt, proAccessEndsAt: proAccessEndsAt, verifiedAt: verifiedAt,
+            subscriptionProduct: subscriptionProduct, environment: environment, purchasedAt: purchasedAt,
+            clockAnchor: clockAnchor, purchaseDenials: denials, appPurchaseDeniedAt: appPurchaseDeniedAt
         )
     }
 
     func withoutAccess(at sample: ProEntitlementClockSample) -> Self {
-        let anchor: ProEntitlementClockAnchor?
-        if let existing = clockAnchor, let date = existing.effectiveDate(at: sample) {
-            anchor = ProEntitlementClockAnchor(
-                anchorDate: date, continuousSeconds: sample.continuousSeconds,
-                continuityID: existing.continuityID, latestSignedAt: existing.latestSignedAt
-            )
-        } else { anchor = clockAnchor }
         return Self(
             reason: .none, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: verifiedAt,
-            environment: environment, clockAnchor: anchor
+            environment: environment, clockAnchor: clockAnchor?.checkpoint(at: sample), purchaseDenials: purchaseDenials,
+            appPurchaseDeniedAt: appPurchaseDeniedAt
         )
     }
 
     var isValidCacheValue: Bool {
-        guard clockAnchor?.isValid != false else { return false }
+        guard clockAnchor?.isValid != false, appPurchaseDeniedAt?.timeIntervalSinceReferenceDate.isFinite != false,
+              purchaseDenials.allSatisfy(\.isValid),
+              Set(purchaseDenials.map(\.product)).count == purchaseDenials.count else { return false }
         if reason == .none { return expiresAt == nil && proAccessEndsAt == nil && subscriptionProduct == nil }
         guard let verifiedAt, verifiedAt.timeIntervalSince1970.isFinite else { return false }
         if reason.isPermanent { return expiresAt == nil && proAccessEndsAt == nil && subscriptionProduct == nil }

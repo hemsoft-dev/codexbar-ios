@@ -19,7 +19,10 @@ final class ProEntitlementCacheTests: XCTestCase {
         let saved = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
         XCTAssertEqual(Set(saved.keys), ["version", "value"])
         let decision = try XCTUnwrap(saved["value"] as? [String: Any])
-        XCTAssertEqual(Set(decision.keys), ["reason", "expiresAt", "proAccessEndsAt", "verifiedAt", "subscriptionProduct", "environment", "clockAnchor"])
+        XCTAssertEqual(Set(decision.keys), [
+            "reason", "expiresAt", "proAccessEndsAt", "verifiedAt", "subscriptionProduct", "environment", "clockAnchor", "purchaseDenials",
+        ])
+        XCTAssertEqual((decision["purchaseDenials"] as? [Any])?.count, 0)
         XCTAssertEqual(decision["subscriptionProduct"] as? String, ProProductID.yearly.rawValue)
     }
 

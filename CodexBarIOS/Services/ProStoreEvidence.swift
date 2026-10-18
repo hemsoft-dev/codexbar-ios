@@ -66,6 +66,12 @@ struct ProUnverifiedPurchase: Hashable, Sendable {
     let environment: ProStoreEnvironment
 }
 
+/// Created only from the verified response to an explicit AppTransaction.refresh request.
+struct ProFreshClockEvidence: Sendable {
+    let signedAt: Date
+    let environment: ProStoreEnvironment
+}
+
 struct ProStoreSnapshot: Sendable {
     var appPurchase: ProVerification<ProAppPurchase> = .unavailable
     var appVerificationEnvironment: ProStoreEnvironment?
@@ -73,12 +79,14 @@ struct ProStoreSnapshot: Sendable {
     var unverifiedPurchases: Set<ProUnverifiedPurchase> = []
     var subscriptions: [ProSubscriptionEvidence] = []
     var subscriptionStatusAvailable = false
+    var freshClockEvidence: ProFreshClockEvidence?
     var unverifiedProducts: Set<ProProductID> { Set(unverifiedPurchases.map(\.product)) }
 
     var latestSignedAt: Date? {
         var dates = purchases.map(\.signedAt)
         dates += subscriptions.filter(\.renewalVerified).map(\.signedAt)
         if case let .verified(app) = appPurchase, let signedAt = app.signedAt { dates.append(signedAt) }
+        if let freshClockEvidence { dates.append(freshClockEvidence.signedAt) }
         return dates.filter { $0.timeIntervalSinceReferenceDate.isFinite }.max()
     }
 }
