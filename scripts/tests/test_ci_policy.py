@@ -70,7 +70,7 @@ class CITriggerPolicyTests(unittest.TestCase):
         self.assertIn("swift run CodexBarIOSSmokeTests", smoke_job)
         ios_job = job_block(self.workflow, "ios-tests")
         self.assertIn("    name: iOS tests\n", ios_job)
-        self.assertIn("    timeout-minutes: 30\n", ios_job)
+        self.assertIn("    timeout-minutes: 45\n", ios_job)
         self.assertIn("Run iOS unit tests", ios_job)
         self.assertIn("Enforce iOS function risk baseline", ios_job)
         self.assertNotIn("UI journeys", ios_job)
