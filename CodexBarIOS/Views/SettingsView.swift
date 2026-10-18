@@ -482,7 +482,7 @@ struct SettingsView: View {
             )
         case .alerts:
             SettingsCategorySummary.alerts(
-                isEnabled: configurationStore.usageAlertSettings.isEnabled,
+                isEnabled: configurationStore.accountAccess.hasProAccess && configurationStore.usageAlertSettings.isEnabled,
                 githubStatusEnabled: githubStatusPreferences.settings.isEnabled,
                 warningThreshold: configurationStore.usageAlertSettings.warningThreshold,
                 criticalThreshold: configurationStore.usageAlertSettings.criticalThreshold
