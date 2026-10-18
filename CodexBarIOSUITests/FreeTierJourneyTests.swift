@@ -47,12 +47,15 @@ final class FreeTierJourneyTests: XCTestCase {
         capture("free-paused-card-large-text")
         tap(makePersonalActive, in: app)
         XCTAssertTrue(chooser.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["active-account-choice-plan-account-1"].label.contains("Active account"))
+        reveal(work, in: app)
+        XCTAssertTrue(work.label.contains("Active account"))
         tap(app.buttons["active-account-choice-plan-account-0"], in: app)
         XCTAssertTrue(chooser.waitForNonExistence(timeout: 5))
         openSettings(app, destination: "accountsAndGroups")
         tap(app.buttons["settings-change-active-account"], in: app)
-        XCTAssertTrue(app.buttons["active-account-choice-plan-account-0"].label.contains("Active account"))
+        let personal = app.buttons["active-account-choice-plan-account-0"]
+        reveal(personal, in: app)
+        XCTAssertTrue(personal.label.contains("Active account"))
         capture("free-active-account-selection-updated")
     }
 
