@@ -7,7 +7,7 @@ struct ProOriginalPurchaserPolicy: Sendable {
     // This does not record a submission. Version 2.0 must still ship as build 5 or higher.
     static let cutover = Date(timeIntervalSince1970: 1_793_491_200)
 
-    var qualifies: @Sendable (ProAppPurchase) -> Bool = Self.recognizes
+    var qualifies: @Sendable (ProAppPurchase) -> Bool = { Self.recognizes($0) }
 
     private static func recognizes(_ purchase: ProAppPurchase) -> Bool {
         guard purchase.isProduction, !purchase.revoked else { return false }
