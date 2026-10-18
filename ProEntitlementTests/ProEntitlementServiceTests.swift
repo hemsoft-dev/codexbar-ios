@@ -33,7 +33,7 @@ final class ProEntitlementServiceTests: XCTestCase {
         XCTAssertFalse(service.hasAccess)
         XCTAssertNotNil(service.statusMessage)
         cache.shouldFail = false
-        await service.receive(ProTransactionDelivery(product: .yearly, evidence: .unverified) { finished += 1 })
+        await service.receive(ProTransactionDelivery(product: .yearly, evidence: .unverified, environment: .production) { finished += 1 })
         XCTAssertEqual(finished, 0)
         XCTAssertEqual(service.value.reason, .none)
     }
@@ -203,7 +203,7 @@ final class ProEntitlementServiceTests: XCTestCase {
         let service = service(source, TestProCache())
         await service.receive(delivery())
         XCTAssertTrue(service.hasAccess)
-        await service.receive(ProTransactionDelivery(product: .yearly, evidence: .unverified, finish: {}))
+        await service.receive(ProTransactionDelivery(product: .yearly, evidence: .unverified, environment: .production, finish: {}))
         XCTAssertFalse(service.hasAccess)
         await service.refresh()
         XCTAssertFalse(service.hasAccess, "Remembered evidence must not undo a newer verification failure")
@@ -256,7 +256,7 @@ final class TestProSource: ProStoreSource {
     var purchaseOutcome: ProPurchaseOutcome = .cancelled
     var restoreRequests: [Bool] = []
     let transactions = AsyncStream<ProTransactionDelivery>.makeStream()
-    let statuses = AsyncStream<ProSubscriptionEvidence>.makeStream()
+    let statuses = AsyncStream<ProSubscriptionUpdate>.makeStream()
 
     func snapshot() async -> ProStoreSnapshot {
         calls.append("snapshot")
@@ -267,7 +267,7 @@ final class TestProSource: ProStoreSource {
         calls.append("transactions")
         return transactions.stream
     }
-    func subscriptionUpdates() -> AsyncStream<ProSubscriptionEvidence> {
+    func subscriptionUpdates() -> AsyncStream<ProSubscriptionUpdate> {
         calls.append("statuses")
         return statuses.stream
     }

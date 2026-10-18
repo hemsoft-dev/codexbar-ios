@@ -60,18 +60,31 @@ struct ProSubscriptionEvidence: Sendable {
     }
 }
 
+struct ProUnverifiedPurchase: Hashable, Sendable {
+    let product: ProProductID
+    let environment: ProStoreEnvironment
+}
+
 struct ProStoreSnapshot: Sendable {
     var appPurchase: ProVerification<ProAppPurchase> = .unavailable
+    var appVerificationEnvironment: ProStoreEnvironment?
     var purchases: [ProPurchaseEvidence] = []
-    var unverifiedProducts: Set<ProProductID> = []
+    var unverifiedPurchases: Set<ProUnverifiedPurchase> = []
     var subscriptions: [ProSubscriptionEvidence] = []
     var subscriptionStatusAvailable = false
+    var unverifiedProducts: Set<ProProductID> { Set(unverifiedPurchases.map(\.product)) }
+}
+
+enum ProSubscriptionUpdate: Sendable {
+    case verified(ProSubscriptionEvidence)
+    case unverified(product: ProProductID, environment: ProStoreEnvironment)
 }
 
 @MainActor
 struct ProTransactionDelivery {
     let product: ProProductID
     let evidence: ProVerification<ProPurchaseEvidence>
+    var environment: ProStoreEnvironment?
     let finish: @MainActor () async -> Void
 }
 
@@ -85,7 +98,7 @@ enum ProPurchaseOutcome {
 protocol ProStoreSource: AnyObject {
     func snapshot() async -> ProStoreSnapshot
     func transactionUpdates() -> AsyncStream<ProTransactionDelivery>
-    func subscriptionUpdates() -> AsyncStream<ProSubscriptionEvidence>
+    func subscriptionUpdates() -> AsyncStream<ProSubscriptionUpdate>
     func purchase(_ product: ProProductID) async throws -> ProPurchaseOutcome
     func restore(refreshAppTransaction: Bool) async throws
 }

@@ -5,7 +5,7 @@ import StoreKit
 final class StoreKitProStoreSource: ProStoreSource {
     func snapshot() async -> ProStoreSnapshot {
         var snapshot = ProStoreSnapshot()
-        snapshot.appPurchase = await appPurchase()
+        await appendAppPurchase(to: &snapshot)
         for await result in Transaction.currentEntitlements { append(result, to: &snapshot) }
         // Latest signed records also expose revocations omitted by currentEntitlements, including after relaunch.
         for product in ProProductID.allCases {
@@ -20,8 +20,9 @@ final class StoreKitProStoreSource: ProStoreSource {
                         snapshot.subscriptions.append(evidence)
                         snapshot.purchases.append(evidence.purchase)
                     } else if case let .unverified(transaction, _) = status.transaction,
-                              let product = ProProductID(rawValue: transaction.productID) {
-                        snapshot.unverifiedProducts.insert(product)
+                              let product = ProProductID(rawValue: transaction.productID),
+                              let environment = Self.environment(transaction.environment) {
+                        snapshot.unverifiedPurchases.insert(ProUnverifiedPurchase(product: product, environment: environment))
                     }
                 }
                 snapshot.subscriptionStatusAvailable = true
@@ -45,12 +46,18 @@ final class StoreKitProStoreSource: ProStoreSource {
         }
     }
 
-    func subscriptionUpdates() -> AsyncStream<ProSubscriptionEvidence> {
+    func subscriptionUpdates() -> AsyncStream<ProSubscriptionUpdate> {
         AsyncStream { continuation in
             let task = Task {
                 for await status in Product.SubscriptionInfo.Status.updates {
                     guard !Task.isCancelled else { break }
-                    if let evidence = Self.subscription(status) { continuation.yield(evidence) }
+                    if let evidence = Self.subscription(status) {
+                        continuation.yield(.verified(evidence))
+                    } else if case let .unverified(transaction, _) = status.transaction,
+                              let product = ProProductID(rawValue: transaction.productID),
+                              let environment = Self.environment(transaction.environment) {
+                        continuation.yield(.unverified(product: product, environment: environment))
+                    }
                 }
                 continuation.finish()
             }
@@ -80,18 +87,23 @@ final class StoreKitProStoreSource: ProStoreSource {
         if refreshAppTransaction { _ = try await AppTransaction.refresh() }
     }
 
-    private func appPurchase() async -> ProVerification<ProAppPurchase> {
+    private func appendAppPurchase(to snapshot: inout ProStoreSnapshot) async {
         do {
-            guard case let .verified(transaction) = try await AppTransaction.shared,
-                  let environment = Self.environment(transaction.environment) else { return .unverified }
-            return .verified(ProAppPurchase(
-                originalVersion: transaction.originalAppVersion,
-                originalPurchaseDate: transaction.originalPurchaseDate,
-                environment: environment,
-                revoked: transaction.revocationDate != nil
-            ))
+            switch try await AppTransaction.shared {
+            case let .verified(transaction):
+                guard let environment = Self.environment(transaction.environment) else { return }
+                snapshot.appPurchase = .verified(ProAppPurchase(
+                    originalVersion: transaction.originalAppVersion,
+                    originalPurchaseDate: transaction.originalPurchaseDate,
+                    environment: environment,
+                    revoked: transaction.revocationDate != nil
+                ))
+            case let .unverified(transaction, _):
+                snapshot.appPurchase = .unverified
+                snapshot.appVerificationEnvironment = Self.environment(transaction.environment)
+            }
         } catch {
-            return .unavailable
+            // An unavailable AppTransaction does not replace a previously verified permanent grant.
         }
     }
 
@@ -100,7 +112,10 @@ final class StoreKitProStoreSource: ProStoreSource {
         case let .verified(transaction):
             if let purchase = Self.purchase(transaction) { snapshot.purchases.append(purchase) }
         case let .unverified(transaction, _):
-            if let product = ProProductID(rawValue: transaction.productID) { snapshot.unverifiedProducts.insert(product) }
+            if let product = ProProductID(rawValue: transaction.productID),
+               let environment = Self.environment(transaction.environment) {
+                snapshot.unverifiedPurchases.insert(ProUnverifiedPurchase(product: product, environment: environment))
+            }
         }
     }
 
@@ -108,12 +123,13 @@ final class StoreKitProStoreSource: ProStoreSource {
         switch result {
         case let .verified(transaction):
             guard let purchase = purchase(transaction) else { return nil }
-            return ProTransactionDelivery(product: purchase.product, evidence: .verified(purchase)) {
+            return ProTransactionDelivery(product: purchase.product, evidence: .verified(purchase), environment: purchase.environment) {
                 await transaction.finish()
             }
         case let .unverified(transaction, _):
-            guard let product = ProProductID(rawValue: transaction.productID) else { return nil }
-            return ProTransactionDelivery(product: product, evidence: .unverified, finish: {})
+            guard let product = ProProductID(rawValue: transaction.productID),
+                  let environment = environment(transaction.environment) else { return nil }
+            return ProTransactionDelivery(product: product, evidence: .unverified, environment: environment, finish: {})
         }
     }
 

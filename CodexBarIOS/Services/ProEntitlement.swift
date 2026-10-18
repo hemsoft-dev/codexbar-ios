@@ -23,6 +23,7 @@ public final class ProEntitlement: ObservableObject {
     private var unverifiedProducts: Set<ProProductID> = []
     private var started = false
     private var currentEnvironment: ProStoreEnvironment?
+    private var appVerificationEnvironment: ProStoreEnvironment?
     #if DEBUG
     private var debugOverride: ProEntitlementValue?
     #endif
@@ -107,12 +108,14 @@ public final class ProEntitlement: ObservableObject {
 
     func receive(_ delivery: ProTransactionDelivery) async {
         refreshGeneration += 1
-        var snapshot = ProStoreSnapshot(appPurchase: appPurchase)
+        var snapshot = ProStoreSnapshot(appPurchase: appPurchase, appVerificationEnvironment: appVerificationEnvironment)
         switch delivery.evidence {
         case let .verified(purchase):
             snapshot.purchases.append(purchase)
         case .unverified:
-            snapshot.unverifiedProducts.insert(delivery.product)
+            // A failed verification cannot establish a new environment or overwrite another environment's cache.
+            guard let environment = delivery.environment, environment == (currentEnvironment ?? value.environment) else { return }
+            snapshot.unverifiedPurchases.insert(ProUnverifiedPurchase(product: delivery.product, environment: environment))
         case .unavailable:
             return
         }
@@ -120,9 +123,23 @@ public final class ProEntitlement: ObservableObject {
         if saved, case .verified = delivery.evidence { await delivery.finish() }
     }
 
+    func receive(_ update: ProSubscriptionUpdate) async {
+        switch update {
+        case let .verified(status):
+            await receive(status)
+        case let .unverified(product, environment):
+            await receive(ProTransactionDelivery(
+                product: product, evidence: .unverified, environment: environment, finish: {}
+            ))
+        }
+    }
+
     func receive(_ status: ProSubscriptionEvidence) async {
         refreshGeneration += 1
-        _ = publish(ProStoreSnapshot(appPurchase: appPurchase, purchases: [status.purchase], subscriptions: [status]))
+        _ = publish(ProStoreSnapshot(
+            appPurchase: appPurchase, appVerificationEnvironment: appVerificationEnvironment,
+            purchases: [status.purchase], subscriptions: [status]
+        ))
     }
 
     @discardableResult
@@ -132,10 +149,15 @@ public final class ProEntitlement: ObservableObject {
         #endif
         var snapshot = scoped(incoming)
         let incoming = snapshot
+        // Keep denial evidence even when saving fails, so unrelated later events cannot resurrect an old grant.
+        appPurchase = incoming.appPurchase
+        appVerificationEnvironment = incoming.appVerificationEnvironment
         let verifiedProducts = Set(incoming.purchases.map(\.product)).subtracting(incoming.unverifiedProducts)
         unverifiedProducts.subtract(verifiedProducts)
         unverifiedProducts.formUnion(incoming.unverifiedProducts)
-        snapshot.unverifiedProducts = unverifiedProducts
+        snapshot.unverifiedPurchases = Set(unverifiedProducts.map {
+            ProUnverifiedPurchase(product: $0, environment: currentEnvironment ?? value.environment)
+        })
         for purchase in incoming.purchases { remember(purchase) }
         for status in incoming.subscriptions { remember(status) }
         snapshot.purchases = Array(purchases.values)
@@ -154,7 +176,6 @@ public final class ProEntitlement: ObservableObject {
             }
             return false
         }
-        appPurchase = incoming.appPurchase
         value = resolved
         subscription = statuses.values.max {
             ($0.purchase.expiresAt ?? .distantPast) < ($1.purchase.expiresAt ?? .distantPast)
@@ -199,8 +220,12 @@ public final class ProEntitlement: ObservableObject {
             )
         }
         currentEnvironment = environment
+        if case .unverified = incoming.appPurchase, incoming.appVerificationEnvironment != environment {
+            snapshot.appPurchase = .unavailable
+        }
         snapshot.purchases = incoming.purchases.filter { accepts($0, environment: environment) }
         snapshot.subscriptions = incoming.subscriptions.filter { accepts($0.purchase, environment: environment) }
+        snapshot.unverifiedPurchases = incoming.unverifiedPurchases.filter { $0.environment == environment }
         return snapshot
     }
 
@@ -218,7 +243,7 @@ public final class ProEntitlement: ObservableObject {
         let current = ProStoreSnapshot(
             appPurchase: value.reason == .originalPurchaser ? snapshot.appPurchase : .unavailable,
             purchases: snapshot.purchases.filter { $0.product == product },
-            unverifiedProducts: snapshot.unverifiedProducts,
+            unverifiedPurchases: snapshot.unverifiedPurchases,
             subscriptions: snapshot.subscriptions.filter { $0.purchase.product == product }
         )
         return ProEntitlementResolver.resolve(current, cached: value, originalPolicy: originalPolicy, now: now()).hasAccess(at: now())

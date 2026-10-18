@@ -131,7 +131,10 @@ final class ProEntitlementResolverTests: XCTestCase {
             var upgraded = purchase(product)
             upgraded.upgraded = true
             XCTAssertEqual(resolve(ProStoreSnapshot(purchases: [upgraded])).reason, .none)
-            XCTAssertEqual(resolve(ProStoreSnapshot(purchases: [purchase(product)], unverifiedProducts: [product])).reason, .none)
+            let snapshot = ProStoreSnapshot(
+                purchases: [purchase(product)], unverifiedPurchases: [ProUnverifiedPurchase(product: product, environment: .production)]
+            )
+            XCTAssertEqual(resolve(snapshot).reason, .none)
         }
     }
 

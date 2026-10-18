@@ -147,6 +147,126 @@ final class ProEntitlementIsolationTests: XCTestCase {
         XCTAssertFalse(restored.hasAccess, "Current verified renewal revocation must still take effect")
     }
 
+    func testUnverifiedForeignOrUnknownTransactionCannotClearProductionBeforeFirstSnapshot() async throws {
+        for environment: ProStoreEnvironment? in [.sandbox, .xcode, nil] {
+            let cache = TestProCache()
+            let previousService = service(TestProSource(), cache)
+            await previousService.receive(delivery(purchase()))
+            let production = try XCTUnwrap(cache.load(environment: .production))
+            let restored = service(TestProSource(), cache)
+            var finished = false
+            await restored.receive(ProTransactionDelivery(
+                product: .yearly, evidence: .unverified, environment: environment, finish: { finished = true }
+            ))
+            XCTAssertTrue(restored.hasAccess)
+            XCTAssertEqual(restored.value, production)
+            XCTAssertEqual(cache.load(environment: .production), production)
+            if let environment { XCTAssertNil(cache.load(environment: environment)) }
+            XCTAssertNil(restored.statusMessage)
+            XCTAssertFalse(finished)
+        }
+    }
+
+    func testUnverifiedTestEnvironmentStatusCannotClearProductionBeforeFirstSnapshot() async throws {
+        for environment: ProStoreEnvironment in [.sandbox, .xcode] {
+            let cache = TestProCache()
+            let previousService = service(TestProSource(), cache)
+            await previousService.receive(delivery(purchase()))
+            let production = try XCTUnwrap(cache.load(environment: .production))
+            let restored = service(TestProSource(), cache)
+            await restored.receive(ProSubscriptionUpdate.unverified(product: .yearly, environment: environment))
+            XCTAssertTrue(restored.hasAccess)
+            XCTAssertEqual(restored.value, production)
+            XCTAssertEqual(cache.load(environment: .production), production)
+            XCTAssertNil(cache.load(environment: environment))
+        }
+    }
+
+    func testUnverifiedSnapshotFailuresAreScopedToTheirEnvironment() async {
+        let source = TestProSource()
+        let cache = TestProCache()
+        source.next = ProStoreSnapshot(appPurchase: appPurchase(.production), purchases: [purchase()])
+        let service = service(source, cache)
+        await service.start()
+        let production = service.value
+        for environment: ProStoreEnvironment in [.sandbox, .xcode] {
+            source.next = ProStoreSnapshot(unverifiedPurchases: [ProUnverifiedPurchase(product: .yearly, environment: environment)])
+            await service.refresh()
+            XCTAssertEqual(service.value, production)
+            XCTAssertEqual(cache.load(environment: .production), production)
+            XCTAssertNil(service.statusMessage)
+        }
+        source.next = ProStoreSnapshot(unverifiedPurchases: [ProUnverifiedPurchase(product: .yearly, environment: .production)])
+        await service.refresh()
+        XCTAssertFalse(service.hasAccess)
+        XCTAssertNotNil(service.statusMessage)
+        source.finishStreams()
+    }
+
+    func testUnverifiedAppPurchaseCannotRevokeAnotherEnvironmentOrUnknownPartition() async throws {
+        let cache = TestProCache()
+        let production = ProEntitlementValue(
+            reason: .originalPurchaser, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: instant
+        )
+        try cache.save(production)
+        let source = TestProSource()
+        let service = service(source, cache)
+        for environment: ProStoreEnvironment? in [.sandbox, .xcode, nil] {
+            source.next = ProStoreSnapshot(appPurchase: .unverified, appVerificationEnvironment: environment)
+            await service.refresh()
+            XCTAssertEqual(service.value, production)
+            XCTAssertEqual(cache.load(environment: .production), production)
+            XCTAssertNil(service.statusMessage)
+        }
+        source.next = ProStoreSnapshot(appPurchase: .unverified, appVerificationEnvironment: .production)
+        await service.refresh()
+        XCTAssertFalse(service.hasAccess)
+        XCTAssertNotNil(service.statusMessage)
+    }
+
+    func testFailedSaveRetainsAppDenialAcrossUnrelatedVerifiedDelivery() async {
+        let revoked = ProVerification.verified(ProAppPurchase(
+            originalVersion: "1", originalPurchaseDate: instant, environment: .production, revoked: true
+        ))
+        for evidence: ProVerification<ProAppPurchase> in [.unverified, revoked] {
+            let source = TestProSource()
+            let cache = TestProCache()
+            source.next = ProStoreSnapshot(appPurchase: appPurchase(.production))
+            let service = ProEntitlement(
+                source: source, cache: cache, originalPolicy: ProOriginalPurchaserPolicy(qualifies: { _ in true }),
+                now: { self.instant }
+            )
+            await service.refresh()
+            XCTAssertEqual(service.value.reason, .originalPurchaser)
+            cache.shouldFail = true
+            source.next = ProStoreSnapshot(appPurchase: evidence, appVerificationEnvironment: .production)
+            await service.refresh()
+            XCTAssertFalse(service.hasAccess)
+            cache.shouldFail = false
+            await service.receive(delivery(purchase()))
+            XCTAssertEqual(service.value.reason, .yearly, "An unrelated verified IAP must not restore denied original-purchaser access")
+            XCTAssertEqual(cache.load(environment: .production)?.reason, .yearly)
+        }
+    }
+
+    func testUnverifiedSubscriptionStreamImmediatelyDeniesAndWarns() async {
+        let source = TestProSource()
+        source.next = ProStoreSnapshot(purchases: [purchase()])
+        let cache = TestProCache()
+        let service = service(source, cache)
+        await service.start()
+        XCTAssertTrue(service.hasAccess)
+        let warning = expectation(description: "Unverified subscription update publishes a warning")
+        let observation = service.$statusMessage.compactMap { $0 }.prefix(1).sink { _ in warning.fulfill() }
+        source.statuses.continuation.yield(.unverified(product: .yearly, environment: .production))
+        await fulfillment(of: [warning], timeout: 2)
+        XCTAssertFalse(service.hasAccess)
+        XCTAssertEqual(cache.load(environment: .production)?.reason, ProEntitlementReason.none)
+        XCTAssertEqual(source.calls.filter { $0 == "snapshot" }.count, 1, "The update must apply without another refresh")
+        source.finishStreams()
+        withExtendedLifetime(observation) {}
+    }
+
     private func service(_ source: TestProSource, _ cache: TestProCache) -> ProEntitlement {
         ProEntitlement(source: source, cache: cache, now: { self.instant })
     }
