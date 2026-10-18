@@ -78,8 +78,9 @@ final class StoreKitProTestContext {
         listeners.forEach { $0.cancel() }
         for listener in listeners { await listener.value }
         listeners.removeAll()
-        // Stop accelerated renewal and billing retry before clearing, so no renewal lands after the clear.
+        session.clearTransactions()
         session.resetToDefaultState()
+        // An accelerated renewal can land between the clear and the reset that stops it.
         session.clearTransactions()
         try await session.setSimulatedError(nil, forAPI: .loadProducts)
         try await session.setSimulatedError(nil, forAPI: .purchase)
