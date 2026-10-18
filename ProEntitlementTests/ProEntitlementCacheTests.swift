@@ -59,9 +59,14 @@ final class ProEntitlementCacheTests: XCTestCase {
     }
 
     func testStoreKitConfigurationMatchesProductsPricesAndYearlyOnlyTrial() throws {
+        #if SWIFT_PACKAGE
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let configURL = root.appendingPathComponent("StoreKit/CodexBarPro.storekit")
+        #else
+        let configURL = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "CodexBarPro", withExtension: "storekit"))
+        #endif
         let config = try XCTUnwrap(JSONSerialization.jsonObject(
-            with: Data(contentsOf: root.appendingPathComponent("StoreKit/CodexBarPro.storekit"))
+            with: Data(contentsOf: configURL)
         ) as? [String: Any])
         let groups = try XCTUnwrap(config["subscriptionGroups"] as? [[String: Any]])
         XCTAssertEqual(groups.count, 1)

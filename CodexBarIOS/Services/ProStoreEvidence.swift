@@ -38,13 +38,16 @@ enum ProRenewalState: Sendable {
 }
 
 struct ProSubscriptionEvidence: Sendable {
-    let purchase: ProPurchaseEvidence
+    var purchase: ProPurchaseEvidence
     let signedAt: Date
     let state: ProRenewalState
     let renewalVerified: Bool
     let willAutoRenew: Bool?
     let isInBillingRetry: Bool
     let graceEndsAt: Date?
+    var nextRenewalProduct: ProProductID?
+    var renewalPrice: Decimal?
+    var renewalCurrency: String?
 
     func deniesAccess(at date: Date) -> Bool {
         if purchase.revoked || purchase.upgraded { return true }
@@ -79,6 +82,8 @@ struct ProStoreSnapshot: Sendable {
     var unverifiedPurchases: Set<ProUnverifiedPurchase> = []
     var subscriptions: [ProSubscriptionEvidence] = []
     var subscriptionStatusAvailable = false
+    /// The current complete group inventory, separate from historical latest transactions.
+    var subscriptionStatusProducts: Set<ProProductID>?
     var freshClockEvidence: ProFreshClockEvidence?
     var unverifiedProducts: Set<ProProductID> { Set(unverifiedPurchases.map(\.product)) }
 
@@ -116,5 +121,24 @@ protocol ProStoreSource: AnyObject {
     func transactionUpdates() -> AsyncStream<ProTransactionDelivery>
     func subscriptionUpdates() -> AsyncStream<ProSubscriptionUpdate>
     func purchase(_ product: ProProductID) async throws -> ProPurchaseOutcome
+    func catalog() async throws -> ProCatalog
+    func storefrontUpdates() -> AsyncStream<String>
+    func purchase(
+        _ product: ProProductID, expectedProduct: ProCatalogProduct,
+        authorize: @MainActor () throws -> Void
+    ) async throws -> ProPurchaseOutcome
     func restore(refreshAppTransaction: Bool) async throws
+}
+
+extension ProStoreSource {
+    func catalog() async throws -> ProCatalog { throw ProCommerceError.catalogUnavailable }
+    func storefrontUpdates() -> AsyncStream<String> { AsyncStream { $0.finish() } }
+    func purchase(
+        _ product: ProProductID, expectedProduct: ProCatalogProduct,
+        authorize: @MainActor () throws -> Void
+    ) async throws -> ProPurchaseOutcome {
+        try Task.checkCancellation()
+        try authorize()
+        return try await purchase(product)
+    }
 }

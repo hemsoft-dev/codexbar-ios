@@ -8,6 +8,18 @@ building, testing, or releasing the app.
 
 ### Added
 
+- Choose monthly, yearly, or lifetime CodexBar Pro with App Store prices for
+  your region. Eligible yearly plans show the seven-day trial and the amount
+  charged afterward. Restore Purchases reports whether access was restored,
+  no purchase was found, or the request could not finish.
+  ([#468](https://github.com/hemsoft-dev/codexbar-ios/issues/468))
+
+- Manage CodexBar Pro from Settings with verified renewal or end dates,
+  upcoming plan changes, and payment recovery. Subscribers can switch to
+  lifetime after turning off auto-renew in Apple's subscription settings.
+  Lifetime owners see a warning if a separate subscription is still renewing.
+  ([#468](https://github.com/hemsoft-dev/codexbar-ios/issues/468))
+
 - Keep lifetime CodexBar Pro if you bought the original paid app. A one-time
   thank-you confirms your access and explains the family installation deadline.
   ([#465](https://github.com/hemsoft-dev/codexbar-ios/issues/465))
@@ -116,6 +128,10 @@ building, testing, or releasing the app.
   ([#421](https://github.com/hemsoft-dev/codexbar-ios/issues/421))
 
 ### Developer Experience
+
+- Add isolated local StoreKit purchase and Restore tests plus a manual commerce
+  UI scheme. These checks do not add automatic CI work.
+  ([#468](https://github.com/hemsoft-dev/codexbar-ios/issues/468))
 
 - Run shared XCTest schemes serially by default to reduce simulator clones and
   process pressure. Keep parallel builds, test coverage and release validation.

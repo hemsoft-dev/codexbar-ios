@@ -4,6 +4,11 @@ import StoreKit
 @MainActor
 final class StoreKitProStoreSource: ProStoreSource {
     private var restoredClockEvidence: ProFreshClockEvidence?
+    private let commerceCatalog = StoreKitProCatalog()
+
+    func catalog() async throws -> ProCatalog { try await commerceCatalog.load() }
+
+    func storefrontUpdates() -> AsyncStream<String> { commerceCatalog.storefrontUpdates() }
 
     func snapshot() async -> ProStoreSnapshot {
         var snapshot = ProStoreSnapshot()
@@ -18,14 +23,17 @@ final class StoreKitProStoreSource: ProStoreSource {
             let products = try await Product.products(for: ProProductID.allCases.map(\.rawValue))
             if let subscription = products.first(where: { $0.subscription != nil })?.subscription {
                 let statuses = try await subscription.status
+                snapshot.subscriptionStatusProducts = []
                 for status in statuses {
                     if let evidence = Self.subscription(status) {
                         snapshot.subscriptions.append(evidence)
                         snapshot.purchases.append(evidence.purchase)
+                        snapshot.subscriptionStatusProducts?.insert(evidence.purchase.product)
                     } else if case let .unverified(transaction, _) = status.transaction,
                               let product = ProProductID(rawValue: transaction.productID),
                               let environment = Self.environment(transaction.environment) {
                         snapshot.unverifiedPurchases.insert(ProUnverifiedPurchase(product: product, environment: environment))
+                        snapshot.subscriptionStatusProducts?.insert(product)
                     }
                 }
                 snapshot.subscriptionStatusAvailable = true
@@ -72,7 +80,22 @@ final class StoreKitProStoreSource: ProStoreSource {
         guard let storeProduct = try await Product.products(for: [product.rawValue]).first else {
             throw PurchaseError.productUnavailable
         }
-        switch try await storeProduct.purchase() {
+        return try purchaseOutcome(await storeProduct.purchase())
+    }
+
+    func purchase(
+        _ product: ProProductID, expectedProduct: ProCatalogProduct,
+        authorize: @MainActor () throws -> Void
+    ) async throws -> ProPurchaseOutcome {
+        let storeProduct = try await commerceCatalog.product(for: product, matching: expectedProduct)
+        try Task.checkCancellation()
+        try authorize()
+        // No suspension between command authorization and entering StoreKit's payment operation.
+        return try purchaseOutcome(await storeProduct.purchase())
+    }
+
+    private func purchaseOutcome(_ outcome: Product.PurchaseResult) throws -> ProPurchaseOutcome {
+        switch outcome {
         case let .success(result):
             guard let delivery = Self.delivery(result) else { throw PurchaseError.productUnavailable }
             return .purchased(delivery)
@@ -87,10 +110,14 @@ final class StoreKitProStoreSource: ProStoreSource {
 
     func restore(refreshAppTransaction: Bool) async throws {
         restoredClockEvidence = nil
-        try await AppStore.sync()
-        if refreshAppTransaction, case let .verified(transaction) = try await AppTransaction.refresh(),
-           let environment = Self.environment(transaction.environment) {
-            restoredClockEvidence = ProFreshClockEvidence(signedAt: transaction.signedDate, environment: environment)
+        do {
+            try await AppStore.sync()
+            if refreshAppTransaction, case let .verified(transaction) = try await AppTransaction.refresh(),
+               let environment = Self.environment(transaction.environment) {
+                restoredClockEvidence = ProFreshClockEvidence(signedAt: transaction.signedDate, environment: environment)
+            }
+        } catch StoreKitError.userCancelled {
+            throw CancellationError()
         }
     }
 
@@ -186,7 +213,9 @@ final class StoreKitProStoreSource: ProStoreSource {
         return ProSubscriptionEvidence(
             purchase: purchase, signedAt: renewal.signedDate, state: state, renewalVerified: true,
             willAutoRenew: renewal.willAutoRenew, isInBillingRetry: renewal.isInBillingRetry,
-            graceEndsAt: renewal.gracePeriodExpirationDate
+            graceEndsAt: renewal.gracePeriodExpirationDate,
+            nextRenewalProduct: renewal.autoRenewPreference.flatMap(ProProductID.init(rawValue:)),
+            renewalPrice: renewal.renewalPrice, renewalCurrency: renewal.currency?.identifier
         )
     }
 

@@ -18,7 +18,8 @@ struct OriginalPurchaserFixture {
         let instant = ProOriginalPurchaserPolicy.cutover.addingTimeInterval(offset)
         entitlement = ProEntitlement(
             source: OriginalPurchaserFixtureSource(instant: instant),
-            cache: OriginalPurchaserFixtureCache(), now: { instant }
+            cache: OriginalPurchaserFixtureCache(), now: { instant },
+            clock: { ProEntitlementClockSample(wallDate: $0, continuousSeconds: $0.timeIntervalSince1970, continuityID: "original-fixture") }
         )
         notice = OriginalPurchaserNotice(defaults: defaults, now: { instant })
     }
