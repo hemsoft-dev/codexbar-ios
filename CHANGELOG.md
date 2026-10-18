@@ -149,6 +149,11 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   and signed original-purchase revocation checks compatible with the release SDK.
   ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
+- Build the Pro commerce test helpers' default entitlement cache on the main
+  actor so the iOS unit tests compile with Xcode 27.1 as well as the pinned
+  release toolchain.
+  ([#488](https://github.com/hemsoft-dev/codexbar-ios/issues/488))
+
 - Add explicit manual release phases with exact test identities, separate
   StoreKit preparation and reset, and retained failure evidence. Combine ordinary
   and native StoreKit iOS coverage with Apple's raw report/archive merge and
