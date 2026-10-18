@@ -99,12 +99,16 @@ risk_run="$(mktemp -d "$PWD/DerivedData/function-risk.XXXXXX")"
 xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarIOS \
   -skipPackagePluginValidation \
   -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+  -parallel-testing-enabled NO \
+  -maximum-concurrent-test-simulator-destinations 1 \
   -enableCodeCoverage YES -resultBundlePath "$risk_run/ios.xcresult" \
   CODE_SIGNING_ALLOWED=NO test
 watch_device_id="$(./scripts/select-watch-simulator.sh)"
 xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarWatchTests \
   -skipPackagePluginValidation \
   -destination "platform=watchOS Simulator,id=$watch_device_id" \
+  -parallel-testing-enabled NO \
+  -maximum-concurrent-test-simulator-destinations 1 \
   -enableCodeCoverage YES -resultBundlePath "$risk_run/watch.xcresult" \
   CODE_SIGNING_ALLOWED=NO test
 python3 scripts/function-risk/measure.py --platform ios \

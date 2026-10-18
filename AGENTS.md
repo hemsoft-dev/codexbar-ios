@@ -153,6 +153,8 @@ Tools, so prefix commands with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/D
   ```sh
   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
     -project CodexBarIOS.xcodeproj -scheme CodexBarIOS \
+    -parallel-testing-enabled NO \
+    -maximum-concurrent-test-simulator-destinations 1 \
     -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' test
   ```
 
@@ -221,6 +223,8 @@ Tools, so prefix commands with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/D
   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
     -project CodexBarIOS.xcodeproj -scheme CodexBarWatchTests \
     -destination "platform=watchOS Simulator,id=$watch_device_id" \
+    -parallel-testing-enabled NO \
+    -maximum-concurrent-test-simulator-destinations 1 \
     test
   ```
 
