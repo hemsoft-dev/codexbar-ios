@@ -4,8 +4,19 @@ import WidgetKit
 struct CodexBarWidgetView: View {
     let entry: CodexBarWidgetEntry
     @Environment(\.widgetFamily) private var family
+    private var appearance = WidgetRenderingAppearance()
 
+    @ViewBuilder
     var body: some View {
+        if appearance.isVibrant {
+            content.foregroundStyle(.white)
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         switch family {
         case .accessoryInline:
             AccessoryInlineWidget(tiles: selectedTiles.map(\.tile))
@@ -280,6 +291,8 @@ struct CodexBarWidgetView: View {
 }
 
 struct TileWidget: View {
+    private var appearance = WidgetRenderingAppearance()
+
     let tiles: [CodexBarWidgetRenderedTile]
     let generatedAt: Date
     let family: WidgetFamily
@@ -305,7 +318,7 @@ struct TileWidget: View {
                     if family != .systemSmall {
                         Text("Updated \(freshnessDate, style: .relative) ago")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(appearance.secondaryForeground)
                             .lineLimit(1)
                     }
                 }
@@ -341,6 +354,8 @@ struct TileWidget: View {
 }
 
 struct DenseTileWidget: View {
+    private var appearance = WidgetRenderingAppearance()
+
     let tiles: [CodexBarWidgetRenderedTile]
     let generatedAt: Date
     let family: WidgetFamily
@@ -350,7 +365,7 @@ struct DenseTileWidget: View {
             HStack {
                 Text("Updated \(freshnessDate, style: .relative) ago")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appearance.secondaryForeground)
                     .lineLimit(1)
 
                 Spacer(minLength: 0)
@@ -404,6 +419,8 @@ private struct LinkedProviderWidgetTile: View {
 }
 
 struct ProviderWidgetTile: View {
+    private var appearance = WidgetRenderingAppearance()
+
     enum Style {
         case small
         case standard
@@ -437,7 +454,12 @@ struct ProviderWidgetTile: View {
             alignment: .topLeading
         )
         .frame(minHeight: minimumHeight, alignment: .topLeading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        // Keep the material's foreground treatment in full color. WidgetKit
+        // otherwise tints this nested background as if it were foreground content.
+        .background(
+            appearance.showsDecorations ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.clear),
+            in: RoundedRectangle(cornerRadius: 8)
+        )
     }
 
     private var automaticStandardBody: some View {
@@ -467,7 +489,7 @@ struct ProviderWidgetTile: View {
                 } else {
                     Text(tile.subtitle)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(appearance.secondaryForeground)
                         .lineLimit(style == .standard ? 2 : 1)
                 }
             }
@@ -496,7 +518,7 @@ struct ProviderWidgetTile: View {
                 .minimumScaleFactor(0.65)
         }
         .font(.caption2)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(appearance.secondaryForeground)
     }
 
     @ViewBuilder
@@ -504,7 +526,7 @@ struct ProviderWidgetTile: View {
         if let detail = bar.localizedProjectionDescription() ?? bar.localizedResetDescription() {
             Text(detail)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(appearance.secondaryForeground)
                 .lineLimit(limit)
                 .minimumScaleFactor(0.65)
         }
@@ -523,7 +545,7 @@ struct ProviderWidgetTile: View {
 
                 Text(tile.title)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appearance.secondaryForeground)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             } else if let bar = tile.bar {
@@ -535,7 +557,7 @@ struct ProviderWidgetTile: View {
 
                 Text(bar.label)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appearance.secondaryForeground)
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
 
@@ -547,7 +569,7 @@ struct ProviderWidgetTile: View {
             } else {
                 Text(tile.subtitle)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appearance.secondaryForeground)
                     .lineLimit(3)
                     .minimumScaleFactor(0.7)
             }
@@ -589,7 +611,7 @@ struct ProviderWidgetTile: View {
 
             Text(compactDetail)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(appearance.secondaryForeground)
                 .lineLimit(style == .dense ? 2 : 1)
                 .minimumScaleFactor(0.65)
 
@@ -612,7 +634,7 @@ struct ProviderWidgetTile: View {
                         .lineLimit(1)
                 }
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(appearance.secondaryForeground)
 
                 if renderedTile.allowsUsageGauge {
                     WidgetUsageProgressBar(bar: bar)
@@ -628,12 +650,12 @@ struct ProviderWidgetTile: View {
 
                 Text(tile.title)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appearance.secondaryForeground)
                     .lineLimit(1)
             } else {
                 Text(tile.subtitle)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appearance.secondaryForeground)
                     .lineLimit(style == .dense ? 3 : 2)
                     .minimumScaleFactor(0.7)
             }
@@ -651,17 +673,18 @@ struct ProviderWidgetTile: View {
 
                 Text(tile.monetaryMetric?.label ?? "Balance")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appearance.secondaryForeground)
                     .lineLimit(1)
             } else {
                 Text("No balance data")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(tile.severity.tint)
+                    .foregroundStyle(appearance.tint(for: tile.severity))
+                    .widgetAccentable()
                     .lineLimit(1)
 
                 Text(tile.subtitle)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(appearance.secondaryForeground)
                     .lineLimit(style == .dense ? 2 : 1)
             }
         }
@@ -671,13 +694,14 @@ struct ProviderWidgetTile: View {
         VStack(alignment: .leading, spacing: modeSpacing) {
             Text(statusLabel)
                 .font(primaryMetricFont)
-                .foregroundStyle(tile.severity.tint)
+                .foregroundStyle(appearance.tint(for: tile.severity))
+                .widgetAccentable()
                 .lineLimit(1)
                 .minimumScaleFactor(0.58)
 
             Text(statusDetail)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(appearance.secondaryForeground)
                 .lineLimit(style == .dense ? 3 : 2)
                 .minimumScaleFactor(0.65)
         }
@@ -685,12 +709,14 @@ struct ProviderWidgetTile: View {
 
     private func header(font: Font, logoSize: CGFloat) -> some View {
         HStack(spacing: 5) {
-            CodexBarProviderLogo(
-                providerID: tile.providerID,
-                size: logoSize,
-                background: Color(.systemBackground),
-                fallbackSystemName: "arrow.clockwise"
-            )
+            if appearance.showsDecorations {
+                CodexBarProviderLogo(
+                    providerID: tile.providerID,
+                    size: logoSize,
+                    background: Color(.systemBackground),
+                    fallbackSystemName: "arrow.clockwise"
+                )
+            }
 
             Text(tile.providerTitle)
                 .font(font)
@@ -797,7 +823,51 @@ struct ProviderWidgetTile: View {
     }
 }
 
+// Keep provider colors in full color, including StandBy, but let the system
+// choose readable foreground colors in tinted and vibrant presentations.
+struct WidgetRenderingAppearance: DynamicProperty {
+    @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.showsWidgetContainerBackground) private var showsContainerBackground
+
+    var isFullColor: Bool {
+        renderingMode == .fullColor
+    }
+
+    var isVibrant: Bool {
+        renderingMode == .vibrant
+    }
+
+    var showsDecorations: Bool {
+        isFullColor && showsContainerBackground
+    }
+
+    var primaryForeground: Color {
+        isVibrant ? .white : .primary
+    }
+
+    var secondaryForeground: AnyShapeStyle {
+        isFullColor ? AnyShapeStyle(.secondary) : AnyShapeStyle(primaryForeground)
+    }
+
+    var trackColor: Color {
+        // Vibrant rendering maps opaque grayscale to adaptive material, while
+        // accented rendering preserves alpha and discards source colors.
+        isVibrant ? Color(white: 0.2) : .primary.opacity(isFullColor ? 0.12 : 0.2)
+    }
+
+    var projectedFillColor: Color? {
+        guard !isFullColor else { return nil }
+        return isVibrant ? Color(white: 0.55) : .primary.opacity(0.45)
+    }
+
+    func tint(for severity: CodexBarWidgetSeverity) -> Color {
+        isFullColor ? severity.tint : primaryForeground
+    }
+}
+
 private struct WidgetUsageProgressBar: View {
+    private var appearance = WidgetRenderingAppearance()
+
     let bar: CodexBarWidgetUsageBarSnapshot
 
     var body: some View {
@@ -806,12 +876,18 @@ private struct WidgetUsageProgressBar: View {
             projectedFraction: bar.projectedFraction,
             severity: bar.severity,
             projectedSeverity: bar.effectiveSeverity,
+            fillColor: appearance.isFullColor ? nil : appearance.primaryForeground,
+            projectedFillColor: appearance.projectedFillColor,
+            trackColor: appearance.trackColor,
             accessibilityText: "\(bar.label) \(bar.usageText)"
         )
+        .widgetAccentable()
     }
 }
 
 private struct WidgetMetricVisualization: View {
+    private var appearance = WidgetRenderingAppearance()
+
     let bar: CodexBarWidgetUsageBarSnapshot
     let layoutStyle: ProviderWidgetTile.Style
 
@@ -824,20 +900,22 @@ private struct WidgetMetricVisualization: View {
                 HStack(spacing: 2) {
                     ForEach(0..<10, id: \.self) { index in
                         Capsule()
-                            .fill(index < filledSegments ? bar.effectiveSeverity.tint : Color.primary.opacity(0.12))
+                            .fill(index < filledSegments ? appearance.tint(for: bar.effectiveSeverity) : appearance.trackColor)
+                            .widgetAccentable(index < filledSegments)
                     }
                 }
                 .frame(height: 6)
             case .circularRing:
                 ZStack {
                     Circle()
-                        .stroke(Color.primary.opacity(0.12), lineWidth: 5)
+                        .stroke(appearance.trackColor, lineWidth: 5)
                     Circle()
                         .trim(from: 0, to: clampedFraction)
                         .stroke(
-                            bar.effectiveSeverity.tint,
+                            appearance.tint(for: bar.effectiveSeverity),
                             style: StrokeStyle(lineWidth: 5, lineCap: .round)
                         )
+                        .widgetAccentable()
                         .rotationEffect(.degrees(-90))
                     Text(bar.usageText)
                         .font(.system(size: 9, weight: .semibold))
@@ -847,13 +925,14 @@ private struct WidgetMetricVisualization: View {
             case .semicircularDial:
                 ZStack(alignment: .bottom) {
                     WidgetSemicircleShape()
-                        .stroke(Color.primary.opacity(0.12), lineWidth: 5)
+                        .stroke(appearance.trackColor, lineWidth: 5)
                     WidgetSemicircleShape()
                         .trim(from: 0, to: clampedFraction)
                         .stroke(
-                            bar.effectiveSeverity.tint,
+                            appearance.tint(for: bar.effectiveSeverity),
                             style: StrokeStyle(lineWidth: 5, lineCap: .round)
                         )
+                        .widgetAccentable()
                     Text(bar.usageText)
                         .font(.system(size: 8, weight: .semibold))
                 }
@@ -861,7 +940,8 @@ private struct WidgetMetricVisualization: View {
             case .largeNumeric:
                 Text(bar.usageText)
                     .font(.system(size: layoutStyle == .dense ? 20 : 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(bar.effectiveSeverity.tint)
+                    .foregroundStyle(appearance.tint(for: bar.effectiveSeverity))
+                    .widgetAccentable()
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)

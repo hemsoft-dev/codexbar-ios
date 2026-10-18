@@ -220,6 +220,10 @@ More provider metrics, guided sign-in, and up to 90 days of usage history.
 
 ### Fixed
 
+- Keep widget labels, usage values and progress readable when the system removes
+  their background or applies a tinted appearance, including Lock Screen widgets.
+  ([#473](https://github.com/hemsoft-dev/codexbar-ios/issues/473))
+
 - Keep Cursor usage current by renewing sign-in automatically when possible. Guided
   reconnection preserves saved card choices; failed refreshes retain visibly stale
   measurements instead of replacing them with fresh zeros. Valid zero usage and a Bot-only failure do not request reconnection.
