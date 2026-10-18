@@ -14,6 +14,8 @@ struct AccessoryInlineWidget: View {
 }
 
 struct AccessoryCircularWidget: View {
+    private var appearance = WidgetRenderingAppearance()
+
     let tile: CodexBarWidgetTile?
 
     var body: some View {
@@ -25,7 +27,7 @@ struct AccessoryCircularWidget: View {
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
             }
-            .foregroundStyle(tile.severity.tint)
+            .foregroundStyle(appearance.tint(for: tile.severity))
             .widgetAccentable()
         } else {
             Gauge(value: tile?.bar?.effectiveFractionUsed ?? 0) {
@@ -36,7 +38,7 @@ struct AccessoryCircularWidget: View {
                     .minimumScaleFactor(0.6)
             }
             .gaugeStyle(.accessoryCircularCapacity)
-            .tint(tile?.severity.tint ?? .secondary)
+            .tint(tile.map { appearance.tint(for: $0.severity) } ?? (appearance.isFullColor ? .secondary : appearance.primaryForeground))
         }
     }
 }
@@ -61,6 +63,8 @@ struct AccessoryRectangularWidget: View {
 }
 
 struct EmptyWidgetState: View {
+    private var appearance = WidgetRenderingAppearance()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Image(systemName: "gauge.with.dots.needle.50percent")
@@ -69,7 +73,7 @@ struct EmptyWidgetState: View {
                 .font(.headline)
             Text("Open the app to refresh usage.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(appearance.secondaryForeground)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(.background, for: .widget)
