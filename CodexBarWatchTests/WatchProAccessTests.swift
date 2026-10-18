@@ -34,7 +34,7 @@ final class WatchProAccessTests: XCTestCase {
         let clock = WatchControlledClock(probe: probe)
         var wallDate = base
         let store = WatchDashboardStore(
-            defaults: isolatedDefaults(), complicationStore: .init(defaults: isolatedDefaults()),
+            defaults: isolatedDefaults(), complicationStore: .init(testDefaults: isolatedDefaults()),
             reloadComplications: {}, session: nil,
             accessTiming: .live(clock: clock, now: { wallDate })
         )
@@ -68,7 +68,7 @@ final class WatchProAccessTests: XCTestCase {
         let probe = WatchSleepProbe(onSleep: { slept.fulfill() })
         var wallDate = base
         let store = WatchDashboardStore(
-            defaults: isolatedDefaults(), complicationStore: .init(defaults: isolatedDefaults()),
+            defaults: isolatedDefaults(), complicationStore: .init(testDefaults: isolatedDefaults()),
             reloadComplications: {}, session: nil,
             accessTiming: .live(clock: WatchControlledClock(probe: probe), now: { wallDate })
         )
@@ -96,7 +96,7 @@ final class WatchProAccessTests: XCTestCase {
         var checksExpiryReload = false
         var publishedLock = false
         var checkedReload = false
-        store = makeStore(defaults: isolatedDefaults(), shared: .init(defaults: isolatedDefaults()), clock: clock) {
+        store = makeStore(defaults: isolatedDefaults(), shared: .init(testDefaults: isolatedDefaults()), clock: clock) {
             guard checksExpiryReload else { return }
             checkedReload = true
             XCTAssertTrue(publishedLock)
@@ -116,13 +116,13 @@ final class WatchProAccessTests: XCTestCase {
     func testFiniteExpiredRetainedAccountsAreHiddenFromActualComplicationQueries() async throws {
         let suite = "WatchProAccessTests.\(UUID().uuidString)"
         let defaults = isolatedDefaults(suite: suite)
-        let shared = WatchComplicationSnapshotStore(defaults: defaults)
+        let shared = WatchComplicationSnapshotStore(testDefaults: defaults)
         try shared.saveIfChanged(snapshot(deadline: Date().addingTimeInterval(-1), sequence: 82))
         let accounts = WatchComplicationAccountQuery(loadSnapshot: {
-            WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).load()
+            WatchComplicationSnapshotStore(testDefaults: UserDefaults(suiteName: suite)!).load()
         })
         let metrics = WatchComplicationMetricQuery(loadSnapshot: {
-            WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).load()
+            WatchComplicationSnapshotStore(testDefaults: UserDefaults(suiteName: suite)!).load()
         })
         let suggestions = try await accounts.suggestedEntities()
         let metricSuggestions = try await metrics.suggestedEntities()
@@ -140,17 +140,17 @@ final class WatchProAccessTests: XCTestCase {
     func testActualComplicationQueriesAtBoundaryColdRollbackAndNewPhoneRecoveryPreserveRawBytes() async throws {
         let suite = "WatchProAccessTests.\(UUID().uuidString)"
         let defaults = isolatedDefaults(suite: suite)
-        let shared = WatchComplicationSnapshotStore(defaults: defaults)
+        let shared = WatchComplicationSnapshotStore(testDefaults: defaults)
         let deadline = base.addingTimeInterval(10)
         try shared.saveIfChanged(snapshot(deadline: deadline, sequence: 83))
         let originalBytes = defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey)
         for offset in [-0.001, 0, 0.001, -5] {
             let date = deadline.addingTimeInterval(offset)
             let accounts = WatchComplicationAccountQuery(loadSnapshot: {
-                WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).loadForAccess(now: date)
+                WatchComplicationSnapshotStore(testDefaults: UserDefaults(suiteName: suite)!).loadForAccess(now: date)
             }, now: { date })
             let metrics = WatchComplicationMetricQuery(loadSnapshot: {
-                WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).loadForAccess(now: date)
+                WatchComplicationSnapshotStore(testDefaults: UserDefaults(suiteName: suite)!).loadForAccess(now: date)
             }, now: { date })
             let suggestions = try await accounts.suggestedEntities()
             let metricSuggestions = try await metrics.suggestedEntities()
@@ -167,7 +167,7 @@ final class WatchProAccessTests: XCTestCase {
         XCTAssertEqual(defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey), originalBytes)
         try shared.saveIfChanged(snapshot(deadline: deadline.addingTimeInterval(100), sequence: 84))
         let recovered = WatchComplicationAccountQuery(loadSnapshot: {
-            WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).loadForAccess(now: deadline.addingTimeInterval(-5))
+            WatchComplicationSnapshotStore(testDefaults: UserDefaults(suiteName: suite)!).loadForAccess(now: deadline.addingTimeInterval(-5))
         }, now: { deadline.addingTimeInterval(-5) })
         let suggestions = try await recovered.suggestedEntities()
         XCTAssertFalse(suggestions.isEmpty)
@@ -175,10 +175,10 @@ final class WatchProAccessTests: XCTestCase {
 
     func testAccessMetadataRoundTripsAndLegacyPayloadFailsClosed() throws {
         let defaults = isolatedDefaults()
-        let store = WatchComplicationSnapshotStore(defaults: defaults)
+        let store = WatchComplicationSnapshotStore(testDefaults: defaults)
         let deadline = base.addingTimeInterval(137.125)
         try store.saveIfChanged(snapshot(deadline: deadline, sequence: 8))
-        let decoded = try XCTUnwrap(WatchComplicationSnapshotStore(defaults: defaults).load())
+        let decoded = try XCTUnwrap(WatchComplicationSnapshotStore(testDefaults: defaults).load())
         XCTAssertEqual(decoded.proAccessEndsAt, deadline)
         XCTAssertEqual(decoded.publicationSequence, 8)
         for (offset, expected) in [(-0.001, false), (0.0, true), (0.001, true)] {
@@ -195,11 +195,11 @@ final class WatchProAccessTests: XCTestCase {
         legacy.removeValue(forKey: "proAccessEndsAt")
         legacy.removeValue(forKey: "publicationSequence")
         defaults.set(try JSONSerialization.data(withJSONObject: legacy), forKey: WatchComplicationConstants.snapshotDefaultsKey)
-        let legacyDecoded = try XCTUnwrap(WatchComplicationSnapshotStore(defaults: defaults).load())
+        let legacyDecoded = try XCTUnwrap(WatchComplicationSnapshotStore(testDefaults: defaults).load())
         XCTAssertTrue(legacyDecoded.isProLocked)
         XCTAssertEqual(WatchComplicationResolver().resolve(snapshot: legacyDecoded, selection: .automatic, at: base).availability, .locked)
         defaults.set(Data("invalid".utf8), forKey: WatchComplicationConstants.snapshotDefaultsKey)
-        XCTAssertNil(WatchComplicationSnapshotStore(defaults: defaults).load())
+        XCTAssertNil(WatchComplicationSnapshotStore(testDefaults: defaults).load())
     }
 
     func testSemanticPayloadIncludesAccessButNotSequenceOrGenerationDate() throws {
@@ -214,7 +214,7 @@ final class WatchProAccessTests: XCTestCase {
     @MainActor
     func testLiveOrderingRejectsDelayedGrantAndLockAcrossClockRollbackAndRestart() throws {
         let defaults = isolatedDefaults()
-        let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+        let shared = WatchComplicationSnapshotStore(testDefaults: isolatedDefaults())
         let clock = WatchAccessTestClock(now: base)
         let store = makeStore(defaults: defaults, shared: shared, clock: clock)
         let oldGrant = snapshot(date: base.addingTimeInterval(10_000), sequence: 10)
@@ -238,7 +238,7 @@ final class WatchProAccessTests: XCTestCase {
     func testSameSequenceDenialDominatesBothDeliveryOrdersAndHarmlessRefreshIsAccepted() throws {
         for denialFirst in [true, false] {
             let clock = WatchAccessTestClock(now: base)
-            let store = makeStore(defaults: isolatedDefaults(), shared: .init(defaults: isolatedDefaults()), clock: clock)
+            let store = makeStore(defaults: isolatedDefaults(), shared: .init(testDefaults: isolatedDefaults()), clock: clock)
             let grant = snapshot(sequence: 20)
             let denial = snapshot(locked: true, sequence: 20)
             XCTAssertTrue(try store.receive((denialFirst ? denial : grant).applicationContext()))
@@ -255,7 +255,7 @@ final class WatchProAccessTests: XCTestCase {
     @MainActor
     func testLowerPhoneSequenceRequestsPersistedWatermarkAndAcceptsRecoveredPublication() async throws {
         let defaults = isolatedDefaults()
-        let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+        let shared = WatchComplicationSnapshotStore(testDefaults: isolatedDefaults())
         try shared.saveIfChanged(snapshot(locked: true, sequence: 100))
         let initialRequest = expectation(description: "Initial reachability request completed")
         let requested = expectation(description: "Rejected lower revision independently requests recovery")
@@ -266,7 +266,9 @@ final class WatchProAccessTests: XCTestCase {
         let store = WatchDashboardStore(
             defaults: defaults, complicationStore: shared, reloadComplications: {}, session: nil,
             requestCoalescingDelay: .zero,
-            accessTiming: WatchAccessTiming(now: { clock.now }, schedule: { clock.schedule($0, action: $1) }),
+            accessTiming: WatchAccessTiming(now: { clock.now }, schedule: { clock.schedule($0, action: $1) }, sample: {
+                ProEntitlementClockSample(wallDate: clock.now, continuousSeconds: 0, continuityID: "watch-test-boot")
+            }),
             requestSnapshotAfterSequence: { sequence, reply, _ in
                 watermarks.append(sequence)
                 if watermarks.count == 1 {
@@ -299,7 +301,7 @@ final class WatchProAccessTests: XCTestCase {
     @MainActor
     func testEqualSequencePhoneResetRecoversDenialAndConflictingUsageWithoutReplayLoop() async throws {
         for retainedLock in [true, false] {
-            let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+            let shared = WatchComplicationSnapshotStore(testDefaults: isolatedDefaults())
             try shared.saveIfChanged(snapshot(locked: retainedLock, sequence: 1))
             let changedAccounts = [WatchAccountSnapshot(
                 id: "account", providerName: "Codex", accountLabel: "Personal", fetchedAt: base,
@@ -318,7 +320,9 @@ final class WatchProAccessTests: XCTestCase {
             let store = WatchDashboardStore(
                 defaults: isolatedDefaults(), complicationStore: shared, reloadComplications: {}, session: nil,
                 requestCoalescingDelay: .zero,
-                accessTiming: WatchAccessTiming(now: { clock.now }, schedule: { clock.schedule($0, action: $1) }),
+                accessTiming: WatchAccessTiming(now: { clock.now }, schedule: { clock.schedule($0, action: $1) }, sample: {
+                ProEntitlementClockSample(wallDate: clock.now, continuousSeconds: 0, continuityID: "watch-test-boot")
+            }),
                 requestSnapshotAfterSequence: { sequence, reply, _ in
                     watermarks.append(sequence)
                     switch watermarks.count {
@@ -360,7 +364,7 @@ final class WatchProAccessTests: XCTestCase {
 
     @MainActor
     func testNewConflictingPayloadRecoversWhilePreviouslyRejectedPayloadsRemainBounded() async throws {
-        let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+        let shared = WatchComplicationSnapshotStore(testDefaults: isolatedDefaults())
         try shared.saveIfChanged(snapshot(locked: true, sequence: 1))
         let initialRequest = expectation(description: "Initial reachability request completed")
         let firstRequest = expectation(description: "First conflict independently requests recovery")
@@ -373,7 +377,9 @@ final class WatchProAccessTests: XCTestCase {
         let store = WatchDashboardStore(
             defaults: isolatedDefaults(), complicationStore: shared, reloadComplications: {}, session: nil,
             requestCoalescingDelay: .zero,
-            accessTiming: WatchAccessTiming(now: { clock.now }, schedule: { clock.schedule($0, action: $1) }),
+            accessTiming: WatchAccessTiming(now: { clock.now }, schedule: { clock.schedule($0, action: $1) }, sample: {
+                ProEntitlementClockSample(wallDate: clock.now, continuousSeconds: 0, continuityID: "watch-test-boot")
+            }),
             requestSnapshotAfterSequence: { sequence, reply, _ in
                 watermarks.append(sequence)
                 switch watermarks.count {
@@ -422,7 +428,7 @@ final class WatchProAccessTests: XCTestCase {
     @MainActor
     func testEqualSequenceCannotExtendDeadlineButHigherSequenceCanRenew() throws {
         let clock = WatchAccessTestClock(now: base)
-        let store = makeStore(defaults: isolatedDefaults(), shared: .init(defaults: isolatedDefaults()), clock: clock)
+        let store = makeStore(defaults: isolatedDefaults(), shared: .init(testDefaults: isolatedDefaults()), clock: clock)
         let short = base.addingTimeInterval(30)
         let long = base.addingTimeInterval(90)
         XCTAssertTrue(try store.receive(snapshot(deadline: long, sequence: 25).applicationContext()))
@@ -444,7 +450,7 @@ final class WatchProAccessTests: XCTestCase {
         for (loser, winner) in pairs {
             for legacyWins in [true, false] {
                 let defaults = isolatedDefaults()
-                let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+                let shared = WatchComplicationSnapshotStore(testDefaults: isolatedDefaults())
                 defaults.set(try (legacyWins ? winner : loser).encoded(), forKey: legacyKey)
                 try shared.saveIfChanged(legacyWins ? loser : winner)
                 let clock = WatchAccessTestClock(now: base)
@@ -464,7 +470,7 @@ final class WatchProAccessTests: XCTestCase {
         let newer = snapshot(date: base.addingTimeInterval(10))
         for legacyWins in [true, false] {
             let defaults = isolatedDefaults()
-            let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+            let shared = WatchComplicationSnapshotStore(testDefaults: isolatedDefaults())
             defaults.set(try (legacyWins ? locked : older).encoded(), forKey: legacyKey)
             try shared.saveIfChanged(legacyWins ? older : locked)
             let store = makeStore(defaults: defaults, shared: shared, clock: WatchAccessTestClock(now: base))
@@ -478,7 +484,7 @@ final class WatchProAccessTests: XCTestCase {
     @MainActor
     func testVisibleOfflineStorePublishesAndPersistsLockAtScheduledDeadline() throws {
         let defaults = isolatedDefaults()
-        let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+        let shared = WatchComplicationSnapshotStore(testDefaults: isolatedDefaults())
         let clock = WatchAccessTestClock(now: base)
         var reloads = 0
         let store = makeStore(defaults: defaults, shared: shared, clock: clock, reload: { reloads += 1 })
@@ -508,7 +514,7 @@ final class WatchProAccessTests: XCTestCase {
 
     @MainActor
     func testQueuedNewerUsageCannotReviveAlreadyExpiredDeadlineAfterRollback() throws {
-        let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+        let shared = WatchComplicationSnapshotStore(testDefaults: isolatedDefaults())
         let clock = WatchAccessTestClock(now: base)
         let store = makeStore(defaults: isolatedDefaults(), shared: shared, clock: clock)
         let deadline = base.addingTimeInterval(10)
@@ -532,7 +538,7 @@ final class WatchProAccessTests: XCTestCase {
     @MainActor
     func testRenewalCancelsOldDeadlineAndPermanentGrantCancelsAllDeadlines() throws {
         let clock = WatchAccessTestClock(now: base)
-        let store = makeStore(defaults: isolatedDefaults(), shared: .init(defaults: isolatedDefaults()), clock: clock)
+        let store = makeStore(defaults: isolatedDefaults(), shared: .init(testDefaults: isolatedDefaults()), clock: clock)
         let firstDeadline = base.addingTimeInterval(10)
         let nextDeadline = base.addingTimeInterval(25)
         XCTAssertTrue(try store.receive(snapshot(deadline: firstDeadline, sequence: 50).applicationContext()))
@@ -552,7 +558,7 @@ final class WatchProAccessTests: XCTestCase {
     @MainActor
     func testForegroundExpirySurvivesDecodeFailureRelaunchAndLocalClockRollback() throws {
         let defaults = isolatedDefaults()
-        let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+        let shared = WatchComplicationSnapshotStore(testDefaults: isolatedDefaults())
         let clock = WatchAccessTestClock(now: base)
         let store = makeStore(defaults: defaults, shared: shared, clock: clock)
         let deadline = base.addingTimeInterval(10)
@@ -582,8 +588,8 @@ final class WatchProAccessTests: XCTestCase {
         for candidate in variants {
             for missingSelection in [false, true] {
                 let defaults = isolatedDefaults()
-                try WatchComplicationSnapshotStore(defaults: defaults).saveIfChanged(candidate)
-                let persisted = WatchComplicationSnapshotStore(defaults: defaults)
+                try WatchComplicationSnapshotStore(testDefaults: defaults).saveIfChanged(candidate)
+                let persisted = WatchComplicationSnapshotStore(testDefaults: defaults)
                 let configuration = WatchComplicationConfigurationIntent()
                 if missingSelection {
                     configuration.account = WatchComplicationAccountEntity(id: "missing", providerName: "Saved", accountLabel: "Saved")
@@ -605,7 +611,7 @@ final class WatchProAccessTests: XCTestCase {
 
     func testPermanentAndAlreadyLockedComplicationTimelinesDoNotInventDeadlines() throws {
         for candidate in [snapshot(), snapshot(locked: true), snapshot(deadline: base)] {
-            let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+            let shared = WatchComplicationSnapshotStore(testDefaults: isolatedDefaults())
             try shared.saveIfChanged(candidate)
             let loader = WatchComplicationTimelineLoader(now: { self.base }, loadSnapshot: { shared.load() })
             let timeline = loader.timeline(configuration: WatchComplicationConfigurationIntent())
@@ -625,7 +631,7 @@ final class WatchProAccessTests: XCTestCase {
         let savedMetric = "legacy-account::claude.weekly-scoped-fable5"
         defaults.set(savedAccount, forKey: "fixture.saved-account")
         defaults.set(savedMetric, forKey: "fixture.saved-metric")
-        let shared = WatchComplicationSnapshotStore(defaults: defaults)
+        let shared = WatchComplicationSnapshotStore(testDefaults: defaults)
         let accounts = [WatchAccountSnapshot(
             id: "canonical-account", legacyAccountIDs: [savedAccount], providerName: "Claude", accountLabel: "Personal", fetchedAt: base,
             metrics: [WatchMetricSnapshot(id: "claude.weekly-scoped-fable", label: "Fable weekly usage limit", exactValue: "37%")]
@@ -634,10 +640,10 @@ final class WatchProAccessTests: XCTestCase {
         for locked in [false, true, false] {
             try shared.saveIfChanged(snapshot(locked: locked, accounts: locked ? [] : accounts))
             let accountQuery = WatchComplicationAccountQuery(loadSnapshot: {
-                WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).load()
+                WatchComplicationSnapshotStore(testDefaults: UserDefaults(suiteName: suite)!).load()
             })
             let metricQuery = WatchComplicationMetricQuery(loadSnapshot: {
-                WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).load()
+                WatchComplicationSnapshotStore(testDefaults: UserDefaults(suiteName: suite)!).load()
             })
             let accountEntities = try await accountQuery.entities(for: [XCTUnwrap(defaults.string(forKey: "fixture.saved-account"))])
             let metricEntities = try await metricQuery.entities(for: [XCTUnwrap(defaults.string(forKey: "fixture.saved-metric"))])
@@ -694,7 +700,9 @@ final class WatchProAccessTests: XCTestCase {
     ) -> WatchDashboardStore {
         WatchDashboardStore(
             defaults: defaults, complicationStore: shared, reloadComplications: reload, session: nil,
-            accessTiming: WatchAccessTiming(now: { clock.now }, schedule: { clock.schedule($0, action: $1) })
+            accessTiming: WatchAccessTiming(now: { clock.now }, schedule: { clock.schedule($0, action: $1) }, sample: {
+                ProEntitlementClockSample(wallDate: clock.now, continuousSeconds: 0, continuityID: "watch-test-boot")
+            })
         )
     }
 }
@@ -732,7 +740,7 @@ private final class WatchAccessTestBoundary {
     }
 }
 
-private struct WatchControlledClock: Clock {
+struct WatchControlledClock: Clock {
     typealias Instant = ContinuousClock.Instant
     let probe: WatchSleepProbe
     var now: Instant { probe.now }
@@ -751,7 +759,7 @@ private struct WatchControlledClock: Clock {
 }
 
 // The probe's state and continuations are accessed only while holding lock.
-private final class WatchSleepProbe: @unchecked Sendable {
+final class WatchSleepProbe: @unchecked Sendable {
     struct Request {
         let deadline: ContinuousClock.Instant
         let tolerance: Duration?
@@ -766,8 +774,12 @@ private final class WatchSleepProbe: @unchecked Sendable {
     private var waiters: [UUID: Waiter] = [:]
     private var cancelled: Set<UUID> = []
     private let onSleep: @Sendable () -> Void
+    private let onRequest: @Sendable (Int) -> Void
 
-    init(onSleep: @escaping @Sendable () -> Void) { self.onSleep = onSleep }
+    init(onSleep: @escaping @Sendable () -> Void, onRequest: @escaping @Sendable (Int) -> Void = { _ in }) {
+        self.onSleep = onSleep
+        self.onRequest = onRequest
+    }
 
     var now: ContinuousClock.Instant {
         lock.lock()
@@ -796,12 +808,13 @@ private final class WatchSleepProbe: @unchecked Sendable {
     ) {
         lock.lock()
         recorded.append(Request(deadline: deadline, tolerance: tolerance))
-        let isFirstRequest = recorded.count == 1
+        let requestCount = recorded.count
         let wasCancelled = cancelled.remove(id) != nil
         let isReady = deadline <= instant
         if !wasCancelled && !isReady { waiters[id] = Waiter(deadline: deadline, continuation: continuation) }
         lock.unlock()
-        if isFirstRequest { onSleep() }
+        if requestCount == 1 { onSleep() }
+        onRequest(requestCount)
         if wasCancelled { continuation.resume(throwing: CancellationError()) } else if isReady { continuation.resume() }
     }
 

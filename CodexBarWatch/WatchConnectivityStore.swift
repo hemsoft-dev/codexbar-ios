@@ -107,12 +107,21 @@ struct WatchAccessTiming {
     typealias Scheduler = (Date, @escaping @MainActor @Sendable () -> Void) -> AnyCancellable
     let now: () -> Date
     let schedule: Scheduler
+    let sample: () -> ProEntitlementClockSample
+
+    init(now: @escaping () -> Date, schedule: @escaping Scheduler, sample: (() -> ProEntitlementClockSample)? = nil) {
+        self.now = now
+        self.schedule = schedule
+        self.sample = sample ?? { ProEntitlementSystemClock.sample(at: now()) }
+    }
 
     static var live: WatchAccessTiming {
         live(clock: ContinuousClock(), now: { Date() })
     }
 
-    static func live<C: Clock>(clock: C, now: @escaping () -> Date) -> WatchAccessTiming where C.Duration == Duration {
+    static func live<C: Clock>(
+        clock: C, now: @escaping () -> Date, sample: (() -> ProEntitlementClockSample)? = nil
+    ) -> WatchAccessTiming where C.Duration == Duration {
         WatchAccessTiming(now: now, schedule: { deadline, action in
             let delay = max(0, deadline.timeIntervalSince(now()))
             let boundary = clock.now.advanced(by: .seconds(delay))
@@ -126,7 +135,7 @@ struct WatchAccessTiming {
                 action()
             }
             return AnyCancellable { task.cancel() }
-        })
+        }, sample: sample)
     }
 }
 
@@ -148,6 +157,8 @@ final class WatchDashboardStore: NSObject, ObservableObject {
         subsystem: "com.hemsoft.CodexBarIOS",
         category: "WatchConnectivity.Watch"
     )
+    private var sourceSnapshot: WatchDashboardSnapshot?
+    private var pendingAccessPublication: ProEntitlementClockSample?
     @Published private(set) var snapshot: WatchDashboardSnapshot?
     @Published private(set) var isPhoneReachable = false
     @Published private(set) var decodingError: String?
@@ -245,30 +256,27 @@ final class WatchDashboardStore: NSObject, ObservableObject {
         } else {
             self.queueSnapshotRequest = nil
         }
-        var migratedSnapshotNeedsReload = false
         let legacyData = defaults.data(forKey: Self.persistedSnapshotKey)
         let legacySnapshot = legacyData.flatMap { try? WatchDashboardSnapshot.decode($0) }
-        let sharedSnapshot = complicationStore.loadForAccess(now: self.accessTiming.now())
-        if let legacySnapshot,
-           sharedSnapshot.map({ legacySnapshot.isNewer(than: $0) }) ?? true {
-            snapshot = legacySnapshot
-            migratedSnapshotNeedsReload = (
-                try? complicationStore.saveIfChanged(
-                    legacySnapshot,
-                    encodedData: legacyData
-                )
-            ) == true
-        } else if let sharedSnapshot {
-            snapshot = sharedSnapshot
-            if legacySnapshot != sharedSnapshot,
-               let sharedData = try? sharedSnapshot.encoded() {
-                defaults.set(sharedData, forKey: Self.persistedSnapshotKey)
-            }
+        let sharedSnapshot = complicationStore.load()
+        let selected: WatchDashboardSnapshot?
+        if let legacySnapshot, sharedSnapshot.map({ legacySnapshot.isNewer(than: $0) }) ?? true {
+            selected = legacySnapshot
         } else {
-            snapshot = nil
+            selected = sharedSnapshot
+        }
+        sourceSnapshot = selected
+        snapshot = selected
+        var migratedSnapshotNeedsReload = false
+        if let selected, let encoded = try? selected.encoded() {
+            let sample = self.accessTiming.sample()
+            let publication = try? complicationStore.publish(selected, encodedData: encoded, sample: sample)
+            migratedSnapshotNeedsReload = publication?.changed == true
+            pendingAccessPublication = publication?.accessInstalled == true ? nil : sample
+            if legacySnapshot != selected { defaults.set(encoded, forKey: Self.persistedSnapshotKey) }
         }
         super.init()
-        reevaluateAccess()
+        reevaluateAccess(retryPending: false)
 
         if migratedSnapshotNeedsReload {
             reloadComplications()
@@ -287,8 +295,9 @@ final class WatchDashboardStore: NSObject, ObservableObject {
     }
 
     func state(at date: Date = Date()) -> WatchDashboardState {
-        WatchDashboardState(
-            snapshot: snapshot,
+        let current = sourceSnapshot.map { complicationStore.accessDecision(for: $0, sample: accessTiming.sample()).snapshot }
+        return WatchDashboardState(
+            snapshot: current,
             now: date,
             isPhoneReachable: isPhoneReachable,
             decodingError: decodingError
@@ -304,23 +313,26 @@ final class WatchDashboardStore: NSObject, ObservableObject {
     func receive(_ applicationContext: WatchDashboardApplicationContext) -> Bool {
         do {
             let decoded = try applicationContext.decode()
-            guard snapshot.map({ decoded == $0 || decoded.isNewer(than: $0) }) ?? true else {
+            guard sourceSnapshot.map({ decoded == $0 || decoded.isNewer(than: $0) }) ?? true else {
                 Self.logger.notice("Ignored older snapshot delivery")
                 requestOrderingRecovery(afterRejecting: decoded)
                 return false
             }
             let encoded = try decoded.encoded()
-            let shouldReloadComplications = try complicationStore.saveIfChanged(
+            let sample = publicationSample(for: decoded, current: accessTiming.sample())
+            let publication = try complicationStore.publish(
                 decoded,
-                encodedData: encoded
+                encodedData: encoded,
+                sample: sample
             )
             defaults.set(encoded, forKey: Self.persistedSnapshotKey)
-            snapshot = complicationStore.loadForAccess(now: accessTiming.now()) ?? decoded
-            reevaluateAccess()
+            sourceSnapshot = decoded
+            pendingAccessPublication = publication.accessInstalled ? nil : sample
+            reevaluateAccess(retryPending: false)
             decodingError = nil
             activeSnapshotRequestID = nil
             hasQueuedSnapshotRequest = hasOutstandingSnapshotRequest()
-            if shouldReloadComplications {
+            if publication.changed {
                 reloadComplications()
             }
             return true
@@ -333,29 +345,52 @@ final class WatchDashboardStore: NSObject, ObservableObject {
         }
     }
 
-    // Foreground entry preserves the earliest continuous boundary across usage refreshes with the same access deadline. A local
-    // expiry is persisted at the same revision, so replay or wall-clock rollback
-    // cannot reveal usage again without a renewed deadline or permanent grant.
+    // A temporary denial is a display decision, never a persisted phone payload or expiry receipt.
     func reevaluateAccess() {
-        if let snapshot, !snapshot.isProLocked, snapshot.proAccessEndsAt == scheduledAccessDeadline,
-           accessBoundaryCancellation != nil {
-            if snapshot.isLocked(at: accessTiming.now()) { lockExpiredSnapshot(snapshot) }
+        reevaluateAccess(retryPending: true)
+    }
+
+    private func reevaluateAccess(retryPending: Bool) {
+        guard let sourceSnapshot else { return }
+        let wasLocked = snapshot?.isProLocked == true
+        let sample = accessTiming.sample()
+        // Retry only the accepted pending payload, once per foreground reevaluation, using its original clock evidence.
+        if retryPending, pendingAccessPublication != nil {
+            let origin = publicationSample(for: sourceSnapshot, current: sample)
+            let installed = complicationStore.accessClock.accept(sourceSnapshot, sample: origin)
+            pendingAccessPublication = installed ? nil : origin
+        }
+        let decision = complicationStore.accessDecision(for: sourceSnapshot, sample: sample)
+        if decision.hasExpired {
+            lockExpiredSnapshot(sourceSnapshot)
             return
         }
+        snapshot = decision.snapshot
+        if retryPending, wasLocked, !decision.isLocked { reloadComplications() }
+        if !decision.isLocked, sourceSnapshot.proAccessEndsAt == scheduledAccessDeadline,
+           accessBoundaryCancellation != nil { return }
         accessBoundaryCancellation?.cancel()
         accessBoundaryCancellation = nil
-        guard let snapshot, !snapshot.isProLocked,
-              let deadline = snapshot.proAccessEndsAt else { return }
-        if deadline <= accessTiming.now() {
-            lockExpiredSnapshot(snapshot)
-            return
-        }
+        scheduledAccessDeadline = nil
+        guard let deadline = sourceSnapshot.proAccessEndsAt, let remaining = decision.remaining else { return }
         scheduledAccessDeadline = deadline
-        accessBoundaryCancellation = accessTiming.schedule(deadline) { [weak self] in
-            guard let self, let current = self.snapshot, !current.isProLocked,
+        let projectedBoundary = sample.wallDate.addingTimeInterval(remaining)
+        accessBoundaryCancellation = accessTiming.schedule(projectedBoundary) { [weak self] in
+            guard let self, let current = self.sourceSnapshot, !current.isProLocked,
                   current.proAccessEndsAt == deadline else { return }
             self.lockExpiredSnapshot(current)
         }
+    }
+
+    private func publicationSample(for incoming: WatchDashboardSnapshot, current: ProEntitlementClockSample) -> ProEntitlementClockSample {
+        guard incoming.proAccessEndsAt == sourceSnapshot?.proAccessEndsAt, let pending = pendingAccessPublication,
+              let continuityID = pending.continuityID,
+              ProEntitlementClockAnchor(
+                anchorDate: pending.wallDate, continuousSeconds: pending.continuousSeconds,
+                continuityID: continuityID, latestSignedAt: pending.wallDate
+              ).isValid else { return current }
+        // A first failed write still has an in-memory origin; later retries must not extend it after wall rollback.
+        return pending
     }
 
     private func lockExpiredSnapshot(_ snapshot: WatchDashboardSnapshot) {
@@ -363,13 +398,15 @@ final class WatchDashboardStore: NSObject, ObservableObject {
         accessBoundaryCancellation = nil
         scheduledAccessDeadline = nil
         let locked = snapshot.lockingAccess()
+        sourceSnapshot = locked
         self.snapshot = locked
         if let deadline = snapshot.proAccessEndsAt { complicationStore.recordExpiration(deadline) }
         if let encoded = try? locked.encoded() {
             defaults.set(encoded, forKey: Self.persistedSnapshotKey)
-            if (try? complicationStore.saveIfChanged(locked, encodedData: encoded)) == true {
-                reloadComplications()
-            }
+            let sample = accessTiming.sample()
+            let publication = try? complicationStore.publish(locked, encodedData: encoded, sample: sample)
+            pendingAccessPublication = publication?.accessInstalled == true ? nil : sample
+            if publication?.changed == true { reloadComplications() }
         }
     }
 

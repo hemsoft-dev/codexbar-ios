@@ -76,7 +76,8 @@ public struct ProEntitlementClockAnchor: Codable, Equatable, Sendable {
 
 public enum ProEntitlementSystemClock {
     public static func sample(at date: Date = Date()) -> ProEntitlementClockSample {
-        let group = CodexBarWidgetConstants.appGroupIdentifier
+        // The same namespace is local to each device and shared by its app and extensions.
+        let group = "group.com.hemsoft.CodexBarIOS"
         let sample = sample(
             at: date,
             sharedMemoryName: group + "/p",

@@ -7,23 +7,24 @@ struct WatchComplicationView: View {
     @Environment(\.widgetFamily) private var family
 
     var body: some View {
-        Group {
+        let sample = entry.sample
+        return Group {
             switch family {
             case .accessoryInline:
-                WatchInlineComplication(sample: entry.sample)
+                WatchInlineComplication(sample: sample)
             case .accessoryCircular:
-                WatchCircularComplication(sample: entry.sample)
+                WatchCircularComplication(sample: sample)
             case .accessoryRectangular:
-                WatchRectangularComplication(sample: entry.sample)
+                WatchRectangularComplication(sample: sample)
             case .accessoryCorner:
-                WatchCornerComplication(sample: entry.sample)
+                WatchCornerComplication(sample: sample)
             default:
-                WatchRectangularComplication(sample: entry.sample)
+                WatchRectangularComplication(sample: sample)
             }
         }
         .containerBackground(.fill.tertiary, for: .widget)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(entry.sample.accessibilityLabel)
+        .accessibilityLabel(sample.accessibilityLabel)
     }
 }
 

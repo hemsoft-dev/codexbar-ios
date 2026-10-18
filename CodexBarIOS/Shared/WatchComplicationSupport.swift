@@ -525,41 +525,62 @@ struct WatchComplicationResolver {
     }
 }
 
+struct WatchSnapshotPublication {
+    let changed: Bool
+    let accessInstalled: Bool
+}
+
 struct WatchComplicationSnapshotStore {
     private let defaults: UserDefaults
+    let accessClock: WatchAccessClockStore
+    private let clockSample: @Sendable (Date) -> ProEntitlementClockSample
+
+    init() {
+        self.init(
+            defaults: UserDefaults(suiteName: WatchComplicationConstants.appGroupIdentifier) ?? .standard,
+            accessClock: WatchAccessClockStore(directory: FileManager.default.containerURL(
+                forSecurityApplicationGroupIdentifier: WatchComplicationConstants.appGroupIdentifier
+            ))
+        )
+    }
 
     init(
-        defaults: UserDefaults = UserDefaults(
-            suiteName: WatchComplicationConstants.appGroupIdentifier
-        ) ?? .standard
+        defaults: UserDefaults, accessClock: WatchAccessClockStore,
+        clockSample: @escaping @Sendable (Date) -> ProEntitlementClockSample = { ProEntitlementSystemClock.sample(at: $0) }
     ) {
         self.defaults = defaults
+        self.accessClock = accessClock
+        self.clockSample = clockSample
     }
 
     func load() -> WatchDashboardSnapshot? {
-        guard let data = defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey) else {
-            return nil
-        }
+        guard let data = defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey) else { return nil }
         return try? WatchDashboardSnapshot.decode(data)
     }
 
     func loadForAccess(now: Date = Date()) -> WatchDashboardSnapshot? {
-        guard let snapshot = load(), let deadline = snapshot.proAccessEndsAt else { return load() }
-        guard deadline.timeIntervalSinceReferenceDate.isFinite, now.timeIntervalSinceReferenceDate.isFinite else {
-            return snapshot.lockingAccess()
+        loadAccess(sample: clockSample(now))?.snapshot
+    }
+
+    func loadAccess(sample: ProEntitlementClockSample? = nil) -> WatchAccessDecision? {
+        guard let snapshot = load() else { return nil }
+        return accessDecision(for: snapshot, sample: sample ?? clockSample(Date()))
+    }
+
+    func accessDecision(for snapshot: WatchDashboardSnapshot, sample: ProEntitlementClockSample) -> WatchAccessDecision {
+        let decision = accessClock.decision(for: snapshot, sample: sample)
+        guard let deadline = snapshot.proAccessEndsAt else { return decision }
+        if decision.hasExpired { recordExpiration(deadline) }
+        if defaults.object(forKey: expirationKey(deadline)) != nil {
+            return WatchAccessDecision(source: snapshot, effectiveDate: nil, epoch: decision.epoch, hasExpired: true)
         }
-        // A queued newer usage revision cannot revive an already denied deadline.
-        // A renewed deadline or permanent phone grant has independent access.
-        if snapshot.isProLocked || now >= deadline {
-            recordExpiration(deadline)
-            return snapshot.lockingAccess()
-        }
-        return defaults.object(forKey: expirationKey(deadline)) == nil ? snapshot : snapshot.lockingAccess()
+        return decision
     }
 
     func recordExpiration(_ deadline: Date) {
         guard deadline.timeIntervalSinceReferenceDate.isFinite else { return }
-        // Only set this receipt; concurrent observers never clear or overwrite it.
+        accessClock.recordExpiration(deadline)
+        // Only actual effective expiry or the original continuous boundary records this receipt.
         defaults.set(true, forKey: expirationKey(deadline))
     }
 
@@ -569,15 +590,21 @@ struct WatchComplicationSnapshotStore {
 
     @discardableResult
     func saveIfChanged(
-        _ snapshot: WatchDashboardSnapshot,
-        encodedData: Data? = nil
+        _ snapshot: WatchDashboardSnapshot, encodedData: Data? = nil, sample: ProEntitlementClockSample? = nil
     ) throws -> Bool {
+        try publish(snapshot, encodedData: encodedData, sample: sample).changed
+    }
+
+    func publish(
+        _ snapshot: WatchDashboardSnapshot, encodedData: Data? = nil, sample: ProEntitlementClockSample? = nil
+    ) throws -> WatchSnapshotPublication {
         let data = try encodedData ?? snapshot.encoded()
-        guard defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey) != data else {
-            return false
-        }
-        defaults.set(data, forKey: WatchComplicationConstants.snapshotDefaultsKey)
-        return true
+        let sample = sample ?? clockSample(Date())
+        let installed = accessClock.accept(snapshot, sample: sample)
+        if let deadline = snapshot.proAccessEndsAt, sample.wallDate >= deadline { recordExpiration(deadline) }
+        let changed = defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey) != data
+        if changed { defaults.set(data, forKey: WatchComplicationConstants.snapshotDefaultsKey) }
+        return WatchSnapshotPublication(changed: changed, accessInstalled: installed)
     }
 }
 
