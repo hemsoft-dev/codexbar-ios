@@ -59,24 +59,26 @@ def json_command(output, name, argv):
     return value
 
 
-def device_record(identifier, family, tools):
+def device_record(identifier, family, tools, runtime_path=None):
     inventory = json.loads(capture(['xcrun', 'simctl', 'list', '--json']))
-    for runtime in inventory['runtimes']:
-        for device in inventory['devices'].get(runtime['identifier'], []):
-            if device['udid'] != identifier:
-                continue
-            model = next(item['name'] for item in inventory['devicetypes']
-                         if item['identifier'] == device['deviceTypeIdentifier'])
-            result = dict(deviceId=identifier, deviceName=device['name'], modelName=model,
-                          osVersion=runtime['version'], osBuildNumber=runtime['buildversion'],
-                          architecture=tools['architecture'], platform='iOS Simulator', family=family,
-                          runtime=runtime['identifier'], state=device['state'])
-            validate_device(result, result)
-            return result
-    raise ValueError(f'Simulator is unavailable: {identifier}')
+    matches = [(runtime, device) for runtime in inventory['runtimes']
+               if runtime['isAvailable'] and (runtime_path is None or runtime['bundlePath'] == runtime_path)
+               for device in inventory['devices'].get(runtime['identifier'], [])
+               if device['udid'] == identifier and device['isAvailable']]
+    if len(matches) != 1:
+        raise ValueError(f'Simulator runtime is unavailable or ambiguous: {identifier}; use an owned runtime receipt')
+    runtime, device = matches[0]
+    model = next(item['name'] for item in inventory['devicetypes']
+                 if item['identifier'] == device['deviceTypeIdentifier'])
+    result = dict(deviceId=identifier, deviceName=device['name'], modelName=model,
+                  osVersion=runtime['version'], osBuildNumber=runtime['buildversion'],
+                  architecture=tools['architecture'], platform='iOS Simulator', family=family,
+                  runtime=runtime['identifier'], runtimeBundlePath=runtime['bundlePath'], state=device['state'])
+    validate_device(result, result)
+    return result
 
 
-def provision(output, family, tools, supplementary=False):
+def provision(output, family, tools, supplementary=False, runtime_build=None):
     inventory = json.loads(capture(['xcrun', 'simctl', 'list', '--json']))
     version = lambda value: tuple(int(part) for part in value.split('.'))
     runtimes = [runtime for runtime in inventory['runtimes'] if runtime['isAvailable']
@@ -85,9 +87,15 @@ def provision(output, family, tools, supplementary=False):
     if not supplementary:
         require_pinned(tools)
         runtimes = [runtime for runtime in runtimes if runtime['version'] == '26.5' and runtime['buildversion'] == '23F77']
+    if runtime_build:
+        runtimes = [runtime for runtime in runtimes if runtime['buildversion'] == runtime_build]
     if not runtimes:
         raise ValueError('No compatible qualified iOS runtime; do not substitute a different runtime')
-    runtime = sorted(runtimes, key=lambda item: version(item['version']))[-1]
+    latest = max(version(runtime['version']) for runtime in runtimes)
+    runtimes = [runtime for runtime in runtimes if version(runtime['version']) == latest]
+    if len(runtimes) != 1:
+        raise ValueError('Ambiguous runtime builds; select an observed --runtime-build before provisioning')
+    runtime = runtimes[0]
     prefix = 'iPhone' if family == 'iphone' else 'iPad'
     # Use a device type actually present for this runtime, without touching that device.
     candidates = [device for device in inventory['devices'].get(runtime['identifier'], [])
@@ -97,11 +105,13 @@ def provision(output, family, tools, supplementary=False):
         raise ValueError(f'No known compatible {family} device type for {runtime["identifier"]}')
     device_type = sorted(candidates, key=lambda item: (item['deviceTypeIdentifier'], item['udid']))[-1]['deviceTypeIdentifier']
     name = f'CodexBar 470 {family} {uuid.uuid4().hex[:10]}'
-    receipt = command(output, 'create-device', ['xcrun', 'simctl', 'create', name, device_type, runtime['identifier']])
+    # simctl supports an exact runtime bundle path. Version identifiers can
+    # name several installed beta/release builds and must not choose implicitly.
+    receipt = command(output, 'create-device', ['xcrun', 'simctl', 'create', name, device_type, runtime['bundlePath']])
     identifier = (output / 'create-device.log').read_text().strip()
     if not re_uuid(identifier):
         raise ValueError('simctl create did not return one UUID; inspect create-device.log')
-    device = device_record(identifier, family, tools)
+    device = device_record(identifier, family, tools, runtime['bundlePath'])
     write(output / 'ownership.json', dict(schema=1, owner=str(ROOT), created=receipt,
                                          tools=tools, device=device, supplementary=supplementary))
     print(f'Created owned simulator: {name} ({identifier}); {output / "ownership.json"}', flush=True)
@@ -126,9 +136,9 @@ def owned_device(path, tools, allow_quarantined=False):
         raise ValueError('Ownership receipt belongs to another checkout/toolchain or failed creation')
     expected = receipt['device']
     argv = receipt['created']['command']
-    if argv != ['xcrun', 'simctl', 'create', expected['deviceName'], argv[4], expected['runtime']]:
+    if argv != ['xcrun', 'simctl', 'create', expected['deviceName'], argv[4], expected['runtimeBundlePath']]:
         raise ValueError('Invalid simulator creation receipt')
-    actual = device_record(expected['deviceId'], expected['family'], tools)
+    actual = device_record(expected['deviceId'], expected['family'], tools, expected['runtimeBundlePath'])
     validate_device(actual, expected)
     if actual['deviceName'] != expected['deviceName'] or not actual['deviceName'].startswith('CodexBar 470 '):
         raise ValueError('Simulator ownership name changed')
@@ -143,7 +153,7 @@ def claim_native_device(ownership, output, device):
 
 
 def shutdown(output, device):
-    current = device_record(device['deviceId'], device['family'], toolchain())
+    current = device_record(device['deviceId'], device['family'], toolchain(), device.get('runtimeBundlePath'))
     validate_device(current, device)
     if current['state'] != 'Shutdown':
         command(output, 'shutdown-device', ['xcrun', 'simctl', 'shutdown', device['deviceId']])
@@ -334,6 +344,7 @@ def main():
     parser.add_argument('--ownership', type=Path)
     parser.add_argument('--base-results', type=Path)
     parser.add_argument('--device', help='Existing destination only for the original base runner')
+    parser.add_argument('--runtime-build', help='Exact observed installed runtime build for new owned devices')
     parser.add_argument('--supplementary', action='store_true', help='Local diagnostics; never release qualification')
     parser.add_argument('--build-only', action='store_true', help='Compile native host only; no passing phase claim')
     args = parser.parse_args()
@@ -351,16 +362,20 @@ def main():
         write(output / 'toolchain.json', tools)
         if args.mode != 'base' and not args.supplementary:
             require_pinned(tools)
+        if args.runtime_build and (args.ownership or args.mode in ('base', 'ui', 'shutdown')):
+            raise ValueError('--runtime-build applies only when creating a new owned device')
         if args.mode == 'base':
             if not args.device:
                 raise ValueError('Base mode requires an explicit destination')
-            device = device_record(args.device, args.family, tools)
+            device = owned_device(args.ownership, tools) if args.ownership else device_record(args.device, args.family, tools)
+            if device['deviceId'] != args.device:
+                raise ValueError('Base destination differs from the ownership receipt')
         elif args.ownership:
             device = owned_device(args.ownership, tools, allow_quarantined=args.mode == 'shutdown')
         elif args.mode in ('ui', 'shutdown'):
             raise ValueError('UI/shutdown requires the ownership receipt from provision')
         else:
-            device = provision(output, args.family, tools, args.supplementary)
+            device = provision(output, args.family, tools, args.supplementary, args.runtime_build)
         if device['family'] != args.family:
             raise ValueError(f'Owned device family differs from requested {args.family}')
         if args.mode not in ('base', 'shutdown') and not args.supplementary:

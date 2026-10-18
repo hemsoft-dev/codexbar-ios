@@ -2,9 +2,11 @@
 import copy
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import sys
+import subprocess
 import tempfile
 import time
 from types import SimpleNamespace
@@ -319,6 +321,100 @@ class BuiltProductsTests(unittest.TestCase):
                 path.write_bytes(b'changed')
                 self.assertTrue(any(EVIDENCE.digest(item['path']) != item['sha256'] for item in inventory))
                 path.write_bytes(original)
+
+
+class RuntimeIdentityTests(unittest.TestCase):
+    def setUp(self):
+        self.identifier = 'com.apple.CoreSimulator.SimRuntime.iOS-27-0'
+        self.device_id = '66F5FBE8-C47A-4841-9B2F-6ECF8FF8FBBB'
+        self.inventory = dict(
+            runtimes=[dict(identifier=self.identifier, version='27.0', buildversion=build,
+                           bundlePath='/installed/' + build + '.simruntime', isAvailable=True)
+                      for build in ('24A5390f', '24A434')],
+            devices={self.identifier: [dict(udid=self.device_id, name='CodexBar 470 iphone fixture',
+                       deviceTypeIdentifier='iPhone-Type', isAvailable=True, state='Shutdown')]},
+            devicetypes=[dict(identifier='iPhone-Type', name='iPhone 17')])
+        self.tools = dict(architecture='arm64', sdk='27.1')
+
+    def test_duplicate_runtime_version_never_silently_selects_first_build(self):
+        with patch.object(RUNNER, 'capture', return_value=json.dumps(self.inventory)):
+            with self.assertRaisesRegex(ValueError, 'ambiguous'):
+                RUNNER.device_record(self.device_id, 'iphone', self.tools)
+            actual = RUNNER.device_record(self.device_id, 'iphone', self.tools, '/installed/24A434.simruntime')
+        self.assertEqual(actual['osBuildNumber'], '24A434')
+
+    def test_ambiguous_provision_fails_before_creating_any_device(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(RUNNER, 'capture', return_value=json.dumps(self.inventory)), patch.object(RUNNER, 'command') as command:
+            with self.assertRaisesRegex(ValueError, 'Ambiguous runtime builds'):
+                RUNNER.provision(Path(folder), 'iphone', self.tools, supplementary=True)
+            command.assert_not_called()
+
+    def test_explicit_observed_build_creates_with_exact_bundle_path(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            def create(_, name, argv):
+                (output / 'create-device.log').write_text(self.device_id)
+                return dict(command=argv, exit=0)
+            with patch.object(RUNNER, 'capture', return_value=json.dumps(self.inventory)), patch.object(RUNNER, 'command', side_effect=create):
+                actual = RUNNER.provision(output, 'iphone', self.tools, supplementary=True, runtime_build='24A434')
+            receipt = EVIDENCE.read(output / 'ownership.json')
+            self.assertEqual(receipt['created']['command'][-1], '/installed/24A434.simruntime')
+            self.assertEqual(actual['osBuildNumber'], '24A434')
+
+
+class OriginalUIRunnerTests(unittest.TestCase):
+    """Run the real Bash entrypoint with fake xcrun/Python, never a simulator."""
+    def run_entrypoint(self, family='iphone', identifier='owned-device', ownership=None):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        inventory = dict(runtimes=[dict(identifier='com.apple.CoreSimulator.SimRuntime.iOS-27-0',
+                                        version='27.0', isAvailable=True)],
+                         devices={'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [dict(
+                             udid='owned-device', name='CodexBar 470 iphone fixture',
+                             deviceTypeIdentifier='phone-model', isAvailable=True)]},
+                         devicetypes=[dict(identifier='phone-model', name='iPhone 17')])
+        (root / 'inventory.json').write_text(json.dumps(inventory))
+        (root / 'xcrun').write_text('#!/bin/sh\ncase "$*" in\n  "--sdk iphonesimulator --show-sdk-version") echo 27.0;;\n  *) cat "$MOCK_INVENTORY";;\nesac\n')
+        (root / 'python3').write_text('''#!/bin/sh
+printf '%s\\n' "$@" > "$MOCK_ARGUMENTS"
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = --output ]; then
+    shift
+    printf '%s\\n' '{"result":"Passed","totalTestCount":29,"passedTests":29,"failedTests":0,"skippedTests":0,"expectedFailures":0}' > "$1/summary.json"
+    exit 0
+  fi
+  shift
+done
+exit 1
+''')
+        for name in ('xcrun', 'python3'):
+            (root / name).chmod(0o755)
+        arguments = root / 'arguments.txt'
+        environment = dict(os.environ, PATH=str(root) + os.pathsep + os.environ['PATH'],
+                           UI_TEST_REQUIRE_DEVICE_ID='1', UI_TEST_DEVICE_ID=identifier, UI_TEST_DEVICE_NAME='',
+                           UI_TEST_OWNERSHIP_RECEIPT=ownership or '', UI_TEST_RESULTS_DIR=str(root / 'results'),
+                           MOCK_INVENTORY=str(root / 'inventory.json'), MOCK_ARGUMENTS=str(arguments))
+        result = subprocess.run(['/bin/bash', str(SCRIPTS / 'run-ui-tests.sh'), family],
+                                env=environment, capture_output=True, text=True)
+        return result, arguments.read_text().splitlines() if arguments.exists() else []
+
+    def test_owned_display_name_uses_model_and_empty_optional_array_works_on_bash_3(self):
+        result, arguments = self.run_entrypoint()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('owned-device', arguments)
+        self.assertNotIn('--ownership', arguments)
+
+    def test_owned_runtime_receipt_reaches_base_runner(self):
+        result, arguments = self.run_entrypoint(ownership='/owned/receipt.json')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(arguments[-2:], ['--ownership', '/owned/receipt.json'])
+
+    def test_missing_owned_id_or_wrong_family_never_launches_base_runner(self):
+        for options in (dict(identifier=''), dict(family='ipad')):
+            result, arguments = self.run_entrypoint(**options)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(arguments, [])
 
 
 if __name__ == '__main__':

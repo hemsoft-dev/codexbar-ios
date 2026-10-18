@@ -37,6 +37,7 @@ ui_run="$(mktemp -d /tmp/codexbar-ui.XXXXXX)"
 ./scripts/run-pro-release-validation.sh provision --family iphone --output "$ui_run/device"
 ui_device_id="$(jq -r .device.deviceId "$ui_run/device/ownership.json")"
 UI_TEST_REQUIRE_DEVICE_ID=1 UI_TEST_DEVICE_ID="$ui_device_id" \
+  UI_TEST_OWNERSHIP_RECEIPT="$ui_run/device/ownership.json" \
   UI_TEST_RESULTS_DIR="$ui_run/base" ./scripts/run-ui-tests.sh iphone
 ./scripts/run-pro-release-validation.sh ui --family iphone \
   --ownership "$ui_run/device/ownership.json" --base-results "$ui_run/base" \
@@ -47,6 +48,10 @@ UI_TEST_REQUIRE_DEVICE_ID=1 UI_TEST_DEVICE_ID="$ui_device_id" \
 
 Repeat with `ipad` and fresh directories. Always shut down the owned simulator
 when an earlier command fails. Never erase or reuse another task's simulator.
+The ownership receipt binds the exact installed runtime bundle path and build.
+If multiple builds share a runtime version, provisioning requires an observed
+`--runtime-build`; it never chooses the first matching version. Standalone base
+runs reject an ambiguous runtime unless given `UI_TEST_OWNERSHIP_RECEIPT`.
 The ownership receipt and an immutable native-use marker prevent reuse after
 an interrupted or failed native run. Shutdown is still allowed. The runner
 attempts the final StoreKit reset after native UI preparation/execution fails,

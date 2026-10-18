@@ -255,6 +255,15 @@ materially from the ledger.
 
 ### 7. Submit and record the outcome
 
+For these first CodexBar Pro products, submit the app, subscriptions and lifetime
+purchase through the App Store Connect website. Apple's
+[first in-app purchase submission rule](https://developer.apple.com/documentation/appstoreconnectapi/managing-in-app-purchases)
+and [first subscription submission rule](https://developer.apple.com/documentation/appstoreconnectapi/submitting-subscriptions-and-subscription-groups-for-app-review)
+require the website with an app version; review-submission API operations do not
+apply. API checks and eligible build selection may prepare the version, but do
+not add or submit these first product items through the API. Re-read the website
+submission result and record all app/product relationships in the ledger.
+
 1. Confirm `submission-ready`, exact version/build, unchanged candidate SHA,
    and exact current-task authority for **Submit for Review**. Otherwise stop
    and ask for confirmation.

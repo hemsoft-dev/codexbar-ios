@@ -97,8 +97,11 @@ trap preserve_failure_attachments EXIT
 # 16 commerce journeys and marketing capture cannot leak into this phase.
 # The runner builds into fresh DerivedData under run_dir, enumerates the built
 # tests, and retains command/source/binary/result evidence even on failure.
-python3 "$repo_root/scripts/pro_release_runner.py" base \
-  --family "$device_family" --device "$device_id" --output "$run_dir"
+runner_arguments=(base --family "$device_family" --device "$device_id" --output "$run_dir")
+if [[ -n "${UI_TEST_OWNERSHIP_RECEIPT:-}" ]]; then
+  runner_arguments+=(--ownership "$UI_TEST_OWNERSHIP_RECEIPT")
+fi
+python3 "$repo_root/scripts/pro_release_runner.py" "${runner_arguments[@]}"
 
 # All twenty-nine named UI journeys must run on each destination. A skipped or empty
 # suite can otherwise make xcodebuild return success without testing the flows.

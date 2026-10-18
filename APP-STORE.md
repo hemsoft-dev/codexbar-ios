@@ -66,17 +66,34 @@ App version `2.0.0`, ID `2c7b9bd4-b877-454d-a5a2-036b25a151f5`, is
 `PREPARE_FOR_SUBMISSION` with `MANUAL` release, no selected build and no phased
 release. Review draft `af75f0db-4b2c-403d-81e2-c3b14ab05986` is
 `READY_FOR_REVIEW`, with zero items and no submitted date. The first Pro
-products must accompany app version 2.0 in one review submission. Selecting
-the exact processed build and attaching the app and product versions remain
-pending; nothing in this draft has been submitted. The three local StoreKit
+products must accompany app version 2.0 in one website submission. Selecting
+the exact processed build and associating the products with the app version
+remain pending; nothing in this draft has been submitted. The three local StoreKit
 review screenshots demonstrate app UI and test-configuration prices. They do
 not establish live App Store prices or production original-purchaser access.
+
+Apple requires the first in-app purchase and first subscriptions to accompany
+an app binary through the [App Store Connect website](https://appstoreconnect.apple.com).
+Use that website to associate the monthly, yearly and lifetime products with
+app version 2.0 and submit them together. The review-submission API's item-add
+and submit operations do not apply to these first products; the empty API
+review draft does not change that requirement. Selecting an eligible processed
+build through the API remains available to the release owner after candidate
+qualification. This distinction follows Apple's
+[in-app purchase guidance](https://developer.apple.com/documentation/appstoreconnectapi/managing-in-app-purchases.md)
+and [subscription guidance](https://developer.apple.com/documentation/appstoreconnectapi/submitting-subscriptions-and-subscription-groups-for-app-review.md),
+rechecked in the [saved Apple readback](/tmp/codexbar-470-first-product-submission/readback.json)
+on October 18 at 8:00:53 AM EDT, `2026-10-18T12:00:53Z`.
 
 The [description](fastlane/metadata/en-US/description.txt),
 [promotional text](fastlane/metadata/en-US/promotional_text.txt),
 [release notes](fastlane/metadata/en-US/release_notes.txt) and
-[review notes](fastlane/metadata/review_information/notes.txt) are 2.0 drafts.
-Do not copy them onto the live 1.4.0 listing. The description includes Apple's
+[review notes](fastlane/metadata/review_information/notes.txt) are prepared for
+2.0. Release copy was finalized on October 18, including the widget-readability
+fix in the 1,984-character What's New text. The earlier saved What's New value
+is stale after that local update; saving and rereading the new text on the 2.0
+draft remains pending. Other metadata values are unchanged. Do not copy the
+2.0 metadata onto the live 1.4.0 listing. The description includes Apple's
 [standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/)
 and the public [privacy policy](https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md).
 The existing GitHub privacy and support URLs remain the release destinations.
@@ -85,6 +102,10 @@ The existing GitHub privacy and support URLs remain the release destinations.
 
 The planned release is `2.0.0 (5)`; all 14 project configurations already use
 that version and build. Qualification of the final immutable candidate is pending.
+The [2.0 changelog](CHANGELOG.md#200---2026-10-18) is dated October 18, and the
+[privacy policy](PRIVACY.md) is effective that day. These dates record finalized
+source copy, not App Store submission or distribution. Start the next version's
+Unreleased section after the release cut.
 The compiled cutoff `T` remains **PROVISIONAL: October 31, 2026 at 8:00 PM EDT**,
 which is `2026-11-01T00:00:00Z`. It is fourteen calendar days after the planned
 submission date `2026-10-18 UTC`, not evidence of a completed submission.
@@ -123,10 +144,12 @@ agent-owned implementation or automated delivery.
    planned submission date. Confirm that the 1.4.0 review is finished. Require
    version 2.0.0 and build 5 or higher across the app and embedded products,
    then verify the built archive rather than relying only on project text.
-   Finalize the cutoff disclosures, the privacy policy's effective date and
-   the [2.0 changelog](CHANGELOG.md#200---unreleased) for the shipped behavior.
-2. Submit 2.0 and all Pro products together. Use manual release with phased
-   release off. Keep the existing US$3.99 app price and sale territories.
+   Recheck the cutoff disclosures, the privacy policy's effective date and
+   the [2.0 changelog](CHANGELOG.md#200---2026-10-18) against the final candidate.
+2. Submit 2.0 and all first Pro products together through the
+   [App Store Connect website](https://appstoreconnect.apple.com).
+   Use manual release with phased release off. Keep the existing US$3.99 app
+   price and sale territories.
    Require the exact candidate's five quality jobs and complete iPhone/iPad
    release UI gate before upload or release.
 3. Release manually only while at least six full days remain before `T`.
@@ -158,7 +181,7 @@ sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.
 | --- | --- | --- | --- | --- | --- |
 | Final candidate and cutoff | Recheck actual submission date against planned October 18 UTC | Not submitted by this preparation | Not applicable | Candidate SHA pending; planned 2.0.0 build 5; provisional T above | None for repository preparation |
 | Exact-candidate qualification | Before upload/release | Pending #470 | Not applicable | Record qualified SHA and built versions | Live provider comparisons remain separate |
-| Manual submission | App 2.0 plus all products; paid price; no phased release | Pending #470 | Existing price retained until launch sequence | Record selected build and finalized T | Small Business enrollment before shipping |
+| Manual submission | Website submission of app 2.0 plus all first products; paid price; no phased release | Pending #470 | Existing price retained until launch sequence | Record selected build and finalized T | Small Business enrollment before shipping |
 | Manual release | At least six days before T | Pending approval and #470 | Record release visibility | Same qualified candidate | None for draft setup |
 | Propagation | Wait full 48 hours after release | Pending release | Record checked storefronts and observed 2.0 versions | Record source/build/T | None |
 | Free schedule | About 72 hours before T; include latest region start | Pending #470 | Verify every storefront Free before T | Record source/build/T and schedule | None |
@@ -167,12 +190,13 @@ sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.
 The release ledger stays open through the price transition and post-cutoff
 checks. The following release actions have not been completed:
 
-- [ ] Freeze the merged candidate SHA and finalize the submission date, cutoff,
-  release copy and built `2.0.0 (5)` versions.
+- [ ] Freeze the merged candidate SHA and recheck the submission date, cutoff,
+  finalized release copy and built `2.0.0 (5)` versions.
 - [ ] Pass the exact candidate's complete manual release gate on Xcode
   26.6 / 17F113, including native commerce, both UI families and function risk.
 - [ ] Archive, export, upload and verify processing, then select that exact build.
-- [ ] Attach app version 2.0 and all first Pro products and submit once for review.
+- [ ] Associate all first Pro products with app version 2.0 and submit once
+  through the [App Store Connect website](https://appstoreconnect.apple.com).
 - [ ] Record approval and manually release with at least six full days before T.
 - [ ] Wait 48 hours and record storefront observations serving 2.0.
 - [ ] Schedule Free, record requested and actual regional times, and verify

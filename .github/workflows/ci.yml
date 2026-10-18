@@ -264,6 +264,7 @@ jobs:
         if: ${{ !cancelled() && steps.ui-device.outcome == 'success' }}
         env:
           UI_TEST_REQUIRE_DEVICE_ID: '1'
+          UI_TEST_OWNERSHIP_RECEIPT: ${{ runner.temp }}/ui-device/ownership.json
           UI_TEST_RESULTS_DIR: ${{ runner.temp }}/ui-tests
           UI_TEST_DEVICE_ID: ${{ steps.ui-device.outputs.id }}
         run: ./scripts/run-ui-tests.sh "${{ matrix.family }}"
