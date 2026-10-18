@@ -284,6 +284,7 @@ class CoverageCollectionTests(unittest.TestCase):
                                          functions=[dict(name='branch(_:)', lineNumber=1, coveredLines=2, executableLines=4)])])
                             for name in ['App.app', 'Widget.appex']])
         self.receipts, self.entries, self.summaries, self.trees, self.commands = {}, [], {}, {}, []
+        self.mutate_result_reads = False
         self.native_build = self.make_build('native', True)
         ordinary_build = self.make_build('ordinary', False)
         for index, phase in enumerate(self.phases['coverage_phases']):
@@ -340,10 +341,15 @@ class CoverageCollectionTests(unittest.TestCase):
 
     def native_tool(self, command):
         self.commands.append(command)
+        if self.mutate_result_reads and '--path' in command:
+            result = Path(command[command.index('--path') + 1])
+            (result / 'database.sqlite3').write_text('lazy index: ' + ' '.join(command))
         if command == ['xcodebuild', '-version']:
             return self.tools['xcode']
         if 'test-results' in command:
-            return json.dumps((self.summaries if 'summary' in command else self.trees)[command[-1]])
+            phase = (Path(command[-1]) / 'Info.plist').read_text()
+            original = str(self.root / phase / 'result.xcresult')
+            return json.dumps((self.summaries if 'summary' in command else self.trees)[original])
         if 'export' in command:
             folder = Path(command[-1])
             (folder / 'action.xccovreport').write_text(str(folder))
@@ -373,6 +379,16 @@ class CoverageCollectionTests(unittest.TestCase):
         self.assertEqual([item['phase'] for item in evidence], self.phases['coverage_phases'])
         self.assertTrue(all(item['producer_attested'] for item in evidence))
         self.assertEqual(len(list((self.output / 'inputs').glob('*/test-summary.json'))), 5)
+
+    def test_lazy_tool_indexes_never_mutate_attested_input_bundles(self):
+        self.mutate_result_reads = True
+        original_hashes = {entry['result']: EVIDENCE.digest(entry['result']) for entry in self.entries}
+        _, evidence = self.collect()
+        self.assertEqual({path: EVIDENCE.digest(path) for path in original_hashes}, original_hashes)
+        self.assertEqual({item['result']: item['result_sha256'] for item in evidence}, original_hashes)
+        for command in self.commands:
+            if '--path' in command:
+                self.assertNotIn(command[command.index('--path') + 1], original_hashes)
 
     def test_single_result_watch_interface_still_collects_without_merging(self):
         result = self.entries[0]['result']

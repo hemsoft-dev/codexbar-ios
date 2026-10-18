@@ -169,6 +169,7 @@ class RunnerCommandFailureTests(unittest.TestCase):
         self.calls = []
         self.exit_codes = {}
         self.extraction_error = False
+        self.lazy_result_database = False
         self.patches = [patch.object(self.runner, 'unchanged'),
                         patch.object(RUNNER.subprocess, 'run', side_effect=self.process)]
         for patcher in self.patches:
@@ -192,6 +193,8 @@ class RunnerCommandFailureTests(unittest.TestCase):
             if self.extraction_error:
                 raise OSError('diagnostic extraction unavailable')
             phase = Path(argv[-1]).parent.name
+            if self.lazy_result_database:
+                (Path(argv[-1]) / 'database.sqlite3').write_text('lazy xcresult index')
             tests = self.manifest['phases'][phase]['tests']
             summary, tree, _ = result_fixture(tests)
             summary.update(startTime=time.time() - .1, finishTime=time.time())
@@ -199,6 +202,11 @@ class RunnerCommandFailureTests(unittest.TestCase):
         else:
             stream.write('diagnostic attachment export\n')
         return SimpleNamespace(returncode=0)
+
+    def test_receipt_hash_includes_database_created_by_result_inspection(self):
+        self.lazy_result_database = True
+        receipt = self.runner.phase('native-preparation', self.build)
+        self.assertEqual(receipt['result_sha256'], EVIDENCE.digest(receipt['result']))
 
     def test_primary_65_survives_phase_receipt_write_failure(self):
         self.exit_codes['native-preparation'] = 65

@@ -124,10 +124,6 @@ def collect_coverage(args, output, policy, source_paths, root, run):
         seen_digests.add(result_digest)
         per_input = inputs_output / phase
         per_input.mkdir()
-        summary = json.loads(run(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path', str(result)]))
-        tests = json.loads(run(['xcrun', 'xcresulttool', 'get', 'test-results', 'tests', '--path', str(result)]))
-        write(per_input / 'test-summary.json', summary)
-        write(per_input / 'tests.json', tests)
         if manifest:
             receipt = read(entry['receipt'])
             write(per_input / 'receipt.json', receipt)
@@ -155,6 +151,17 @@ def collect_coverage(args, output, policy, source_paths, root, run):
             if runtime is not None and runtime != device_runtime:
                 raise ValueError('Mixed runtime/platform/architecture coverage inputs')
             runtime = device_runtime
+        # xcresulttool may write lazy indexes even for read/export commands.
+        # Authenticate the producer's bundle first, then inspect an exact copy.
+        inspection = per_input / 'inspection.xcresult'
+        shutil.copytree(result, inspection, symlinks=True)
+        if digest(inspection) != result_digest:
+            raise ValueError(f'Inspection copy differs from coverage input: {result}')
+        summary = json.loads(run(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path', str(inspection)]))
+        tests = json.loads(run(['xcrun', 'xcresulttool', 'get', 'test-results', 'tests', '--path', str(inspection)]))
+        write(per_input / 'test-summary.json', summary)
+        write(per_input / 'tests.json', tests)
+        if manifest:
             validate_results(summary, tests, expected, receipt['device'], receipt['started'], receipt['ended'])
         else:
             identities = validate_results(summary, tests)
@@ -162,7 +169,7 @@ def collect_coverage(args, output, policy, source_paths, root, run):
             if summary['devicesAndConfigurations'][0]['device']['platform'] != expected_platform or not all(
                     identity.startswith(bundle) for identity in identities):
                 raise ValueError('Single-result test execution does not match the requested platform/bundle')
-        report_path, archive_path = export_pair(result, per_input / 'raw', run)
+        report_path, archive_path = export_pair(inspection, per_input / 'raw', run)
         coverage = json.loads(run(['xcrun', 'xccov', 'view', '--json', str(report_path)]))
         write(per_input / 'coverage.json', coverage)
         index = coverage_index(coverage, root, source_paths)
@@ -173,6 +180,13 @@ def collect_coverage(args, output, policy, source_paths, root, run):
                              report=str(report_path), report_sha256=digest(report_path),
                              archive=str(archive_path), archive_sha256=digest(archive_path),
                              tests=summary['totalTestCount'], producer_attested=bool(manifest)))
+        if digest(result) != result_digest:
+            raise ValueError(f'Attested result changed during coverage collection: {result}')
+        write(per_input / 'inspection.json', dict(original=str(result), original_sha256=result_digest,
+              inspection=str(inspection), initial_sha256=result_digest, final_sha256=digest(inspection)))
+        # Keep a failed inspection copy for diagnosis; successful inputs already
+        # retain their source bundle, summaries and raw coverage pair.
+        shutil.rmtree(inspection)
         write(output / 'coverage-inputs.json', evidence)
     validate_union(indexes, None)
     if manifest:

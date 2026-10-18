@@ -136,6 +136,13 @@ the earlier iOS risk job. Watch collection keeps its single-result interface
 and verifies watchOS execution. A legacy single-result receipt is explicitly
 marked as lacking producer provenance.
 
+Phase receipts hash result bundles after diagnostic extraction because
+`xcresulttool` can create a database during its first read. Coverage collection
+authenticates the original bundle, inspects a verified working copy and checks
+that the original remains unchanged. Failed inspection copies are retained;
+successful copies are removed after their summaries, raw coverage and hashes
+have been saved.
+
 `prove-coverage-union.py` creates a tiny hostless macOS XCTest project outside
 the checkout and executes opposite branches in two separately built result
 bundles. It requires the merged shared function to cover more lines than either

@@ -294,7 +294,7 @@ class Runner:
         receipt['ended'] = now()
         try:
             if result.exists():
-                receipt['result_sha256'] = digest(result)
+                receipt['result_initial_sha256'] = digest(result)
                 summary = json_command(folder, 'summary', ['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path', str(result)])
                 tree = json_command(folder, 'tests', ['xcrun', 'xcresulttool', 'get', 'test-results', 'tests', '--path', str(result)])
                 receipt['executedTests'] = validate_results(summary, tree, expected, self.device, receipt['started'], receipt['ended'])
@@ -305,16 +305,24 @@ class Runner:
             receipt['validationError'] = str(error)
             if failure is None:
                 failure = PhaseFailure(str(error))
+        if failure and result.exists():
+            try:
+                command(folder, 'attachments', ['xcrun', 'xcresulttool', 'export', 'attachments',
+                        '--path', str(result), '--output-path', str(folder / 'failure-attachments')])
+            except (PhaseFailure, OSError) as error:
+                receipt['attachmentError'] = str(error)
+        # xcresulttool lazily creates database.sqlite3 during inspection. Bind
+        # the retained bundle only after every diagnostic read has completed.
+        try:
+            if result.exists():
+                receipt['result_sha256'] = digest(result)
+        except (ValueError, OSError) as error:
+            receipt['digestError'] = str(error)
+            failure = failure or PhaseFailure(str(error))
         receipt['exit'] = failure.code if failure else 0
         failure = persist(folder / 'receipt.json', receipt, failure)
         self.receipts.append(dict(phase=name, result=str(result), receipt=str(folder / 'receipt.json')))
         if failure:
-            if result.exists():
-                try:
-                    command(folder, 'attachments', ['xcrun', 'xcresulttool', 'export', 'attachments',
-                            '--path', str(result), '--output-path', str(folder / 'failure-attachments')])
-                except (PhaseFailure, OSError):
-                    pass
             raise failure
         return receipt
 
