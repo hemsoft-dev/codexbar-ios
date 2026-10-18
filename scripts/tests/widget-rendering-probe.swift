@@ -257,6 +257,20 @@ struct WidgetRenderingProbe {
                 detail: String(format: "%.1f%% pixels contain visible ink; limit 50%%", coverage * 100)
             ))
         }
+        if appearance == .fullColorRemoved {
+            // Whole-tile coverage misses small opaque badges. Inspect the leading
+            // 22 pt header area inside the tile's 10 pt padding separately.
+            guard let header = raw.cropping(to: CGRect(x: 10 * scale, y: 10 * scale, width: 22 * scale, height: 22 * scale)) else {
+                throw ProbeFailure(description: "Cannot inspect the provider header")
+            }
+            captures.append(try save(header, name: "header-source-\(appearance.rawValue)-\(theme).png", output: output))
+            let headerCoverage = try alphaCoverage(header)
+            checks.append(CheckRecord(
+                name: "\(appearance.rawValue)/\(theme) removes opaque provider badge",
+                passed: headerCoverage < 0.50,
+                detail: String(format: "%.1f%% header pixels contain visible ink; limit 50%%", headerCoverage * 100)
+            ))
+        }
         checks.append(CheckRecord(
             name: "\(appearance.rawValue)/\(theme) retains foreground content",
             passed: coverage > 0.025,

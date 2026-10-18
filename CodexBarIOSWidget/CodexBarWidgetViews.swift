@@ -709,7 +709,7 @@ struct ProviderWidgetTile: View {
 
     private func header(font: Font, logoSize: CGFloat) -> some View {
         HStack(spacing: 5) {
-            if appearance.isFullColor {
+            if appearance.showsDecorations {
                 CodexBarProviderLogo(
                     providerID: tile.providerID,
                     size: logoSize,
