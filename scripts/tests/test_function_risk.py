@@ -4,6 +4,7 @@ from fractions import Fraction
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -462,6 +463,64 @@ class CoverageCollectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'empty coverage target'):
             self.collect()
         self.assertFalse(any('merge' in command for command in self.commands))
+
+
+class MeasurementSourceIdentityTests(unittest.TestCase):
+    """Reject a report whose inputs were collected across a source change."""
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name).resolve()
+        self.policy = METRICS.read(METRICS.POLICY)
+        self.baseline = self.root / 'baseline.json'
+        METRICS.write(self.baseline, dict(platforms={}))
+        self.snapshot = dict(revision='a' * 40, root=str(self.root), status='', files={'Source.swift': '1' * 64})
+        for target, value in (('ROOT', self.root), ('collect_coverage', lambda *_: ({}, [])),
+                              ('project_sources', lambda *_: set()), ('gate', lambda *_: []),
+                              ('measure', lambda *_: dict(platform='ios', functions=[])),
+                              ('markdown', lambda _: ''), ('run', self.tool)):
+            patcher = patch.object(METRICS, target, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tool(self, command, **_):
+        if command == ['xcodebuild', '-version']:
+            return self.policy['tools']['xcode']
+        if command[-1] == 'version':
+            return self.policy['tools']['swiftlint']
+        if command == ['xcrun', '--find', 'swiftc']:
+            return str(self.root / 'usr/bin/swiftc')
+        if command[:2] == ['xcrun', 'swiftc']:
+            Path(command[-1]).write_text('')
+            return ''
+        if command[0].endswith('declarations-tool') or command[1:2] == ['lint']:
+            return '[]'
+        return '{}'
+
+    def collect(self, final):
+        output = self.root / 'risk'
+        args = SimpleNamespace(platform='ios', inputs=self.root / 'inputs.json', result=None,
+                               output=output, baseline=self.baseline)
+        with patch.object(METRICS, 'source_snapshot', side_effect=[self.snapshot, final]) as snapshot:
+            try:
+                return METRICS.collect(args), output
+            finally:
+                self.assertEqual([call.kwargs for call in snapshot.call_args_list], [dict(require_clean=True)] * 2)
+
+    def test_unchanged_source_reports_the_verified_revision(self):
+        failed, output = self.collect(copy.deepcopy(self.snapshot))
+        self.assertFalse(failed)
+        self.assertEqual(METRICS.read(output / 'report.json')['tools']['revision'], self.snapshot['revision'])
+
+    def test_source_change_during_collection_fails_without_a_report(self):
+        changed_file = dict(copy.deepcopy(self.snapshot), files={'Source.swift': '2' * 64})
+        new_commit = dict(copy.deepcopy(self.snapshot), revision='b' * 40)
+        for final in (changed_file, new_commit):
+            with self.subTest(final=final), self.assertRaisesRegex(ValueError, 'Source changed during'):
+                self.collect(final)
+            self.assertFalse((self.root / 'risk/report.json').exists())
+            shutil.rmtree(self.root / 'risk')
 
 
 if __name__ == '__main__':

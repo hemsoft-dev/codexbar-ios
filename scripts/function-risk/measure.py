@@ -13,6 +13,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from coverage_inputs import collect_coverage
+from release_evidence import source_snapshot
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY = ROOT / 'scripts/function-risk/policy.json'
@@ -244,6 +245,8 @@ def collect(args):
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     args.output_created = True
+    # Bind declarations, complexity, coverage and report metadata to one source identity.
+    source = source_snapshot(require_clean=bool(args.inputs))
     os.environ.setdefault('DEVELOPER_DIR', '/Applications/Xcode.app/Contents/Developer')
     version = run(['xcodebuild', '-version'])
     if version != policy['tools']['xcode']:
@@ -273,13 +276,16 @@ def collect(args):
     write(output / 'baseline.json', read(args.baseline))
     report = measure(args.platform, declarations, complexity, coverage, source_paths, policy)
     report['coverage_inputs'] = inputs
-    report['tools'] = dict(policy['tools'], swift=run(['xcrun', 'swift', '--version']), python=sys.version, revision=run(['git', 'rev-parse', 'HEAD']), policy_sha256=hashlib.sha256(POLICY.read_bytes()).hexdigest(), baseline_sha256=hashlib.sha256(args.baseline.read_bytes()).hexdigest())
+    report['tools'] = dict(policy['tools'], swift=run(['xcrun', 'swift', '--version']), python=sys.version, revision=source['revision'], policy_sha256=hashlib.sha256(POLICY.read_bytes()).hexdigest(), baseline_sha256=hashlib.sha256(args.baseline.read_bytes()).hexdigest())
     baseline = read(args.baseline)
     report['errors'] = gate(report, baseline)
     for row in report['functions']:
         exception = baseline['platforms'].get(args.platform, {}).get('unmatched', {}).get(row['id'])
         if row['status'] == 'unmatched' and exception:
             row['baseline_exception'] = exception
+    final = source_snapshot(require_clean=bool(args.inputs))
+    if (final['revision'], final['files']) != (source['revision'], source['files']):
+        raise ValueError('Source changed during function-risk measurement; rerun from an unchanged checkout')
     write(output / 'report.json', report)
     (output / 'report.md').write_text(markdown(report))
     print(markdown(report))
