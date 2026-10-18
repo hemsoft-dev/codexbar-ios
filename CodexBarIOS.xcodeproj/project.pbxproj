@@ -275,6 +275,7 @@
 		975E0FB408DB39D92A7CC5BD /* ProLifetimeConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5734DC4DF1B9538EDE913703 /* ProLifetimeConfirmationView.swift */; };
 		AE3A5D13AFFE7D5B1F686B01 /* StoreKitProFailureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E4A8BBEB8BBA44AABED1D04 /* StoreKitProFailureTests.swift */; };
 		DF1C624E6DC98B945ECD0C96 /* StoreKitProPreparationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 004CE20852D0BA4159217B84 /* StoreKitProPreparationTests.swift */; };
+		469000000000000000000004 /* StorefrontFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 469000000000000000000003 /* StorefrontFixtureTests.swift */; };
 		3CE563A33F8A4DD133D0713E /* StoreKitProStoreSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC705FE0140E51C8DC47507 /* StoreKitProStoreSourceTests.swift */; };
 		66B95C20B8924EA8393F8DA6 /* StoreKitProTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D60D94DF05814DFF047518C5 /* StoreKitProTestSupport.swift */; };
 		7EE28141F0F310C96D3017B4 /* ProCommercePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B7F3EF0A166C8054A4F79F /* ProCommercePolicyTests.swift */; };
@@ -283,6 +284,7 @@
 		647524BB8A6994FB3155DEED /* ProCommerceCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E867B8B195A361EF34FAEC0 /* ProCommerceCommandTests.swift */; };
 		AAAC21A15E0B7111ABFE908C /* ProCommerceRefreshTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B02D39269FB632A3759065B0 /* ProCommerceRefreshTests.swift */; };
 		AB8C27CE490AA8EE37866A02 /* ProCommerceJourneyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 999DBD5BD4F64CFB35C7D70D /* ProCommerceJourneyTests.swift */; };
+		469000000000000000000002 /* StorefrontReviewCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 469000000000000000000001 /* StorefrontReviewCaptureTests.swift */; };
 		3F16CC4165A5EC0DB2F90708 /* ProCommerceVerificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81102DE8447B99A314AD0A1B /* ProCommerceVerificationTests.swift */; };
 		EBD689101F58278A3C80CC7B /* ProCommerceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B7FBEB417DF0D4CC8A58D88 /* ProCommerceRestoreTests.swift */; };
 		7D84B7CF44F1806A9CE9E685 /* StoreKitProPurchaseOutcomeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7F2C201EAE228FD14FAF37 /* StoreKitProPurchaseOutcomeTests.swift */; };
@@ -617,6 +619,7 @@
 		5734DC4DF1B9538EDE913703 /* ProLifetimeConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOS/Views/ProLifetimeConfirmationView.swift; sourceTree = SOURCE_ROOT; };
 		7E4A8BBEB8BBA44AABED1D04 /* StoreKitProFailureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOSTests/StoreKitProFailureTests.swift; sourceTree = SOURCE_ROOT; };
 		004CE20852D0BA4159217B84 /* StoreKitProPreparationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOSTests/StoreKitProPreparationTests.swift; sourceTree = SOURCE_ROOT; };
+		469000000000000000000003 /* StorefrontFixtureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOSTests/StorefrontFixtureTests.swift; sourceTree = SOURCE_ROOT; };
 		FCC705FE0140E51C8DC47507 /* StoreKitProStoreSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOSTests/StoreKitProStoreSourceTests.swift; sourceTree = SOURCE_ROOT; };
 		D60D94DF05814DFF047518C5 /* StoreKitProTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOSTests/StoreKitProTestSupport.swift; sourceTree = SOURCE_ROOT; };
 		56B7F3EF0A166C8054A4F79F /* ProCommercePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommercePolicyTests.swift; sourceTree = SOURCE_ROOT; };
@@ -625,6 +628,7 @@
 		5E867B8B195A361EF34FAEC0 /* ProCommerceCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommerceCommandTests.swift; sourceTree = SOURCE_ROOT; };
 		B02D39269FB632A3759065B0 /* ProCommerceRefreshTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommerceRefreshTests.swift; sourceTree = SOURCE_ROOT; };
 		999DBD5BD4F64CFB35C7D70D /* ProCommerceJourneyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOSUITests/ProCommerceJourneyTests.swift; sourceTree = SOURCE_ROOT; };
+		469000000000000000000001 /* StorefrontReviewCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOSUITests/StorefrontReviewCaptureTests.swift; sourceTree = SOURCE_ROOT; };
 		81102DE8447B99A314AD0A1B /* ProCommerceVerificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommerceVerificationTests.swift; sourceTree = SOURCE_ROOT; };
 		0B7FBEB417DF0D4CC8A58D88 /* ProCommerceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommerceRestoreTests.swift; sourceTree = SOURCE_ROOT; };
 		7E7F2C201EAE228FD14FAF37 /* StoreKitProPurchaseOutcomeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/StoreKitProPurchaseOutcomeTests.swift; sourceTree = SOURCE_ROOT; };
@@ -890,6 +894,7 @@
 				D60D94DF05814DFF047518C5 /* StoreKitProTestSupport.swift */,
 				FCC705FE0140E51C8DC47507 /* StoreKitProStoreSourceTests.swift */,
 				004CE20852D0BA4159217B84 /* StoreKitProPreparationTests.swift */,
+				469000000000000000000003 /* StorefrontFixtureTests.swift */,
 				7E4A8BBEB8BBA44AABED1D04 /* StoreKitProFailureTests.swift */,
 				C288EA32DFE19600B81250AE /* CodexBarPro.storekit */,
 				D6015DFB29C505854E597E62 /* WidgetEntitlementPartitionTests.swift */,
@@ -1047,6 +1052,7 @@
 			isa = PBXGroup;
 			children = (
 				999DBD5BD4F64CFB35C7D70D /* ProCommerceJourneyTests.swift */,
+				469000000000000000000001 /* StorefrontReviewCaptureTests.swift */,
 				A4660000000000000000000B /* FreeTierJourneyTests.swift */,
 				A30700000000000000000011 /* AccountJourneysUITests.swift */,
 				A37700000000000000000006 /* SettingsEvidenceUITests.swift */,
@@ -1489,6 +1495,7 @@
 				66B95C20B8924EA8393F8DA6 /* StoreKitProTestSupport.swift in Sources */,
 				3CE563A33F8A4DD133D0713E /* StoreKitProStoreSourceTests.swift in Sources */,
 				DF1C624E6DC98B945ECD0C96 /* StoreKitProPreparationTests.swift in Sources */,
+				469000000000000000000004 /* StorefrontFixtureTests.swift in Sources */,
 				AE3A5D13AFFE7D5B1F686B01 /* StoreKitProFailureTests.swift in Sources */,
 				A980B81D19DB7ED6CBF428FC /* WidgetEntitlementPartitionTests.swift in Sources */,
 				B4DDD9FB0A5E4382E5578533 /* ProOriginalPurchaserServiceTests.swift in Sources */,
@@ -1627,6 +1634,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AB8C27CE490AA8EE37866A02 /* ProCommerceJourneyTests.swift in Sources */,
+				469000000000000000000002 /* StorefrontReviewCaptureTests.swift in Sources */,
 				A4660000000000000001000B /* FreeTierJourneyTests.swift in Sources */,
 				A30700000000000000000001 /* AccountJourneysUITests.swift in Sources */,
 				A37700000000000000000005 /* SettingsEvidenceUITests.swift in Sources */,
@@ -1824,7 +1832,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CodexBarIOS/CodexBarIOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				ENABLE_DEBUG_DYLIB = NO;
@@ -1860,7 +1868,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CodexBarIOS/CodexBarIOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1901,7 +1909,7 @@
 					"$(SRCROOT)/ProClockSupport/include",
 				);
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1933,7 +1941,7 @@
 					"$(SRCROOT)/ProClockSupport/include",
 				);
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1960,7 +1968,7 @@
 				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexBarIOSWidget/Info.plist;
@@ -1991,7 +1999,7 @@
 				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexBarIOSWidget/Info.plist;
@@ -2023,7 +2031,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CodexBarWatch/CodexBarWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexBarWatch/Info.plist;
@@ -2052,7 +2060,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CodexBarWatch/CodexBarWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexBarWatch/Info.plist;
@@ -2079,7 +2087,7 @@
 				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -2107,7 +2115,7 @@
 				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -2136,7 +2144,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = CodexBarWatchWidget/CodexBarWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexBarWatchWidget/Info.plist;
@@ -2167,7 +2175,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = CodexBarWatchWidget/CodexBarWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexBarWatchWidget/Info.plist;
@@ -2194,7 +2202,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -2216,7 +2224,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

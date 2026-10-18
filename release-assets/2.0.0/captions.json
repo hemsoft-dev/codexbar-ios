@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "release": "2.0.0",
+  "assets": [
+    {
+      "id": "iphone_01_free-overview_light",
+      "device": "iphone",
+      "width": 1320,
+      "height": 2868,
+      "scene": "free-overview",
+      "appearance": "light",
+      "entitlement_fixture": "synthetic-free",
+      "caption": "Free plan",
+      "subtitle": "One account. 7-day history.",
+      "raw_path": "release-assets/2.0.0/raw/iphone_01_free-overview_light.png",
+      "output_path": "release-assets/2.0.0/screenshots/iphone_01_free-overview_light.png"
+    },
+    {
+      "id": "iphone_02_dashboard-overview_light",
+      "device": "iphone",
+      "width": 1320,
+      "height": 2868,
+      "scene": "dashboard-overview",
+      "appearance": "light",
+      "entitlement_fixture": "synthetic-pro",
+      "caption": "CodexBar Pro",
+      "subtitle": "All your accounts, together.",
+      "raw_path": "release-assets/2.0.0/raw/iphone_02_dashboard-overview_light.png",
+      "output_path": "release-assets/2.0.0/screenshots/iphone_02_dashboard-overview_light.png"
+    },
+    {
+      "id": "iphone_03_widget-builder_light",
+      "device": "iphone",
+      "width": 1320,
+      "height": 2868,
+      "scene": "widget-builder",
+      "appearance": "light",
+      "entitlement_fixture": "synthetic-pro",
+      "caption": "CodexBar Pro",
+      "subtitle": "Build your own widgets.",
+      "raw_path": "release-assets/2.0.0/raw/iphone_03_widget-builder_light.png",
+      "output_path": "release-assets/2.0.0/screenshots/iphone_03_widget-builder_light.png"
+    },
+    {
+      "id": "iphone_04_history_dark",
+      "device": "iphone",
+      "width": 1320,
+      "height": 2868,
+      "scene": "history",
+      "appearance": "dark",
+      "entitlement_fixture": "synthetic-pro",
+      "caption": "CodexBar Pro",
+      "subtitle": "See 90 days of usage.",
+      "raw_path": "release-assets/2.0.0/raw/iphone_04_history_dark.png",
+      "output_path": "release-assets/2.0.0/screenshots/iphone_04_history_dark.png"
+    },
+    {
+      "id": "ipad_01_free-overview_light",
+      "device": "ipad",
+      "width": 2064,
+      "height": 2752,
+      "scene": "free-overview",
+      "appearance": "light",
+      "entitlement_fixture": "synthetic-free",
+      "caption": "Free plan",
+      "subtitle": "One account. 7-day history.",
+      "raw_path": "release-assets/2.0.0/raw/ipad_01_free-overview_light.png",
+      "output_path": "release-assets/2.0.0/screenshots/ipad_01_free-overview_light.png"
+    },
+    {
+      "id": "ipad_02_dashboard-overview_light",
+      "device": "ipad",
+      "width": 2064,
+      "height": 2752,
+      "scene": "dashboard-overview",
+      "appearance": "light",
+      "entitlement_fixture": "synthetic-pro",
+      "caption": "CodexBar Pro",
+      "subtitle": "All your accounts, together.",
+      "raw_path": "release-assets/2.0.0/raw/ipad_02_dashboard-overview_light.png",
+      "output_path": "release-assets/2.0.0/screenshots/ipad_02_dashboard-overview_light.png"
+    },
+    {
+      "id": "ipad_03_widget-builder_light",
+      "device": "ipad",
+      "width": 2064,
+      "height": 2752,
+      "scene": "widget-builder",
+      "appearance": "light",
+      "entitlement_fixture": "synthetic-pro",
+      "caption": "CodexBar Pro",
+      "subtitle": "Build your own widgets.",
+      "raw_path": "release-assets/2.0.0/raw/ipad_03_widget-builder_light.png",
+      "output_path": "release-assets/2.0.0/screenshots/ipad_03_widget-builder_light.png"
+    },
+    {
+      "id": "ipad_04_history_dark",
+      "device": "ipad",
+      "width": 2064,
+      "height": 2752,
+      "scene": "history",
+      "appearance": "dark",
+      "entitlement_fixture": "synthetic-pro",
+      "caption": "CodexBar Pro",
+      "subtitle": "See 90 days of usage.",
+      "raw_path": "release-assets/2.0.0/raw/ipad_04_history_dark.png",
+      "output_path": "release-assets/2.0.0/screenshots/ipad_04_history_dark.png"
+    },
+    {
+      "id": "watch_01_overview",
+      "device": "watch",
+      "width": 422,
+      "height": 514,
+      "scene": "overview",
+      "appearance": "dark",
+      "entitlement_fixture": "synthetic-pro-watch-layout",
+      "caption": "CodexBar Pro",
+      "subtitle": "On your wrist.",
+      "raw_path": "release-assets/2.0.0/raw/watch_01_overview.png",
+      "output_path": "release-assets/2.0.0/screenshots/watch_01_overview.png"
+    }
+  ]
+}

@@ -2,9 +2,214 @@
 
 This document tracks the work required to ship CodexBar for iOS and iPadOS through TestFlight and App Store review.
 
-Status last reviewed: 2026-10-16
+Status last reviewed: October 18, 2026
 
-## Current Status
+## CodexBar 2.0 policy and preparation
+
+The [approved Pro plan](docs/2026-10-16-codexbar-pro-plan.md) introduces a free
+plan with one active account from any supported provider, the customizable
+dashboard and seven days of history. CodexBar Pro adds all saved accounts,
+Home Screen and Lock Screen widgets, Apple Watch and complications, up to
+90 days of daily history, and usage alerts. GitHub service-status notices stay
+free.
+
+US base prices are $1.99 monthly, $14.99 yearly with a seven-day introductory
+free trial for eligible customers, and $29.99 for a lifetime purchase. The app
+shows Apple's localized prices and billing periods before purchase. Family
+Sharing is off for all three new products. Eligible original purchasers keep
+lifetime Pro after Apple verifies their purchase.
+
+The app download moves to Free through the launch sequence below. Its existing
+US$3.99 base price remains in place through the initial 2.0 rollout. A free plan
+inside the app does not mean the download is already free. This repository
+preparation does not upload a build, submit App Review, or change download
+pricing. [Issue #469](https://github.com/hemsoft-dev/codexbar-ios/issues/469)
+owns the disclosures and draft products;
+[issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) owns final
+qualification, submission, release and the timed price change.
+
+### Product configuration and review handoff
+
+These are the required settings, not a claim of live App Store configuration.
+Record actual App Store Connect readbacks before marking them complete.
+
+| Product | Identifier | Required configuration | Live readback |
+| --- | --- | --- | --- |
+| CodexBar Pro Yearly | `com.hemsoft.CodexBarIOS.pro.yearly` | CodexBar Pro group, level 1, one year, USA $14.99, seven-day eligible free trial | Pending release-owner record |
+| CodexBar Pro Monthly | `com.hemsoft.CodexBarIOS.pro.monthly` | Same group and level, one month, USA $1.99, no trial | Pending release-owner record |
+| CodexBar Pro Lifetime | `com.hemsoft.CodexBarIOS.pro.lifetime` | Non-consumable, USA $29.99, no trial | Pending release-owner record |
+
+Keep Family Sharing off and multiseat at Apple's default. Enable 16-day billing
+grace for all renewals in production and sandbox, recording that app-level
+setting separately from unsubmitted product drafts. Both subscriptions use
+ordinary full-period payment, `UPFRONT`, rather than an installment commitment.
+Verify every intended territory, localized description, processed product
+review screenshot and actual product state.
+
+The first Pro products must accompany app version 2.0 in one review submission.
+Record the app version, group and product-version links and whether each item
+is attached. Selecting the uploaded release candidate may still be pending;
+an unsubmitted record is not App Review approval. The three local StoreKit
+review screenshots demonstrate app UI and test-configuration prices. They do
+not establish live App Store prices or production original-purchaser access.
+
+The [description](fastlane/metadata/en-US/description.txt),
+[promotional text](fastlane/metadata/en-US/promotional_text.txt),
+[release notes](fastlane/metadata/en-US/release_notes.txt) and
+[review notes](fastlane/metadata/review_information/notes.txt) are 2.0 drafts.
+Do not copy them onto the live 1.4.0 listing. The description includes Apple's
+[standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/)
+and the public [privacy policy](https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md).
+The existing GitHub privacy and support URLs remain the release destinations.
+
+### Cutover and original-purchaser rules
+
+The compiled cutoff `T` is **PROVISIONAL: October 31, 2026 at 8:00 PM EDT**,
+which is `2026-11-01T00:00:00Z`. It corresponds to the planned October 18
+submission, not a completed submission. The value in
+[ProOriginalPurchaserPolicy](CodexBarIOS/Services/ProOriginalPurchaserPolicy.swift)
+is unchanged by this preparation. Before submission,
+[issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) must
+recompute and finalize `T` from the actual planned submission date, then verify
+that the compiled value, original-purchaser notice, support page, promotional
+text, release notes and review notes name the same instant. A later deadline
+requires updated copy and a newly qualified candidate.
+
+Original-purchaser access requires verified, non-revoked production
+`AppTransaction` evidence. The evaluator accepts a finite original purchase
+date strictly before `T`, or a recognized paid version. For the version rule,
+a plain ASCII integer is a build number and qualifies at 4 or below. It is
+never retried as a marketing version, including on integer overflow. Otherwise,
+only a dotted numeric marketing version below 2.0 qualifies. Malformed versions
+fail the version rule but do not invalidate an independently qualifying date.
+Sandbox, TestFlight and Xcode AppTransactions never qualify as original
+purchases. Fresh verified evidence must also pass the resolver's saved
+revocation ordering; stale evidence cannot undo a recorded revocation.
+
+Family members of original purchasers must install before October 31, 2026 at
+8:00 PM EDT, `2026-11-01T00:00:00Z`, under the current provisional candidate.
+The [support page](SUPPORT.md#codexbar-pro-and-restoring-purchases) explains the
+one-time free lifetime offer-code route for missed cases. No codes are created
+or distributed by this disclosure work. Franz's original-purchase and family
+device checks remain pending; local StoreKit tests do not prove either result.
+
+### Approved launch sequence
+
+1. Before submission, set `T` to 00:00 UTC fourteen calendar days after the
+   planned submission date. Confirm that the 1.4.0 review is finished. Require
+   version 2.0.0 and build 5 or higher across the app and embedded products,
+   then verify the built archive rather than relying only on project text.
+   Finalize the cutoff disclosures, the privacy policy's effective date and
+   the [2.0 changelog](CHANGELOG.md#200---unreleased) for the shipped behavior.
+2. Submit 2.0 and all Pro products together. Use manual release with phased
+   release off. Keep the existing US$3.99 app price and sale territories.
+   Require the exact candidate's five quality jobs and complete iPhone/iPad
+   release UI gate before upload or release.
+3. Release manually only while at least six full days remain before `T`.
+   Wait 48 hours after release and verify that several storefronts serve 2.0.
+   Do not make the download free while a storefront still serves 1.4.0.
+4. Schedule Free about 72 hours before `T`, accounting for the latest
+   storefront start time. Verify Free in every storefront before `T`.
+   Paid and free downloads before `T` deliberately receive lifetime Pro through
+   the date rule. Record requested and actual effective times separately.
+5. After `T`, new free downloads use the free plan. Verify the production free
+   download, Pro screen, eligible trial and Restore. Franz verifies original
+   1.x lifetime access and family-device behavior. Never raise the app price
+   again after `T`.
+
+If approval leaves fewer than six days before `T`, do not release. Reject the
+approved build while it is Pending Developer Release and submit a replacement
+2.0 build with a later `T` and fresh qualification. Do not attempt to create
+2.0.1 before 2.0 has been distributed.
+
+If 2.0 is already distributed and paid distribution cannot end safely before
+`T`, remove it from sale at least 48 hours before `T`. Verify removal in several
+storefronts and keep it off sale until a 2.0.1 with a later cutoff is live.
+After the Free transition, existing grants stay granted. Do not raise the
+price or extend `T` to restore paid sales; that would also grant lifetime Pro
+to intervening free downloads. If acquisition must stop, remove the app from
+sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.md#rollback).
+
+| Checkpoint | Requested action and time | Actual App Store Connect time | Storefront observations | Source SHA / build / T | Pending Franz checks |
+| --- | --- | --- | --- | --- | --- |
+| Final candidate and cutoff | Recompute before planned October 18 submission | Not submitted by this preparation | Not applicable | Candidate SHA pending; 2.0.0 build ≥5; provisional T above | None for repository preparation |
+| Exact-candidate qualification | Before upload/release | Pending #470 | Not applicable | Record qualified SHA and built versions | Live provider comparisons remain separate |
+| Manual submission | App 2.0 plus all products; paid price; no phased release | Pending #470 | Existing price retained until launch sequence | Record selected build and finalized T | Small Business enrollment before shipping |
+| Manual release | At least six days before T | Pending approval and #470 | Record release visibility | Same qualified candidate | None for draft setup |
+| Propagation | Wait full 48 hours after release | Pending release | Record checked storefronts and observed 2.0 versions | Record source/build/T | None |
+| Free schedule | About 72 hours before T; include latest region start | Pending #470 | Verify every storefront Free before T | Record source/build/T and schedule | None |
+| Post-cutoff | After T | Pending launch | Production download, Pro, trial and Restore | Record source/build/T | Original 1.x purchase and family device |
+
+The four known monthly transaction-finish failures from
+[issue #468](https://github.com/hemsoft-dev/codexbar-ios/issues/468) remain
+unresolved release-qualification work in
+[issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
+The [commerce validation record](docs/2026-10-18-pro-commerce-validation.md)
+preserves them. Marketing captures and passing lifetime tests do not waive
+these failures or the pinned-toolchain release gate.
+
+### Native marketing and review assets
+
+The [2.0 asset runbook](release-assets/2.0.0/README.md) describes the current
+capture procedure. The checked-in sources are the
+[caption manifest](release-assets/2.0.0/captions.json),
+[capture command](scripts/capture-storefront-assets.py) and
+[native Swift/AppKit compositor](scripts/storefront-assets/compose.swift).
+The public set contains four iPhone scenes, four iPad scenes and one native
+Watch overview. A separate `CodexBarStorefrontAssets` scheme selects only
+`StorefrontReviewCaptureTests/testCaptureThreeLocalStoreKitProducts` for the
+three product-review captures.
+
+Capture only after the source commit is final. Generated assets and provenance
+are kept outside the checkout under
+`/tmp/codexbar-469-validation/artifacts/release-assets/2.0.0`, with separate raw,
+public and review images. This avoids an asset-only commit changing the source
+identity. The parent release owner inspects and uploads those exact files.
+Record the artifact index and hashes before any upload; no asset upload or
+processed App Store state is asserted here.
+
+Pro scenes must enable Pro with synthetic provider data. The Free scene must
+use one active account and seven-day history. Every public image showing
+multiple active accounts, widgets, longer history or Watch contains a visible
+CodexBar Pro label in the image, outside the app controls. Fit the complete
+native viewport proportionally without cropping. Public iPhone images are
+1320×2868 and iPad images are 2064×2752, opaque RGB; Watch stays at its accepted
+native size. The three uncomposed review screenshots show the respective
+monthly, yearly and lifetime product with actual localized values from the
+local StoreKit test configuration. Preserve source/app hashes, signing and
+fixture-isolation evidence separately from live App Store configuration.
+
+### Copy and privacy release checks
+
+Use the family-deadline promotional text before `T`. After `T`, and only after
+worldwide Free is verified, replace it with this evergreen text:
+
+```text
+Start free with one AI account and 7-day history. CodexBar Pro adds all accounts, widgets, Watch, alerts and 90-day history. Original purchasers keep lifetime Pro.
+```
+
+Remove the expired family-install request from What's New at the same
+transition. Keep the historical deadline and offer-code help in support copy.
+Revalidate Apple's metadata limits after every timestamp change.
+
+Privacy remains **Data Not Collected** for this local-only implementation.
+The app-owned purchase cache contains access, verification and timing state,
+including unresolved verification and denials; it excludes Apple Account and
+transaction identifiers and payment details. Provider snapshots still contain
+local account identifiers, labels and usage. Apple's
+[privacy guidance](https://developer.apple.com/app-store/app-privacy-details/)
+distinguishes on-device processing and Apple's own collection from developer
+collection. Record the actual privacy-label readback separately; the source
+review alone is not proof of saved App Store Connect answers.
+
+Paid Apps Agreement status and Small Business Program membership remain
+unverified by this repository preparation. Franz must complete
+[Small Business Program enrollment](https://developer.apple.com/app-store/small-business-program/)
+before 2.0 ships. Do not infer enrollment or current agreement status from
+historical sales. These pending owner checks do not prevent preparation of
+repository copy, native assets or unsubmitted product drafts.
+
+## Published 1.x history and earlier preparation
 
 - Version `1.3 (3)` was the distributed release at the final submission check.
 - Version `1.4.0 (4)` was submitted for App Review on October 7, 2026 at 4:56 PM EDT under
@@ -40,9 +245,10 @@ Status last reviewed: 2026-10-16
   previews contain nine iPhone, nine iPad and two Apple Watch screenshots. Privacy
   remains Data Not Collected, age 4+, and the support/privacy URLs and opaque
   1024-pixel app icon were verified. Legacy demo credentials were cleared.
-- Release policy is unchanged: US$3.99, 175 available territories, automatic release
-  after approval, immediate rollout and the existing star rating. Existing Mac,
-  Vision Pro, public distribution and education-discount settings are preserved.
+- Version 1.4.0 shipped at US$3.99 in 175 available territories, with automatic
+  release after approval, immediate rollout and the existing star rating. That
+  release preserved Mac, Vision Pro, public distribution and education-discount
+  settings. This is the historical 1.4.0 policy, not the 2.0 launch policy.
 - TestFlight and a fresh final-candidate Release install/launch on the physical
   iPhone were skipped. The earlier development launch passed. The shipping source
   differs from that device-tested candidate only in documentation; production and
@@ -111,10 +317,9 @@ Reference links:
 - [App Review preparation](https://developer.apple.com/distribute/app-review/)
 - [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
 
-## Release Work
+## Earlier release work and recurring checks
 
-Version 1.3 is already public. Checked items below record completed release
-history; unchecked items remain manual or App Store Connect work for a future
+Checked items below record the named 1.x release history; unchecked items remain manual or App Store Connect work for a future
 submission unless a version-specific note says otherwise.
 
 ### 1. App Store Connect Setup
@@ -123,9 +328,9 @@ submission unless a version-specific note says otherwise.
 - [x] Create the App Store Connect app record. Created as `CodexBar Usage Monitor`, app ID `6787769891`, on 2026-07-05.
 - [x] Confirm bundle ID, SKU, primary language, category, and age rating. App Store Connect uses bundle ID `com.hemsoft.CodexBarIOS`, SKU `codexbar-ios`, primary language `English (U.S.)`, primary category `Developer Tools`, secondary category `Utilities`, and age rating `4+`.
 - [x] Decide initial availability: iPhone and iPad.
-- [ ] Revisit pricing before a future release if a paid distribution plan is
-  introduced; version 1.1 remains available under its current storefront
-  pricing.
+- [x] Revisit the 1.x pricing policy for 2.0. The free/Pro policy and timed
+  transition are documented above; the actual price change remains pending
+  [issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
 
 ### 2. Production Signing And Upload
 
@@ -171,8 +376,9 @@ submission unless a version-specific note says otherwise.
 | --- | --- | --- |
 | Tracks ChatGPT / Codex, GitHub Copilot, GitHub Billing, Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot (Kimi), Greptile, and Google Gemini | Current provider list used by the app; metrics vary by account and service | Name exactly these providers; do not imply official affiliation or complete metric availability. |
 | Shows usage, limits, balances, reset timing, refresh state, alerts, and history | Provider data varies by API/account type | Say metrics appear where each provider makes them available. |
-| Supports multiple accounts and provider groups | Current app configuration model | Say multiple accounts/groups, not team management or shared org administration. |
-| Offers Home Screen and Lock Screen widgets | Widget extension and configurable widget surfaces | Say configurable widgets; do not promise real-time refresh because iOS controls widget timing. |
+| Supports multiple accounts and provider groups with CodexBar Pro | Free refreshes one active account; Pro refreshes all saved accounts | Label multiple active accounts as CodexBar Pro; do not imply team administration. |
+| Offers Home Screen and Lock Screen widgets with CodexBar Pro | Widget extension and entitlement checks | Label widgets as CodexBar Pro; iOS controls refresh timing. |
+| Offers Apple Watch, complications and up to 90-day history with CodexBar Pro | Shared access checks; free history is limited to seven days | Put a visible CodexBar Pro label inside every public image showing these benefits. |
 | Stores credentials locally and uses Keychain where appropriate | Privacy policy and app behavior | Say credentials stay on device and are stored in Keychain where appropriate. |
 | Makes provider requests directly from the device | Current network architecture | Say no CodexBar account and no HemSoft backend for provider credentials or usage data. |
 | Independent provider dashboard | Legal/brand constraint | Include a clear non-affiliation disclaimer wherever provider names are used prominently. |
@@ -187,10 +393,20 @@ visible. Keep the tone practical and privacy-forward. Avoid claims about
 provider completeness, guaranteed metric availability, automatic background
 accuracy, official partnerships, or server-side syncing.
 
-### Screenshot Regeneration Workflow
+### Historical 1.4.0 screenshot workflow
 
-Use the deterministic simulator capture script whenever the App Store
-screenshots need to be refreshed:
+The commands and nine-scene order below document the 1.4.0 captures. For 2.0,
+use the [2.0 runbook](release-assets/2.0.0/README.md) and the external artifact
+path recorded above, with separate build output outside the repository.
+Every public image implying several active accounts, widgets, long history or
+Watch must contain a visible CodexBar Pro label outside the app controls. The
+Free scene must actually use one active account and seven-day history. Fit the
+entire native app viewport proportionally, with no crop or stretch, into an
+opaque RGB PNG at the exact sizes below. Capture from the final committed
+source; preserve hashes, fixture state, source/build and native provenance.
+Do not overwrite published 1.x assets.
+
+Historical capture command:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/capture-app-store-screenshots.sh

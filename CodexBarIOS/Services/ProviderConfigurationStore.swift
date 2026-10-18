@@ -2511,7 +2511,7 @@ public final class ProviderConfigurationStore: ObservableObject {
 
 #if DEBUG
 public extension ProviderConfigurationStore {
-    static func appStoreScreenshotDemo() -> ProviderConfigurationStore {
+    static func appStoreScreenshotDemo(singleAccount: Bool = false) -> ProviderConfigurationStore {
         let suiteName = "com.hemsoft.CodexBarIOS.appStoreScreenshots.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             preconditionFailure("Could not create isolated screenshot account storage.")
@@ -2521,7 +2521,7 @@ public extension ProviderConfigurationStore {
 
         let usageGroup = ProviderAccountGroup(id: AppStoreScreenshotFixtureID.usageGroup, name: "Usage Limits")
         let balanceGroup = ProviderAccountGroup(id: AppStoreScreenshotFixtureID.balanceGroup, name: "API Balances")
-        let configurations = [
+        let sampleConfigurations = [
             ProviderAccountConfiguration(
                 id: AppStoreScreenshotFixtureID.codexAccount,
                 providerID: .codex,
@@ -2612,6 +2612,7 @@ public extension ProviderConfigurationStore {
             ),
         ]
 
+        let configurations = singleAccount ? Array(sampleConfigurations.prefix(1)) : sampleConfigurations
         let encoder = JSONEncoder()
         defaults.set(try? encoder.encode([usageGroup, balanceGroup]), forKey: DefaultsKey.groups)
         defaults.set(try? encoder.encode(configurations), forKey: DefaultsKey.configurations)

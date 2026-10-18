@@ -507,6 +507,7 @@ struct LiveProviderUsageHistoryDetailView: View {
     let result: ProviderUsageResult
     @ObservedObject var historyStore: UsageHistoryStore
     @ObservedObject var configurationStore: ProviderConfigurationStore
+    var initialRange: UsageHistoryRange = .sevenDays
 
     var body: some View {
         ProviderUsageHistoryDetailView(
@@ -516,6 +517,7 @@ struct LiveProviderUsageHistoryDetailView: View {
                 severityThresholds: configurationStore.usageAlertSettings.severityThresholds
             ),
             accessPolicy: historyStore.accessPolicy,
+            initialRange: initialRange,
             onRequestPro: configurationStore.requestProPresentation
         )
         .accountPlanPresentation(configurationStore: configurationStore)

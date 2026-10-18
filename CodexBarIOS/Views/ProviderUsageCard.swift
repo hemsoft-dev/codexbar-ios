@@ -2156,12 +2156,14 @@ struct ProviderUsageHistoryDetailView: View {
         result: ProviderUsageResult,
         seriesOptions: [UsageHistorySeriesOption],
         accessPolicy: HistoryAccessPolicy = HistoryAccessPolicy(hasProAccess: true),
+        initialRange: UsageHistoryRange = .sevenDays,
         onRequestPro: @escaping () -> Void = {}
     ) {
         self.result = result
         self.seriesOptions = seriesOptions
         self.accessPolicy = accessPolicy
         self.onRequestPro = onRequestPro
+        _selectedRange = State(initialValue: accessPolicy.allows(range: initialRange) ? initialRange : .sevenDays)
         _selectedSeriesID = State(initialValue: seriesOptions.first?.id ?? "primary")
     }
 

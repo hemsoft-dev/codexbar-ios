@@ -1,6 +1,12 @@
-CodexBar Usage Monitor keeps your AI usage, limits, balances, and refresh status in one iPhone and iPad dashboard.
+CodexBar Usage Monitor keeps your AI usage, limits, balances and refresh status in one iPhone and iPad dashboard.
 
-Check what is available before starting work, whether you use one provider or several.
+The free plan includes one active account from any supported provider, a customizable dashboard and seven days of history.
+
+CodexBar Pro
+
+Use all your saved accounts, configure Home Screen and Lock Screen widgets, and check usage on Apple Watch and its complications. Pro also includes usage alerts and up to 90 days of daily history. Choose a monthly subscription, a yearly subscription or a one-time lifetime purchase. The yearly subscription offers seven days free to eligible customers. The app shows the price and billing period for your App Store region before purchase.
+
+Subscriptions renew automatically unless canceled in your Apple Account subscription settings. You can manage your subscription or restore purchases from Settings > CodexBar Pro. Lifetime Pro does not renew. Eligible purchasers of the original paid app keep lifetime Pro after Apple verifies their purchase.
 
 Supported providers:
 
@@ -19,30 +25,27 @@ Supported providers:
 
 What you can track:
 
-- Usage limits, balances, reset times, refresh status, and alerts where each provider makes those metrics available
-- GitHub personal and organization billing, included allowances, budgets, and spending projections where supported
+- Usage limits, balances, reset times and refresh status where each provider makes those metrics available
+- GitHub personal and organization billing, included allowances, budgets and spending projections where supported
 - Gemini Apps and coding limits in one account, with separate five-hour and weekly metrics
 - Grok paid weekly usage and Extra Usage Credits where available, separately from Cursor's Grok Bot allowance
-- X Subscription shared weekly pool, its reset, per-product detail and Extra Usage Credits where available, with one xAI sign-in
+- X Subscription's shared weekly pool, its reset, per-product details and Extra Usage Credits where available, with one xAI sign-in
 - Greptile completed-review activity and provider-returned free-allowance renewal dates, kept distinct from pull requests and billing credit balances
-- Multiple accounts and provider groups, so work and personal configurations stay organized
-- Up to 90 days of daily usage history alongside recent detailed samples
 
-Make the dashboard yours:
-
-- Show, hide, reorder, resize, and restyle individual metrics
-- Set usage alerts for the metrics that matter to you
-- Configure Home Screen and Lock Screen widgets with saved usage snapshots
-- Check the paired Apple Watch dashboard and configurable complications. Setup stays on the iPhone; widgets and Watch show saved snapshots, and system scheduling controls background refresh.
+Make the dashboard yours by showing, hiding, reordering, resizing and restyling individual metrics. Pro keeps work and personal accounts organized in provider groups. Widgets and Watch show saved snapshots; iOS and watchOS control background refresh timing. Setup stays on the iPhone.
 
 Privacy and account model:
 
 - No CodexBar account is required
 - Provider credentials stay on your device and are stored in Keychain where appropriate
 - Provider requests go directly from your device to the services you configure, not through a HemSoft backend
-- Widgets and Apple Watch receive presentation snapshots, never provider credentials
-- Feedback is optional. You preview and choose whether to open a private email draft or a public GitHub report.
+- Widgets and Apple Watch receive presentation and access-validity snapshots, never provider credentials
+- Apple processes Pro purchases; CodexBar checks access on your device with StoreKit
+- Feedback is optional. You preview and choose whether to open a private email draft or a public GitHub report
 
-Provider metrics and authorization depend on the service, account, subscription, and available permissions. Unavailable data stays unavailable rather than becoming guessed usage. Greptile renewal dates require a verified dashboard session; fresh Google-backed billing sign-in or reconnection may be unavailable in this version.
+Provider metrics and authorization depend on the service, account, subscription and available permissions. Unavailable data stays unavailable. Greptile renewal dates require a verified dashboard session; fresh Google-backed billing sign-in or reconnection may be unavailable in this version.
 
-CodexBar is an independent tool and is not affiliated with, endorsed by, or sponsored by the providers it displays. Provider names identify only the services you choose to connect.
+CodexBar is an independent tool and is not affiliated with, endorsed by or sponsored by the providers it displays. Provider names identify only the services you choose to connect.
+
+Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Privacy Policy: https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md

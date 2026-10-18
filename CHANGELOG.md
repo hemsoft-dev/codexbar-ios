@@ -69,6 +69,12 @@ building, testing, or releasing the app.
 
 ### Changed
 
+- Clarify which features come with the free plan and CodexBar Pro, how to
+  restore purchases, and how original purchasers and their family members keep
+  lifetime access. Explain Apple's purchase processing and the access records
+  CodexBar keeps on your device.
+  ([#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469))
+
 - Widgets, the Apple Watch app, and complications require CodexBar Pro. They
   show an unlock message when access ends, including while the iPhone is
   offline. Upgrading restores them with your saved selections intact.

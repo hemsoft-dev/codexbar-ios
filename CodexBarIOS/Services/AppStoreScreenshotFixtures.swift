@@ -2,6 +2,7 @@
 import Foundation
 
 enum AppStoreScreenshotScene: String {
+    case freeOverview = "free-overview"
     case dashboardOverview = "dashboard-overview"
     case dashboardDark = "dashboard-dark"
     case gemini
@@ -11,6 +12,8 @@ enum AppStoreScreenshotScene: String {
     case accounts
     case providerCopilot = "provider-copilot"
     case history
+
+    var hasProAccess: Bool { self != .freeOverview }
 }
 
 enum AppStoreScreenshotFixtureID {
@@ -88,6 +91,7 @@ struct AppStoreScreenshotConfiguration {
 @MainActor
 enum AppStoreScreenshotFixtures {
     private static let captureDate = Date()
+    static let applicationDefaults = isolatedDefaults()
     static let widgetDefaults = isolatedDefaults()
     private static let widgetAccessGuard: WidgetAccessGuard = {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("screenshot-widget-access-\(UUID().uuidString)")
@@ -235,7 +239,15 @@ enum AppStoreScreenshotFixtures {
         )
     }
 
-    static func markReady(scene: AppStoreScreenshotScene) {
+    static func markReady(
+        scene: AppStoreScreenshotScene,
+        entitlement: ProEntitlement,
+        configurationStore: ProviderConfigurationStore,
+        historyStore: UsageHistoryStore
+    ) {
+        precondition(entitlement.isResolved && entitlement.hasAccess == scene.hasProAccess)
+        precondition(configurationStore.accountAccess.isResolved)
+        precondition(historyStore.accessPolicy.hasProAccess == scene.hasProAccess)
         guard let cachesDirectory = FileManager.default.urls(
             for: .cachesDirectory,
             in: .userDomainMask
@@ -246,7 +258,23 @@ enum AppStoreScreenshotFixtures {
         let readyFile = cachesDirectory.appendingPathComponent(
             AppStoreScreenshotConfiguration.readyFileName
         )
-        try? Data(scene.rawValue.utf8).write(to: readyFile, options: .atomic)
+        let receipt: [String: Any] = [
+            "scene": scene.rawValue,
+            "hasProAccess": entitlement.hasAccess,
+            "isResolved": entitlement.isResolved,
+            "visibleAccountCount": configurationStore.visibleConfigurations.count,
+            "historyDayLimit": historyStore.accessPolicy.hasProAccess ? 90 : 7,
+            "providerData": "synthetic",
+            "purchaseEvidence": "in-memory fixture, not StoreKit",
+            "storage": "UUID-isolated defaults and in-memory credentials",
+        ]
+        do {
+            let data = try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: readyFile.appendingPathExtension("json"), options: .atomic)
+            try Data(scene.rawValue.utf8).write(to: readyFile, options: .atomic)
+        } catch {
+            assertionFailure("Cannot publish screenshot readiness: \(error)")
+        }
     }
 }
 #endif

@@ -2,6 +2,9 @@
 
 Effective date: October 6, 2026
 
+The purchase disclosures below are prepared for CodexBar 2.0. The effective
+date will be updated when that release ships.
+
 CodexBar Usage Monitor is a local dashboard for monitoring AI provider usage, limits, and API balances. It does not require a CodexBar account and does not send your provider credentials or usage data to HemSoft servers.
 
 ## Data CodexBar Stores On Your Device
@@ -18,16 +21,23 @@ paired Apple Watch:
   identity, consecutive-failure retry state, and the pending local-notification
   queue used to avoid duplicates.
 - Widget configuration, including which tiles you choose to show.
-- A presentation-only Apple Watch snapshot containing account labels, metric
-  names and values, visualization choices, reset context, status, and freshness.
+- Purchase access and timing records, including the applicable Pro plan,
+  purchase and verification dates, access deadlines, local clock information,
+  and records of expiration, revocation or unresolved purchase verification.
+- Widget and Apple Watch access-validity and update-ordering state.
+- An Apple Watch snapshot containing local account and metric identifiers,
+  account labels, metric names and values, visualization choices, reset context,
+  status and freshness, alongside its access-validity state.
 
 Provider credentials are stored using the iOS Keychain where appropriate. Widget snapshots and app settings are stored locally in the app container or app group container so the app and widgets can display your configured tiles.
 
-The iPhone app sends only the latest presentation-ready dashboard snapshot to
-the paired Apple Watch through Apple's Watch Connectivity framework. Provider
-credentials, credential identifiers, cookies, raw provider responses, and
-provider networking never move to the watch. The watch stores its last valid
-snapshot locally so it can remain useful during a temporary disconnection.
+The iPhone app sends the latest dashboard presentation, access-validity and
+update-ordering snapshot to the paired Apple Watch through Apple's Watch
+Connectivity framework. Provider credentials, credential identifiers, cookies,
+raw provider responses, and provider networking never move to the watch. The watch stores its last valid
+snapshot locally so it can remain useful during a temporary disconnection
+while Pro access is valid. A Pro lock hides usage; it does not delete the saved
+provider snapshot.
 
 ## Third-Party Provider Requests
 
@@ -119,9 +129,32 @@ repositories, organizations, or teams. Its data requests are read-only.
 CodexBar sends the token only to GitHub's API and OAuth token endpoints. Billing
 amounts, repository names returned with usage, organization names, and derived
 allowance or budget readings may be stored locally in dashboard history,
-widgets, and presentation-only Watch snapshots. Each GitHub Billing account's
+widgets, and Watch presentation snapshots. Each GitHub Billing account's
 access and optional refresh tokens remain in that account's own iOS Keychain
 entry and are removed when that account is disconnected.
+
+## Purchases
+
+Apple processes CodexBar Pro purchases and payments. CodexBar uses StoreKit on
+your device to check purchase status, renewals, expiration, refunds and access
+for people who bought the original paid app. It does not send purchase
+information to a HemSoft server or require a CodexBar account.
+
+CodexBar keeps purchase access and timing records locally, including the
+applicable Pro plan, purchase and verification dates, access deadlines, local
+clock information, and records needed to preserve expiration, revocation or
+unresolved verification decisions. Its local purchase cache does not contain
+Apple Account identifiers, transaction identifiers or payment details. Widgets and the paired Apple Watch receive
+access-validity information and provider presentation data, including account
+labels, local account and metric identifiers, and usage values. Provider
+credentials remain separate from purchase checks and are not included in those
+snapshots.
+
+CodexBar has no billing backend, advertising or third-party analytics SDK.
+Apple processes purchases under its own
+[privacy policy](https://www.apple.com/legal/privacy/). When you choose Restore
+Purchases, CodexBar asks Apple to synchronize purchases available to your
+current App Store account.
 
 ## Data HemSoft Collects
 
@@ -180,8 +213,12 @@ HemSoft does not sell your data and does not share your CodexBar data with adver
 
 ## Data Retention And Deletion
 
-CodexBar keeps local settings, credentials, and snapshots until you remove a
-provider, use an available in-app removal or reset control, or delete the app.
+CodexBar keeps local provider settings, credentials, and snapshots until you
+remove a provider, use an available in-app removal or reset control, or delete
+the app. Purchase and access records are separate from provider accounts.
+Removing a provider or losing Pro does not clear those purchase records or
+cancel an Apple subscription. The app updates local purchase records as Apple
+provides new evidence; it has no separate purchase-history erase control.
 Deleting the app removes app data stored in the app container. Some Keychain
 items may remain according to iOS Keychain behavior; you can remove saved
 provider credentials from CodexBar settings before deleting the app.
