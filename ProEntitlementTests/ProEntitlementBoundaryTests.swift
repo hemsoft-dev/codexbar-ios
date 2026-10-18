@@ -10,9 +10,9 @@ final class ProEntitlementBoundaryTests: XCTestCase {
         let expiry = Date().addingTimeInterval(0.15)
         try cache.save(ProEntitlementValue(
             reason: .monthly, expiresAt: expiry, proAccessEndsAt: expiry.addingTimeInterval(259_200),
-            verifiedAt: expiry.addingTimeInterval(-3_600)
+            verifiedAt: expiry.addingTimeInterval(-3_600), clockAnchor: testProAnchor(expiry.addingTimeInterval(-3_600))
         ))
-        let service = ProEntitlement(source: source, cache: cache)
+        let service = ProEntitlement(source: source, cache: cache, clock: testProClock)
         await service.start()
         let rechecked = expectation(description: "StoreKit rechecked at signed expiry")
         source.beforeSnapshot = { rechecked.fulfill() }
@@ -26,7 +26,7 @@ final class ProEntitlementBoundaryTests: XCTestCase {
         let instant = Date(timeIntervalSince1970: 1_800_000_000)
         let source = TestProSource()
         let cache = TestProCache()
-        let service = ProEntitlement(source: source, cache: cache, now: { instant })
+        let service = ProEntitlement(source: source, cache: cache, now: { instant }, clock: testProClock)
         let yearly = ProPurchaseEvidence(
             product: .yearly, transactionID: 1, purchasedAt: instant, signedAt: instant,
             expiresAt: instant.addingTimeInterval(3_600)

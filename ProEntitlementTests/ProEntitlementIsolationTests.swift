@@ -80,9 +80,10 @@ final class ProEntitlementIsolationTests: XCTestCase {
         let boundary = Date().addingTimeInterval(0.2)
         try cache.save(ProEntitlementValue(
             reason: .monthly, expiresAt: boundary.addingTimeInterval(-ProEntitlementValue.offlineAllowance),
-            proAccessEndsAt: boundary, verifiedAt: boundary.addingTimeInterval(-300_000)
+            proAccessEndsAt: boundary, verifiedAt: boundary.addingTimeInterval(-300_000),
+            clockAnchor: testProAnchor(boundary.addingTimeInterval(-300_000))
         ))
-        let service = ProEntitlement(source: source, cache: cache)
+        let service = ProEntitlement(source: source, cache: cache, clock: testProClock)
         XCTAssertTrue(service.hasAccess)
         let snapshotStarted = expectation(description: "Initial StoreKit snapshot suspended")
         let expired = expectation(description: "Published expiration without waiting for StoreKit")
@@ -234,7 +235,7 @@ final class ProEntitlementIsolationTests: XCTestCase {
             source.next = ProStoreSnapshot(appPurchase: appPurchase(.production))
             let service = ProEntitlement(
                 source: source, cache: cache, originalPolicy: ProOriginalPurchaserPolicy(qualifies: { _ in true }),
-                now: { self.instant }
+                now: { self.instant }, clock: testProClock
             )
             await service.refresh()
             XCTAssertEqual(service.value.reason, .originalPurchaser)
@@ -268,7 +269,7 @@ final class ProEntitlementIsolationTests: XCTestCase {
     }
 
     private func service(_ source: TestProSource, _ cache: TestProCache) -> ProEntitlement {
-        ProEntitlement(source: source, cache: cache, now: { self.instant })
+        ProEntitlement(source: source, cache: cache, now: { self.instant }, clock: testProClock)
     }
 
     private func appPurchase(_ environment: ProStoreEnvironment) -> ProVerification<ProAppPurchase> {

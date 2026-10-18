@@ -39,12 +39,14 @@ an app-bundle resource and is never selected by an archive.
 The service starts transaction and subscription-status listeners before its
 launch snapshot, then refreshes on foreground entry. A generation check prevents
 a suspended snapshot from overwriting a newer event. Signed transaction dates
-and identifiers order events in memory; neither is logged. Revocations can also
+order events; transaction identifiers remain in memory and neither is logged. Revocations can also
 be recovered through StoreKit's latest signed record after an app restart.
 
 The App Group cache contains the winning reason, expiry, access deadline,
-verification time, purchase date, environment and the known subscription product. It contains no transaction
-ID, Apple Account identifier, signed token or provider data. A successful atomic
+verification time, purchase date, environment and the known subscription product.
+It also stores a signed-time watermark, continuous-clock anchor and random local
+boot-continuity marker. It contains no transaction ID, Apple Account identifier,
+signed token or provider data. A successful atomic
 cache write and publication precede finishing a verified purchase or update.
 Failed writes and unverified purchases remain unfinished.
 
@@ -57,7 +59,15 @@ prevents an older refund from erasing a newer repurchase after relaunch.
 Offline subscription access ends exactly three days after the last verified
 paid or grace expiry. A cached status aging past that date does not invent a new
 verification or move the deadline. Explicit verified expiry, retry without grace
-or revocation overrides the allowance for the affected purchase. Independent
+or revocation overrides the allowance for the affected purchase. A continuous
+clock counts elapsed time through sleep. Re-reading the same signed StoreKit
+record never resets its anchor, so rolling the device clock backward cannot
+extend the deadline. App restarts and App Group readers share the same anchor.
+After a device reboot or unavailable boot-continuity evidence, subscriptions
+require newer signed StoreKit evidence before access resumes. Restore Purchases
+can explicitly refresh the app transaction; launch never prompts for it. The
+signed-time watermark survives expiration so replaying an old record cannot
+re-grant access. Independent
 permanent grants survive subscription loss. With no verified cache, startup is
 free. A timer expires access locally before waiting for StoreKit. Foreground
 refresh re-evaluates the complete decision without a relaunch.

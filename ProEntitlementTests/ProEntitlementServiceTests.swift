@@ -76,9 +76,10 @@ final class ProEntitlementServiceTests: XCTestCase {
         let boundary = Date().addingTimeInterval(0.1)
         cache.saved = ProEntitlementValue(
             reason: .monthly, expiresAt: boundary.addingTimeInterval(-259200),
-            proAccessEndsAt: boundary, verifiedAt: boundary.addingTimeInterval(-300000)
+            proAccessEndsAt: boundary, verifiedAt: boundary.addingTimeInterval(-300000),
+            clockAnchor: testProAnchor(boundary.addingTimeInterval(-300000))
         )
-        let service = ProEntitlement(source: source, cache: cache)
+        let service = ProEntitlement(source: source, cache: cache, clock: testProClock)
         XCTAssertTrue(service.hasAccess)
         let expired = expectation(description: "Published free state at the offline boundary")
         let publication = service.$value.dropFirst().filter { $0.reason == .none }.prefix(1).sink { _ in expired.fulfill() }
@@ -189,7 +190,7 @@ final class ProEntitlementServiceTests: XCTestCase {
         let source = TestProSource()
         let cache = TestProCache()
         var clock = instant
-        let service = ProEntitlement(source: source, cache: cache, now: { clock })
+        let service = ProEntitlement(source: source, cache: cache, now: { clock }, clock: testProClock)
         await service.receive(delivery())
         let verified = service.value
         clock = instant.addingTimeInterval(30)
@@ -213,7 +214,7 @@ final class ProEntitlementServiceTests: XCTestCase {
     }
 
     private func service(_ source: TestProSource, _ cache: TestProCache) -> ProEntitlement {
-        ProEntitlement(source: source, cache: cache, now: { self.instant })
+        ProEntitlement(source: source, cache: cache, now: { self.instant }, clock: testProClock)
     }
 
     private func purchase(id: UInt64 = 1, offset: TimeInterval = 0) -> ProPurchaseEvidence {

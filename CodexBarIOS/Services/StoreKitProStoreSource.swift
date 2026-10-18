@@ -96,7 +96,7 @@ final class StoreKitProStoreSource: ProStoreSource {
                     originalVersion: transaction.originalAppVersion,
                     originalPurchaseDate: transaction.originalPurchaseDate,
                     environment: environment,
-                    revoked: transaction.revocationDate != nil
+                    revoked: transaction.revocationDate != nil, signedAt: transaction.signedDate
                 ))
             case let .unverified(transaction, _):
                 snapshot.appPurchase = .unverified

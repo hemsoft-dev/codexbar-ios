@@ -33,6 +33,7 @@ let package = Package(
         ),
     ],
     targets: [
+        .target(name: "ProClockSupport", path: "ProClockSupport"),
         // StoreKit state-machine regressions run locally, never in automatic PR CI.
         .testTarget(
             name: "ProEntitlementTests",
@@ -117,6 +118,7 @@ let package = Package(
         ),
         .target(
             name: "CodexBarIOS",
+            dependencies: ["ProClockSupport"],
             path: "CodexBarIOS",
             exclude: [
                 "CodexBarIOSApp.swift",

@@ -18,7 +18,7 @@ public enum ProEntitlementReason: String, Codable, Sendable {
     }
 }
 
-/// Only this identifier-free decision crosses the App Group boundary.
+/// Only this decision and local timing evidence cross the App Group boundary.
 public struct ProEntitlementValue: Codable, Equatable, Sendable {
     public let reason: ProEntitlementReason
     public let expiresAt: Date?
@@ -27,6 +27,7 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
     public let subscriptionProduct: ProProductID?
     public let environment: ProStoreEnvironment
     public let purchasedAt: Date?
+    public let clockAnchor: ProEntitlementClockAnchor?
 
     public static let free = ProEntitlementValue(
         reason: .none, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: nil
@@ -36,7 +37,7 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
     public init(
         reason: ProEntitlementReason, expiresAt: Date?, proAccessEndsAt: Date?, verifiedAt: Date?,
         subscriptionProduct: ProProductID? = nil, environment: ProStoreEnvironment = .production,
-        purchasedAt: Date? = nil
+        purchasedAt: Date? = nil, clockAnchor: ProEntitlementClockAnchor? = nil
     ) {
         self.reason = reason
         self.expiresAt = expiresAt
@@ -45,14 +46,43 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
         self.subscriptionProduct = subscriptionProduct ?? Self.product(for: reason)
         self.environment = environment
         self.purchasedAt = purchasedAt
+        self.clockAnchor = clockAnchor
     }
 
     public func hasAccess(at date: Date) -> Bool {
-        guard reason != .none, isValidCacheValue, let verifiedAt, verifiedAt <= date else { return false }
-        return reason.isPermanent || proAccessEndsAt.map { date < $0 } == true
+        hasAccess(at: ProEntitlementSystemClock.sample(at: date))
+    }
+
+    public func hasAccess(at sample: ProEntitlementClockSample) -> Bool {
+        guard reason != .none, isValidCacheValue else { return false }
+        if reason.isPermanent { return true }
+        guard let date = clockAnchor?.effectiveDate(at: sample), let verifiedAt, verifiedAt <= date else { return false }
+        return proAccessEndsAt.map { date < $0 } == true
+    }
+
+    func withClockAnchor(_ anchor: ProEntitlementClockAnchor?) -> Self {
+        Self(
+            reason: reason, expiresAt: expiresAt, proAccessEndsAt: proAccessEndsAt, verifiedAt: verifiedAt,
+            subscriptionProduct: subscriptionProduct, environment: environment, purchasedAt: purchasedAt, clockAnchor: anchor
+        )
+    }
+
+    func withoutAccess(at sample: ProEntitlementClockSample) -> Self {
+        let anchor: ProEntitlementClockAnchor?
+        if let existing = clockAnchor, let date = existing.effectiveDate(at: sample) {
+            anchor = ProEntitlementClockAnchor(
+                anchorDate: date, continuousSeconds: sample.continuousSeconds,
+                continuityID: existing.continuityID, latestSignedAt: existing.latestSignedAt
+            )
+        } else { anchor = clockAnchor }
+        return Self(
+            reason: .none, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: verifiedAt,
+            environment: environment, clockAnchor: anchor
+        )
     }
 
     var isValidCacheValue: Bool {
+        guard clockAnchor?.isValid != false else { return false }
         if reason == .none { return expiresAt == nil && proAccessEndsAt == nil && subscriptionProduct == nil }
         guard let verifiedAt, verifiedAt.timeIntervalSince1970.isFinite else { return false }
         if reason.isPermanent { return expiresAt == nil && proAccessEndsAt == nil && subscriptionProduct == nil }

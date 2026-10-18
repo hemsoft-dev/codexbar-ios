@@ -9,7 +9,7 @@ final class ProEntitlementResolverTests: XCTestCase {
         for evidence: ProVerification<ProAppPurchase> in [.unavailable, .unverified] {
             let value = resolve(ProStoreSnapshot(appPurchase: evidence))
             XCTAssertEqual(value.reason, .none)
-            XCTAssertFalse(value.hasAccess(at: instant))
+            XCTAssertFalse(value.hasAccess(at: testProClock(instant)))
         }
     }
 
@@ -22,7 +22,7 @@ final class ProEntitlementResolverTests: XCTestCase {
             purchase.isFreeTrial = trial
             let value = resolve(ProStoreSnapshot(purchases: [purchase]))
             XCTAssertEqual(value.reason, reason)
-            XCTAssertTrue(value.hasAccess(at: instant))
+            XCTAssertTrue(value.hasAccess(at: testProClock(instant)))
             if product == .lifetime {
                 XCTAssertNil(value.proAccessEndsAt)
             } else {
@@ -39,7 +39,7 @@ final class ProEntitlementResolverTests: XCTestCase {
             )
             let snapshot = ProStoreSnapshot(appPurchase: .verified(app))
             let value = resolve(snapshot, policy: ProOriginalPurchaserPolicy(qualifies: { _ in true }))
-            XCTAssertEqual(value.hasAccess(at: instant), expected)
+            XCTAssertEqual(value.hasAccess(at: testProClock(instant)), expected)
         }
         let app = ProAppPurchase(originalVersion: "4", originalPurchaseDate: instant, environment: .production, revoked: false)
         XCTAssertEqual(resolve(ProStoreSnapshot(appPurchase: .verified(app))).reason, .none)
@@ -48,7 +48,7 @@ final class ProEntitlementResolverTests: XCTestCase {
     func testPermanentCacheSurvivesUnavailableEvidenceButNotExplicitRevocation() {
         for reason: ProEntitlementReason in [.lifetime, .originalPurchaser] {
             let cached = permanent(reason)
-            XCTAssertTrue(resolve(ProStoreSnapshot(), cached: cached).hasAccess(at: instant))
+            XCTAssertTrue(resolve(ProStoreSnapshot(), cached: cached).hasAccess(at: testProClock(instant)))
         }
         var revoked = purchase(.lifetime)
         revoked.revoked = true
@@ -62,13 +62,14 @@ final class ProEntitlementResolverTests: XCTestCase {
         let cached = resolve(ProStoreSnapshot(purchases: [purchase(.yearly)]))
         let boundary = instant.addingTimeInterval(3600 + 259200)
         let before = ProEntitlementResolver.resolve(
-            ProStoreSnapshot(), cached: cached, originalPolicy: ProOriginalPurchaserPolicy(), now: boundary.addingTimeInterval(-0.001)
+            ProStoreSnapshot(), cached: cached, originalPolicy: ProOriginalPurchaserPolicy(), now: boundary.addingTimeInterval(-0.001),
+            clock: testProClock(boundary.addingTimeInterval(-0.001))
         )
         XCTAssertEqual(before, cached)
-        XCTAssertTrue(before.hasAccess(at: boundary.addingTimeInterval(-0.001)))
-        XCTAssertFalse(before.hasAccess(at: boundary))
+        XCTAssertTrue(before.hasAccess(at: testProClock(boundary.addingTimeInterval(-0.001))))
+        XCTAssertFalse(before.hasAccess(at: testProClock(boundary)))
         let atBoundary = ProEntitlementResolver.resolve(
-            ProStoreSnapshot(), cached: cached, originalPolicy: ProOriginalPurchaserPolicy(), now: boundary
+            ProStoreSnapshot(), cached: cached, originalPolicy: ProOriginalPurchaserPolicy(), now: boundary, clock: testProClock(boundary)
         )
         XCTAssertEqual(atBoundary.reason, .none)
     }
@@ -171,7 +172,7 @@ final class ProEntitlementResolverTests: XCTestCase {
             ProEntitlementValue(reason: .lifetime, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: nil),
             ProEntitlementValue(reason: .monthly, expiresAt: instant, proAccessEndsAt: .distantFuture, verifiedAt: instant),
         ] {
-            XCTAssertFalse(value.hasAccess(at: instant))
+            XCTAssertFalse(value.hasAccess(at: testProClock(instant)))
             XCTAssertEqual(resolve(ProStoreSnapshot(), cached: value).reason, .none)
         }
     }
@@ -199,6 +200,6 @@ final class ProEntitlementResolverTests: XCTestCase {
         _ snapshot: ProStoreSnapshot, cached: ProEntitlementValue = .free,
         policy: ProOriginalPurchaserPolicy = ProOriginalPurchaserPolicy()
     ) -> ProEntitlementValue {
-        ProEntitlementResolver.resolve(snapshot, cached: cached, originalPolicy: policy, now: instant)
+        ProEntitlementResolver.resolve(snapshot, cached: cached, originalPolicy: policy, now: instant, clock: testProClock(instant))
     }
 }

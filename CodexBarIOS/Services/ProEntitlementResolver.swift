@@ -5,7 +5,37 @@ enum ProEntitlementResolver {
         _ snapshot: ProStoreSnapshot,
         cached: ProEntitlementValue,
         originalPolicy: ProOriginalPurchaserPolicy,
-        now: Date
+        now: Date,
+        clock: ProEntitlementClockSample? = nil
+    ) -> ProEntitlementValue {
+        let sample = clock ?? ProEntitlementSystemClock.sample(at: now)
+        let anchor = updatedAnchor(cached.clockAnchor, snapshot: snapshot, sample: sample)
+        let effectiveDate = anchor?.effectiveDate(at: sample)
+        let cached = cached.withClockAnchor(anchor)
+        let value = resolveAtTime(
+            snapshot, cached: cached, originalPolicy: originalPolicy, now: effectiveDate ?? now,
+            timedAccess: effectiveDate != nil, cachedAccess: cached.hasAccess(at: sample)
+        ).withClockAnchor(anchor)
+        return value.reason == .none ? value.withoutAccess(at: sample) : value
+    }
+
+    private static func updatedAnchor(
+        _ previous: ProEntitlementClockAnchor?, snapshot: ProStoreSnapshot, sample: ProEntitlementClockSample
+    ) -> ProEntitlementClockAnchor? {
+        guard let signedAt = snapshot.latestSignedAt, signedAt > (previous?.latestSignedAt ?? .distantPast),
+              let continuityID = sample.continuityID, !continuityID.isEmpty,
+              sample.continuousSeconds.isFinite, sample.continuousSeconds >= 0,
+              sample.wallDate.timeIntervalSinceReferenceDate.isFinite else { return previous }
+        let knownDate = max(previous?.anchorDate ?? .distantPast, previous?.effectiveDate(at: sample) ?? .distantPast)
+        return ProEntitlementClockAnchor(
+            anchorDate: max(sample.wallDate, max(signedAt, knownDate)),
+            continuousSeconds: sample.continuousSeconds, continuityID: continuityID, latestSignedAt: signedAt
+        )
+    }
+
+    private static func resolveAtTime(
+        _ snapshot: ProStoreSnapshot, cached: ProEntitlementValue, originalPolicy: ProOriginalPurchaserPolicy,
+        now: Date, timedAccess: Bool, cachedAccess: Bool
     ) -> ProEntitlementValue {
         if originalAccess(snapshot.appPurchase, cached: cached, policy: originalPolicy, now: now) {
             if case .unavailable = snapshot.appPurchase { return cached }
@@ -16,8 +46,8 @@ enum ProEntitlementResolver {
             let purchase = snapshot.purchases.first { $0.product == .lifetime }
             return permanent(.lifetime, now: now, purchase: purchase)
         }
-        let candidates = snapshot.purchases.compactMap { subscription($0, snapshot: snapshot, now: now) }
-        let offline = canUseOfflineSubscription(cached, snapshot: snapshot, now: now)
+        let candidates = timedAccess ? snapshot.purchases.compactMap { subscription($0, snapshot: snapshot, now: now) } : []
+        let offline = cachedAccess && canUseOfflineSubscription(cached, snapshot: snapshot, now: now)
         if let best = candidates.max(by: { ($0.expiresAt ?? .distantPast) < ($1.expiresAt ?? .distantPast) }) {
             if offline, (cached.expiresAt ?? .distantPast) > (best.expiresAt ?? .distantPast) { return cached }
             return best
@@ -84,7 +114,7 @@ enum ProEntitlementResolver {
     private static func canUseOfflineSubscription(
         _ cached: ProEntitlementValue, snapshot: ProStoreSnapshot, now: Date
     ) -> Bool {
-        guard !cached.reason.isPermanent, cached.hasAccess(at: now), let product = cached.subscriptionProduct,
+        guard !cached.reason.isPermanent, let product = cached.subscriptionProduct,
               !snapshot.unverifiedProducts.contains(product) else { return false }
         let denied = snapshot.subscriptions.contains { $0.purchase.product == product && $0.deniesAccess(at: now) }
         let revoked = snapshot.purchases.contains { $0.product == product && ($0.revoked || $0.upgraded) }

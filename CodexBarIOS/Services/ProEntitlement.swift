@@ -13,6 +13,7 @@ public final class ProEntitlement: ObservableObject {
     private let cache: any ProEntitlementCaching
     private let originalPolicy: ProOriginalPurchaserPolicy
     private let now: @MainActor () -> Date
+    private let clock: @MainActor (Date) -> ProEntitlementClockSample
     private var purchases: [ProProductID: ProPurchaseEvidence] = [:]
     private var statuses: [ProProductID: ProSubscriptionEvidence] = [:]
     private var transactionTask: Task<Void, Never>?
@@ -32,14 +33,16 @@ public final class ProEntitlement: ObservableObject {
         source: any ProStoreSource,
         cache: any ProEntitlementCaching,
         originalPolicy: ProOriginalPurchaserPolicy = ProOriginalPurchaserPolicy(),
-        now: @escaping @MainActor () -> Date = Date.init
+        now: @escaping @MainActor () -> Date = Date.init,
+        clock: @escaping @MainActor (Date) -> ProEntitlementClockSample = { ProEntitlementSystemClock.sample(at: $0) }
     ) {
         self.source = source
         self.cache = cache
         self.originalPolicy = originalPolicy
         self.now = now
-        let cached = cache.load() ?? .free
-        value = cached.hasAccess(at: now()) ? cached : .free
+        self.clock = clock
+        // Keep the signed-time watermark even when its grant has expired or boot continuity was lost.
+        value = cache.load() ?? .free
     }
 
     static func live() -> ProEntitlement {
@@ -52,7 +55,7 @@ public final class ProEntitlement: ObservableObject {
         boundaryTask?.cancel()
     }
 
-    public var hasAccess: Bool { value.hasAccess(at: now()) }
+    public var hasAccess: Bool { value.hasAccess(at: clock(now())) }
 
     /// Attach both listeners before the first snapshot so launch cannot miss a delivery.
     public func start() async {
@@ -101,7 +104,9 @@ public final class ProEntitlement: ObservableObject {
     /// Called by an explicit Restore action, never by startup or foreground refresh.
     public func restore() async throws {
         let refreshAppTransaction: Bool
-        if case .verified = appPurchase { refreshAppTransaction = false } else { refreshAppTransaction = true }
+        if case .verified = appPurchase {
+            refreshAppTransaction = value.clockAnchor.map { $0.effectiveDate(at: clock(now())) == nil } ?? false
+        } else { refreshAppTransaction = true }
         try await source.restore(refreshAppTransaction: refreshAppTransaction)
         await refresh()
     }
@@ -162,7 +167,10 @@ public final class ProEntitlement: ObservableObject {
         for status in incoming.subscriptions { remember(status) }
         snapshot.purchases = Array(purchases.values)
         snapshot.subscriptions = Array(statuses.values)
-        let candidate = ProEntitlementResolver.resolve(snapshot, cached: value, originalPolicy: originalPolicy, now: now())
+        let instant = now()
+        let candidate = ProEntitlementResolver.resolve(
+            snapshot, cached: value, originalPolicy: originalPolicy, now: instant, clock: clock(instant)
+        )
         let resolved = preservingVerificationDate(candidate, incoming: incoming)
         do {
             try cache.save(resolved)
@@ -170,9 +178,7 @@ public final class ProEntitlement: ObservableObject {
             statusMessage = "Purchase verification could not be saved. Try Restore Purchases."
             // Never keep access in memory after an observed revocation, even if storage failed.
             if !canRetainCurrentValue(snapshot) {
-                value = ProEntitlementValue(
-                    reason: .none, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: now(), environment: value.environment
-                )
+                value = candidate.withoutAccess(at: clock(instant))
             }
             return false
         }
@@ -198,7 +204,7 @@ public final class ProEntitlement: ObservableObject {
             let product = candidate.reason == .lifetime ? ProProductID.lifetime : candidate.subscriptionProduct
             verified = incoming.purchases.contains { $0.product == product }
         }
-        return verified ? candidate : value
+        return verified ? candidate : value.withClockAnchor(candidate.clockAnchor)
     }
 
     private func scoped(_ incoming: ProStoreSnapshot) -> ProStoreSnapshot {
@@ -246,7 +252,11 @@ public final class ProEntitlement: ObservableObject {
             unverifiedPurchases: snapshot.unverifiedPurchases,
             subscriptions: snapshot.subscriptions.filter { $0.purchase.product == product }
         )
-        return ProEntitlementResolver.resolve(current, cached: value, originalPolicy: originalPolicy, now: now()).hasAccess(at: now())
+        let instant = now()
+        let sample = clock(instant)
+        return ProEntitlementResolver.resolve(
+            current, cached: value, originalPolicy: originalPolicy, now: instant, clock: sample
+        ).hasAccess(at: sample)
     }
 
     private func remember(_ purchase: ProPurchaseEvidence) {
@@ -266,7 +276,7 @@ public final class ProEntitlement: ObservableObject {
 
     private func scheduleBoundary() {
         boundaryTask?.cancel()
-        let instant = now()
+        guard let instant = value.clockAnchor?.effectiveDate(at: clock(now())) else { return }
         let boundary = [value.expiresAt, value.proAccessEndsAt].compactMap { $0 }.filter { $0 > instant }.min()
         guard started, let boundary else { return }
         let delay = boundary.timeIntervalSince(instant)
@@ -280,11 +290,8 @@ public final class ProEntitlement: ObservableObject {
     }
 
     private func applyLocalBoundary() {
-        guard !value.hasAccess(at: now()) else { scheduleBoundary(); return }
-        let expired = ProEntitlementValue(
-            reason: .none, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: value.verifiedAt,
-            environment: value.environment
-        )
+        guard !value.hasAccess(at: clock(now())) else { scheduleBoundary(); return }
+        let expired = value.withoutAccess(at: clock(now()))
         // Expiration is already established locally; network latency must not extend visible access.
         value = expired
         try? cache.save(expired)

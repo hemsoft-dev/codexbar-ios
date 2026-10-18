@@ -11,6 +11,7 @@ struct ProAppPurchase: Sendable {
     let originalPurchaseDate: Date
     let environment: ProStoreEnvironment
     let revoked: Bool
+    var signedAt: Date?
     var isProduction: Bool { environment == .production }
 }
 
@@ -73,6 +74,13 @@ struct ProStoreSnapshot: Sendable {
     var subscriptions: [ProSubscriptionEvidence] = []
     var subscriptionStatusAvailable = false
     var unverifiedProducts: Set<ProProductID> { Set(unverifiedPurchases.map(\.product)) }
+
+    var latestSignedAt: Date? {
+        var dates = purchases.map(\.signedAt)
+        dates += subscriptions.filter(\.renewalVerified).map(\.signedAt)
+        if case let .verified(app) = appPurchase, let signedAt = app.signedAt { dates.append(signedAt) }
+        return dates.filter { $0.timeIntervalSinceReferenceDate.isFinite }.max()
+    }
 }
 
 enum ProSubscriptionUpdate: Sendable {

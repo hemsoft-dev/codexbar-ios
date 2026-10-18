@@ -200,11 +200,13 @@
 		A40600000000000000000501 /* GreptileRenewalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000502 /* GreptileRenewalView.swift */; };
 		A40600000000000000000601 /* ProviderCardInformationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000602 /* ProviderCardInformationView.swift */; };
 		A46400000000000000010001 /* ProEntitlementValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000001 /* ProEntitlementValue.swift */; };
+		A46400000000000000010007 /* ProEntitlementClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000007 /* ProEntitlementClock.swift */; };
 		A46400000000000000010002 /* ProStoreEvidence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000002 /* ProStoreEvidence.swift */; };
 		A46400000000000000010003 /* ProEntitlementResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000003 /* ProEntitlementResolver.swift */; };
 		A46400000000000000010004 /* ProEntitlementCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000004 /* ProEntitlementCache.swift */; };
 		A46400000000000000010005 /* ProEntitlement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000005 /* ProEntitlement.swift */; };
 		A46400000000000000010006 /* StoreKitProStoreSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000006 /* StoreKitProStoreSource.swift */; };
+		A46400000000000000010008 /* ProClockSupport.c in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000008 /* ProClockSupport.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -471,12 +473,16 @@
 		A40600000000000000000502 /* GreptileRenewalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileRenewalView.swift; sourceTree = "<group>"; };
 		A40600000000000000000602 /* ProviderCardInformationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderCardInformationView.swift; sourceTree = "<group>"; };
 		A46400000000000000000001 /* ProEntitlementValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementValue.swift; sourceTree = "<group>"; };
+		A46400000000000000000007 /* ProEntitlementClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementClock.swift; sourceTree = "<group>"; };
 		A46400000000000000000002 /* ProStoreEvidence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProStoreEvidence.swift; sourceTree = "<group>"; };
 		A46400000000000000000003 /* ProEntitlementResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementResolver.swift; sourceTree = "<group>"; };
 		A46400000000000000000004 /* ProEntitlementCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementCache.swift; sourceTree = "<group>"; };
 		A46400000000000000000005 /* ProEntitlement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlement.swift; sourceTree = "<group>"; };
 		A46400000000000000000006 /* StoreKitProStoreSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitProStoreSource.swift; sourceTree = "<group>"; };
 		A46400000000000000000010 /* CodexBarPro.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = StoreKit/CodexBarPro.storekit; sourceTree = "<group>"; };
+		A46400000000000000000008 /* ProClockSupport.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ProClockSupport/ProClockSupport.c; sourceTree = "<group>"; };
+		A46400000000000000000009 /* ProClockSupport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProClockSupport/include/ProClockSupport.h; sourceTree = "<group>"; };
+		A46400000000000000000011 /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = ProClockSupport/include/module.modulemap; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -536,6 +542,9 @@
 			isa = PBXGroup;
 			children = (
 				A46400000000000000000010 /* CodexBarPro.storekit */,
+				A46400000000000000000008 /* ProClockSupport.c */,
+				A46400000000000000000009 /* ProClockSupport.h */,
+				A46400000000000000000011 /* module.modulemap */,
 				700000000000000000000002 /* CodexBarIOS */,
 				700000000000000000000009 /* CodexBarIOSWidget */,
 				D70000000000000000000001 /* CodexBarWatch */,
@@ -765,6 +774,7 @@
 			isa = PBXGroup;
 			children = (
 				A46400000000000000000001 /* ProEntitlementValue.swift */,
+				A46400000000000000000007 /* ProEntitlementClock.swift */,
 				A22700000000000000000005 /* CursorUsageIdentity.swift */,
 				A42100000000000000000105 /* ClaudeFableUsageIdentity.swift */,
 				A22600000000000000000005 /* GreptileUsageIdentity.swift */,
@@ -1109,6 +1119,8 @@
 				A46400000000000000010003 /* ProEntitlementResolver.swift in Sources */,
 				A46400000000000000010002 /* ProStoreEvidence.swift in Sources */,
 				A46400000000000000010001 /* ProEntitlementValue.swift in Sources */,
+				A46400000000000000010007 /* ProEntitlementClock.swift in Sources */,
+				A46400000000000000010008 /* ProClockSupport.c in Sources */,
 				A22700000000000000000001 /* CursorUsageIdentity.swift in Sources */,
 				A42100000000000000000101 /* ClaudeFableUsageIdentity.swift in Sources */,
 				A22600000000000000000001 /* GreptileUsageIdentity.swift in Sources */,
@@ -1536,6 +1548,14 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOS;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/ProClockSupport/include",
+				);
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/ProClockSupport/include",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -1563,6 +1583,14 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOS;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/ProClockSupport/include",
+				);
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/ProClockSupport/include",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;

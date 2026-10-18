@@ -4,7 +4,7 @@ import XCTest
 
 @MainActor
 final class ProEntitlementCacheTests: XCTestCase {
-    func testFreshInstanceReadsSavedDecisionWithoutIdentifiers() throws {
+    func testFreshInstanceReadsSavedDecisionWithoutAccountIdentifiers() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -12,14 +12,14 @@ final class ProEntitlementCacheTests: XCTestCase {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let value = ProEntitlementValue(
             reason: .yearly, expiresAt: now.addingTimeInterval(3600),
-            proAccessEndsAt: now.addingTimeInterval(3600 + 259200), verifiedAt: now
+            proAccessEndsAt: now.addingTimeInterval(3600 + 259200), verifiedAt: now, clockAnchor: testProAnchor(now)
         )
         try ProEntitlementCache(fileURL: url).save(value)
         XCTAssertEqual(ProEntitlementCache(fileURL: url).load(), value)
         let saved = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
         XCTAssertEqual(Set(saved.keys), ["version", "value"])
         let decision = try XCTUnwrap(saved["value"] as? [String: Any])
-        XCTAssertEqual(Set(decision.keys), ["reason", "expiresAt", "proAccessEndsAt", "verifiedAt", "subscriptionProduct", "environment"])
+        XCTAssertEqual(Set(decision.keys), ["reason", "expiresAt", "proAccessEndsAt", "verifiedAt", "subscriptionProduct", "environment", "clockAnchor"])
         XCTAssertEqual(decision["subscriptionProduct"] as? String, ProProductID.yearly.rawValue)
     }
 
