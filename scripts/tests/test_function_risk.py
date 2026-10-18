@@ -248,6 +248,20 @@ class CoverageInputTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unambiguous'):
             INPUTS.export_pair(self.root / 'input.xcresult', self.root / 'empty', lambda _: '')
 
+    def test_export_preserves_actual_extensionless_names_and_normalizes_for_xccov(self):
+        def export(argv):
+            folder = Path(argv[-1])
+            (folder / '0_Test_My Mac_CoverageReport').write_bytes(b'raw report')
+            (folder / '0_Test_My Mac_CoverageArchive').mkdir()
+            (folder / '0_Test_My Mac_CoverageArchive/Index').write_bytes(b'raw index')
+        output = self.root / 'actual-layout'
+        report, archive = INPUTS.export_pair(self.root / 'input.xcresult', output, export)
+        self.assertEqual(report.read_bytes(), b'raw report')
+        self.assertEqual((archive / 'Index').read_bytes(), b'raw index')
+        mapping = EVIDENCE.read(output / 'export-paths.json')
+        self.assertEqual(EVIDENCE.digest(mapping['report']), EVIDENCE.digest(report))
+        self.assertEqual(EVIDENCE.digest(mapping['archive']), EVIDENCE.digest(archive))
+
 
 class CoverageCollectionTests(unittest.TestCase):
     """End-to-end collection contract with fake native tools, real files/hashes."""
@@ -333,7 +347,8 @@ class CoverageCollectionTests(unittest.TestCase):
         if 'export' in command:
             folder = Path(command[-1])
             (folder / 'action.xccovreport').write_text(str(folder))
-            (folder / 'action.xccovarchive').write_text(str(folder) + ':raw')
+            (folder / 'action.xccovarchive').mkdir()
+            (folder / 'action.xccovarchive/Index').write_text(str(folder) + ':raw')
             return ''
         if 'merge' in command:
             Path(command[command.index('--outReport') + 1]).write_text('merged-report')

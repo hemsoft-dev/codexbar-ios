@@ -1,6 +1,7 @@
 """Validate native inputs, then let xccov merge raw line counters before scoring."""
 from pathlib import Path
 from datetime import datetime
+import shutil
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -63,12 +64,24 @@ def require_counters(index, names, covered=False):
 
 def export_pair(result, output, run):
     output.mkdir()
-    run(['xcrun', 'xcresulttool', 'export', 'coverage', '--path', str(result), '--output-path', str(output)])
-    reports = list(output.rglob('*.xccovreport'))
-    archives = list(output.rglob('*.xccovarchive'))
-    if len(reports) != 1 or len(archives) != 1 or reports[0].with_suffix('') != archives[0].with_suffix(''):
+    exported = output / 'exported'
+    exported.mkdir()
+    run(['xcrun', 'xcresulttool', 'export', 'coverage', '--path', str(result), '--output-path', str(exported)])
+    reports = [path for path in exported.rglob('*') if path.is_file() and
+               (path.name.endswith('.xccovreport') or path.name.endswith('_CoverageReport'))]
+    archives = [path for path in exported.rglob('*') if path.is_dir() and
+                (path.name.endswith('.xccovarchive') or path.name.endswith('_CoverageArchive'))]
+    def identity(path):
+        return path.parent / path.name.removesuffix('.xccovreport').removesuffix('.xccovarchive').removesuffix('_CoverageReport').removesuffix('_CoverageArchive')
+    if len(reports) != 1 or len(archives) != 1 or identity(reports[0]) != identity(archives[0]):
         raise ValueError(f'Expected one unambiguous report/archive pair: {output}')
-    return reports[0], archives[0]
+    # xcresulttool exports extensionless *_CoverageReport/Archive; xccov
+    # identifies file formats by extension. Preserve exports and their names.
+    report, archive = output / 'coverage.xccovreport', output / 'coverage.xccovarchive'
+    shutil.copyfile(reports[0], report)
+    shutil.copytree(archives[0], archive)
+    write(output / 'export-paths.json', dict(report=str(reports[0]), archive=str(archives[0])))
+    return report, archive
 
 
 def collect_coverage(args, output, policy, source_paths, root, run):
