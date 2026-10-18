@@ -48,8 +48,21 @@ final class ProCommerceJourneyTests: XCTestCase {
             journey.tap("pro-purchase-lifetime")
             journey.feedback(containing: message)
             journey.plan("Free plan")
+            if scenario == "commerce-storage-error" {
+                for product in ["monthly", "yearly", "lifetime"] {
+                    journey.reveal(journey.element("pro-product-\(product)"))
+                    let action = journey.app.buttons["pro-purchase-\(product)"]
+                    let opensManagement = product == "lifetime" && action.label == "Manage Subscription"
+                    XCTAssertEqual(action.isEnabled, opensManagement,
+                                   "Verification recovery must disable payment while keeping subscription management available.")
+                }
+            }
             journey.reveal(journey.app.buttons["pro-restore-purchases"])
             XCTAssertTrue(journey.app.buttons["pro-restore-purchases"].isEnabled)
+            if scenario == "commerce-storage-error" {
+                journey.reveal(journey.app.buttons["pro-refresh"])
+                XCTAssertTrue(journey.app.buttons["pro-refresh"].isEnabled)
+            }
             XCTAssertFalse(journey.element("pro-command-busy").exists)
         }
     }

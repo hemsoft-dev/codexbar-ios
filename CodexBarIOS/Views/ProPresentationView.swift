@@ -55,7 +55,8 @@ struct ProPresentationView: View {
                 ProLifetimeConfirmationView(
                     product: product,
                     subscriptionEndsAt: entitlement.commerce.subscriptionPeriodEnd,
-                    canPurchase: !isBusy && entitlement.commerce.lifetimeAction == .available
+                    canPurchase: !isBusy && !entitlement.purchaseNeedsRecovery
+                        && entitlement.commerce.lifetimeAction == .available
                         && products[.lifetime] == product,
                     onPurchase: {
                         showsLifetimeConfirmation = false
@@ -181,7 +182,7 @@ struct ProPresentationView: View {
                 ForEach(ProProductID.allCases, id: \.self) { productID in
                     if let product = products[productID] {
                         ProProductOptionView(
-                            product: product, isBusy: isBusy,
+                            product: product, isBusy: isProductActionDisabled(product.id),
                             actionTitle: purchaseActionTitle(product),
                             onPurchase: { select(product) }
                         )
@@ -208,7 +209,7 @@ struct ProPresentationView: View {
                 Text("\(product.displayPrice) once")
                     .font(.title2.weight(.semibold))
                 Button(lifetimeActionTitle) { prepareLifetimeSwitch(isSettingsSwitch: true) }
-                    .disabled(isBusy)
+                    .disabled(isProductActionDisabled(.lifetime))
                     .accessibilityIdentifier("pro-switch-lifetime")
             } else {
                 Text("Lifetime pricing is unavailable. Refresh to try again.")
@@ -300,7 +301,13 @@ struct ProPresentationView: View {
         return product.id == .lifetime ? "Buy lifetime" : "Choose \(product.id.proIdentifier)"
     }
 
+    private func isProductActionDisabled(_ product: ProProductID) -> Bool {
+        let opensManagement = product == .lifetime && entitlement.commerce.lifetimeAction != .available
+        return isBusy || entitlement.purchaseNeedsRecovery && !opensManagement
+    }
+
     private func select(_ product: ProCatalogProduct) {
+        guard !isProductActionDisabled(product.id) else { return }
         if product.id == .lifetime, needsLifetimeGate {
             prepareLifetimeSwitch(isSettingsSwitch: false)
         } else {
@@ -309,7 +316,7 @@ struct ProPresentationView: View {
     }
 
     private func prepareLifetimeSwitch(isSettingsSwitch: Bool) {
-        guard !isBusy else { return }
+        guard !isProductActionDisabled(.lifetime) else { return }
         isRefreshing = true
         Task {
             await entitlement.refreshCommerce()
@@ -318,6 +325,7 @@ struct ProPresentationView: View {
                 showManagement()
                 return
             }
+            guard !entitlement.purchaseNeedsRecovery else { return }
             guard let product = products[.lifetime] else {
                 feedback = ProCommerceFeedback(
                     title: "Lifetime is unavailable", detail: "Refresh purchase information and try again.", isError: true
@@ -352,7 +360,7 @@ struct ProPresentationView: View {
     }
 
     private func purchase(_ product: ProCatalogProduct, isLifetimeSwitch: Bool) {
-        guard !isBusy else { return }
+        guard !isBusy, !entitlement.purchaseNeedsRecovery else { return }
         feedback = nil
         Task {
             do {

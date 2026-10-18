@@ -71,14 +71,12 @@ final class StoreKitProFailureTests: XCTestCase {
         do {
             switch try await context.source.purchase(.lifetime) {
             case .cancelled:
-                observed = "Product.PurchaseResult.userCancelled"
+                observed = "adapter cancelled outcome; native returned-result or thrown-error boundary normalized"
             case .pending, .purchased:
                 throw StoreKitProTestFailure.assertion("Cancellation simulation returned a non-cancellation purchase outcome.")
             }
         } catch StoreKitError.userCancelled {
-            // Some StoreKitTest runtimes inject a thrown error instead of the result case.
-            // This proves that boundary only; injected pure tests cover .cancelled separately.
-            observed = "thrown StoreKitError.userCancelled; result-case coverage unavailable"
+            throw StoreKitProTestFailure.assertion("The adapter must normalize a thrown StoreKit user cancellation.")
         } catch StoreKitError.unknown {
             // iOS 27.0 can map this supported simulation to ASDServerErrorDomain 907
             // and then StoreKitError.unknown. Record the limitation, never cancellation success.

@@ -283,6 +283,9 @@
 		647524BB8A6994FB3155DEED /* ProCommerceCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E867B8B195A361EF34FAEC0 /* ProCommerceCommandTests.swift */; };
 		AAAC21A15E0B7111ABFE908C /* ProCommerceRefreshTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B02D39269FB632A3759065B0 /* ProCommerceRefreshTests.swift */; };
 		AB8C27CE490AA8EE37866A02 /* ProCommerceJourneyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 999DBD5BD4F64CFB35C7D70D /* ProCommerceJourneyTests.swift */; };
+		3F16CC4165A5EC0DB2F90708 /* ProCommerceVerificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81102DE8447B99A314AD0A1B /* ProCommerceVerificationTests.swift */; };
+		EBD689101F58278A3C80CC7B /* ProCommerceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B7FBEB417DF0D4CC8A58D88 /* ProCommerceRestoreTests.swift */; };
+		7D84B7CF44F1806A9CE9E685 /* StoreKitProPurchaseOutcomeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7F2C201EAE228FD14FAF37 /* StoreKitProPurchaseOutcomeTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -622,6 +625,9 @@
 		5E867B8B195A361EF34FAEC0 /* ProCommerceCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommerceCommandTests.swift; sourceTree = SOURCE_ROOT; };
 		B02D39269FB632A3759065B0 /* ProCommerceRefreshTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommerceRefreshTests.swift; sourceTree = SOURCE_ROOT; };
 		999DBD5BD4F64CFB35C7D70D /* ProCommerceJourneyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOSUITests/ProCommerceJourneyTests.swift; sourceTree = SOURCE_ROOT; };
+		81102DE8447B99A314AD0A1B /* ProCommerceVerificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommerceVerificationTests.swift; sourceTree = SOURCE_ROOT; };
+		0B7FBEB417DF0D4CC8A58D88 /* ProCommerceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommerceRestoreTests.swift; sourceTree = SOURCE_ROOT; };
+		7E7F2C201EAE228FD14FAF37 /* StoreKitProPurchaseOutcomeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/StoreKitProPurchaseOutcomeTests.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -873,6 +879,9 @@
 		700000000000000000000007 /* CodexBarIOSTests */ = {
 			isa = PBXGroup;
 			children = (
+				7E7F2C201EAE228FD14FAF37 /* StoreKitProPurchaseOutcomeTests.swift */,
+				0B7FBEB417DF0D4CC8A58D88 /* ProCommerceRestoreTests.swift */,
+				81102DE8447B99A314AD0A1B /* ProCommerceVerificationTests.swift */,
 				B02D39269FB632A3759065B0 /* ProCommerceRefreshTests.swift */,
 				5E867B8B195A361EF34FAEC0 /* ProCommerceCommandTests.swift */,
 				5A15AD2FF2830B9AB2292566 /* StoreKitProSubscriptionTests.swift */,
@@ -1469,6 +1478,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7D84B7CF44F1806A9CE9E685 /* StoreKitProPurchaseOutcomeTests.swift in Sources */,
+				EBD689101F58278A3C80CC7B /* ProCommerceRestoreTests.swift in Sources */,
+				3F16CC4165A5EC0DB2F90708 /* ProCommerceVerificationTests.swift in Sources */,
 				AAAC21A15E0B7111ABFE908C /* ProCommerceRefreshTests.swift in Sources */,
 				647524BB8A6994FB3155DEED /* ProCommerceCommandTests.swift in Sources */,
 				C99972D12838ECBA8F6F0F90 /* StoreKitProSubscriptionTests.swift in Sources */,

@@ -374,11 +374,14 @@ match these boundaries. Initial trial cases poll actual eligibility within a
 deadline; Germany starts a new host; purchase errors use real UI automation.
 None of these measures proves the affected hot-update path on iOS 27.0.
 
-The cancellation test records
-whether StoreKit returned `.userCancelled`, threw `StoreKitError.userCancelled`,
-or failed to represent the requested cancellation. The local iOS 27 runtime can
-return `StoreKitError.unknown` for that simulation. Neither a thrown error nor
-that framework limitation proves the returned-result branch. StoreKitTest's global
+The adapter maps both a returned `.userCancelled` and a thrown
+`StoreKitError.userCancelled` to the canceled outcome. Focused adapter tests
+exercise both paths and require unrelated errors to remain errors. The native
+cancellation test records the normalized outcome without claiming which SDK
+path produced it; an escaping `StoreKitError.userCancelled` fails the test.
+The local iOS 27 runtime can instead return `StoreKitError.unknown` for that
+simulation. That framework limitation does not prove cancellation handling.
+StoreKitTest's global
 verification failure cannot independently represent every transaction and
 renewal-info verification combination. The subscription-status simulation reads
 back its configured error, queries the native status API directly and requires
@@ -389,3 +392,11 @@ cover those injected cases, preserved renewal prices, unavailable currency and
 scheduled next-plan differences. Report that distinction with the native
 results. Do not dispatch the full release workflow for these local checks or
 change automatic PR CI workloads.
+
+The focused verification tests also recreate the service from actual cache
+bytes after lifetime or original-purchaser verification fails. Payment must
+remain unavailable until verified evidence resolves that uncertainty. Separate
+Restore tests distinguish newly found, qualifying verified purchases from
+permitted cached access: an empty Restore reports no purchases without removing
+an otherwise valid offline allowance. These injected regressions do not claim
+live Apple Account switching or production receipt verification.

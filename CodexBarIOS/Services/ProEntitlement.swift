@@ -40,6 +40,7 @@ public final class ProEntitlement: ObservableObject {
     // Denied feature access after a failed write is not permission to charge again.
     private var purchaseCommitNeedsRefresh = false
     private var unverifiedProducts: Set<ProProductID> = []
+    private var appPurchaseVerificationUncertain = false
     private var started = false
     // Only a newly accepted verification can restore missing widget clock storage.
     private var widgetVerificationGenerations: [ProStoreEnvironment: UUID] = [:]
@@ -64,6 +65,9 @@ public final class ProEntitlement: ObservableObject {
         self.clock = clock
         // Keep the signed-time watermark even when its grant has expired or boot continuity was lost.
         value = cache.load() ?? .free
+        unverifiedProducts = value.verificationUncertainty?.products ?? []
+        appPurchaseVerificationUncertain = value.verificationUncertainty?.appPurchase == true
+        if purchaseNeedsRecovery { statusMessage = "A purchase could not be verified. Try Restore Purchases." }
     }
 
     static func live() -> ProEntitlement {
@@ -79,6 +83,10 @@ public final class ProEntitlement: ObservableObject {
     }
 
     public var hasAccess: Bool { value.hasAccess(at: clock(now())) }
+
+    var purchaseNeedsRecovery: Bool {
+        purchaseCommitNeedsRefresh || !unverifiedProducts.isEmpty || appPurchaseVerificationUncertain
+    }
 
     var accessState: ProAccessState { ProAccessState(hasAccess: hasAccess, isResolved: isResolved) }
 
@@ -128,7 +136,7 @@ public final class ProEntitlement: ObservableObject {
 
     public func refresh() async { _ = await refreshEvidence() }
 
-    private func refreshEvidence() async -> Bool {
+    private func refreshEvidence() async -> ProStoreSnapshot? {
         reevaluateLocalAccess()
         renewalMetadataProducts = []
         refreshRequest += 1
@@ -136,7 +144,7 @@ public final class ProEntitlement: ObservableObject {
         while !Task.isCancelled {
             let generation = refreshGeneration
             let snapshot = await source.snapshot()
-            guard request == refreshRequest, !Task.isCancelled else { return false }
+            guard request == refreshRequest, !Task.isCancelled else { return nil }
             // A concurrent delivery may concern a different product. Re-read the complete
             // snapshot instead of losing independent entitlements during launch.
             guard generation == refreshGeneration else { continue }
@@ -156,9 +164,9 @@ public final class ProEntitlement: ObservableObject {
                 }.map(\.purchase.product))
             }
             isResolved = true
-            return saved
+            return saved ? snapshot : nil
         }
-        return false
+        return nil
     }
 
     func purchase(
@@ -171,7 +179,7 @@ public final class ProEntitlement: ObservableObject {
         guard let displayed = expectedProduct ?? catalog.loadedCatalog?.products[product] else {
             throw ProCommerceError.productUnavailable
         }
-        guard await refreshEvidence() else { throw ProCommerceError.notCommitted }
+        guard await refreshEvidence() != nil else { throw ProCommerceError.notCommitted }
         try authorizePurchase(product, context: context)
         await loadCatalog()
         try authorizePurchase(product, context: context)
@@ -219,10 +227,33 @@ public final class ProEntitlement: ObservableObject {
         } else { refreshAppTransaction = true }
         try await source.restore(refreshAppTransaction: refreshAppTransaction)
         try Task.checkCancellation()
-        guard await refreshEvidence(), statusMessage == nil else { throw ProCommerceError.notCommitted }
+        guard let snapshot = await refreshEvidence(), statusMessage == nil else { throw ProCommerceError.notCommitted }
         await loadCatalog()
         try Task.checkCancellation()
-        return hasAccess ? .restored : .noPurchases
+        return hasFreshRestoredAccess(snapshot) ? .restored : .noPurchases
+    }
+
+    private func hasFreshRestoredAccess(_ snapshot: ProStoreSnapshot) -> Bool {
+        guard hasAccess else { return false }
+        var fresh = snapshot
+        if case let .verified(app) = fresh.appPurchase, app.environment != value.environment {
+            fresh.appPurchase = .unavailable
+        }
+        fresh.subscriptions = snapshot.subscriptions.filter {
+            accepts($0.purchase, environment: value.environment, statusSignedAt: $0.renewalVerified ? $0.signedAt : nil)
+        }
+        fresh.purchases = snapshot.purchases.filter { accepts($0, environment: value.environment) }
+            + fresh.subscriptions.map(\.purchase)
+        fresh.unverifiedPurchases = snapshot.unverifiedPurchases.filter { $0.environment == value.environment }
+        if fresh.freshClockEvidence?.environment != value.environment { fresh.freshClockEvidence = nil }
+        let instant = now()
+        let sample = clock(instant)
+        // A Restore result describes this refresh's verified evidence, independently of
+        // the offline grant that the normal resolver may legitimately retain.
+        let restored = ProEntitlementResolver.resolve(
+            fresh, cached: value.withoutAccess(at: sample), originalPolicy: originalPolicy, now: instant, clock: sample
+        )
+        return restored.hasAccess(at: sample)
     }
 
     @discardableResult
@@ -376,7 +407,7 @@ public final class ProEntitlement: ObservableObject {
 
     private func authorizePurchase(_ product: ProProductID, context: ProPurchaseContext) throws {
         try Task.checkCancellation()
-        guard !purchaseCommitNeedsRefresh else { throw ProCommerceError.notCommitted }
+        guard !purchaseNeedsRecovery else { throw ProCommerceError.notCommitted }
         try ProCommercePolicy.authorize(product, context: context, presentation: commerce, isResolved: isResolved)
     }
 
@@ -405,6 +436,12 @@ public final class ProEntitlement: ObservableObject {
         // Keep denial evidence even when saving fails, so unrelated later events cannot resurrect an old grant.
         appPurchase = incoming.appPurchase
         appVerificationEnvironment = incoming.appVerificationEnvironment
+        // Missing evidence cannot resolve a prior app-purchase verification failure.
+        switch incoming.appPurchase {
+        case .verified: appPurchaseVerificationUncertain = false
+        case .unverified: appPurchaseVerificationUncertain = true
+        case .unavailable: break
+        }
         let verifiedProducts = Set(incoming.purchases.map(\.product) + incoming.subscriptions.map(\.purchase.product))
             .subtracting(incoming.unverifiedProducts)
         unverifiedProducts.subtract(verifiedProducts)
@@ -419,7 +456,7 @@ public final class ProEntitlement: ObservableObject {
         let instant = now()
         let candidate = ProEntitlementResolver.resolve(
             snapshot, cached: value, originalPolicy: originalPolicy, now: instant, clock: clock(instant)
-        )
+        ).withVerificationUncertainty(products: unverifiedProducts, appPurchase: appPurchaseVerificationUncertain)
         let resolved = preservingVerificationDate(candidate, incoming: incoming)
         do {
             try cache.save(resolved)
@@ -444,9 +481,8 @@ public final class ProEntitlement: ObservableObject {
             ($0.purchase.expiresAt ?? .distantPast) < ($1.purchase.expiresAt ?? .distantPast)
         }
         subscriptionStatuses = Array(statuses.values)
-        let appUnverified: Bool
-        if case .unverified = incoming.appPurchase { appUnverified = true } else { appUnverified = false }
-        statusMessage = unverifiedProducts.isEmpty && !appUnverified ? nil : "A purchase could not be verified. Try Restore Purchases."
+        statusMessage = unverifiedProducts.isEmpty && !appPurchaseVerificationUncertain
+            ? nil : "A purchase could not be verified. Try Restore Purchases."
         scheduleBoundary()
         return true
     }
@@ -455,7 +491,8 @@ public final class ProEntitlement: ObservableObject {
         guard candidate.reason == value.reason, candidate.expiresAt == value.expiresAt,
               candidate.proAccessEndsAt == value.proAccessEndsAt, candidate.environment == value.environment,
               candidate.purchasedAt == value.purchasedAt, candidate.purchaseDenials == value.purchaseDenials,
-              candidate.appPurchaseDeniedAt == value.appPurchaseDeniedAt else { return candidate }
+              candidate.appPurchaseDeniedAt == value.appPurchaseDeniedAt,
+              candidate.verificationUncertainty == value.verificationUncertainty else { return candidate }
         let verified: Bool
         if candidate.reason == .originalPurchaser {
             if case .verified = incoming.appPurchase { verified = true } else { verified = false }
@@ -480,6 +517,7 @@ public final class ProEntitlement: ObservableObject {
             purchases.removeAll()
             statuses.removeAll()
             unverifiedProducts.removeAll()
+            appPurchaseVerificationUncertain = false
             currentStatusProducts = nil
             renewalMetadataProducts = []
             subscriptionStatusAvailable = false
@@ -487,6 +525,8 @@ public final class ProEntitlement: ObservableObject {
             value = cache.load(environment: environment) ?? ProEntitlementValue(
                 reason: .none, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: nil, environment: environment
             )
+            unverifiedProducts = value.verificationUncertainty?.products ?? []
+            appPurchaseVerificationUncertain = value.verificationUncertainty?.appPurchase == true
         }
         currentEnvironment = environment
         if snapshot.freshClockEvidence?.environment != environment { snapshot.freshClockEvidence = nil }

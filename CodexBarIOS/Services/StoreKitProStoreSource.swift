@@ -80,7 +80,7 @@ final class StoreKitProStoreSource: ProStoreSource {
         guard let storeProduct = try await Product.products(for: [product.rawValue]).first else {
             throw PurchaseError.productUnavailable
         }
-        return try purchaseOutcome(await storeProduct.purchase())
+        return try await performPurchase { try await storeProduct.purchase() }
     }
 
     func purchase(
@@ -88,10 +88,20 @@ final class StoreKitProStoreSource: ProStoreSource {
         authorize: @MainActor () throws -> Void
     ) async throws -> ProPurchaseOutcome {
         let storeProduct = try await commerceCatalog.product(for: product, matching: expectedProduct)
-        try Task.checkCancellation()
-        try authorize()
-        // No suspension between command authorization and entering StoreKit's payment operation.
-        return try purchaseOutcome(await storeProduct.purchase())
+        return try await performPurchase {
+            try Task.checkCancellation()
+            try authorize()
+            // No suspension between command authorization and entering StoreKit's payment operation.
+            return try await storeProduct.purchase()
+        }
+    }
+
+    func performPurchase(_ operation: @MainActor () async throws -> Product.PurchaseResult) async throws -> ProPurchaseOutcome {
+        do {
+            return try purchaseOutcome(await operation())
+        } catch StoreKitError.userCancelled {
+            return .cancelled
+        }
     }
 
     private func purchaseOutcome(_ outcome: Product.PurchaseResult) throws -> ProPurchaseOutcome {

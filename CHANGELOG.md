@@ -11,7 +11,8 @@ building, testing, or releasing the app.
 - Choose monthly, yearly, or lifetime CodexBar Pro with App Store prices for
   your region. Eligible yearly plans show the seven-day trial and the amount
   charged afterward. Restore Purchases reports whether access was restored,
-  no purchase was found, or the request could not finish.
+  no purchase was found, or the request could not finish. If an earlier purchase
+  cannot be verified, restore it before buying again, including after relaunch.
   ([#468](https://github.com/hemsoft-dev/codexbar-ios/issues/468))
 
 - Manage CodexBar Pro from Settings with verified renewal or end dates,
