@@ -9,7 +9,7 @@ import sys
 import uuid
 import xml.etree.ElementTree as ET
 
-from release_evidence import (ROOT, capture, digest, discovery_tests, load_manifest, now, read,
+from release_evidence import (QUALIFIED_IOS_RUNTIME, ROOT, capture, digest, discovery_tests, load_manifest, now, read,
                               require_pinned, source_snapshot, toolchain, unique_tests,
                               validate_device, validate_receipt, validate_results, write)
 
@@ -86,7 +86,8 @@ def provision(output, family, tools, supplementary=False, runtime_build=None):
                 and version(runtime['version']) <= version(tools['sdk'])]
     if not supplementary:
         require_pinned(tools)
-        runtimes = [runtime for runtime in runtimes if runtime['version'] == '26.5' and runtime['buildversion'] == '23F77']
+        runtimes = [runtime for runtime in runtimes if runtime['version'] == QUALIFIED_IOS_RUNTIME['version']
+                    and runtime['buildversion'] == QUALIFIED_IOS_RUNTIME['build']]
     if runtime_build:
         runtimes = [runtime for runtime in runtimes if runtime['buildversion'] == runtime_build]
     if not runtimes:

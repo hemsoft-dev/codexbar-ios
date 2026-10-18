@@ -86,9 +86,11 @@ hashes lock the currently uncompiled source; neither receives a coverage score.
 ## Reproduce
 
 Use a clean committed checkout and new output directories. The release pin is
-Xcode 26.6 / 17F113, iOS SDK/runtime 26.5 and watchOS SDK/runtime 26.5. The runner
-also checks iOS runtime build 23F77, observed in the retained issue #468 26.5
-preparation result. It does not substitute a newer runtime. Xcode 27.1 runs with
+Xcode 26.6 / 17F113 with iOS SDK 26.5, iOS simulator runtime 26.2 / 23C54, and
+watchOS SDK/runtime 26.5. iOS 26.3 through 26.5 simulators break `SKTestSession`
+under command-line `xcodebuild` (Apple FB22237318): its configuration calls fail
+with `SKInternalErrorDomain` code 3 and native StoreKit tests hang (#490). The
+runner selects only the exact qualified runtime build and never substitutes another. Xcode 27.1 runs with
 `--supplementary` are development evidence and cannot qualify this release.
 
 ```sh

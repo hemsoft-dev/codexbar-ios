@@ -156,7 +156,9 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 - Deliver simulated sign-in callbacks outside the test host's fixture network
   blocker, build daily-history test dates in the device calendar, and cover the
-  entitlement clock's shared continuity marker on iPhone and Apple Watch.
+  entitlement clock's shared continuity marker on iPhone and Apple Watch. Run
+  release qualification on the iOS 26.2 simulator, because iOS 26.3 through
+  26.5 simulators break StoreKit testing from the command line.
   ([#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490))
 
 - Add explicit manual release phases with exact test identities, separate
