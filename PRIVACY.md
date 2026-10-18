@@ -1,9 +1,6 @@
 # CodexBar Privacy Policy
 
-Effective date: October 6, 2026
-
-The purchase disclosures below are prepared for CodexBar 2.0. The effective
-date will be updated when that release ships.
+Effective date: October 18, 2026
 
 CodexBar Usage Monitor is a local dashboard for monitoring AI provider usage, limits, and API balances. It does not require a CodexBar account and does not send your provider credentials or usage data to HemSoft servers.
 

@@ -136,12 +136,13 @@ final class StoreKitProStoreSource: ProStoreSource {
             switch try await AppTransaction.shared {
             case let .verified(transaction):
                 guard let environment = Self.environment(transaction.environment) else { return }
-                snapshot.appPurchase = .verified(ProAppPurchase(
+                snapshot.appendVerifiedAppPurchase(
                     originalVersion: transaction.originalAppVersion,
                     originalPurchaseDate: transaction.originalPurchaseDate,
                     environment: environment,
-                    revoked: transaction.revocationDate != nil, signedAt: transaction.signedDate
-                ))
+                    signedAt: transaction.signedDate,
+                    jsonRepresentation: transaction.jsonRepresentation
+                )
             case let .unverified(transaction, _):
                 snapshot.appPurchase = .unverified
                 snapshot.appVerificationEnvironment = Self.environment(transaction.environment)

@@ -53,6 +53,108 @@ final class ProOriginalPurchaserServiceTests: XCTestCase {
         XCTAssertNotNil(service.statusMessage)
     }
 
+    func testVerifiedAppPayloadPreservesMetadataWithoutRevocation() {
+        for json in ["{}", #"{"appRevocationDate":null}"#, #"{"revocationDate":1,"futureField":"ignored"}"#] {
+            for environment: ProStoreEnvironment in [.production, .sandbox, .xcode] {
+                let result = verifiedPayload(json, environment: environment)
+                guard case let .verified(purchase) = result.appPurchase else {
+                    XCTFail("An absent app revocation must remain verified: \(json)")
+                    continue
+                }
+                XCTAssertFalse(purchase.revoked)
+                XCTAssertEqual(purchase.originalVersion, "4")
+                XCTAssertEqual(purchase.originalPurchaseDate, instant)
+                XCTAssertEqual(purchase.signedAt, instant)
+                XCTAssertEqual(purchase.environment, environment)
+                XCTAssertEqual(result.appVerificationEnvironment, environment)
+            }
+        }
+    }
+
+    func testVerifiedAppPayloadRecognizesRevocationTimestamps() {
+        for timestamp: Int64 in [0, 1, -1, 1_792_320_000_000, .min, .max] {
+            let result = verifiedPayload("{\"appRevocationDate\":\(timestamp)}")
+            guard case let .verified(purchase) = result.appPurchase else {
+                XCTFail("A valid app revocation timestamp must remain verified")
+                continue
+            }
+            XCTAssertTrue(purchase.revoked, "Any timestamp denotes revocation, including zero")
+        }
+    }
+
+    func testInvalidVerifiedAppPayloadBecomesScopedUnverifiedEvidence() {
+        let invalid = [
+            "", "{", "[]", "null", "true", "0", #"{"appRevocationDate":true}"#,
+            #"{"appRevocationDate":"1792320000000"}"#, #"{"appRevocationDate":1.25}"#,
+            #"{"appRevocationDate":9223372036854775808}"#, #"{"appRevocationDate":-9223372036854775809}"#,
+            #"{"appRevocationDate":{}}"#, #"{"appRevocationDate":[]}"#,
+        ]
+        for json in invalid {
+            for environment: ProStoreEnvironment in [.production, .sandbox, .xcode] {
+                let result = verifiedPayload(json, environment: environment)
+                guard case .unverified = result.appPurchase else {
+                    XCTFail("Malformed app evidence must not preserve or grant access: \(json)")
+                    continue
+                }
+                XCTAssertEqual(result.appVerificationEnvironment, environment)
+            }
+        }
+    }
+
+    func testInvalidVerifiedAppPayloadDeniesCachedGrantAcrossRestart() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = ProEntitlementCache(fileURL: directory.appendingPathComponent("entitlement.json"))
+        let source = TestProSource()
+        defer { source.finishStreams() }
+        source.next = verifiedPayload("{}")
+        let service = ProEntitlement(source: source, cache: cache, now: { self.instant })
+        await service.refresh()
+        XCTAssertTrue(service.hasAccess)
+
+        source.next = verifiedPayload(#"{"appRevocationDate":true}"#)
+        await service.refresh()
+        XCTAssertFalse(service.hasAccess)
+        let denied = try XCTUnwrap(cache.load())
+        XCTAssertEqual(denied.reason, .none)
+        XCTAssertNil(denied.appPurchaseDeniedAt, "Uncertainty must not invent a verified revocation date")
+
+        source.next = ProStoreSnapshot()
+        await service.refresh()
+        XCTAssertFalse(service.hasAccess)
+        let restart = ProEntitlement(source: source, cache: cache, now: { self.instant })
+        await restart.refresh()
+        XCTAssertFalse(restart.hasAccess, "Unavailable evidence after restart must not revive invalidated access")
+    }
+
+    func testInvalidSandboxAppPayloadCannotRemoveProductionAccess() async {
+        let source = TestProSource()
+        defer { source.finishStreams() }
+        source.next = verifiedPayload("{}")
+        let service = ProEntitlement(source: source, cache: TestProCache(), now: { self.instant })
+        await service.refresh()
+        XCTAssertTrue(service.hasAccess)
+        source.next = verifiedPayload(#"{"appRevocationDate":true}"#, environment: .sandbox)
+        await service.refresh()
+        XCTAssertTrue(service.hasAccess)
+        XCTAssertEqual(service.value.reason, .originalPurchaser)
+    }
+
+    func testRevokedVerifiedAppPayloadRemovesOriginalAccess() async {
+        let source = TestProSource()
+        defer { source.finishStreams() }
+        source.next = verifiedPayload("{}")
+        let cache = TestProCache()
+        let service = ProEntitlement(source: source, cache: cache, now: { self.instant })
+        await service.refresh()
+        XCTAssertTrue(service.hasAccess)
+        source.next = verifiedPayload(#"{"appRevocationDate":0}"#, signedOffset: 1)
+        await service.refresh()
+        XCTAssertFalse(service.hasAccess)
+        XCTAssertEqual(cache.saved?.appPurchaseDeniedAt, instant.addingTimeInterval(1))
+    }
+
     #if DEBUG
     func testScreenshotFixtureAcknowledgmentIsIsolatedAndPersistsOnlyWithinItsNamespace() async throws {
         let suite = "original-purchaser-fixture-tests.\(UUID().uuidString)"
@@ -81,6 +183,17 @@ final class ProOriginalPurchaserServiceTests: XCTestCase {
         XCTAssertTrue(independent.notice.shouldShow(value: independent.entitlement.value, isResolved: true))
     }
     #endif
+
+    private func verifiedPayload(
+        _ json: String, environment: ProStoreEnvironment = .production, signedOffset: TimeInterval = 0
+    ) -> ProStoreSnapshot {
+        var result = ProStoreSnapshot()
+        result.appendVerifiedAppPurchase(
+            originalVersion: "4", originalPurchaseDate: instant, environment: environment,
+            signedAt: instant.addingTimeInterval(signedOffset), jsonRepresentation: Data(json.utf8)
+        )
+        return result
+    }
 
     private func snapshot(revoked: Bool = false, signedOffset: TimeInterval = 0) -> ProStoreSnapshot {
         ProStoreSnapshot(appPurchase: .verified(ProAppPurchase(

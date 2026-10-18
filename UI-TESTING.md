@@ -18,6 +18,60 @@ the build log, result bundle, and summary. On failure it also exports screenshot
 attachments and the accessibility hierarchy from the result bundle. Open the
 `.xcresult` in Xcode to inspect each action and assertion.
 
+## Complete release phases
+
+The base command above still executes exactly 29 original journeys. The
+[phase manifest](scripts/pro-release-phases.json) requires 51 user journeys per
+family for a release: original 29, supplemental 6, synthetic commerce 14, and
+native purchase/restore and purchase-error journeys 1 each. The separate
+marketing capture method is excluded. Normal preparation, purchase-error
+preparation and a final normal reset add three separate XCTest invocations;
+they are not counted as user journeys.
+
+Run the complete family from a clean committed checkout with pinned Xcode
+26.6 / 17F113 and iOS runtime 26.5 / 23F77:
+
+```sh
+export DEVELOPER_DIR=/Applications/Xcode_26.6.app/Contents/Developer
+ui_run="$(mktemp -d /tmp/codexbar-ui.XXXXXX)"
+./scripts/run-pro-release-validation.sh provision --family iphone --output "$ui_run/device"
+ui_device_id="$(jq -r .device.deviceId "$ui_run/device/ownership.json")"
+UI_TEST_REQUIRE_DEVICE_ID=1 UI_TEST_DEVICE_ID="$ui_device_id" \
+  UI_TEST_OWNERSHIP_RECEIPT="$ui_run/device/ownership.json" \
+  UI_TEST_RESULTS_DIR="$ui_run/base" ./scripts/run-ui-tests.sh iphone
+./scripts/run-pro-release-validation.sh ui --family iphone \
+  --ownership "$ui_run/device/ownership.json" --base-results "$ui_run/base" \
+  --output "$ui_run/commerce"
+./scripts/run-pro-release-validation.sh shutdown --family iphone \
+  --ownership "$ui_run/device/ownership.json" --output "$ui_run/shutdown"
+```
+
+Repeat with `ipad` and fresh directories. Always shut down the owned simulator
+when an earlier command fails. Never erase or reuse another task's simulator.
+The ownership receipt binds the exact installed runtime bundle path and build.
+If multiple builds share a runtime version, provisioning requires an observed
+`--runtime-build`; it never chooses the first matching version. Standalone base
+runs reject an ambiguous runtime unless given `UI_TEST_OWNERSHIP_RECEIPT`.
+The ownership receipt and an immutable native-use marker prevent reuse after
+an interrupted or failed native run. Shutdown is still allowed. The runner
+attempts the final StoreKit reset after native UI preparation/execution fails,
+retains both failures, and preserves the original exit code. A reset failure
+fails qualification even if the journeys passed.
+
+Each phase enumerates the built tests and checks exact identities, passing
+counts, zero skips/expected failures and one expected destination. It records
+source and binary hashes, signing, commands, timestamps, summaries and xcresults.
+The supplemental six reuse the verified base build; native hosts are separately
+built with coverage, the Debug isolation flag and ad hoc signatures. Each
+preparation exits before its consumer starts. Every native scheme execution is
+explicitly filtered. Fresh DerivedData lives inside each unique output directory;
+`UI_TEST_DERIVED_DATA_DIR` is no longer used.
+
+These commands add no automatic CI work. See [function coverage](FUNCTION-RISK.md)
+and [native commerce validation](docs/2026-10-18-pro-commerce-validation.md) for
+the separate unit-coverage phases and retained StoreKit failures. A local run
+with `--supplementary` is not release qualification.
+
 ## Journeys
 
 For focused Cursor renewal validation, set
@@ -278,7 +332,7 @@ requests. It exercises
 light/dark with default/accessibility2 text, plus zero, ineligible, paused,
 inactive, expired, unknown, malformed and failed inventories. Fixtures use the
 production inventory parser and an isolated fake consuming provider; networking
-is blocked and no Anthropic reset is used. The public release count remains 29.
+is blocked and no Anthropic reset is used. The original base phase remains 29 journeys.
 
 Local/native regression classes are `ClaudeUsageResetInventoryTests`,
 `ClaudeUsageResetClientTests`, `ClaudeUsageResetFlowTests` and
@@ -294,7 +348,7 @@ separately from the shared 5-hour and all-model weekly windows. It covers two
 accounts, hide/restore and model-name changes across relaunch, Customize Card,
 light/dark appearance and default/accessibility2 text. Absent allowances and
 usage-credit-only responses do not create a Fable quota. The release count stays
-29 journeys per family. No live provider quota is consumed.
+29 original journeys per family. The full release also requires the supplemental and commerce phases above. No live provider quota is consumed.
 
 `ClaudeFableWeeklyTests` runs locally and in the manual native unit suite. Its
 nine cases cover reported values, known aliases, inactive/duplicate windows,
@@ -366,8 +420,9 @@ SHA changes, dispatch a new run.
 The two families run on independent manual workers, each with a 90-minute
 limit and its own artifact. Fail-fast is disabled. An always-run aggregate
 fails unless both workers succeed, including when a worker is cancelled or
-skipped. The runner rejects anything other than twenty-nine passed tests with zero skips or
-expected failures. GitHub retains both destinations' result bundles, logs,
+skipped. Each worker requires all 51 exact journey identities plus the three
+preparation/reset calls. The original runner retains its separate 29-pass contract.
+Every phase requires zero skips or expected failures. GitHub retains both destinations' result bundles, logs,
 summaries, and exported failure screenshots for 14 days. See
 [CI-POLICY.md](CI-POLICY.md) for dispatch and SHA-verification commands.
 
@@ -404,7 +459,7 @@ The manual-only `CodexCreditsPoolUITests.testPreciseSubscriptionPillsOnExpandedA
 checks Codex Pro/Plus, Claude Max 5x, verified Grok, unknown Google and API-credit
 headers in light/dark at default and accessibility text sizes. It asserts actual
 expanded/collapsed state changes and the same account's plan after refresh. The
-full release runner requires all 29 journeys with zero skips; ordinary automatic
+base runner requires all 29 original journeys with zero skips; ordinary automatic
 CI does not run them.
 
 ## Google and OpenCode subscription headers
@@ -461,7 +516,8 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 
 The renewal subjourney also checks parsed Google AI Free has no renewal label or
 billing-only More Information menu item. The release runner does not set this
-selector and still requires all 29 complete journeys on both families. Billing
+selector and still requires all 29 original journeys on both families, followed
+by the required supplemental and commerce phases. Billing
 fixtures are synthetic; real-account billing comparisons remain Franz-owned.
 The same focused journey covers Claude and Grok renewal pills and unknown,
 canceled, stale and passed details. Its billing connection sheet uses the real

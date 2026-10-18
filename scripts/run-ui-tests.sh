@@ -31,6 +31,10 @@ case "$device_family" in
 esac
 
 sdk_version="$(xcrun --sdk iphonesimulator --show-sdk-version)"
+if [[ "${UI_TEST_REQUIRE_DEVICE_ID:-0}" == 1 && -z "${UI_TEST_DEVICE_ID:-}" ]]; then
+  echo "Release UI execution requires its newly owned simulator UUID." >&2
+  exit 1
+fi
 simulator_json="$(xcrun simctl list --json)"
 device="$(jq -r \
   --arg sdk_version "$sdk_version" \
@@ -49,7 +53,10 @@ device="$(jq -r \
         | select($version <= $sdk)
         | .identifier as $runtime
         | $simulators.devices[$runtime][]?
-        | select(.isAvailable == true and (.name | startswith($device_prefix)))
+        | . as $device
+        | select(.isAvailable == true)
+        | select(any($simulators.devicetypes[];
+            .identifier == $device.deviceTypeIdentifier and (.name | startswith($device_prefix))))
         | select($preferred_name == "" or .name == $preferred_name)
         | select($preferred_id == "" or .udid == $preferred_id)
         | {name, udid, version: $version}
@@ -85,21 +92,16 @@ preserve_failure_attachments() {
 }
 trap preserve_failure_attachments EXIT
 
-xcodebuild \
-  -project "$repo_root/CodexBarIOS.xcodeproj" \
-  -scheme CodexBarIOSUITests \
-  -configuration Debug \
-  -skipPackagePluginValidation \
-  -destination "platform=iOS Simulator,id=$device_id" \
-  -derivedDataPath "${UI_TEST_DERIVED_DATA_DIR:-$repo_root/build/DerivedData-UI}" \
-  -resultBundlePath "$result_bundle" \
-  -parallel-testing-enabled NO \
-  -maximum-concurrent-test-simulator-destinations 1 \
-  CODE_SIGNING_ALLOWED=NO \
-  test 2>&1 | tee "$run_dir/xcodebuild.log"
-
-xcrun xcresulttool get test-results summary \
-  --path "$result_bundle" > "$run_dir/summary.json"
+# The manifest selects the original 29 by exact method identity. The four
+# FreeTierJourneyTests and two newer Grok methods run in ui-supplemental; the
+# 16 commerce journeys and marketing capture cannot leak into this phase.
+# The runner builds into fresh DerivedData under run_dir, enumerates the built
+# tests, and retains command/source/binary/result evidence even on failure.
+runner_arguments=(base --family "$device_family" --device "$device_id" --output "$run_dir")
+if [[ -n "${UI_TEST_OWNERSHIP_RECEIPT:-}" ]]; then
+  runner_arguments+=(--ownership "$UI_TEST_OWNERSHIP_RECEIPT")
+fi
+python3 "$repo_root/scripts/pro_release_runner.py" "${runner_arguments[@]}"
 
 # All twenty-nine named UI journeys must run on each destination. A skipped or empty
 # suite can otherwise make xcodebuild return success without testing the flows.

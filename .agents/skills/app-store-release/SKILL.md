@@ -1,6 +1,6 @@
 ---
 name: app-store-release
-description: "V1.0 - Commands: Prepare, Upload, Submit, Resume. Prepare, validate, upload, and submit CodexBar production releases through App Store review."
+description: "V1.1 - Commands: Prepare, Upload, Submit, Resume. Prepare, validate, upload, and submit CodexBar production releases through App Store review."
 disable-model-invocation: true
 compatibility: Requires macOS, Xcode, PowerShell 7, git, GitHub and App Store Connect access, CodexBar signing authority for upload stages, plus the perfection, issue-to-pr, process-pr, playwright-cli, and unslop skills.
 hooks:
@@ -164,10 +164,21 @@ intended version differs from the ledger.
 Dispatch `ci.yml` against the frozen candidate ref and verify its resolved
 `headSha`. Before archive/upload, require SwiftLint, Strict concurrency, iOS tests,
 watchOS tests, SwiftPM smoke tests and Full iOS UI validation to succeed for that
-exact SHA, including both families and all 29 manual journeys with zero skips.
+exact merged SHA. Require Xcode 26.6 / 17F113 with the recorded compatible
+26.5 runtimes. Each UI family must pass the manifest's original 29,
+supplemental 6, synthetic commerce 14 and native commerce 2 journeys, plus
+three separate preparation/reset calls. The marketing capture is excluded.
+Require exact discovered/executed identities and zero skips or expected failures.
+The iOS risk job must merge the full ordinary unit result with native
+preparation 1, commerce 25, Germany preparation 1 and Germany storefront 1.
+Require the real disjoint-line xccov proof, per-input provenance and nonempty
+counters. A setup, product, transaction-finish or reset failure fails the gate;
+local 27.1 evidence and historical passes cannot waive it.
 Any source change invalidates the run. Routine PR automation requires only
 SwiftLint; do not recreate retired automatic native gates or main-push reruns.
-Keep manual security/performance release requirements unchanged.
+Also run the existing manual `security-analysis.yml` and
+`usage-history-performance.yml` requirements for the exact candidate. Retain
+their tool pins, source-bound reviews, exclusions and budgets.
 
 1. Confirm `release-preparation-merged`, synchronized `main`, and the recorded
    candidate SHA. Require
@@ -244,6 +255,19 @@ materially from the ledger.
 
 ### 7. Submit and record the outcome
 
+For these first CodexBar Pro products, submit the app, subscriptions and lifetime
+purchase through the App Store Connect website. Apple's
+[first in-app purchase submission rule](https://developer.apple.com/documentation/appstoreconnectapi/managing-in-app-purchases)
+and [first subscription submission rule](https://developer.apple.com/documentation/appstoreconnectapi/submitting-subscriptions-and-subscription-groups-for-app-review)
+require the website with an app version; review-submission API operations do not
+apply. API checks and eligible build selection may prepare the version, but do
+not add or submit these first product items through the API. Use website **Add
+for Review** and select the existing draft. Verify that the app version,
+subscription group and all three products appear in that same draft; add the
+group only if absent. Follow Apple's [website submission instructions](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-in-app-purchase/)
+and verify actual group membership before submitting. Re-read the website
+submission result and record all app/group/product relationships in the ledger.
+
 1. Confirm `submission-ready`, exact version/build, unchanged candidate SHA,
    and exact current-task authority for **Submit for Review**. Otherwise stop
    and ask for confirmation.
@@ -256,6 +280,32 @@ materially from the ledger.
    `Unreleased` section and any remaining release metadata through the release
    issue, branch, PR, automated review, required checks, and merge gate. Do not
    edit or merge directly on `main`.
+
+### 8. Continue the approved 2.0 rollout
+
+Submission is a checkpoint, not completion of issue #470. Keep its ledger and
+issue #469 open until their actual acceptance criteria are met. Follow the
+[approved launch sequence](../../../APP-STORE.md#approved-launch-sequence) and
+record requested/actual times and storefront observations separately.
+
+For the planned 2.0.0 build 5, the planned October 18, 2026 UTC submission
+corresponds to cutoff `2026-11-01T00:00:00Z`, October 31 at 8:00 PM EDT.
+Recheck the actual plan before final qualification and submission. A changed
+cutoff, build, source or release copy requires a newly qualified candidate.
+Submit all first-time Pro products with the app, manual release, phased release
+off and the existing US$3.99 app price. Do not infer release or price-change
+authority from Submit mode alone; use the already recorded launch authority.
+
+After approval, release only with at least six full days before the cutoff.
+Otherwise replace the unreleased 2.0 build with a later cutoff and requalify.
+Wait a full 48 hours after release and verify several storefronts serve 2.0
+before scheduling worldwide Free about 72 hours before the cutoff. Verify
+every storefront is Free before the cutoff; never raise the price afterward.
+If paid distribution cannot end safely, apply the approved remove-from-sale
+rollback at least 48 hours before the cutoff and verify several storefronts.
+Keep production original-purchase/Family Sharing checks pending for Franz;
+they are not an agent delivery prerequisite or an invented pass. Paid Apps
+Agreement and Small Business Program status remain unverified until checked.
 
 ## Recovery
 

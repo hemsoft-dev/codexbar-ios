@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "reviewed_commit": "07711d0467d276b1dc0717a5ea6c262c38a6311b",
-  "source_snapshot_sha256": "544189229dbf2ff3e600d3e456a495a3eb4bb2bd40ced53c4b48402d7a605039",
+  "reviewed_commit": "925ff1f8792adb46440866dea7a192baafb3f7a4",
+  "source_snapshot_sha256": "3cce29e754ff990df45c3787b292f7b7a73be6e897e92612c2d724fa7f4ee52d",
   "codeql_version": "2.26.4",
   "query_pack_version": "1.3.9+1d123a2caa0e4e6256a49d963bfcbd51a01617e8",
   "findings": [
@@ -14,32 +14,44 @@
         "message": "Insecure hashing algorithm (SHA256) depends on [password (balanceCredential)](1).\nInsecure hashing algorithm (SHA256) depends on [password (goCredential)](2).",
         "diagnostic_sha256": "5f1496c65fc30d9560b382010124317c39ab181e30f19c854ccc92e29e9b3b0a"
       },
-      "alert": "https://github.com/HemSoft/codexbar-ios/security/code-scanning/2",
+      "alert": "https://github.com/hemsoft-dev/codexbar-ios/security/code-scanning/2",
       "rationale": "The SHA256 value distinguishes workspace/session combinations for ephemeral UsageRefreshService cache equality. ProviderUsageResult is not Codable; this digest is neither persisted nor used as a password verifier. Actual dashboard credentials remain in SecretStore. Re-review every consumer if this digest is persisted, exposed, or used for authentication."
     },
     {
       "finding": {
         "rule": "swift/cleartext-storage-preferences",
         "severity": 7.5,
-        "path": "CodexBarIOS/Services/UITestFixtures.swift",
-        "line": 1329,
-        "message": "This operation stores 'secret' in the user defaults database. It may contain unencrypted sensitive data from [secret](1).",
-        "diagnostic_sha256": "95b46e19c855f4a38180dc318b7fc6597d454686747419116567eff6f0460dc3"
+        "path": "CodexBarIOS/Services/ProviderConfigurationStore.swift",
+        "line": 2374,
+        "message": "This operation stores 'call to sorted()' in the user defaults database. It may contain unencrypted sensitive data from [.collapsedDashboardAccountIDs](1).",
+        "diagnostic_sha256": "e2875ef14c43d2a7c9e411a9482e7ae5890d22a0670cb23dd6b1dfd3279af5a6"
       },
-      "alert": "https://github.com/HemSoft/codexbar-ios/security/code-scanning/4",
-      "rationale": "UITestSecretStore accepts only ui-test-credential or exact parsed synthetic coding, Codex, Cursor, Greptile and Grok fixture credentials. Grok uses the fixed synthetic plan-pill subject and access/refresh token values; these grant no provider access. Arbitrary values are rejected before the preferences write. Activation is DEBUG-only, simulator-only and UUID-isolated. Provider networking is blocked except the existing synthetic Greptile host. Claude reset and Fable scenarios use only ui-test-credential and isolated fake usage; Fable adds no accepted credential or network boundary. Re-review any accepted value, caller, activation guard or network boundary change."
+      "alert": "https://github.com/hemsoft-dev/codexbar-ios/security/code-scanning/3",
+      "rationale": "The preference stores the collapsed state of configured local IDs, not credentials or provider account identifiers. ProviderAccountConfiguration uses a provider name or provider plus random UUID, and the collapse updater rejects unknown IDs. The configuration already persists those IDs; secrets are stored separately through SecretStore. Re-review if account-ID generation or callers accept sensitive identifiers."
     },
     {
       "finding": {
         "rule": "swift/cleartext-storage-preferences",
         "severity": 7.5,
         "path": "CodexBarIOS/Services/ProviderConfigurationStore.swift",
-        "line": 2375,
-        "message": "This operation stores 'call to sorted()' in the user defaults database. It may contain unencrypted sensitive data from [.collapsedDashboardAccountIDs](1).",
-        "diagnostic_sha256": "a6a021638f1bfb0695fbb720f88ea844893804b718ad5fa3599627b168431050"
+        "line": 2982,
+        "message": "This operation stores 'accountID' in the user defaults database. It may contain unencrypted sensitive data from [accountID](1).",
+        "diagnostic_sha256": "df86a6a2e1eff5f5b3577794149a03e854301b0c650dd63c8d4a68ea718afc73"
       },
-      "alert": "https://github.com/HemSoft/codexbar-ios/security/code-scanning/3",
-      "rationale": "The preference stores the collapsed state of configured local IDs, not credentials or provider account identifiers. ProviderAccountConfiguration uses a provider name or provider plus random UUID, and the collapse updater rejects unknown IDs. The configuration already persists those IDs; secrets are stored separately through SecretStore. Re-review if account-ID generation or callers accept sensitive identifiers."
+      "alert": "https://github.com/hemsoft-dev/codexbar-ios/security/code-scanning/5",
+      "rationale": "freeActiveAccountID stores the configured local account ID chosen as the CodexBar Free active account. IDs are the provider name or provider plus a random UUID, already persisted with the configuration; chooseActiveAccount accepts only an existing candidate ID, and secrets are stored separately through SecretStore. Re-review if account-ID generation or callers accept sensitive identifiers."
+    },
+    {
+      "finding": {
+        "rule": "swift/cleartext-storage-preferences",
+        "severity": 7.5,
+        "path": "CodexBarIOS/Services/UITestFixtures.swift",
+        "line": 1613,
+        "message": "This operation stores 'secret' in the user defaults database. It may contain unencrypted sensitive data from [secret](1).",
+        "diagnostic_sha256": "7722d1d6b1ec385bdacd27c0b888dab47f1b04ff536fef08b0c0dd2f4a00d275"
+      },
+      "alert": "https://github.com/hemsoft-dev/codexbar-ios/security/code-scanning/4",
+      "rationale": "UITestSecretStore is compiled only in DEBUG builds and activates only on simulators with a UUID-isolated defaults suite; Release builds do not contain it. It accepts ui-test-credential, the cursor-plan- prefixed plan-parity values, and exact parsed synthetic coding, Codex (personal, work and plan-tier), Cursor billing/session, Greptile, Grok, OpenCode console, Claude profile and matching-cookie subscription-billing fixtures. Other values are rejected before the preferences write. These synthetic values grant no provider access, and provider networking stays blocked except the existing synthetic Greptile host. Re-review any accepted value, caller, activation guard or network boundary change."
     }
   ]
 }

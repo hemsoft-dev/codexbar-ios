@@ -118,9 +118,10 @@ enum PlanTierFixture {
 
     static func seedAccounts(in store: ProviderConfigurationStore, multiple: Bool) {
         if store.configurations.isEmpty {
-            for (index, label) in (multiple ? ["Personal account", "Work account", "Family account"] : ["Personal account"]).enumerated() {
-                let account = ProviderAccountConfiguration(id: "plan-account-\(index)", providerID: .openRouter,
-                                                          accountLabel: label, authMethod: .apiKey)
+            let labels: [String] = multiple ? ["Personal account", "Work account", "Family account"] : ["Personal account"]
+            for indexedLabel in labels.enumerated() {
+                let account = ProviderAccountConfiguration(id: "plan-account-\(indexedLabel.offset)", providerID: .openRouter,
+                                                          accountLabel: indexedLabel.element, authMethod: .apiKey)
                 precondition(store.update(account))
                 precondition(store.saveSecret("ui-test-credential", for: account))
             }

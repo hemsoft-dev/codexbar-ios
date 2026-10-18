@@ -85,25 +85,25 @@ hashes lock the currently uncompiled source; neither receives a coverage score.
 
 ## Reproduce
 
-Run from the repository root with the pinned Xcode selected. Use fresh result
-paths for each run. Simulator runtimes are recorded in the xcresult; the
-initial baseline used iOS 27.0 and watchOS 26.5 simulators. CI selects an
-available iPhone and the compatible watch simulator as it does for ordinary
-tests. Differences in instrumentation or coverage still must meet the same
-baseline; do not average or loosen ceilings to conceal a platform discrepancy.
+Use a clean committed checkout and new output directories. The release pin is
+Xcode 26.6 / 17F113, iOS SDK/runtime 26.5 and watchOS SDK/runtime 26.5. The runner
+also checks iOS runtime build 23F77, observed in the retained issue #468 26.5
+preparation result. It does not substitute a newer runtime. Xcode 27.1 runs with
+`--supplementary` are development evidence and cannot qualify this release.
 
 ```sh
-export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-mkdir -p DerivedData
-risk_run="$(mktemp -d "$PWD/DerivedData/function-risk.XXXXXX")"
-xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarIOS \
-  -skipPackagePluginValidation \
-  -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
-  -parallel-testing-enabled NO \
-  -maximum-concurrent-test-simulator-destinations 1 \
-  -enableCodeCoverage YES -resultBundlePath "$risk_run/ios.xcresult" \
-  CODE_SIGNING_ALLOWED=NO test
+export DEVELOPER_DIR=/Applications/Xcode_26.6.app/Contents/Developer
+risk_run="$(mktemp -d /tmp/codexbar-risk.XXXXXX)"
+python3 scripts/verify-release-toolchain.py --output "$risk_run/toolchain.json"
+python3 -m unittest discover -s scripts/tests -p 'test_function_risk.py' -v
+python3 -m unittest discover -s scripts/tests -p 'test_pro_release_validation.py' -v
+python3 scripts/function-risk/prove-coverage-union.py --output "$risk_run/union-proof"
+./scripts/run-pro-release-validation.sh native --output "$risk_run/native"
+python3 scripts/function-risk/measure.py --platform ios \
+  --inputs "$risk_run/native/coverage-inputs.json" --output "$risk_run/ios-risk"
 watch_device_id="$(./scripts/select-watch-simulator.sh)"
+python3 scripts/verify-release-toolchain.py --watch-device "$watch_device_id" \
+  --output "$risk_run/watch-toolchain.json"
 xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarWatchTests \
   -skipPackagePluginValidation \
   -destination "platform=watchOS Simulator,id=$watch_device_id" \
@@ -111,26 +111,52 @@ xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarWatchTests \
   -maximum-concurrent-test-simulator-destinations 1 \
   -enableCodeCoverage YES -resultBundlePath "$risk_run/watch.xcresult" \
   CODE_SIGNING_ALLOWED=NO test
-python3 scripts/function-risk/measure.py --platform ios \
-  --result "$risk_run/ios.xcresult" --output "$risk_run/ios"
 python3 scripts/function-risk/measure.py --platform watch \
-  --result "$risk_run/watch.xcresult" --output "$risk_run/watch"
-python3 -m unittest discover -s scripts/tests -p 'test_function_risk.py' -v
+  --result "$risk_run/watch.xcresult" --output "$risk_run/watch-risk"
 ```
 
-Create `DerivedData` first if it does not exist. To inspect coverage directly:
+The native command creates its own simulator and fresh instrumented DerivedData.
+It runs the full ordinary iOS suite, including 197 shared Pro test methods from
+22 sources, then four separately selected native phases: preparation 1, native
+commerce 25, Germany preparation 1 and Germany storefront 1. The two top-level
+`testProClock` and `testProAnchor` support functions are not XCTest methods.
+Every native invocation uses the isolated Debug host and ad hoc signing. The
+five complete result bundles are required for aggregate iOS measurement.
+Preparation and its consumer must use the same build and owned simulator.
 
-```sh
-xcrun xccov view --report --json "$risk_run/ios.xcresult"
-xcrun xccov view --report --json "$risk_run/watch.xcresult"
-```
+The collector exports each xcresult's actual `.xccovreport`/`.xccovarchive`
+pair and passes all five pairs to `xccov merge`. It reads function counts from
+the merged report; it never sums or takes the maximum of covered-line counts.
+It rejects duplicate targets/files/functions, incompatible denominators, stale
+source paths, missing phases, changed receipts, filtered ordinary test runs,
+failed or skipped tests and empty app counters. Source hashes, tool versions,
+actual runtime, built binaries, discovered/executed test identities and raw
+input/merged artifacts remain in the output. UI counters are not included in
+the earlier iOS risk job. Watch collection keeps its single-result interface
+and verifies watchOS execution. A legacy single-result receipt is explicitly
+marked as lacking producer provenance.
 
-The regression fixtures construct a six-decision uncovered function whose
-score is 42, prove the gate fails, then restore full coverage and prove it
-passes. A second fixture worsens an existing score by less than the report's
-display precision and still fails. Other fixtures cover missing/ambiguous
-coverage, empty denominators, platform separation, stale exceptions and source
-identity. Fixtures use isolated temporary files, so no broken source remains.
+Phase receipts hash result bundles after diagnostic extraction because
+`xcresulttool` can create a database during its first read. Coverage collection
+authenticates the original bundle, inspects a verified working copy and checks
+that the original remains unchanged. Failed inspection copies are retained;
+successful copies are removed after their summaries, raw coverage and hashes
+have been saved.
+
+`prove-coverage-union.py` creates a tiny hostless macOS XCTest project outside
+the checkout and executes opposite branches in two separately built result
+bundles. It requires the merged shared function to cover more lines than either
+input, fewer than their sum, and the full denominator. It also requires retention
+of ordinary-only and native-only functions. This proves xccov merge semantics
+when it passes; it does not qualify application coverage or native StoreKit.
+The default requires the pinned Xcode. Local `--supplementary` output remains
+unqualified. Keep the first failure and use a new output directory for a repair.
+
+The bounded Python fixtures exercise PBX `SOURCE_ROOT` and group-relative paths,
+missing/ambiguous roots, raw pair export, provenance, omitted phases, duplicates,
+empty counters and incompatible denominators. Existing six-decision uncovered
+risk and exact-ceiling fixtures still fail and pass at their original boundaries.
+No risk arithmetic, baseline, exception or ceiling changes are part of #470.
 
 ## Initial baseline and bounded risk plan
 

@@ -4,7 +4,10 @@ Notable changes to CodexBar are documented here. Entries describe shipped app
 behavior; development-only changes are listed separately when they affect
 building, testing, or releasing the app.
 
-## 2.0.0 - Unreleased
+## 2.0.0 - 2026-10-18
+
+Release copy is finalized. App Store submission and distribution remain pending
+in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Added
 
@@ -114,6 +117,11 @@ building, testing, or releasing the app.
   ([#417](https://github.com/HemSoft/codexbar-ios/issues/417))
 
 ### Fixed
+
+- Keep widget labels, usage values and progress readable when the system removes
+  their background or applies a tinted appearance, including Lock Screen widgets.
+  ([#473](https://github.com/hemsoft-dev/codexbar-ios/issues/473))
+
 - Claude renewal dates accept the provider's timestamp or legacy date fields without requiring both. Billing details now explain expired sign-in, account mismatch, denied access and unavailable responses, with a shortcut to billing settings. ([#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454))
 
 - See verified Cursor Pro and Pro+ subscriptions in each account’s header pill, with independent plan names that survive refresh and relaunch. Unknown plans remain clearly unavailable. ([#438](https://github.com/hemsoft-dev/codexbar-ios/issues/438))
@@ -135,6 +143,19 @@ building, testing, or releasing the app.
   ([#421](https://github.com/hemsoft-dev/codexbar-ios/issues/421))
 
 ### Developer Experience
+
+- Give widget views explicit initializers for the pinned Swift compiler while
+  keeping their environment-driven appearance state private. Keep plan fixtures
+  and signed original-purchase revocation checks compatible with the release SDK.
+  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+
+- Add explicit manual release phases with exact test identities, separate
+  StoreKit preparation and reset, and retained failure evidence. Combine ordinary
+  and native StoreKit iOS coverage with Apple's raw report/archive merge and
+  per-input provenance before applying the existing function-risk rules and
+  baselines. Automatic PR work stays unchanged; final
+  qualification still requires the immutable merged candidate on Xcode 26.6.
+  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Preserve each storefront build attempt and record its verified bundle versions
   and simulator metadata in the capture evidence.
@@ -261,10 +282,6 @@ More provider metrics, guided sign-in, and up to 90 days of usage history.
   ([#371](https://github.com/HemSoft/codexbar-ios/issues/371)) ([#373](https://github.com/HemSoft/codexbar-ios/issues/373))
 
 ### Fixed
-
-- Keep widget labels, usage values and progress readable when the system removes
-  their background or applies a tinted appearance, including Lock Screen widgets.
-  ([#473](https://github.com/hemsoft-dev/codexbar-ios/issues/473))
 
 - Keep Cursor usage current by renewing sign-in automatically when possible. Guided
   reconnection preserves saved card choices; failed refreshes retain visibly stale
