@@ -182,7 +182,7 @@ def capture(args):
                 run('xcrun', 'simctl', 'ui', udid, 'appearance', asset['appearance'])
             launch = ['xcrun', 'simctl', 'launch', '--terminate-running-process', udid, bundle_id,
                       '--app-store-screenshots', '--app-store-watch-scene' if watch else '--app-store-scene', asset['scene'],
-                      '--app-store-appearance', asset['appearance'], '--app-store-settle-seconds', '3',
+                      '--app-store-appearance', asset['appearance'], '--app-store-settle-seconds', str(args.settle_seconds),
                       '-AppleLanguages', '(en)', '-AppleLocale', 'en_US']
             print(f"Capturing {asset['id']}", flush=True)
             run(*launch)
@@ -225,7 +225,11 @@ def main():
     parser.add_argument('--manifest', type=Path)
     parser.add_argument('--output-root', type=Path)
     parser.add_argument('--receipt', type=Path)
+    parser.add_argument('--settle-seconds', type=float, default=15,
+                        help='Allow native layout and the simulator status bar to settle, between 0 and 30 seconds')
     args = parser.parse_args()
+    if not 0 <= args.settle_seconds <= 30:
+        parser.error('--settle-seconds must be between 0 and 30')
     required = ('work_dir',) if args.action == 'build' else ('build_receipt', 'manifest', 'output_root', 'receipt')
     for field in required:
         if getattr(args, field) is None:

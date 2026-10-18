@@ -97,7 +97,8 @@ python3 scripts/capture-storefront-assets.py capture \
   --build-receipt /tmp/codexbar-469-validation/final/build-provenance.json \
   --manifest release-assets/2.0.0/captions.json \
   --output-root /tmp/codexbar-469-validation/artifacts \
-  --receipt /tmp/codexbar-469-validation/capture-provenance.json
+  --receipt /tmp/codexbar-469-validation/capture-provenance.json \
+  --settle-seconds 15
 ```
 
 The build action runs clean iOS app/UI and Watch builds with complete strict
@@ -105,6 +106,9 @@ concurrency and Swift warnings as errors. The capture action waits for each
 fresh scene's readiness marker, keeps the original simulator PNG separately,
 and flattens an opaque RGB copy at the same dimensions. The source SHA, runtime,
 app hashes, fixture receipt and image hashes are retained with the capture.
+The default 15-second delay also allows the simulator's status bar to settle.
+If visual inspection finds an incomplete frame, preserve that attempt and
+recapture after correcting the cause. Do not repair the native UI in an image.
 
 Run the [native compositor and validator](../../scripts/storefront-assets/README.md)
 against the same artifact root. Their geometry report records the full source
