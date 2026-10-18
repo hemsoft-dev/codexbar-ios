@@ -125,6 +125,9 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         XCTAssertTrue(status.isInBillingRetry)
         XCTAssertNil(status.graceEndsAt)
         XCTAssertEqual(service.commerce.lifetimeAction, .manageSubscription)
+        try await storeKitEventually("StoreKit did not mark the renewal with its purchase issue.") {
+            context.session.allTransactions().contains { $0.hasPurchaseIssue }
+        }
         let issue = try XCTUnwrap(context.session.allTransactions().last { $0.hasPurchaseIssue })
         context.session.shouldEnterBillingRetryOnRenewal = false
         try context.session.resolveIssueForTransaction(identifier: issue.identifier)

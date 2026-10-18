@@ -118,6 +118,10 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Fixed
 
+- When the App Store can't load CodexBar Pro's products, the Pro screen now
+  offers to try again instead of showing an empty list.
+  ([#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490))
+
 - Cursor usage charts without a Total meter now show the same point in every
   view when a sample and its daily summary share a time.
   ([#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490))

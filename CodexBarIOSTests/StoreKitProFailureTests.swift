@@ -82,7 +82,8 @@ final class StoreKitProFailureTests: XCTestCase {
             // and then StoreKitError.unknown. Record the limitation, never cancellation success.
             observed = "thrown StoreKitError.unknown; requested cancellation not represented by runtime"
         }
-        XCTAssertTrue(context.session.allTransactions().isEmpty)
+        // iOS 26.2 records a cancelled attempt as a failed transaction; nothing may be purchased.
+        XCTAssertTrue(context.session.allTransactions().allSatisfy { $0.state == .failed })
         let current = await storeKitCurrentProducts()
         XCTAssertTrue(current.isEmpty)
         try storeKitEvent("cancellation-observed", ["actualBoundary": observed, "committed": "false"])
