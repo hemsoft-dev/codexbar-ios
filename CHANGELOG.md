@@ -102,6 +102,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Run shared XCTest schemes serially by default to reduce simulator clones and
+  process pressure. Keep parallel builds, test coverage and release validation.
+  ([#474](https://github.com/hemsoft-dev/codexbar-ios/issues/474))
+
 - Document the cross-platform CodexBar Pro distribution and billing plan, with
   dated store policies, privacy and purchase-state requirements, and decisions
   required before another platform sells Pro.
