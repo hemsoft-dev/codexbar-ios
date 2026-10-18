@@ -571,3 +571,13 @@ consumers changed. The four exact diagnostic identities from
 remain the accepted findings. Local replay of that SARIF and source-reach CSV
 against this baseline is a replay, not a hosted pass; the release candidate
 still needs its own successful hosted analysis.
+
+[Run 39154682983](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39154682983)
+passed on the hosted analyzer for that baseline at `4aff1f1`.
+
+`StoreKitProCatalog.load()` then gained one guard: an empty StoreKit product
+lookup throws `catalogUnavailable` instead of returning an empty catalog. It
+touches no credential, persistence or network boundary. Reviewed commit
+`cedd7a74ef51b104969052d3a65141d801e04677` binds source snapshot
+`694c0669b8bf840138a6dffbc0856e5f60a87560fac17059450fe69409b22ad4`
+with the same 157 files and the same four accepted diagnostics.
