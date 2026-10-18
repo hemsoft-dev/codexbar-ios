@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "1600"
+   version = "1.7">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "500000000000000000000001"
+               BuildableName = "CodexBarIOS.app"
+               BlueprintName = "CodexBarIOS"
+               ReferencedContainer = "container:CodexBarIOS.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "NO">
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "CODEXBAR_NATIVE_STOREKIT_TEST_HOST"
+            value = "1"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
+      <!-- Manual only: every test invocation must use explicit -only-testing target/class/method selectors.
+           Run the selected StoreKit preparation method in its own process, then the matching execution
+           cases in a new invocation on the same disposable simulator. Never run this scheme unfiltered. -->
+      <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <SelectedTests>
+               <Test Identifier = "StoreKitProPreparationTests" />
+               <Test Identifier = "StoreKitProStoreSourceTests" />
+               <Test Identifier = "StoreKitProStorefrontTests" />
+               <Test Identifier = "StoreKitProFailureTests" />
+               <Test Identifier = "StoreKitProSubscriptionTests" />
+            </SelectedTests>
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "500000000000000000000002"
+               BuildableName = "CodexBarIOSTests.xctest"
+               BlueprintName = "CodexBarIOSTests"
+               ReferencedContainer = "container:CodexBarIOS.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <SelectedTests>
+               <Test Identifier = "ProCommerceNativeJourneyTests" />
+            </SelectedTests>
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A30700000000000000000051"
+               BuildableName = "CodexBarIOSUITests.xctest"
+               BlueprintName = "CodexBarIOSUITests"
+               ReferencedContainer = "container:CodexBarIOS.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
+   </TestAction>
+   <LaunchAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "500000000000000000000001"
+            BuildableName = "CodexBarIOS.app"
+            BlueprintName = "CodexBarIOS"
+            ReferencedContainer = "container:CodexBarIOS.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </LaunchAction>
+   <ProfileAction
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "500000000000000000000001"
+            BuildableName = "CodexBarIOS.app"
+            BlueprintName = "CodexBarIOS"
+            ReferencedContainer = "container:CodexBarIOS.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+   </ArchiveAction>
+</Scheme>

@@ -133,6 +133,7 @@ struct CodexBarIOSApp: App {
                 .task {
                     #if DEBUG
                     if let fixtures = UITestFixtures.current {
+                        guard !fixtures.isNativeTestHost else { return }
                         await fixtures.entitlement.start()
                         return
                     }
@@ -189,7 +190,11 @@ struct CodexBarIOSApp: App {
     private var rootView: some View {
         #if DEBUG
         if let fixtures = UITestFixtures.current {
-            fixtures.contentView()
+            if fixtures.isNativeTestHost {
+                Color.clear.accessibilityIdentifier("native-storekit-test-host")
+            } else {
+                fixtures.contentView()
+            }
         } else if let screenshotConfiguration {
             screenshotRootView(for: screenshotConfiguration.scene)
         } else if let providerID = debugProviderSettingsProviderID {

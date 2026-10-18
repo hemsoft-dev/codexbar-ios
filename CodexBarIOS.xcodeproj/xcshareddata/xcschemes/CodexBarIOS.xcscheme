@@ -26,11 +26,26 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES">
+      shouldUseLaunchSchemeArgsEnv = "NO">
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "CODEXBAR_NATIVE_STOREKIT_TEST_HOST"
+            value = "1"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
       <Testables>
          <TestableReference
             skipped = "NO"
             parallelizable = "NO">
+            <!-- Local StoreKit cases require separate preparation and execution processes in CodexBarProNativeCommerce. -->
+            <SkippedTests>
+               <Test Identifier = "StoreKitProPreparationTests" />
+               <Test Identifier = "StoreKitProStoreSourceTests" />
+               <Test Identifier = "StoreKitProStorefrontTests" />
+               <Test Identifier = "StoreKitProFailureTests" />
+               <Test Identifier = "StoreKitProSubscriptionTests" />
+            </SkippedTests>
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "500000000000000000000002"

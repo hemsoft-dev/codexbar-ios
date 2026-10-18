@@ -485,6 +485,7 @@ public final class ProviderConfigurationStore: ObservableObject {
     @Published public private(set) var lastError: String?
     @Published public private(set) var accountAccess: AccountPlanAccess
     @Published public var requestedProPresentation = false
+    @Published private(set) var requestedProPresentationOrigin: ProPresentationOrigin = .limit
 
     private let defaults: UserDefaults
     private let secretStore: SecretStore
@@ -2923,6 +2924,13 @@ public extension ProviderConfigurationStore {
     }
 
     func requestProPresentation() {
+        requestProPresentation(origin: .limit)
+    }
+
+    func requestProPresentation(origin: ProPresentationOrigin) {
+        // Repeated taps preserve the active destination and its purchase context.
+        guard !requestedProPresentation else { return }
+        requestedProPresentationOrigin = origin
         requestedProPresentation = true
     }
 

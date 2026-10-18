@@ -33,6 +33,10 @@
          <TestableReference
             skipped = "NO"
             parallelizable = "NO">
+            <SkippedTests>
+               <Test Identifier = "ProCommerceJourneyTests" />
+               <Test Identifier = "ProCommerceNativeJourneyTests" />
+            </SkippedTests>
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A30700000000000000000051"

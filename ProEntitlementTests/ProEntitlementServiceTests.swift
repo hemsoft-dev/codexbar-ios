@@ -11,9 +11,10 @@ final class ProEntitlementServiceTests: XCTestCase {
         let source = TestProSource()
         let cache = TestProCache()
         let service = service(source, cache)
+        await service.refreshCommerce()
         var events: [String] = []
-        cache.onSave = { _ in events.append("save") }
-        let publication = service.$value.dropFirst().sink { _ in events.append("publish") }
+        cache.onSave = { value in if value.reason == .yearly { events.append("save") } }
+        let publication = service.$value.dropFirst().filter { $0.reason == .yearly }.sink { _ in events.append("publish") }
         source.purchaseOutcome = .purchased(delivery { events.append("finish") })
         _ = try await service.purchase(.yearly)
         XCTAssertEqual(events, ["save", "publish", "finish"])
@@ -42,10 +43,12 @@ final class ProEntitlementServiceTests: XCTestCase {
         let source = TestProSource()
         let cache = TestProCache()
         let service = service(source, cache)
+        await service.refreshCommerce()
+        let previous = cache.saved
         for result: ProPurchaseOutcome in [.pending, .cancelled] {
             source.purchaseOutcome = result
             _ = try await service.purchase(.yearly)
-            XCTAssertNil(cache.saved)
+            XCTAssertEqual(cache.saved, previous, "Purchase preflight may persist an unchanged free decision")
             XCTAssertFalse(service.hasAccess)
         }
     }
@@ -282,6 +285,7 @@ final class TestProSource: ProStoreSource {
         return statuses.stream
     }
     func purchase(_ product: ProProductID) async throws -> ProPurchaseOutcome { purchaseOutcome }
+    func catalog() async throws -> ProCatalog { commerceTestCatalog() }
     func restore(refreshAppTransaction: Bool) async throws {
         restoreRequests.append(refreshAppTransaction)
         await beforeRestore?(refreshAppTransaction)

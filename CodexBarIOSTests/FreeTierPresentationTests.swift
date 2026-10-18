@@ -52,6 +52,32 @@ final class FreeTierPresentationTests: XCTestCase {
         XCTAssertFalse(store.requestedProPresentation)
     }
 
+    func testProRequestKeepsItsOriginUntilDismissedAndPreservesPendingAccountChoice() throws {
+        let suiteName = "ProPresentationOriginTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults,
+                                               secretStore: EmptySecretStore(), widgetSnapshotDefaults: nil)
+        _ = try XCTUnwrap(store.addAccount(for: .codex))
+        _ = try XCTUnwrap(store.addAccount(for: .claude))
+        store.applyPlanAccess(hasProAccess: false, isResolved: true)
+        XCTAssertTrue(store.accountAccess.needsActiveAccountChoice)
+
+        store.requestProPresentation(origin: .settings)
+        store.requestProPresentation()
+        XCTAssertTrue(store.requestedProPresentation)
+        XCTAssertEqual(store.requestedProPresentationOrigin, .settings)
+        XCTAssertTrue(store.accountAccess.needsActiveAccountChoice)
+        store.dismissProPresentation()
+        XCTAssertTrue(store.accountAccess.needsActiveAccountChoice)
+
+        store.requestProPresentation()
+        XCTAssertEqual(store.requestedProPresentationOrigin, .limit)
+        store.dismissProPresentation()
+        XCTAssertFalse(store.requestedProPresentation)
+        XCTAssertTrue(store.accountAccess.needsActiveAccountChoice)
+    }
+
     func testPausedAccountSettingsAnnouncePlanStateWithoutCallingAccountDisabled() {
         let account = ProviderAccountConfiguration(id: "claude.saved", providerID: .claude, isEnabled: true, authMethod: .browserSession)
         let value = ProviderSettingsRow.accessibilityValue(

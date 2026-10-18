@@ -33,6 +33,12 @@ public struct ProPurchaseDenial: Codable, Equatable, Sendable {
     }
 }
 
+/// Verification uncertainty blocks another purchase without granting feature access.
+public struct ProPurchaseVerificationUncertainty: Codable, Equatable, Sendable {
+    public let products: Set<ProProductID>
+    public let appPurchase: Bool
+}
+
 /// Only this decision and local timing evidence cross the App Group boundary.
 public struct ProEntitlementValue: Codable, Equatable, Sendable {
     public let reason: ProEntitlementReason
@@ -45,6 +51,7 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
     public let clockAnchor: ProEntitlementClockAnchor?
     public let purchaseDenials: [ProPurchaseDenial]
     public let appPurchaseDeniedAt: Date?
+    public let verificationUncertainty: ProPurchaseVerificationUncertainty?
 
     public static let free = ProEntitlementValue(
         reason: .none, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: nil
@@ -55,7 +62,8 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
         reason: ProEntitlementReason, expiresAt: Date?, proAccessEndsAt: Date?, verifiedAt: Date?,
         subscriptionProduct: ProProductID? = nil, environment: ProStoreEnvironment = .production,
         purchasedAt: Date? = nil, clockAnchor: ProEntitlementClockAnchor? = nil,
-        purchaseDenials: [ProPurchaseDenial] = [], appPurchaseDeniedAt: Date? = nil
+        purchaseDenials: [ProPurchaseDenial] = [], appPurchaseDeniedAt: Date? = nil,
+        verificationUncertainty: ProPurchaseVerificationUncertainty? = nil
     ) {
         self.reason = reason
         self.expiresAt = expiresAt
@@ -67,6 +75,7 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
         self.clockAnchor = clockAnchor
         self.purchaseDenials = purchaseDenials
         self.appPurchaseDeniedAt = appPurchaseDeniedAt
+        self.verificationUncertainty = verificationUncertainty
     }
 
     public func hasAccess(at date: Date) -> Bool {
@@ -84,7 +93,8 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
         Self(
             reason: reason, expiresAt: expiresAt, proAccessEndsAt: proAccessEndsAt, verifiedAt: verifiedAt,
             subscriptionProduct: subscriptionProduct, environment: environment, purchasedAt: purchasedAt, clockAnchor: anchor,
-            purchaseDenials: purchaseDenials, appPurchaseDeniedAt: appPurchaseDeniedAt
+            purchaseDenials: purchaseDenials, appPurchaseDeniedAt: appPurchaseDeniedAt,
+            verificationUncertainty: verificationUncertainty
         )
     }
 
@@ -92,7 +102,20 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
         Self(
             reason: reason, expiresAt: expiresAt, proAccessEndsAt: proAccessEndsAt, verifiedAt: verifiedAt,
             subscriptionProduct: subscriptionProduct, environment: environment, purchasedAt: purchasedAt,
-            clockAnchor: clockAnchor, purchaseDenials: denials, appPurchaseDeniedAt: appPurchaseDeniedAt
+            clockAnchor: clockAnchor, purchaseDenials: denials, appPurchaseDeniedAt: appPurchaseDeniedAt,
+            verificationUncertainty: verificationUncertainty
+        )
+    }
+
+    func withVerificationUncertainty(products: Set<ProProductID>, appPurchase: Bool) -> Self {
+        let uncertainty = products.isEmpty && !appPurchase ? nil : ProPurchaseVerificationUncertainty(
+            products: products, appPurchase: appPurchase
+        )
+        return Self(
+            reason: reason, expiresAt: expiresAt, proAccessEndsAt: proAccessEndsAt, verifiedAt: verifiedAt,
+            subscriptionProduct: subscriptionProduct, environment: environment, purchasedAt: purchasedAt,
+            clockAnchor: clockAnchor, purchaseDenials: purchaseDenials, appPurchaseDeniedAt: appPurchaseDeniedAt,
+            verificationUncertainty: uncertainty
         )
     }
 
@@ -100,7 +123,7 @@ public struct ProEntitlementValue: Codable, Equatable, Sendable {
         return Self(
             reason: .none, expiresAt: nil, proAccessEndsAt: nil, verifiedAt: verifiedAt,
             environment: environment, clockAnchor: clockAnchor?.checkpoint(at: sample), purchaseDenials: purchaseDenials,
-            appPurchaseDeniedAt: appPurchaseDeniedAt
+            appPurchaseDeniedAt: appPurchaseDeniedAt, verificationUncertainty: verificationUncertainty
         )
     }
 

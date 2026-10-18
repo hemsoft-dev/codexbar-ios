@@ -1,5 +1,10 @@
 import Foundation
 
+public enum ProPresentationOrigin: Equatable, Sendable {
+    case limit
+    case settings
+}
+
 /// A committed account-access decision. Pausing never changes the saved configuration.
 public struct AccountPlanAccess: Equatable, Sendable {
     public static let unresolved = AccountPlanAccess(hasProAccess: false, isResolved: false)

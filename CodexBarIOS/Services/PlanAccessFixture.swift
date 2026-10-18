@@ -12,7 +12,10 @@ final class PlanAccessFixture: ObservableObject {
     init(hasProAccess: Bool = true) {
         self.hasProAccess = hasProAccess
         source = PlanFixtureSource(hasProAccess: hasProAccess)
-        entitlement = ProEntitlement(source: source, cache: PlanFixtureCache(hasProAccess: hasProAccess))
+        entitlement = ProEntitlement(
+            source: source, cache: PlanFixtureCache(hasProAccess: hasProAccess),
+            clock: { ProEntitlementClockSample(wallDate: $0, continuousSeconds: $0.timeIntervalSince1970, continuityID: "plan-fixture") }
+        )
     }
 
     func setProAccess(_ hasAccess: Bool) async {

@@ -367,7 +367,7 @@ struct SettingsView: View {
         return List(selection: $selectedDestination) {
             Section {
                 Button {
-                    configurationStore.requestProPresentation()
+                    configurationStore.requestProPresentation(origin: .settings)
                 } label: {
                     Label("CodexBar Pro", systemImage: "sparkles")
                 }

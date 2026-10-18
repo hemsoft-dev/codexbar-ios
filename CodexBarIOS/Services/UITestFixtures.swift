@@ -8,6 +8,13 @@ import WebKit
 final class UITestFixtures {
     static let current: UITestFixtures? = {
         let environment = ProcessInfo.processInfo.environment
+        if environment["CODEXBAR_NATIVE_STOREKIT_TEST_HOST"] == "1" {
+            #if targetEnvironment(simulator)
+            return UITestFixtures(runID: UUID(), environment: environment)
+            #else
+            preconditionFailure("Native StoreKit test host is available only on simulators")
+            #endif
+        }
         guard environment["CODEXBAR_UI_TESTS"] == "1" else { return nil }
         #if targetEnvironment(simulator)
         guard let rawID = environment["CODEXBAR_UI_TEST_RUN_ID"],
@@ -21,6 +28,7 @@ final class UITestFixtures {
     }()
 
     let defaults: UserDefaults
+    let isNativeTestHost: Bool
     let configurationStore: ProviderConfigurationStore
     let refreshService: UsageRefreshService
     let historyStore: UsageHistoryStore
@@ -29,8 +37,9 @@ final class UITestFixtures {
     let statusMonitor: GitHubStatusMonitor
     let appUpdateController: AppUpdateController
     let originalPurchaserFixture: OriginalPurchaserFixture?
+    let commerceFixture: ProCommerceFixture?
     let planFixture: PlanAccessFixture
-    var entitlement: ProEntitlement { originalPurchaserFixture?.entitlement ?? planFixture.entitlement }
+    var entitlement: ProEntitlement { commerceFixture?.entitlement ?? originalPurchaserFixture?.entitlement ?? planFixture.entitlement }
     private let showsPlanTransitions: Bool
     let dynamicTypeSize: DynamicTypeSize
 
@@ -56,7 +65,9 @@ final class UITestFixtures {
             defaults.removePersistentDomain(forName: suite)
         }
         self.defaults = defaults
+        isNativeTestHost = environment["CODEXBAR_NATIVE_STOREKIT_TEST_HOST"] == "1"
         let planScenario = environment["CODEXBAR_UI_TEST_SCENARIO"] ?? ""
+        commerceFixture = ProCommerceFixture(scenario: planScenario, runID: runID, environment: environment)
         planFixture = PlanAccessFixture(hasProAccess: !planScenario.hasPrefix("plan-free"))
         showsPlanTransitions = planScenario == "plan-transition"
         originalPurchaserFixture = OriginalPurchaserFixture(scenario: environment["CODEXBAR_UI_TEST_SCENARIO"], defaults: defaults)
@@ -77,6 +88,7 @@ final class UITestFixtures {
         appUpdateController = AppUpdateController(defaults: defaults)
 
         let scenario = environment["CODEXBAR_UI_TEST_SCENARIO"]
+        commerceFixture?.seedAccounts(in: configurationStore)
         PlanTierFixture.seedAccountsIfNeeded(in: configurationStore, scenario: scenario)
         let recovery = scenario == "recovery"
         let metricEvidence = scenario?.hasPrefix("metric-evidence-") == true
@@ -279,7 +291,17 @@ final class UITestFixtures {
         return result(for: configuration, balance: configuration.id.hasPrefix("ui-navigation-") ? 90 : 25)
     }
 
+    @ViewBuilder
     func contentView() -> some View {
+        if let entry = commerceFixture?.entry {
+            ProPresentationView(configurationStore: configurationStore, origin: entry)
+                .dynamicTypeSize(dynamicTypeSize)
+        } else {
+            dashboardContentView()
+        }
+    }
+
+    private func dashboardContentView() -> some View {
         ContentView(
             refreshService: refreshService,
             configurationStore: configurationStore,
