@@ -11,6 +11,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from coverage_inputs import collect_coverage
+
 ROOT = Path(__file__).resolve().parents[2]
 POLICY = ROOT / 'scripts/function-risk/policy.json'
 BASELINE = ROOT / 'scripts/function-risk/baseline.json'
@@ -47,15 +50,24 @@ def relative(path):
 def project_sources(project, targets):
     """Read actual PBX Sources membership instead of assuming directory membership."""
     objects = project['objects']
-    paths = {}
+    paths = defaultdict(set)
 
-    def walk(identifier, parent):
+    def walk(identifier, parent, ancestors=()):
+        if identifier in ancestors:
+            raise ValueError(f'Cycle in PBX groups: {identifier}')
         item = objects[identifier]
-        path = parent / item.get('path', '')
+        tree = item.get('sourceTree', '<group>')
+        component = Path(item.get('path', ''))
+        # Product/framework references may use other roots. Reject them only
+        # if a selected production Sources phase actually consumes that path.
+        base = Path() if tree == 'SOURCE_ROOT' else parent if tree == '<group>' else None
+        path = None
+        if base is not None and not component.is_absolute() and '..' not in component.parts and '$' not in str(component):
+            path = base / component
         if item['isa'] == 'PBXFileReference':
-            paths[identifier] = str(path)
+            paths[identifier].add(str(path) if path is not None else None)
         for child in item.get('children', []):
-            walk(child, path)
+            walk(child, path, (*ancestors, identifier))
 
     walk(objects[project['rootObject']]['mainGroup'], Path())
     output = set()
@@ -67,7 +79,11 @@ def project_sources(project, targets):
         for phase in target['buildPhases']:
             if objects[phase]['isa'] == 'PBXSourcesBuildPhase':
                 for identifier in objects[phase]['files']:
-                    path = paths[objects[identifier]['fileRef']]
+                    reference = objects[identifier]['fileRef']
+                    candidates = paths[reference]
+                    if len(candidates) != 1 or None in candidates:
+                        raise ValueError(f'Unsupported or ambiguous production source path: {reference}: {candidates}')
+                    path = next(iter(candidates))
                     if path.endswith('.swift'):
                         output.add(path)
     if found != set(targets):
@@ -226,7 +242,8 @@ def markdown(report):
 def collect(args):
     policy = read(POLICY)
     output = args.output.resolve()
-    output.mkdir(parents=True, exist_ok=True)
+    output.mkdir(parents=True, exist_ok=False)
+    args.output_created = True
     os.environ.setdefault('DEVELOPER_DIR', '/Applications/Xcode.app/Contents/Developer')
     version = run(['xcodebuild', '-version'])
     if version != policy['tools']['xcode']:
@@ -243,19 +260,19 @@ def collect(args):
     declarations = json.loads(run([str(inventory), *files]))
     inventory.unlink()
     complexity = json.loads(run([str(lint), 'lint', '--config', 'scripts/function-risk/complexity.yml', '--reporter', 'json', '--quiet', '--no-cache', *policy['source_roots']]))
-    coverage = json.loads(run(['xcrun', 'xccov', 'view', '--report', '--json', str(args.result.resolve())]))
     project = json.loads(run(['plutil', '-convert', 'json', '-o', '-', 'CodexBarIOS.xcodeproj/project.pbxproj']))
     source_paths = project_sources(project, policy['platforms'][args.platform]['source_targets'])
     unknown = source_paths - set(files)
     if unknown:
         raise ValueError(f'Production source outside inventory roots: {unknown}')
+    coverage, inputs = collect_coverage(args, output, policy, source_paths, ROOT, run)
     write(output / 'declarations.json', declarations)
     write(output / 'complexity.json', complexity)
     write(output / 'coverage.json', coverage)
     write(output / 'policy.json', policy)
     write(output / 'baseline.json', read(args.baseline))
-    write(output / 'test-summary.json', json.loads(run(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path', str(args.result.resolve())])))
     report = measure(args.platform, declarations, complexity, coverage, source_paths, policy)
+    report['coverage_inputs'] = inputs
     report['tools'] = dict(policy['tools'], swift=run(['xcrun', 'swift', '--version']), python=sys.version, revision=run(['git', 'rev-parse', 'HEAD']), policy_sha256=hashlib.sha256(POLICY.read_bytes()).hexdigest(), baseline_sha256=hashlib.sha256(args.baseline.read_bytes()).hexdigest())
     baseline = read(args.baseline)
     report['errors'] = gate(report, baseline)
@@ -275,15 +292,17 @@ def collect(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--platform', required=True, choices=['ios', 'watch'])
-    parser.add_argument('--result', type=Path, required=True)
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument('--result', type=Path, help='Single native xcresult (existing iOS/watch interface)')
+    inputs.add_argument('--inputs', type=Path, help='Complete, producer-attested iOS phase manifest')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--baseline', type=Path, default=BASELINE)
     args = parser.parse_args()
     try:
         return collect(args)
     except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as error:
-        args.output.mkdir(parents=True, exist_ok=True)
-        (args.output / 'failure.txt').write_text(str(error) + '\n')
+        if getattr(args, 'output_created', False):
+            (args.output / 'failure.txt').write_text(str(error) + '\n')
         print(f'Function risk measurement failed: {error}', file=sys.stderr)
         return 1
 

@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 
 # The local audit supplies an isolated path so clean never touches developer builds.
 run_xcodebuild() {

@@ -54,12 +54,17 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     name: Strict concurrency
     runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Verify pinned release toolchain and installed runtimes
+        run: python3 scripts/verify-release-toolchain.py --output "$RUNNER_TEMP/release-toolchain.json"
 
       - name: Build with complete strict concurrency checking
         run: ./scripts/check-strict-concurrency.sh
@@ -68,6 +73,8 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     name: iOS tests
     runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     timeout-minutes: 30
 
     steps:
@@ -75,52 +82,24 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Select an available iPhone simulator
-        id: ios-destination
-        shell: bash
-        run: |
-          set -euo pipefail
+      - name: Verify pinned release toolchain and installed runtimes
+        run: python3 scripts/verify-release-toolchain.py --output "$RUNNER_TEMP/release-toolchain.json"
 
-          device_id="$(
-            xcrun simctl list devices available --json |
-              jq -r '
-                [.devices[] | .[] |
-                  select(.isAvailable == true and (.name | startswith("iPhone")))]
-                | first
-                | .udid // empty
-              '
-          )"
+      - name: Verify function risk and release phase failure fixtures
+        run: python3 -m unittest scripts.tests.test_function_risk scripts.tests.test_pro_release_validation -v
 
-          if [[ -z "$device_id" ]]; then
-            xcrun simctl list devices available
-            echo "No available iPhone simulator was found." >&2
-            exit 1
-          fi
-
-          echo "id=$device_id" >> "$GITHUB_OUTPUT"
+      - name: Prove raw coverage line union on the pinned toolchain
+        run: python3 scripts/function-risk/prove-coverage-union.py --output "$RUNNER_TEMP/coverage-union"
 
       - name: Run iOS unit tests
         id: ios-tests
-        run: |
-          set -o pipefail
-          xcodebuild \
-            -project CodexBarIOS.xcodeproj \
-            -scheme CodexBarIOS \
-            -skipPackagePluginValidation \
-            -destination "platform=iOS Simulator,id=${{ steps.ios-destination.outputs.id }}" \
-            -enableCodeCoverage YES \
-            -resultBundlePath "$RUNNER_TEMP/CodexBarIOSTests.xcresult" \
-            CODE_SIGNING_ALLOWED=NO \
-            test
-
-      - name: Verify function risk failure fixtures
-        run: python3 -m unittest discover -s scripts/tests -p 'test_function_risk.py' -v
+        run: ./scripts/run-pro-release-validation.sh native --output "$RUNNER_TEMP/pro-native"
 
       - name: Enforce iOS function risk baseline
         id: ios-risk
         run: >-
           python3 scripts/function-risk/measure.py --platform ios
-          --result "$RUNNER_TEMP/CodexBarIOSTests.xcresult"
+          --inputs "$RUNNER_TEMP/pro-native/coverage-inputs.json"
           --output "$RUNNER_TEMP/function-risk-ios"
 
       - name: Publish iOS function risk
@@ -133,11 +112,16 @@ jobs:
           retention-days: 14
 
       - name: Preserve iOS test diagnostics
-        if: ${{ failure() && steps.ios-tests.outcome == 'failure' }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: CodexBarIOSTests-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/CodexBarIOSTests.xcresult
+          path: |
+            ${{ runner.temp }}/pro-native
+            ${{ runner.temp }}/coverage-union
+            ${{ runner.temp }}/release-toolchain.json
+            !${{ runner.temp }}/pro-native/DerivedData-*/**
+            !${{ runner.temp }}/coverage-union/*/DerivedData/**
           if-no-files-found: warn
           retention-days: 14
 
@@ -145,12 +129,17 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     name: watchOS tests
     runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Verify pinned release toolchain and installed runtimes
+        run: python3 scripts/verify-release-toolchain.py --output "$RUNNER_TEMP/release-toolchain.json"
 
       - name: Test Apple Watch simulator selection
         run: ./scripts/tests/select-watch-simulator-tests.sh
@@ -162,6 +151,8 @@ jobs:
           set -euo pipefail
 
           device_id="$(./scripts/select-watch-simulator.sh)"
+
+          python3 scripts/verify-release-toolchain.py --watch-device "$device_id" --output "$RUNNER_TEMP/watch-toolchain.json"
 
           xcrun simctl boot "$device_id" 2>/dev/null || true
           xcrun simctl bootstatus "$device_id" -b
@@ -211,12 +202,17 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     name: SwiftPM smoke tests
     runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Verify pinned release toolchain and installed runtimes
+        run: python3 scripts/verify-release-toolchain.py --output "$RUNNER_TEMP/release-toolchain.json"
 
       - name: Run smoke harness
         run: xcrun swift run CodexBarIOSSmokeTests
@@ -237,6 +233,8 @@ jobs:
       - watch-tests
       - smoke-tests
     runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -248,23 +246,54 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Verify pinned release toolchain and installed runtimes
+        run: python3 scripts/verify-release-toolchain.py --output "$RUNNER_TEMP/release-toolchain.json"
+
+      - name: Create an owned UI simulator
+        id: ui-device
+        run: |
+          ./scripts/run-pro-release-validation.sh provision --family "${{ matrix.family }}" --output "$RUNNER_TEMP/ui-device"
+          echo "id=$(jq -r .device.deviceId "$RUNNER_TEMP/ui-device/ownership.json")" >> "$GITHUB_OUTPUT"
+
       - name: Run GitHub Billing API fixtures
         if: ${{ matrix.family == 'iphone' }}
         run: xcrun swift run GitHubBillingFixtureTests
 
       - name: Run UI journeys
-        if: ${{ !cancelled() }}
+        id: ui-base
+        if: ${{ !cancelled() && steps.ui-device.outcome == 'success' }}
         env:
+          UI_TEST_REQUIRE_DEVICE_ID: '1'
           UI_TEST_RESULTS_DIR: ${{ runner.temp }}/ui-tests
-          UI_TEST_DERIVED_DATA_DIR: ${{ runner.temp }}/DerivedData-UI
+          UI_TEST_DEVICE_ID: ${{ steps.ui-device.outputs.id }}
         run: ./scripts/run-ui-tests.sh "${{ matrix.family }}"
+
+      - name: Run supplemental and commerce release phases
+        if: ${{ !cancelled() && steps.ui-base.outcome == 'success' }}
+        run: >-
+          ./scripts/run-pro-release-validation.sh ui --family "${{ matrix.family }}"
+          --ownership "$RUNNER_TEMP/ui-device/ownership.json"
+          --base-results "$RUNNER_TEMP/ui-tests" --output "$RUNNER_TEMP/pro-ui"
+
+      - name: Shut down the owned UI simulator
+        if: ${{ always() && steps.ui-device.outcome == 'success' }}
+        run: >-
+          ./scripts/run-pro-release-validation.sh shutdown --family "${{ matrix.family }}"
+          --ownership "$RUNNER_TEMP/ui-device/ownership.json" --output "$RUNNER_TEMP/ui-shutdown"
 
       - name: Preserve UI test results and failure screenshots
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: CodexBarIOSUITests-${{ matrix.family }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/ui-tests
+          path: |
+            ${{ runner.temp }}/ui-tests
+            ${{ runner.temp }}/pro-ui
+            ${{ runner.temp }}/ui-device
+            ${{ runner.temp }}/ui-shutdown
+            ${{ runner.temp }}/release-toolchain.json
+            !${{ runner.temp }}/ui-tests/*/DerivedData-*/**
+            !${{ runner.temp }}/pro-ui/DerivedData-*/**
           if-no-files-found: warn
           retention-days: 14
 
@@ -297,12 +326,17 @@ jobs:
       - watch-tests
       - smoke-tests
     runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Verify pinned release toolchain and installed runtimes
+        run: python3 scripts/verify-release-toolchain.py --output "$RUNNER_TEMP/release-toolchain.json"
 
       - name: Compare the original account journey on baseline and candidate
         env:

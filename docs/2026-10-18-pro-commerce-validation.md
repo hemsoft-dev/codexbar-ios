@@ -7,6 +7,35 @@ manifest for each execution. [Issue #470](https://github.com/hemsoft-dev/codexba
 owns the complete release qualification against the exact release candidate and
 the toolchain pinned in [the function-risk policy](../scripts/function-risk/policy.json).
 
+## Release runner
+
+[Issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) adds the
+[explicit phase runner](../scripts/run-pro-release-validation.sh) and
+[method manifest](../scripts/pro-release-phases.json). Use `native --output
+<fresh-directory>` for the full ordinary suite followed by preparation 1,
+native matrix 25, Germany preparation 1 and Germany storefront 1. The runner
+creates an owned device, records source/toolchain/binary provenance and checks
+built-test discovery against each result. Native hosts use Debug isolation,
+ad hoc signing and coverage instrumentation for both build and execution.
+The ordinary shared Pro subset is 197 XCTest methods from 22 source files;
+the earlier count of 199 included two top-level support functions.
+
+Use the [function-risk commands](../FUNCTION-RISK.md#reproduce) to merge all
+five passing unit results before scoring. The [UI procedure](../UI-TESTING.md#complete-release-phases)
+requires 51 journeys on each family plus three separate preparation/reset calls.
+UI coverage is not part of the earlier unit-risk job. `probe` builds and runs
+only the native preparation to diagnose setup; `--build-only` compiles without
+executing tests. Neither produces complete qualification. `--supplementary`
+allows local Xcode 27.1 diagnostics without changing the 26.6 release pin.
+
+The lower-level commands below remain useful for diagnosis. Keep instrumentation
+consistent across every build and execution, use explicit selectors, preserve
+first failures and do not reuse a simulator after failed/incomplete cleanup.
+The known monthly-finish failures later in this record remain unresolved until
+fresh pinned-toolchain evidence establishes their outcome.
+
+## Individual diagnostic commands
+
 Run these commands from the repository root on an issue branch. Replace
 `<simulator-id>`, `<derived-data>` and `<results>` with a dedicated disposable
 simulator UUID and new local directories. Do not reuse a personal simulator,
@@ -72,6 +101,7 @@ and are not SwiftPM test sources.
      -derivedDataPath '<derived-data>/native' \
      -parallel-testing-enabled NO \
      -maximum-concurrent-test-simulator-destinations 1 \
+     -enableCodeCoverage YES \
      -only-testing:CodexBarIOSTests/StoreKitProPreparationTests \
      -only-testing:CodexBarIOSTests/StoreKitProStoreSourceTests \
      -only-testing:CodexBarIOSTests/StoreKitProFailureTests \
@@ -94,6 +124,7 @@ and are not SwiftPM test sources.
      -derivedDataPath '<derived-data>/native' \
      -parallel-testing-enabled NO \
      -maximum-concurrent-test-simulator-destinations 1 \
+     -enableCodeCoverage YES \
      -only-testing:CodexBarIOSTests/StoreKitProPreparationTests/testPrepareLocalStoreKitConfiguration \
      -resultBundlePath '<results>/native-preparation.xcresult' \
      test-without-building 2>&1 | tee '<results>/native-preparation.log'
@@ -110,6 +141,7 @@ and are not SwiftPM test sources.
      -derivedDataPath '<derived-data>/native' \
      -parallel-testing-enabled NO \
      -maximum-concurrent-test-simulator-destinations 1 \
+     -enableCodeCoverage YES \
      -test-timeouts-enabled YES \
      -default-test-execution-time-allowance 90 \
      -maximum-test-execution-time-allowance 120 \
@@ -181,6 +213,7 @@ xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarProNativeCommerce \
   -derivedDataPath '<derived-data>/native' \
   -parallel-testing-enabled NO \
   -maximum-concurrent-test-simulator-destinations 1 \
+     -enableCodeCoverage YES \
   -only-testing:CodexBarIOSTests/StoreKitProPreparationTests/testPrepareLocalStoreKitGermany \
   -resultBundlePath '<results>/native-germany-preparation.xcresult' \
   test-without-building 2>&1 | tee '<results>/native-germany-preparation.log'
@@ -190,6 +223,7 @@ xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarProNativeCommerce \
   -derivedDataPath '<derived-data>/native' \
   -parallel-testing-enabled NO \
   -maximum-concurrent-test-simulator-destinations 1 \
+     -enableCodeCoverage YES \
   -only-testing:CodexBarIOSTests/StoreKitProStorefrontTests/testCatalogUsesPreparedGermanyStorefrontAndLocale \
   -resultBundlePath '<results>/native-germany.xcresult' \
   test-without-building 2>&1 | tee '<results>/native-germany.log'
@@ -229,6 +263,7 @@ xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarProCommerce \
   -derivedDataPath '<derived-data>/commerce-ui' \
   -parallel-testing-enabled NO \
   -maximum-concurrent-test-simulator-destinations 1 \
+     -enableCodeCoverage YES \
   CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- \
   SWIFT_STRICT_CONCURRENCY=complete SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
   clean build-for-testing 2>&1 | tee '<results>/commerce-ui-build.log'
@@ -238,6 +273,7 @@ xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarProCommerce \
   -derivedDataPath '<derived-data>/commerce-ui' \
   -parallel-testing-enabled NO \
   -maximum-concurrent-test-simulator-destinations 1 \
+     -enableCodeCoverage YES \
   -only-testing:CodexBarIOSUITests/ProCommerceJourneyTests \
   -resultBundlePath '<results>/commerce-ui-synthetic.xcresult' \
   test-without-building 2>&1 | tee '<results>/commerce-ui-synthetic.log'
@@ -265,6 +301,7 @@ xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarProNativeCommerce \
   -derivedDataPath '<derived-data>/native' \
   -parallel-testing-enabled NO \
   -maximum-concurrent-test-simulator-destinations 1 \
+     -enableCodeCoverage YES \
   -only-testing:CodexBarIOSUITests/ProCommerceNativeJourneyTests/testPurchaseAndRestore \
   -resultBundlePath '<results>/commerce-ui-native.xcresult' \
   test-without-building 2>&1 | tee '<results>/commerce-ui-native.log'
@@ -293,6 +330,7 @@ xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarProNativeCommerce \
   -derivedDataPath '<derived-data>/native' \
   -parallel-testing-enabled NO \
   -maximum-concurrent-test-simulator-destinations 1 \
+     -enableCodeCoverage YES \
   -only-testing:CodexBarIOSTests/StoreKitProPreparationTests/testPrepareLocalStoreKitPurchaseFailure \
   -resultBundlePath '<results>/native-purchase-error-preparation.xcresult' \
   test-without-building 2>&1 | tee '<results>/native-purchase-error-preparation.log'
@@ -302,6 +340,7 @@ xcodebuild -project CodexBarIOS.xcodeproj -scheme CodexBarProNativeCommerce \
   -derivedDataPath '<derived-data>/native' \
   -parallel-testing-enabled NO \
   -maximum-concurrent-test-simulator-destinations 1 \
+     -enableCodeCoverage YES \
   -only-testing:CodexBarIOSUITests/ProCommerceNativeJourneyTests/testPurchaseErrorLeavesFreePlanAndUsableControls \
   -resultBundlePath '<results>/commerce-ui-native-purchase-error.xcresult' \
   test-without-building 2>&1 | tee '<results>/commerce-ui-native-purchase-error.log'

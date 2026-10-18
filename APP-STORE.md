@@ -27,29 +27,48 @@ pricing. [Issue #469](https://github.com/hemsoft-dev/codexbar-ios/issues/469)
 owns the disclosures and draft products;
 [issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) owns final
 qualification, submission, release and the timed price change.
+Keep both issues open until their actual acceptance criteria are complete;
+merged preparation code and saved draft settings do not qualify a release.
 
 ### Product configuration and review handoff
 
-These are the required settings, not a claim of live App Store configuration.
-Record actual App Store Connect readbacks before marking them complete.
+The [saved App Store Connect inventory](/tmp/codexbar-469-readiness/asc-readback-20261018T111753.999215Z.json)
+was observed on October 18, 2026 at 7:17:53 AM EDT, `2026-10-18T11:17:53Z`.
+It contains 40 complete collections. The independent
+[post-assets audit](/tmp/codexbar-469-post-assets-audit/post-assets-audit.json)
+passed 346 of 346 checks against saved evidence. These are dated draft
+readbacks; the release owner must recheck current state before submission.
 
-| Product | Identifier | Required configuration | Live readback |
+| Product | Identifier | Required configuration | Saved readback |
 | --- | --- | --- | --- |
-| CodexBar Pro Yearly | `com.hemsoft.CodexBarIOS.pro.yearly` | CodexBar Pro group, level 1, one year, USA $14.99, seven-day eligible free trial | Pending release-owner record |
-| CodexBar Pro Monthly | `com.hemsoft.CodexBarIOS.pro.monthly` | Same group and level, one month, USA $1.99, no trial | Pending release-owner record |
-| CodexBar Pro Lifetime | `com.hemsoft.CodexBarIOS.pro.lifetime` | Non-consumable, USA $29.99, no trial | Pending release-owner record |
+| CodexBar Pro Yearly | `com.hemsoft.CodexBarIOS.pro.yearly` | CodexBar Pro group, level 1, one year, USA $14.99, seven-day eligible free trial | Resource `6824195239`, `READY_TO_SUBMIT`; USA $14.99, 175 priced/available territories and 175 one-week free-trial offers |
+| CodexBar Pro Monthly | `com.hemsoft.CodexBarIOS.pro.monthly` | Same group and level, one month, USA $1.99, no trial | Resource `6824195141`, `READY_TO_SUBMIT`; USA $1.99, 175 priced/available territories, zero introductory offers |
+| CodexBar Pro Lifetime | `com.hemsoft.CodexBarIOS.pro.lifetime` | Non-consumable, USA $29.99, no trial | Resource `6824195355`, `READY_TO_SUBMIT`; USA $29.99 and 175 priced/available territories |
 
-Keep Family Sharing off and multiseat at Apple's default. Enable 16-day billing
-grace for all renewals in production and sandbox, recording that app-level
-setting separately from unsubmitted product drafts. Both subscriptions use
-ordinary full-period payment, `UPFRONT`, rather than an installment commitment.
-Verify every intended territory, localized description, processed product
-review screenshot and actual product state.
+The saved subscription group is `22490183`, named CodexBar Pro. Its version
+`153c92f1-497a-43d5-8902-92030fd8ef1f` is `PREPARE_FOR_SUBMISSION`.
+The monthly, yearly and lifetime version records are respectively
+`c8c9fb7c-663f-48c7-b3af-79bb63ba5cb3`,
+`8acbb0ea-aaaf-46f4-9147-f5122af71820` and
+`a29cfae6-d318-419f-9865-9a34a257f0e1`; each is also
+`PREPARE_FOR_SUBMISSION`. Product readiness does not mean those versions have
+been submitted or approved.
 
-The first Pro products must accompany app version 2.0 in one review submission.
-Record the app version, group and product-version links and whether each item
-is attached. Selecting the uploaded release candidate may still be pending;
-an unsubmitted record is not App Review approval. The three local StoreKit
+Family Sharing is off for all three products. Both subscriptions retain
+Apple's default multiseat `ENABLED` setting and use ordinary full-period
+payment, `UPFRONT`. The separate app-level billing grace record enables
+`SIXTEEN_DAYS` for `ALL_RENEWALS` in production and sandbox. The six audited
+app-download pricing and availability collections are unchanged, including
+the US$3.99 download price and 175 sale territories. Preserve these settings
+through the approved launch sequence.
+
+App version `2.0.0`, ID `2c7b9bd4-b877-454d-a5a2-036b25a151f5`, is
+`PREPARE_FOR_SUBMISSION` with `MANUAL` release, no selected build and no phased
+release. Review draft `af75f0db-4b2c-403d-81e2-c3b14ab05986` is
+`READY_FOR_REVIEW`, with zero items and no submitted date. The first Pro
+products must accompany app version 2.0 in one review submission. Selecting
+the exact processed build and attaching the app and product versions remain
+pending; nothing in this draft has been submitted. The three local StoreKit
 review screenshots demonstrate app UI and test-configuration prices. They do
 not establish live App Store prices or production original-purchaser access.
 
@@ -64,9 +83,12 @@ The existing GitHub privacy and support URLs remain the release destinations.
 
 ### Cutover and original-purchaser rules
 
-The compiled cutoff `T` is **PROVISIONAL: October 31, 2026 at 8:00 PM EDT**,
-which is `2026-11-01T00:00:00Z`. It corresponds to the planned October 18
-submission, not a completed submission. The value in
+The planned release is `2.0.0 (5)`; all 14 project configurations already use
+that version and build. Qualification of the final immutable candidate is pending.
+The compiled cutoff `T` remains **PROVISIONAL: October 31, 2026 at 8:00 PM EDT**,
+which is `2026-11-01T00:00:00Z`. It is fourteen calendar days after the planned
+submission date `2026-10-18 UTC`, not evidence of a completed submission.
+The value in
 [ProOriginalPurchaserPolicy](CodexBarIOS/Services/ProOriginalPurchaserPolicy.swift)
 is unchanged by this preparation. Before submission,
 [issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) must
@@ -92,6 +114,8 @@ The [support page](SUPPORT.md#codexbar-pro-and-restoring-purchases) explains the
 one-time free lifetime offer-code route for missed cases. No codes are created
 or distributed by this disclosure work. Franz's original-purchase and family
 device checks remain pending; local StoreKit tests do not prove either result.
+Those production checks belong to Franz and are not prerequisites for
+agent-owned implementation or automated delivery.
 
 ### Approved launch sequence
 
@@ -132,7 +156,7 @@ sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.
 
 | Checkpoint | Requested action and time | Actual App Store Connect time | Storefront observations | Source SHA / build / T | Pending Franz checks |
 | --- | --- | --- | --- | --- | --- |
-| Final candidate and cutoff | Recompute before planned October 18 submission | Not submitted by this preparation | Not applicable | Candidate SHA pending; 2.0.0 build ≥5; provisional T above | None for repository preparation |
+| Final candidate and cutoff | Recheck actual submission date against planned October 18 UTC | Not submitted by this preparation | Not applicable | Candidate SHA pending; planned 2.0.0 build 5; provisional T above | None for repository preparation |
 | Exact-candidate qualification | Before upload/release | Pending #470 | Not applicable | Record qualified SHA and built versions | Live provider comparisons remain separate |
 | Manual submission | App 2.0 plus all products; paid price; no phased release | Pending #470 | Existing price retained until launch sequence | Record selected build and finalized T | Small Business enrollment before shipping |
 | Manual release | At least six days before T | Pending approval and #470 | Record release visibility | Same qualified candidate | None for draft setup |
@@ -140,13 +164,33 @@ sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.
 | Free schedule | About 72 hours before T; include latest region start | Pending #470 | Verify every storefront Free before T | Record source/build/T and schedule | None |
 | Post-cutoff | After T | Pending launch | Production download, Pro, trial and Restore | Record source/build/T | Original 1.x purchase and family device |
 
+The release ledger stays open through the price transition and post-cutoff
+checks. The following release actions have not been completed:
+
+- [ ] Freeze the merged candidate SHA and finalize the submission date, cutoff,
+  release copy and built `2.0.0 (5)` versions.
+- [ ] Pass the exact candidate's complete manual release gate on Xcode
+  26.6 / 17F113, including native commerce, both UI families and function risk.
+- [ ] Archive, export, upload and verify processing, then select that exact build.
+- [ ] Attach app version 2.0 and all first Pro products and submit once for review.
+- [ ] Record approval and manually release with at least six full days before T.
+- [ ] Wait 48 hours and record storefront observations serving 2.0.
+- [ ] Schedule Free, record requested and actual regional times, and verify
+  every storefront is Free before T.
+- [ ] Record post-cutoff production checks and Franz's original-purchase and
+  Family Sharing results without treating pending checks as passes.
+
 The four known monthly transaction-finish failures from
 [issue #468](https://github.com/hemsoft-dev/codexbar-ios/issues/468) remain
 unresolved release-qualification work in
 [issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
 The [commerce validation record](docs/2026-10-18-pro-commerce-validation.md)
-preserves them. Marketing captures and passing lifetime tests do not waive
-these failures or the pinned-toolchain release gate.
+preserves them. The retained
+[local Xcode 27.1 matrix](/tmp/codexbar-468-validation/committed-native-matrix-7385afa)
+has 25 tests: 21 passed, four monthly transaction-finish failures and zero
+skips. It is supplementary evidence, not Xcode 26.6 qualification. Marketing
+captures and passing lifetime tests do not waive these failures or the
+pinned-toolchain release gate.
 
 ### Native marketing and review assets
 
@@ -164,9 +208,16 @@ Capture only after the source commit is final. Generated assets and provenance
 are kept outside the checkout under
 `/tmp/codexbar-469-validation/artifacts/release-assets/2.0.0`, with separate raw,
 public and review images. This avoids an asset-only commit changing the source
-identity. The parent release owner inspects and uploads those exact files.
-Record the artifact index and hashes before any upload; no asset upload or
-processed App Store state is asserted here.
+identity. The release owner retains the uploaded files and checks their
+indexed hashes before any replacement.
+The saved post-assets audit records all nine public placements as `ACTIVE`
+and all three product-review screenshots as `COMPLETE`. All 12 Apple-processed
+images independently decode to the same RGBA8 pixels and dimensions as their
+source PNGs; processed PNG bytes differ. Preserve the existing artifact index,
+source/app hashes and upload receipts. The audit verifies saved processing
+and pixel preservation; it does not claim a new composition review or release
+qualification. The separate marketing capture method is excluded from the
+51 release user journeys per device family.
 
 Pro scenes must enable Pro with synthetic provider data. The Free scene must
 use one active account and seven-day history. Every public image showing
@@ -202,8 +253,17 @@ distinguishes on-device processing and Apple's own collection from developer
 collection. Record the actual privacy-label readback separately; the source
 review alone is not proof of saved App Store Connect answers.
 
+The release owner's separate [app-information audit](/tmp/codexbar-470-app-info/audit.json)
+passed 17 checks over seven complete read-only collections observed on
+October 18 at 7:45:40 AM EDT, `2026-10-18T11:45:40Z`. Distributed and editable
+app information agrees on Developer Tools / Utilities, the base 4+ rating,
+en-US name and subtitle, and the saved
+[privacy URL](https://github.com/HemSoft/codexbar-ios/blob/main/PRIVACY.md).
+These fields do not verify the unpublished privacy questionnaire, legal
+agreements or Small Business Program status.
+
 Paid Apps Agreement status and Small Business Program membership remain
-unverified by this repository preparation. Franz must complete
+**UNVERIFIED**. Enrollment remains pending for Franz, who must complete
 [Small Business Program enrollment](https://developer.apple.com/app-store/small-business-program/)
 before 2.0 ships. Do not infer enrollment or current agreement status from
 historical sales. These pending owner checks do not prevent preparation of
