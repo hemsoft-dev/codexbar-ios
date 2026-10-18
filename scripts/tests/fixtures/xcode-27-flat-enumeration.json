@@ -1,0 +1,20 @@
+{
+  "errors" : [
+
+  ],
+  "values" : [
+    {
+      "disabledTests" : [
+        {
+          "identifier" : "UnionTests/UnionTests/testNative()"
+        }
+      ],
+      "enabledTests" : [
+        {
+          "identifier" : "UnionTests/UnionTests/testOrdinary()"
+        }
+      ],
+      "testPlan" : "CoverageUnion"
+    }
+  ]
+}

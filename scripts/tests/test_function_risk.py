@@ -14,7 +14,7 @@ METRICS = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(METRICS)
 import coverage_inputs as INPUTS
 import release_evidence as EVIDENCE
-from scripts.tests.test_pro_release_validation import result_fixture
+from scripts.tests.test_pro_release_validation import discovery_fixture, result_fixture
 
 
 class FunctionRiskTests(unittest.TestCase):
@@ -284,7 +284,7 @@ class CoverageCollectionTests(unittest.TestCase):
             self.summaries[str(result)] = summary
             self.trees[str(result)] = tree
             discovery = folder / 'discovery.json'
-            EVIDENCE.write(discovery, {'values': expected})
+            EVIDENCE.write(discovery, discovery_fixture(expected))
             build_path = ordinary_build if phase == 'ios' else self.native_build
             build = EVIDENCE.read(build_path)
             argv = build['command'][:-1] + ([] if phase == 'ios' else ['-only-testing:' + test for test in expected])

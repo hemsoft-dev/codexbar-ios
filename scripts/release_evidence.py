@@ -266,17 +266,18 @@ def validate_receipt(receipt, snapshot, tools, expected, phase, result):
 
 def discovery_tests(value):
     """Parse xcodebuild's flat JSON enumeration; reject unknown/empty schemas."""
-    tests = []
-
-    def visit(item):
-        if isinstance(item, str) and TEST_ID.fullmatch(item.removesuffix('()')):
-            tests.append(item.removesuffix('()'))
-        elif isinstance(item, list):
-            for child in item:
-                visit(child)
-        elif isinstance(item, dict):
-            for child in item.values():
-                visit(child)
-
-    visit(value)
-    return unique_tests(tests)
+    if value.get('errors') != [] or not isinstance(value.get('values'), list) or len(value['values']) != 1:
+        raise ValueError('Expected one error-free flat test enumeration')
+    plan = value['values'][0]
+    if not isinstance(plan, dict) or not plan.get('testPlan'):
+        raise ValueError('Missing enumerated test plan')
+    groups = []
+    for key in ('enabledTests', 'disabledTests'):
+        rows = plan.get(key)
+        if not isinstance(rows, list) or any(not isinstance(row, dict) or not isinstance(row.get('identifier'), str) for row in rows):
+            raise ValueError(f'Invalid flat enumeration {key}')
+        identities = [row['identifier'].removesuffix('()') for row in rows]
+        groups.append(unique_tests(identities) if identities else [])
+    if set(groups[0]) & set(groups[1]):
+        raise ValueError('Enumeration both enables and disables the same test')
+    return unique_tests(groups[0])

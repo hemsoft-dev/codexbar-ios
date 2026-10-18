@@ -17,6 +17,11 @@ import release_evidence as EVIDENCE
 import pro_release_runner as RUNNER
 
 
+def discovery_fixture(identities, disabled=()):
+    return dict(errors=[], values=[dict(testPlan='Fixture', enabledTests=[dict(identifier=test+'()') for test in identities],
+                                       disabledTests=[dict(identifier=test+'()') for test in disabled])])
+
+
 def result_fixture(identities):
     device = dict(deviceId='owned-device', modelName='iPhone 17', osVersion='26.5',
                   osBuildNumber='23F77', architecture='arm64', platform='iOS Simulator', family='iphone')
@@ -87,10 +92,17 @@ class PhaseResultTests(unittest.TestCase):
             EVIDENCE.validate_results(self.summary, self.tree, self.expected, started='2026-10-18T00:00:00+00:00')
 
     def test_flat_discovery_requires_exact_unique_method_identifiers(self):
-        self.assertEqual(EVIDENCE.discovery_tests({'values': self.expected}), self.expected)
-        for value in ({'tests': []}, {'tests': self.expected * 2}, {'tests': ['ExampleTests']}):
+        self.assertEqual(EVIDENCE.discovery_tests(discovery_fixture(self.expected)), self.expected)
+        for value in ({'tests': []}, discovery_fixture(self.expected * 2), discovery_fixture(['ExampleTests'])):
             with self.assertRaises(ValueError):
                 EVIDENCE.discovery_tests(value)
+
+    def test_actual_xcode_flat_enumeration_excludes_disabled_method(self):
+        actual = EVIDENCE.read(Path(__file__).parent / 'fixtures/xcode-27-flat-enumeration.json')
+        self.assertEqual(EVIDENCE.discovery_tests(actual), ['UnionTests/UnionTests/testOrdinary'])
+        actual['errors'] = ['enumeration failed']
+        with self.assertRaisesRegex(ValueError, 'error-free'):
+            EVIDENCE.discovery_tests(actual)
 
 
 class PhaseManifestTests(unittest.TestCase):
@@ -166,7 +178,7 @@ class RunnerCommandFailureTests(unittest.TestCase):
         stream = kwargs['stdout']
         if '-enumerate-tests' in argv:
             tests = sorted(item.removeprefix('-only-testing:') for item in argv if item.startswith('-only-testing:'))
-            EVIDENCE.write(argv[argv.index('-test-enumeration-output-path')+1], {'values': tests})
+            EVIDENCE.write(argv[argv.index('-test-enumeration-output-path')+1], discovery_fixture(tests))
             stream.write('enumerated\n')
         elif '-resultBundlePath' in argv:
             path = Path(argv[argv.index('-resultBundlePath')+1])
