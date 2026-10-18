@@ -296,6 +296,7 @@ final class UITestFixtures {
         .safeAreaInset(edge: .bottom) {
             if showsPlanTransitions { PlanTransitionFixtureControls(fixture: planFixture) }
         }
+        .dynamicTypeSize(dynamicTypeSize)
     }
 
     nonisolated static func codexCredential(for identity: String) -> String {

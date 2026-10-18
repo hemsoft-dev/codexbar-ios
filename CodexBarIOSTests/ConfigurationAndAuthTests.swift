@@ -868,9 +868,10 @@ final class ConfigurationAndAuthTests: XCTestCase {
         store.updateUsageAlertActiveIDs([removedAlertID, failedAlertID])
         store.updateVisualizationStyle(.circularRing, accountID: removedAccount.id, metricID: "usage")
         store.updateVisualizationStyle(.semicircularDial, accountID: failedAccount.id, metricID: "balance")
+        // Credential setup also clears Claude's billing session; inject deletion failure only for reset.
+        secretStore.shouldFailDelete = false
         XCTAssertTrue(store.saveSecret("removed-token", for: removedAccount))
         XCTAssertTrue(store.saveSecret("failed-token", for: failedAccount))
-        secretStore.shouldFailDelete = false
         secretStore.failingAccount = ProviderConfigurationStore.keychainAccount(for: failedAccount)
 
         XCTAssertFalse(store.resetAccounts())

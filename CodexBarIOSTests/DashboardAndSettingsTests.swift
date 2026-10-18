@@ -1341,7 +1341,7 @@ final class DashboardAndSettingsTests: XCTestCase {
             used: 75
         )
         let service = UsageRefreshService(
-            providers: [ReturningFailureUsageProvider(providerID: .codex)],
+            providers: [ReturningFailureUsageProvider(providerID: .codex, allowsUnscopedCacheReuse: true)],
             initialResults: [cachedResult]
         )
 
@@ -1391,7 +1391,7 @@ final class DashboardAndSettingsTests: XCTestCase {
             fetchedAt: Date().addingTimeInterval(-300)
         )
         let service = UsageRefreshService(
-            providers: [ReturningPartialFailureUsageProvider(providerID: .codex)],
+            providers: [ReturningPartialFailureUsageProvider(providerID: .codex, allowsUnscopedCacheReuse: true)],
             initialResults: [cachedResult]
         )
 

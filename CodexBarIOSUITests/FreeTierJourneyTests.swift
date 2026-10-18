@@ -35,6 +35,9 @@ final class FreeTierJourneyTests: XCTestCase {
         XCTAssertTrue(chooser.waitForExistence(timeout: 10))
         let work = app.buttons["active-account-choice-plan-account-1"]
         reveal(work, in: app)
+        let headline = work.staticTexts["Work account"].firstMatch
+        XCTAssertTrue(headline.exists)
+        XCTAssertGreaterThanOrEqual(headline.frame.height, 30, "The chooser must render the Accessibility 2 text-size fixture.")
         XCTAssertTrue(work.label.contains("Credits remaining"), "The chooser must show the stored cold-start values.")
         capture("free-active-account-chooser-large-text")
         tap(work, in: app)

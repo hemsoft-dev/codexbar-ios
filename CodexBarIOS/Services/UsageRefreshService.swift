@@ -369,11 +369,8 @@ public final class UsageRefreshService: ObservableObject {
         guard canRefresh(configuration), !hasCurrentConfigurationSnapshot || isCurrent(configuration) else {
             throw CodexBankedResetConsumptionError.notConfigured
         }
-        let generation = registerCurrentConfiguration(configuration)
         if let activeTask = codexResetTasks[configuration.id] {
-            let outcome = try await activeTask.value
-            guard isCurrent(configuration, generation: generation) else { throw CodexBankedResetConsumptionError.notConfigured }
-            return outcome
+            return try await activeTask.value
         }
 
         let attempt = codexResetAttempts[configuration.id] ?? CodexResetAttempt(
@@ -394,7 +391,8 @@ public final class UsageRefreshService: ObservableObject {
             let outcome = try await task.value
             codexResetTasks[configuration.id] = nil
             codexResetAttempts[configuration.id] = nil
-            guard isCurrent(configuration, generation: generation) else { throw CodexBankedResetConsumptionError.notConfigured }
+            // A confirmed reset has already happened at the provider. Keep that outcome
+            // truthful; refresh eligibility separately prevents follow-up work for stale accounts.
             return outcome
         } catch {
             codexResetTasks[configuration.id] = nil

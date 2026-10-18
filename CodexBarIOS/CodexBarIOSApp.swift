@@ -157,11 +157,6 @@ struct CodexBarIOSApp: App {
                     #endif
                 }
         }
-        #if DEBUG
-        .transformEnvironment(\.dynamicTypeSize) { [fixtureSize = UITestFixtures.current?.dynamicTypeSize] size in
-            if let fixtureSize { size = fixtureSize }
-        }
-        #endif
         .backgroundTask(
             .appRefresh(GitHubStatusMonitor.backgroundTaskIdentifier)
         ) {

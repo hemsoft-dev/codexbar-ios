@@ -62,6 +62,7 @@ extension View {
 private struct AccountPlanPresentationModifier: ViewModifier {
     @ObservedObject var configurationStore: ProviderConfigurationStore
     @Environment(\.accountLastResultProvider) private var lastResultProvider
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let usageResultForAccount: @MainActor (String) -> ProviderUsageResult?
     let isActive: Bool
 
@@ -72,6 +73,7 @@ private struct AccountPlanPresentationModifier: ViewModifier {
                 set: { if !$0 && isActive { configurationStore.dismissProPresentation() } }
             )) {
                 ProPresentationView(configurationStore: configurationStore)
+                    .dynamicTypeSize(dynamicTypeSize)
             }
             .sheet(isPresented: Binding(
                 get: {
@@ -86,6 +88,7 @@ private struct AccountPlanPresentationModifier: ViewModifier {
                         usageResultForAccount(accountID) ?? lastResultProvider(accountID)
                     }
                 )
+                .dynamicTypeSize(dynamicTypeSize)
             }
     }
 }
