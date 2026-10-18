@@ -28,6 +28,7 @@ final class UITestFixtures {
     let statusPreferences: GitHubStatusPreferences
     let statusMonitor: GitHubStatusMonitor
     let appUpdateController: AppUpdateController
+    let originalPurchaserFixture: OriginalPurchaserFixture?
     private let usesDefaultText: Bool
 
     private lazy var widgetSnapshotCoordinator = WidgetSnapshotCoordinator(
@@ -52,6 +53,7 @@ final class UITestFixtures {
             defaults.removePersistentDomain(forName: suite)
         }
         self.defaults = defaults
+        originalPurchaserFixture = OriginalPurchaserFixture(scenario: environment["CODEXBAR_UI_TEST_SCENARIO"], defaults: defaults)
         usesDefaultText = environment["CODEXBAR_UI_TEST_DEFAULT_TEXT"] == "1"
         URLProtocol.registerClass(UITestNetworkBlocker.self)
         configurationStore = ProviderConfigurationStore(

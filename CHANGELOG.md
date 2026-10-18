@@ -8,6 +8,10 @@ building, testing, or releasing the app.
 
 ### Added
 
+- Keep lifetime CodexBar Pro if you bought the original paid app. A one-time
+  thank-you confirms your access and explains the family installation deadline.
+  ([#465](https://github.com/hemsoft-dev/codexbar-ios/issues/465))
+
 - Add an X Subscription account with one xAI sign-in on your phone to see the
   shared weekly pool and its reset once, a per-product breakdown of the pool
   when xAI reports it, and your Extra Usage Credits balance. Recognized plan

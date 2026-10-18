@@ -207,6 +207,10 @@
 		A46400000000000000010005 /* ProEntitlement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000005 /* ProEntitlement.swift */; };
 		A46400000000000000010006 /* StoreKitProStoreSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000006 /* StoreKitProStoreSource.swift */; };
 		A46400000000000000010008 /* ProClockSupport.c in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000008 /* ProClockSupport.c */; };
+		A46500000000000000010001 /* ProOriginalPurchaserPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46500000000000000000001 /* ProOriginalPurchaserPolicy.swift */; };
+		A46500000000000000010002 /* OriginalPurchaserNotice.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46500000000000000000002 /* OriginalPurchaserNotice.swift */; };
+		A46500000000000000010003 /* OriginalPurchaserFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46500000000000000000003 /* OriginalPurchaserFixture.swift */; };
+		A46500000000000000010004 /* OriginalPurchaserNoticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46500000000000000000004 /* OriginalPurchaserNoticeView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -483,6 +487,10 @@
 		A46400000000000000000008 /* ProClockSupport.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ProClockSupport/ProClockSupport.c; sourceTree = "<group>"; };
 		A46400000000000000000009 /* ProClockSupport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProClockSupport/include/ProClockSupport.h; sourceTree = "<group>"; };
 		A46400000000000000000011 /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = ProClockSupport/include/module.modulemap; sourceTree = "<group>"; };
+		A46500000000000000000001 /* ProOriginalPurchaserPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProOriginalPurchaserPolicy.swift; sourceTree = "<group>"; };
+		A46500000000000000000002 /* OriginalPurchaserNotice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalPurchaserNotice.swift; sourceTree = "<group>"; };
+		A46500000000000000000003 /* OriginalPurchaserFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalPurchaserFixture.swift; sourceTree = "<group>"; };
+		A46500000000000000000004 /* OriginalPurchaserNoticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalPurchaserNoticeView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -604,6 +612,9 @@
 		700000000000000000000004 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				A46500000000000000000003 /* OriginalPurchaserFixture.swift */,
+				A46500000000000000000002 /* OriginalPurchaserNotice.swift */,
+				A46500000000000000000001 /* ProOriginalPurchaserPolicy.swift */,
 				A46400000000000000000006 /* StoreKitProStoreSource.swift */,
 				A46400000000000000000005 /* ProEntitlement.swift */,
 				A46400000000000000000004 /* ProEntitlementCache.swift */,
@@ -685,6 +696,7 @@
 		700000000000000000000005 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A46500000000000000000004 /* OriginalPurchaserNoticeView.swift */,
 				F20000000000000000000002 /* DiagnosticReportView.swift */,
 				20000000000000000000000A /* ProviderUsageCard.swift */,
 				A42000000000000000000302 /* ClaudeUsageResetInventoryView.swift */,
@@ -1115,6 +1127,10 @@
 			files = (
 				A46400000000000000010006 /* StoreKitProStoreSource.swift in Sources */,
 				A46400000000000000010005 /* ProEntitlement.swift in Sources */,
+				A46500000000000000010004 /* OriginalPurchaserNoticeView.swift in Sources */,
+				A46500000000000000010003 /* OriginalPurchaserFixture.swift in Sources */,
+				A46500000000000000010002 /* OriginalPurchaserNotice.swift in Sources */,
+				A46500000000000000010001 /* ProOriginalPurchaserPolicy.swift in Sources */,
 				A46400000000000000010004 /* ProEntitlementCache.swift in Sources */,
 				A46400000000000000010003 /* ProEntitlementResolver.swift in Sources */,
 				A46400000000000000010002 /* ProStoreEvidence.swift in Sources */,
