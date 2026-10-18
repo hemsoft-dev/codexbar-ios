@@ -138,7 +138,12 @@ final class FreeTierJourneyTests: XCTestCase {
     private func tapSwitch(_ element: XCUIElement, in app: XCUIApplication) {
         reveal(element, in: app)
         let control = element.switches.firstMatch
-        (control.exists ? control : element).tap()
+        if control.exists {
+            control.tap()
+        } else {
+            // SwiftUI may expose the complete row as the switch on iPad.
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        }
     }
 
     private func tap(_ element: XCUIElement, in app: XCUIApplication) {
