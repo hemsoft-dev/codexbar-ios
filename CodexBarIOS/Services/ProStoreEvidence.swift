@@ -1,0 +1,96 @@
+import Foundation
+
+enum ProVerification<Value: Sendable>: Sendable {
+    case verified(Value)
+    case unverified
+    case unavailable
+}
+
+struct ProAppPurchase: Sendable {
+    let originalVersion: String
+    let originalPurchaseDate: Date
+    let environment: ProStoreEnvironment
+    let revoked: Bool
+    var isProduction: Bool { environment == .production }
+}
+
+/// Transaction identifiers stay in memory to order updates. They are never cached or logged.
+struct ProPurchaseEvidence: Equatable, Sendable {
+    let product: ProProductID
+    let transactionID: UInt64
+    let purchasedAt: Date
+    let signedAt: Date
+    var expiresAt: Date?
+    var revoked = false
+    var upgraded = false
+    var isFreeTrial = false
+    var environment: ProStoreEnvironment = .production
+
+    func isNewer(than other: Self) -> Bool {
+        if purchasedAt != other.purchasedAt { return purchasedAt > other.purchasedAt }
+        return signedAt > other.signedAt
+    }
+}
+
+enum ProRenewalState: Sendable {
+    case subscribed, expired, billingRetry, grace, revoked
+}
+
+struct ProSubscriptionEvidence: Sendable {
+    let purchase: ProPurchaseEvidence
+    let signedAt: Date
+    let state: ProRenewalState
+    let renewalVerified: Bool
+    let willAutoRenew: Bool?
+    let isInBillingRetry: Bool
+    let graceEndsAt: Date?
+
+    func deniesAccess(at date: Date) -> Bool {
+        if purchase.revoked || purchase.upgraded { return true }
+        guard renewalVerified else { return false }
+        if state == .revoked { return true }
+        if let graceEndsAt, graceEndsAt > date { return false }
+        if state == .expired { return true }
+        if state == .billingRetry || isInBillingRetry {
+            // A previously verified grace record aging out offline is not a new denial from Apple.
+            if let graceEndsAt, signedAt < graceEndsAt { return false }
+            return true
+        }
+        return state == .grace && graceEndsAt == nil
+    }
+}
+
+struct ProStoreSnapshot: Sendable {
+    var appPurchase: ProVerification<ProAppPurchase> = .unavailable
+    var purchases: [ProPurchaseEvidence] = []
+    var unverifiedProducts: Set<ProProductID> = []
+    var subscriptions: [ProSubscriptionEvidence] = []
+    var subscriptionStatusAvailable = false
+}
+
+@MainActor
+struct ProTransactionDelivery {
+    let product: ProProductID
+    let evidence: ProVerification<ProPurchaseEvidence>
+    let finish: @MainActor () async -> Void
+}
+
+enum ProPurchaseOutcome {
+    case purchased(ProTransactionDelivery)
+    case pending
+    case cancelled
+}
+
+@MainActor
+protocol ProStoreSource: AnyObject {
+    func snapshot() async -> ProStoreSnapshot
+    func transactionUpdates() -> AsyncStream<ProTransactionDelivery>
+    func subscriptionUpdates() -> AsyncStream<ProSubscriptionEvidence>
+    func purchase(_ product: ProProductID) async throws -> ProPurchaseOutcome
+    func restore(refreshAppTransaction: Bool) async throws
+}
+
+/// Recognition is supplied by the original-purchaser rollout, independently of IAP verification.
+struct ProOriginalPurchaserPolicy: Sendable {
+    var qualifies: @Sendable (ProAppPurchase) -> Bool = { _ in false }
+}

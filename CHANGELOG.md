@@ -107,6 +107,11 @@ building, testing, or releasing the app.
   required before another platform sells Pro.
   ([#459](https://github.com/hemsoft-dev/codexbar-ios/issues/459))
 
+- Add the verified StoreKit entitlement foundation for CodexBar Pro, including
+  local product fixtures, an identifier-free shared cache, purchase delivery
+  handling and local tests for refunds, grace periods and offline access.
+  ([#464](https://github.com/hemsoft-dev/codexbar-ios/issues/464))
+
 - Document verified subscription billing contracts and access gaps for Cursor,
   Google AI, personal Copilot, OpenCode Go and paid Greptile. Add a manual,
   offline OpenCode contract replay and a separate implementation follow-up.

@@ -199,6 +199,12 @@
 		A40600000000000000000401 /* GreptileBrowserSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000402 /* GreptileBrowserSignInView.swift */; };
 		A40600000000000000000501 /* GreptileRenewalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000502 /* GreptileRenewalView.swift */; };
 		A40600000000000000000601 /* ProviderCardInformationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000602 /* ProviderCardInformationView.swift */; };
+		A46400000000000000010001 /* ProEntitlementValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000001 /* ProEntitlementValue.swift */; };
+		A46400000000000000010002 /* ProStoreEvidence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000002 /* ProStoreEvidence.swift */; };
+		A46400000000000000010003 /* ProEntitlementResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000003 /* ProEntitlementResolver.swift */; };
+		A46400000000000000010004 /* ProEntitlementCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000004 /* ProEntitlementCache.swift */; };
+		A46400000000000000010005 /* ProEntitlement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000005 /* ProEntitlement.swift */; };
+		A46400000000000000010006 /* StoreKitProStoreSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000006 /* StoreKitProStoreSource.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -464,6 +470,13 @@
 		A40600000000000000000402 /* GreptileBrowserSignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileBrowserSignInView.swift; sourceTree = "<group>"; };
 		A40600000000000000000502 /* GreptileRenewalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileRenewalView.swift; sourceTree = "<group>"; };
 		A40600000000000000000602 /* ProviderCardInformationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderCardInformationView.swift; sourceTree = "<group>"; };
+		A46400000000000000000001 /* ProEntitlementValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementValue.swift; sourceTree = "<group>"; };
+		A46400000000000000000002 /* ProStoreEvidence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProStoreEvidence.swift; sourceTree = "<group>"; };
+		A46400000000000000000003 /* ProEntitlementResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementResolver.swift; sourceTree = "<group>"; };
+		A46400000000000000000004 /* ProEntitlementCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementCache.swift; sourceTree = "<group>"; };
+		A46400000000000000000005 /* ProEntitlement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlement.swift; sourceTree = "<group>"; };
+		A46400000000000000000006 /* StoreKitProStoreSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitProStoreSource.swift; sourceTree = "<group>"; };
+		A46400000000000000000010 /* CodexBarPro.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = StoreKit/CodexBarPro.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -522,6 +535,7 @@
 		700000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				A46400000000000000000010 /* CodexBarPro.storekit */,
 				700000000000000000000002 /* CodexBarIOS */,
 				700000000000000000000009 /* CodexBarIOSWidget */,
 				D70000000000000000000001 /* CodexBarWatch */,
@@ -581,6 +595,11 @@
 		700000000000000000000004 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				A46400000000000000000006 /* StoreKitProStoreSource.swift */,
+				A46400000000000000000005 /* ProEntitlement.swift */,
+				A46400000000000000000004 /* ProEntitlementCache.swift */,
+				A46400000000000000000003 /* ProEntitlementResolver.swift */,
+				A46400000000000000000002 /* ProStoreEvidence.swift */,
 				G20000000000000000000244 /* GitHubStatusMonitor.swift */,
 				200000000000000000000007 /* UsageProvider.swift */,
 				200000000000000000000008 /* DemoUsageProvider.swift */,
@@ -745,6 +764,7 @@
 		70000000000000000000000A /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				A46400000000000000000001 /* ProEntitlementValue.swift */,
 				A22700000000000000000005 /* CursorUsageIdentity.swift */,
 				A42100000000000000000105 /* ClaudeFableUsageIdentity.swift */,
 				A22600000000000000000005 /* GreptileUsageIdentity.swift */,
@@ -1083,6 +1103,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A46400000000000000010006 /* StoreKitProStoreSource.swift in Sources */,
+				A46400000000000000010005 /* ProEntitlement.swift in Sources */,
+				A46400000000000000010004 /* ProEntitlementCache.swift in Sources */,
+				A46400000000000000010003 /* ProEntitlementResolver.swift in Sources */,
+				A46400000000000000010002 /* ProStoreEvidence.swift in Sources */,
+				A46400000000000000010001 /* ProEntitlementValue.swift in Sources */,
 				A22700000000000000000001 /* CursorUsageIdentity.swift in Sources */,
 				A42100000000000000000101 /* ClaudeFableUsageIdentity.swift in Sources */,
 				A22600000000000000000001 /* GreptileUsageIdentity.swift in Sources */,
