@@ -1407,7 +1407,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
             URLQueryItem(name: "state", value: state),
         ]
         let callbackURL = try XCTUnwrap(callbackComponents.url)
-        _ = try await URLSession.shared.data(from: callbackURL)
+        try await LoopbackBrowser.deliver(callbackURL)
         let result = try await signInTask.value
         let completedAt = Int64(Date().timeIntervalSince1970)
 
@@ -1500,7 +1500,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
                     return
                 }
                 Task.detached {
-                    _ = try? await URLSession.shared.data(from: callbackURL)
+                    try? await LoopbackBrowser.deliver(callbackURL)
                 }
             }
             XCTFail("Expected GitHub sign-in to fail.")
@@ -1702,7 +1702,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
                     return
                 }
                 Task.detached {
-                    _ = try? await URLSession.shared.data(from: callbackURL)
+                    try? await LoopbackBrowser.deliver(callbackURL)
                 }
             }
             XCTFail("Expected Claude sign-in to fail.")

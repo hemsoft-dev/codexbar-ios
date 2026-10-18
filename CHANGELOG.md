@@ -154,6 +154,11 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   release toolchain.
   ([#488](https://github.com/hemsoft-dev/codexbar-ios/issues/488))
 
+- Deliver simulated sign-in callbacks outside the test host's fixture network
+  blocker, build daily-history test dates in the device calendar, and cover the
+  entitlement clock's shared continuity marker on iPhone and Apple Watch.
+  ([#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490))
+
 - Add explicit manual release phases with exact test identities, separate
   StoreKit preparation and reset, and retained failure evidence. Combine ordinary
   and native StoreKit iOS coverage with Apple's raw report/archive merge and
