@@ -1,0 +1,4 @@
+module ProClockSupport {
+    header "ProClockSupport.h"
+    export *
+}

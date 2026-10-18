@@ -3,6 +3,8 @@ import SwiftUI
 
 @main
 struct CodexBarIOSApp: App {
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var proEntitlement: ProEntitlement
     @StateObject private var refreshService: UsageRefreshService
     @StateObject private var configurationStore: ProviderConfigurationStore
     @StateObject private var historyStore: UsageHistoryStore
@@ -15,6 +17,7 @@ struct CodexBarIOSApp: App {
     #endif
 
     init() {
+        _proEntitlement = StateObject(wrappedValue: ProEntitlement.live())
         #if DEBUG
         if let fixtures = UITestFixtures.current {
             _refreshService = StateObject(wrappedValue: fixtures.refreshService)
@@ -89,7 +92,21 @@ struct CodexBarIOSApp: App {
     var body: some Scene {
         WindowGroup {
             rootView
+                .environmentObject(proEntitlement)
                 .preferredColorScheme(configurationStore.appAppearance.colorScheme)
+                .task {
+                    #if DEBUG
+                    if UITestFixtures.current != nil || screenshotConfiguration != nil { return }
+                    #endif
+                    await proEntitlement.start()
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    guard phase == .active else { return }
+                    #if DEBUG
+                    if UITestFixtures.current != nil || screenshotConfiguration != nil { return }
+                    #endif
+                    Task { await proEntitlement.refresh() }
+                }
                 .task {
                     #if DEBUG
                     if UITestFixtures.current != nil { return }

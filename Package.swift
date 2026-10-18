@@ -33,6 +33,16 @@ let package = Package(
         ),
     ],
     targets: [
+        .target(name: "ProClockSupport", path: "ProClockSupport"),
+        // StoreKit state-machine regressions run locally, never in automatic PR CI.
+        .testTarget(
+            name: "ProEntitlementTests",
+            dependencies: ["CodexBarIOS"],
+            path: "ProEntitlementTests",
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins"),
+            ]
+        ),
         // Local-only regressions; automatic CI continues running its existing smoke executable.
         .testTarget(
             name: "CodexUsageTests",
@@ -108,6 +118,7 @@ let package = Package(
         ),
         .target(
             name: "CodexBarIOS",
+            dependencies: ["ProClockSupport"],
             path: "CodexBarIOS",
             exclude: [
                 "CodexBarIOSApp.swift",
