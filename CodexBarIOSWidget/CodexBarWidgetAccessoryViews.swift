@@ -18,6 +18,10 @@ struct AccessoryCircularWidget: View {
 
     let tile: CodexBarWidgetTile?
 
+    init(tile: CodexBarWidgetTile?) {
+        self.tile = tile
+    }
+
     var body: some View {
         if let tile, !tile.allowsUsageGauge {
             VStack(spacing: 1) {

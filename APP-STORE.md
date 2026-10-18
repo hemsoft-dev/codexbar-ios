@@ -74,8 +74,14 @@ not establish live App Store prices or production original-purchaser access.
 
 Apple requires the first in-app purchase and first subscriptions to accompany
 an app binary through the [App Store Connect website](https://appstoreconnect.apple.com).
-Use that website to associate the monthly, yearly and lifetime products with
-app version 2.0 and submit them together. The review-submission API's item-add
+Use **Add for Review** on the website and select the existing draft. Before
+**Submit for Review**, verify that the same draft contains app version 2.0,
+subscription group `22490183`, and all three monthly, yearly and lifetime
+products. Add the group if it is absent; do not add a duplicate when the website
+has already included it. Verify the displayed group membership rather than
+inferring it from API localization behavior. Apple's
+[first-submission website instructions](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-in-app-purchase/)
+require these items together. The review-submission API's item-add
 and submit operations do not apply to these first products; the empty API
 review draft does not change that requirement. Selecting an eligible processed
 build through the API remains available to the release owner after candidate
@@ -148,6 +154,8 @@ agent-owned implementation or automated delivery.
    the [2.0 changelog](CHANGELOG.md#200---2026-10-18) against the final candidate.
 2. Submit 2.0 and all first Pro products together through the
    [App Store Connect website](https://appstoreconnect.apple.com).
+   Verify the subscription group and all three products are in the same draft
+   as the app version before submitting.
    Use manual release with phased release off. Keep the existing US$3.99 app
    price and sale territories.
    Require the exact candidate's five quality jobs and complete iPhone/iPad

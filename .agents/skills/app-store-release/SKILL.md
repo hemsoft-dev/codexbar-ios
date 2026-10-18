@@ -261,8 +261,12 @@ purchase through the App Store Connect website. Apple's
 and [first subscription submission rule](https://developer.apple.com/documentation/appstoreconnectapi/submitting-subscriptions-and-subscription-groups-for-app-review)
 require the website with an app version; review-submission API operations do not
 apply. API checks and eligible build selection may prepare the version, but do
-not add or submit these first product items through the API. Re-read the website
-submission result and record all app/product relationships in the ledger.
+not add or submit these first product items through the API. Use website **Add
+for Review** and select the existing draft. Verify that the app version,
+subscription group and all three products appear in that same draft; add the
+group only if absent. Follow Apple's [website submission instructions](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-in-app-purchase/)
+and verify actual group membership before submitting. Re-read the website
+submission result and record all app/group/product relationships in the ledger.
 
 1. Confirm `submission-ready`, exact version/build, unchanged candidate SHA,
    and exact current-task authority for **Submit for Review**. Otherwise stop
@@ -284,7 +288,7 @@ issue #469 open until their actual acceptance criteria are met. Follow the
 [approved launch sequence](../../../APP-STORE.md#approved-launch-sequence) and
 record requested/actual times and storefront observations separately.
 
-For the selected 2.0.0 build 5, the planned October 18, 2026 UTC submission
+For the planned 2.0.0 build 5, the planned October 18, 2026 UTC submission
 corresponds to cutoff `2026-11-01T00:00:00Z`, October 31 at 8:00 PM EDT.
 Recheck the actual plan before final qualification and submission. A changed
 cutoff, build, source or release copy requires a newly qualified candidate.

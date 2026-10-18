@@ -144,6 +144,10 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Developer Experience
 
+- Give widget views explicit initializers for the pinned Swift compiler while
+  keeping their environment-driven appearance state private.
+  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+
 - Add explicit manual release phases with exact test identities, separate
   StoreKit preparation and reset, and retained failure evidence. Combine ordinary
   and native StoreKit iOS coverage with Apple's raw report/archive merge and

@@ -6,6 +6,10 @@ struct CodexBarWidgetView: View {
     @Environment(\.widgetFamily) private var family
     private var appearance = WidgetRenderingAppearance()
 
+    init(entry: CodexBarWidgetEntry) {
+        self.entry = entry
+    }
+
     @ViewBuilder
     var body: some View {
         if appearance.isVibrant {
@@ -304,6 +308,10 @@ private struct ProLockedWidget: View {
     let family: WidgetFamily
     private var appearance = WidgetRenderingAppearance()
 
+    init(family: WidgetFamily) {
+        self.family = family
+    }
+
     var body: some View {
         content
             .accessibilityElement(children: .ignore)
@@ -349,6 +357,12 @@ struct TileWidget: View {
     let tiles: [CodexBarWidgetRenderedTile]
     let generatedAt: Date
     let family: WidgetFamily
+
+    init(tiles: [CodexBarWidgetRenderedTile], generatedAt: Date, family: WidgetFamily) {
+        self.tiles = tiles
+        self.generatedAt = generatedAt
+        self.family = family
+    }
 
     var body: some View {
         Group {
@@ -412,6 +426,12 @@ struct DenseTileWidget: View {
     let tiles: [CodexBarWidgetRenderedTile]
     let generatedAt: Date
     let family: WidgetFamily
+
+    init(tiles: [CodexBarWidgetRenderedTile], generatedAt: Date, family: WidgetFamily) {
+        self.tiles = tiles
+        self.generatedAt = generatedAt
+        self.family = family
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -482,6 +502,11 @@ struct ProviderWidgetTile: View {
 
     let renderedTile: CodexBarWidgetRenderedTile
     let style: Style
+
+    init(renderedTile: CodexBarWidgetRenderedTile, style: Style) {
+        self.renderedTile = renderedTile
+        self.style = style
+    }
 
     private var tile: CodexBarWidgetTile {
         renderedTile.tile
@@ -923,6 +948,10 @@ private struct WidgetUsageProgressBar: View {
 
     let bar: CodexBarWidgetUsageBarSnapshot
 
+    init(bar: CodexBarWidgetUsageBarSnapshot) {
+        self.bar = bar
+    }
+
     var body: some View {
         CodexBarUsageProgressBar(
             fractionUsed: bar.fractionUsed,
@@ -943,6 +972,11 @@ private struct WidgetMetricVisualization: View {
 
     let bar: CodexBarWidgetUsageBarSnapshot
     let layoutStyle: ProviderWidgetTile.Style
+
+    init(bar: CodexBarWidgetUsageBarSnapshot, layoutStyle: ProviderWidgetTile.Style) {
+        self.bar = bar
+        self.layoutStyle = layoutStyle
+    }
 
     var body: some View {
         Group {
