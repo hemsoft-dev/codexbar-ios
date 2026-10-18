@@ -138,6 +138,8 @@ def wait_ready(path, scene):
 
 
 def capture(args):
+    if args.receipt.exists():
+        raise ValueError(f'Refusing to overwrite capture provenance: {args.receipt}')
     source = committed_source(args.root)
     build_receipt = json.loads(args.build_receipt.read_text())
     if build_receipt['source_commit'] != source:
