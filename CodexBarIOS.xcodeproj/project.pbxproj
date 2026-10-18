@@ -246,6 +246,8 @@
 		A46700000000000000042005 /* ProClockSupport.c in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000008 /* ProClockSupport.c */; };
 		A46700000000000000042006 /* ProClockSupport.c in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000008 /* ProClockSupport.c */; };
 		A46700000000000000042007 /* WatchAccessTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040003 /* WatchAccessTestSupport.swift */; };
+		A49000000000000000000002 /* ProEntitlementClockContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49000000000000000000001 /* ProEntitlementClockContinuityTests.swift */; };
+		A49000000000000000000003 /* ProEntitlementClockContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49000000000000000000001 /* ProEntitlementClockContinuityTests.swift */; };
 		A46700000000000000043051 /* WatchAccessClockStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040002 /* WatchAccessClockStore.swift */; };
 		A46700000000000000043052 /* WatchComplicationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32000000000000000000001 /* WatchComplicationSupport.swift */; };
 		A46700000000000000043053 /* WatchComplicationConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32000000000000000000003 /* WatchComplicationConfiguration.swift */; };
@@ -593,6 +595,7 @@
 		A46700000000000000040001 /* WatchAccessRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccessRecoveryTests.swift; sourceTree = "<group>"; };
 		A46700000000000000040002 /* WatchAccessClockStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccessClockStore.swift; sourceTree = "<group>"; };
 		A46700000000000000040003 /* WatchAccessTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccessTestSupport.swift; sourceTree = "<group>"; };
+		A49000000000000000000001 /* ProEntitlementClockContinuityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementClockContinuityTests.swift; sourceTree = "<group>"; };
 		846554F909D0B6424BB493A9 /* OriginalPurchaserNoticeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/OriginalPurchaserNoticeTests.swift; sourceTree = SOURCE_ROOT; };
 		9CA1F9D2E0FE3735ECB713C8 /* ProEntitlementAppReplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProEntitlementAppReplayTests.swift; sourceTree = SOURCE_ROOT; };
 		CF2628A97C18F461D82A89FC /* ProEntitlementBoundaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProEntitlementBoundaryTests.swift; sourceTree = SOURCE_ROOT; };
@@ -1031,6 +1034,7 @@
 				A46700000000000000040001 /* WatchAccessRecoveryTests.swift */,
 				A46700000000000000040004 /* WatchAccessReaderTests.swift */,
 				A46700000000000000040003 /* WatchAccessTestSupport.swift */,
+				A49000000000000000000001 /* ProEntitlementClockContinuityTests.swift */,
 			);
 			path = CodexBarWatchTests;
 			sourceTree = "<group>";
@@ -1545,6 +1549,7 @@
 				C10000000000000000000003 /* WidgetConfigurationTests.swift in Sources */,
 				A46700000000000000032002 /* WidgetAccessFixture.swift in Sources */,
 				A46700000000000000032003 /* WidgetAccessGuardTests.swift in Sources */,
+				A49000000000000000000002 /* ProEntitlementClockContinuityTests.swift in Sources */,
 				A46700000000000000032004 /* WidgetAccessQueryTests.swift in Sources */,
 				A46700000000000000032005 /* WidgetPublicationRecoveryTests.swift in Sources */,
 				A46700000000000000010003 /* WidgetProAccessTests.swift in Sources */,
@@ -1607,6 +1612,7 @@
 				A46700000000000000010005 /* WatchProAccessTests.swift in Sources */,
 				A46700000000000000041001 /* WatchAccessRecoveryTests.swift in Sources */,
 				A46700000000000000043001 /* WatchAccessReaderTests.swift in Sources */,
+				A49000000000000000000003 /* ProEntitlementClockContinuityTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

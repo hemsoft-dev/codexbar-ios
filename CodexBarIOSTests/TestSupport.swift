@@ -424,6 +424,17 @@ final class IsolatedTestURLProtocol: TestURLProtocol, @unchecked Sendable {
     }
 }
 
+/// Simulates the browser's request to an in-process loopback OAuth listener.
+/// A dedicated session keeps protocols registered globally by the test host,
+/// such as the fixture network blocker, out of the callback's path.
+enum LoopbackBrowser {
+    static func deliver(_ url: URL) async throws {
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.finishTasksAndInvalidate() }
+        _ = try await session.data(from: url)
+    }
+}
+
 final class IsolatedTestURLSession: @unchecked Sendable {
     let session: URLSession
 

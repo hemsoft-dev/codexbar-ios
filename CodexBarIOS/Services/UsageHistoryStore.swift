@@ -1135,7 +1135,9 @@ public final class UsageHistoryStore: ObservableObject {
     ) -> UsageHistorySeries {
         let snapshotsByTimestamp = Dictionary(grouping: snapshots, by: \.capturedAt)
         let points = snapshotsByTimestamp.compactMap { capturedAt, matchingSnapshots in
-            let bars = matchingSnapshots.flatMap { snapshot in
+            // A raw sample and its daily summaries can share a timestamp. Ordering by ID makes
+            // every caller select the same point; the raw ID prefixes its summaries' IDs.
+            let bars = matchingSnapshots.sorted { $0.id < $1.id }.flatMap { snapshot in
                 snapshot.bars.map { (snapshot, $0) }
             }
             let selected = bars.first(where: { _, bar in

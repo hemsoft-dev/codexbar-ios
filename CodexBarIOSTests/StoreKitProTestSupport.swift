@@ -80,6 +80,8 @@ final class StoreKitProTestContext {
         listeners.removeAll()
         session.clearTransactions()
         session.resetToDefaultState()
+        // An accelerated renewal can land between the clear and the reset that stops it.
+        session.clearTransactions()
         try await session.setSimulatedError(nil, forAPI: .loadProducts)
         try await session.setSimulatedError(nil, forAPI: .purchase)
         try await session.setSimulatedError(nil, forAPI: .verification)

@@ -29,7 +29,7 @@ preparation and a final normal reset add three separate XCTest invocations;
 they are not counted as user journeys.
 
 Run the complete family from a clean committed checkout with pinned Xcode
-26.6 / 17F113 and iOS runtime 26.5 / 23F77:
+26.6 / 17F113 and iOS runtime 26.2 / 23C54 (see FUNCTION-RISK.md):
 
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode_26.6.app/Contents/Developer

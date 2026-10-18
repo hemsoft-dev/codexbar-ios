@@ -13,6 +13,8 @@ final class StoreKitProCatalog {
         let request = generation
         guard let storefront = await Storefront.current else { throw ProCommerceError.catalogUnavailable }
         let fetched = try await Product.products(for: ProProductID.allCases.map(\.rawValue))
+        // Some runtimes report a failed lookup by returning no products instead of throwing.
+        guard !fetched.isEmpty else { throw ProCommerceError.catalogUnavailable }
         var models: [ProProductID: ProCatalogProduct] = [:]
         var retained: [ProProductID: Product] = [:]
         for product in fetched {

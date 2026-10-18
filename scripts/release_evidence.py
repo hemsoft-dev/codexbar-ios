@@ -69,14 +69,20 @@ def toolchain():
                 architecture=capture(['uname', '-m']), image=os.environ.get('ImageVersion', 'local'))
 
 
+# iOS 26.3-26.5 simulators break SKTestSession under command-line xcodebuild
+# (Apple FB22237318), so release phases run on the installed 26.2 runtime.
+QUALIFIED_IOS_RUNTIME = dict(version='26.2', build='23C54')
+
+
 def require_pinned(tools, device=None):
     pin = read(ROOT / 'scripts/function-risk/policy.json')['tools']['xcode']
     if any(not tools.get(key) for key in ('xcode', 'swift', 'developer_dir', 'sdk', 'sdk_build', 'architecture', 'image')):
         raise ValueError('Incomplete producer toolchain evidence')
     if tools['xcode'] != pin or tools['sdk'] != '26.5':
         raise ValueError(f'Qualification requires {pin!r} and iOS SDK 26.5; found {tools}')
-    if device and (device['osVersion'] != '26.5' or device['osBuildNumber'] != '23F77'):
-        raise ValueError(f'Qualification requires iOS Simulator 26.5 / 23F77: {device}')
+    runtime = QUALIFIED_IOS_RUNTIME
+    if device and (device['osVersion'] != runtime['version'] or device['osBuildNumber'] != runtime['build']):
+        raise ValueError(f"Qualification requires iOS Simulator {runtime['version']} / {runtime['build']}: {device}")
 
 
 def load_manifest(path=MANIFEST):

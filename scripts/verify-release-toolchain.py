@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sys
 
-from release_evidence import capture, now, require_pinned, toolchain
+from release_evidence import QUALIFIED_IOS_RUNTIME, capture, now, require_pinned, toolchain
 
 
 def main():
@@ -20,11 +20,12 @@ def main():
         require_pinned(evidence['tools'])
         if evidence['watchSDK'] != '26.5':
             raise ValueError('Expected watchOS simulator SDK 26.5')
-        for platform in ('iOS', 'watchOS'):
-            if not any(runtime['isAvailable'] and runtime['version'] == '26.5' and
+        for platform, version, build in (('iOS', QUALIFIED_IOS_RUNTIME['version'], QUALIFIED_IOS_RUNTIME['build']),
+                                         ('watchOS', '26.5', None)):
+            if not any(runtime['isAvailable'] and runtime['version'] == version and build in (None, runtime['buildversion']) and
                        runtime['identifier'].startswith(f'com.apple.CoreSimulator.SimRuntime.{platform}-')
                        for runtime in evidence['runtimes']['runtimes']):
-                raise ValueError(f'Missing installed {platform} 26.5 simulator runtime')
+                raise ValueError(f'Missing installed {platform} {version} simulator runtime')
         if args.watch_device:
             devices = json.loads(capture(['xcrun', 'simctl', 'list', 'devices', '--json']))
             matches = [runtime for runtime in evidence['runtimes']['runtimes']

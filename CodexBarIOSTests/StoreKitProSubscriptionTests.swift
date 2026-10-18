@@ -97,7 +97,7 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         let context = try await storeKitContext()
         configureBillingRenewal(context, grace: true)
         let service = try await purchaseMonthly(context)
-        try await storeKitEventually("Real StoreKit billing grace did not reach the service status listener.", timeout: 30) {
+        try await storeKitEventually("Real StoreKit billing grace did not reach the service status listener.", timeout: 75) {
             service.value.reason == .billingGrace && service.commerce.hasBillingIssue
         }
         let snapshot = await context.source.snapshot()
@@ -116,7 +116,7 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         let context = try await storeKitContext()
         configureBillingRenewal(context, grace: false)
         let service = try await purchaseMonthly(context)
-        try await storeKitEventually("Real billing retry without grace did not deny subscription access.", timeout: 30) {
+        try await storeKitEventually("Real billing retry without grace did not deny subscription access.", timeout: 75) {
             !service.hasAccess && service.commerce.hasBillingIssue
         }
         let snapshot = await context.source.snapshot()
@@ -125,10 +125,13 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         XCTAssertTrue(status.isInBillingRetry)
         XCTAssertNil(status.graceEndsAt)
         XCTAssertEqual(service.commerce.lifetimeAction, .manageSubscription)
+        try await storeKitEventually("StoreKit did not mark the renewal with its purchase issue.", timeout: 30) {
+            context.session.allTransactions().contains { $0.hasPurchaseIssue }
+        }
         let issue = try XCTUnwrap(context.session.allTransactions().last { $0.hasPurchaseIssue })
         context.session.shouldEnterBillingRetryOnRenewal = false
         try context.session.resolveIssueForTransaction(identifier: issue.identifier)
-        try await storeKitEventually("Verified billing recovery did not restore monthly access through the listeners.") {
+        try await storeKitEventually("Verified billing recovery did not restore monthly access through the listeners.", timeout: 30) {
             service.hasAccess && service.value.reason == .monthly && !service.commerce.hasBillingIssue
         }
         try storeKitEvent("billing-retry-recovered", ["retryAccess": "false", "recoveredAccess": "monthly", "newPurchaseRequested": "false"])
@@ -142,7 +145,7 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         try await storeKitEventually("Externally purchased lifetime did not arrive through transaction updates.") {
             service.value.reason == .lifetime
         }
-        try await storeKitEventually("Independent subscription billing problem did not appear for lifetime owner.", timeout: 30) {
+        try await storeKitEventually("Independent subscription billing problem did not appear for lifetime owner.", timeout: 75) {
             service.commerce.hasBillingIssue
         }
         XCTAssertTrue(service.hasAccess)
@@ -185,8 +188,9 @@ final class StoreKitProSubscriptionTests: XCTestCase {
     private func configureBillingRenewal(_ context: StoreKitProTestContext, grace: Bool) {
         // Apple's forceRenewalOfSubscription deliberately leaves billing retry unchanged.
         // Automatic renewal exercises the supported simulated billing failure instead.
-        // This rate gives a 10-second grace period and a 20-second retry period.
-        context.session.timeRate = .oneRenewalEveryTenSeconds
+        // This rate gives a 30-second grace period and a 60-second retry period. The
+        // 10-second rate let grace end before slow hosted runners observed it.
+        context.session.timeRate = .oneRenewalEveryThirtySeconds
         context.session.shouldEnterBillingRetryOnRenewal = true
         context.session.billingGracePeriodIsEnabled = grace
     }

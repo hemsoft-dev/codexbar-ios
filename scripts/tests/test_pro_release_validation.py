@@ -25,8 +25,8 @@ def discovery_fixture(identities, disabled=()):
 
 
 def result_fixture(identities):
-    device = dict(deviceId='owned-device', modelName='iPhone 17', osVersion='26.5',
-                  osBuildNumber='23F77', architecture='arm64', platform='iOS Simulator', family='iphone')
+    device = dict(deviceId='owned-device', modelName='iPhone 17', osVersion='26.2',
+                  osBuildNumber='23C54', architecture='arm64', platform='iOS Simulator', family='iphone')
     summary = dict(result='Passed', totalTestCount=len(identities), passedTests=len(identities),
                    failedTests=0, skippedTests=0, expectedFailures=0, startTime=100, finishTime=101,
                    devicesAndConfigurations=[dict(device=device, passedTests=len(identities),
@@ -368,6 +368,30 @@ class RuntimeIdentityTests(unittest.TestCase):
             receipt = EVIDENCE.read(output / 'ownership.json')
             self.assertEqual(receipt['created']['command'][-1], '/installed/24A434.simruntime')
             self.assertEqual(actual['osBuildNumber'], '24A434')
+
+
+class QualifiedRuntimeTests(unittest.TestCase):
+    """Release phases use the 26.2 runtime; 26.5 breaks SKTestSession (FB22237318)."""
+    def test_qualification_selects_only_the_unaffected_ios_runtime(self):
+        identifier = lambda version: 'com.apple.CoreSimulator.SimRuntime.iOS-' + version.replace('.', '-')
+        inventory = dict(runtimes=[dict(identifier=identifier(version), version=version, buildversion=build,
+                                        bundlePath='/installed/' + build + '.simruntime', isAvailable=True)
+                                   for version, build in (('26.2', '23C54'), ('26.4.1', '23E254a'), ('26.5', '23F77'))],
+                         devices={identifier(version): [dict(udid=version, name='Default', deviceTypeIdentifier='iPhone-Type',
+                                                            isAvailable=True, state='Shutdown')]
+                                  for version in ('26.2', '26.4.1', '26.5')},
+                         devicetypes=[dict(identifier='iPhone-Type', name='iPhone 17')])
+        tools = dict(xcode=EVIDENCE.read(EVIDENCE.ROOT / 'scripts/function-risk/policy.json')['tools']['xcode'],
+                     swift='swift', developer_dir='/dev', sdk='26.5', sdk_build='23F81a', architecture='arm64', image='image')
+        with tempfile.TemporaryDirectory() as folder, patch.object(RUNNER, 'capture', return_value=json.dumps(inventory)), \
+                patch.object(RUNNER, 'command', side_effect=AssertionError('stop after selection')) as command:
+            with self.assertRaisesRegex(AssertionError, 'stop after selection'):
+                RUNNER.provision(Path(folder), 'iphone', tools)
+            self.assertEqual(command.call_args.args[2][-1], '/installed/23C54.simruntime')
+        device = dict(osVersion='26.2', osBuildNumber='23C54')
+        EVIDENCE.require_pinned(tools, device)
+        with self.assertRaisesRegex(ValueError, '26.2 / 23C54'):
+            EVIDENCE.require_pinned(tools, dict(osVersion='26.5', osBuildNumber='23F77'))
 
 
 class OriginalUIRunnerTests(unittest.TestCase):

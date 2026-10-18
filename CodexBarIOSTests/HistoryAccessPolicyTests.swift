@@ -106,6 +106,10 @@ final class HistoryAccessPolicyTests: XCTestCase {
 
     @MainActor
     func testDailyOnlySamplesFollowSameCutoffAndRemainAvailableAfterUpgrade() throws {
+        // The store groups daily samples by the device calendar, so this test builds its dates in it.
+        let calendar = Calendar.autoupdatingCurrent
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 10, hour: 15)))
+        let cutoff = try XCTUnwrap(HistoryAccessPolicy.free.cutoff(now: now, calendar: calendar))
         let suiteName = "HistoryAccessPolicyTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }

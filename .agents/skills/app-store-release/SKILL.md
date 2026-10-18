@@ -164,8 +164,8 @@ intended version differs from the ledger.
 Dispatch `ci.yml` against the frozen candidate ref and verify its resolved
 `headSha`. Before archive/upload, require SwiftLint, Strict concurrency, iOS tests,
 watchOS tests, SwiftPM smoke tests and Full iOS UI validation to succeed for that
-exact merged SHA. Require Xcode 26.6 / 17F113 with the recorded compatible
-26.5 runtimes. Each UI family must pass the manifest's original 29,
+exact merged SHA. Require Xcode 26.6 / 17F113 with iOS simulator runtime
+26.2 / 23C54 and watchOS runtime 26.5 (see FUNCTION-RISK.md). Each UI family must pass the manifest's original 29,
 supplemental 6, synthetic commerce 14 and native commerce 2 journeys, plus
 three separate preparation/reset calls. The marketing capture is excluded.
 Require exact discovered/executed identities and zero skips or expected failures.

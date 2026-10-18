@@ -290,3 +290,19 @@ manual `CI` run records `workflow_dispatch`, matches the reviewed SHA, and runs
 both destinations after all five quality jobs pass. The security-analysis and
 usage-history performance workflows must contain only `workflow_dispatch`.
 Keep failures and cancellations in the inventory when refreshing measurements.
+
+## Manual iOS release job timeout, October 18
+
+Issue [#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490) raises the
+manual-only `iOS tests` job timeout from 30 to 45 minutes. The job runs only on
+`workflow_dispatch`, so automatic pull-request work, triggers, jobs, matrices,
+retries and SwiftLint's ten-minute timeout are unchanged. The CI-policy assertion
+for the new value runs inside the existing SwiftLint job and adds no work there.
+
+Measured need: the job had never completed its full native workload within 30
+minutes. [Run 39159924940](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39159924940)
+used 27 minutes 45 seconds of the budget by the end of native commerce, before
+the Germany preparation and storefront phases or function-risk scoring had run.
+Its 25-minute test step covered the native build, 1,106 ordinary tests, native
+preparation and 25 native commerce tests. The new budget leaves room for the
+remaining phases and scoring without retries.

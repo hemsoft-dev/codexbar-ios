@@ -1155,6 +1155,11 @@ final class UsageHistoryTests: XCTestCase {
         )
         XCTAssertEqual(partialOptions.first?.series.points.map(\.value), [1])
         XCTAssertEqual(partialOptions.first?.series, store.historySeries(for: resultWithoutTotal))
+        XCTAssertEqual(
+            store.historySeries(for: resultWithoutTotal).points.map(\.id),
+            [partialSnapshot.id],
+            "A raw sample and its daily summary share a timestamp; every caller selects the raw sample"
+        )
 
         let laterResultWithoutTotal = ProviderUsageResult(
             accountID: result.accountID,

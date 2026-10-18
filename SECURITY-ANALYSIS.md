@@ -555,3 +555,29 @@ The hosted result remains failed on its old baseline. Do not report the renewed
 baseline as hosted passing until a full manual analysis succeeds on the reviewed
 branch or release candidate. That is not an ordinary-PR merge status. The raw
 analysis is not repeated solely for baseline and documentation metadata.
+
+## October 18 Cursor history tie-break review
+
+Issue [#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490) changes one
+production function. `UsageHistoryStore.cursorPrimaryUsageSeries` now orders the
+snapshots sharing a timestamp by ID before choosing a point. Reviewed production
+commit `4e653a754eaa248334491e822b791250b530dbc4` has the same 157 production Swift
+files with source snapshot
+`308dc5fc7825e6bcab870fac93645461f90b5b16922c406d1f055389173c2e6e`.
+The change reads in-memory history only. It adds no persistence, credential,
+network or export path, and none of the four reviewed finding files or their
+consumers changed. The four exact diagnostic identities from
+[run 39137060109](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39137060109)
+remain the accepted findings. Local replay of that SARIF and source-reach CSV
+against this baseline is a replay, not a hosted pass; the release candidate
+still needs its own successful hosted analysis.
+
+[Run 39154682983](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39154682983)
+passed on the hosted analyzer for that baseline at `4aff1f1`.
+
+`StoreKitProCatalog.load()` then gained one guard: an empty StoreKit product
+lookup throws `catalogUnavailable` instead of returning an empty catalog. It
+touches no credential, persistence or network boundary. Reviewed commit
+`cedd7a74ef51b104969052d3a65141d801e04677` binds source snapshot
+`694c0669b8bf840138a6dffbc0856e5f60a87560fac17059450fe69409b22ad4`
+with the same 157 files and the same four accepted diagnostics.
