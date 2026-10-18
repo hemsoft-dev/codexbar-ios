@@ -31,11 +31,14 @@ final class CursorStalePublicationRegressionTests: XCTestCase {
         XCTAssertNotNil(retained.failureMessage)
         XCTAssertEqual(retained.recoveryAction, .reauthenticate)
         XCTAssertTrue(service.successfulRefreshResults.isEmpty)
-        WidgetSnapshotPublisher.publish(results: service.results, configurationStore: fixture.store, snapshotDefaults: fixture.defaults)
+        WidgetSnapshotPublisher.publish(results: service.results, configurationStore: fixture.store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: fixture.defaults, accessGuard: WidgetAccessGuard(directory: nil))
         let widget = try XCTUnwrap(WidgetSnapshotStore.loadSnapshot(defaults: fixture.defaults).results.first)
         XCTAssertTrue(widget.subtitle.contains("last known data"))
         XCTAssertEqual(widget.fetchedAt, measuredAt)
-        let watch = WatchSnapshotPublisher.makeSnapshot(results: service.results, configurationStore: fixture.store)
+        let watch = WatchSnapshotPublisher.makeSnapshot(results: service.results, configurationStore: fixture.store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil))
         XCTAssertTrue(watch.accounts.first?.statusText?.contains("last known data") == true)
         XCTAssertEqual(watch.accounts.first?.fetchedAt, measuredAt)
     }

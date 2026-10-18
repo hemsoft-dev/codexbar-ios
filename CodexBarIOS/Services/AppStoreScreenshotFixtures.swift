@@ -89,6 +89,11 @@ struct AppStoreScreenshotConfiguration {
 enum AppStoreScreenshotFixtures {
     private static let captureDate = Date()
     static let widgetDefaults = isolatedDefaults()
+    private static let widgetAccessGuard: WidgetAccessGuard = {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("screenshot-widget-access-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return WidgetAccessGuard(directory: directory)
+    }()
 
     private static func isolatedDefaults() -> UserDefaults {
         let suite = "com.hemsoft.CodexBarIOS.screenshot.\(UUID().uuidString)"
@@ -213,7 +218,7 @@ enum AppStoreScreenshotFixtures {
         WidgetSnapshotPublisher.publish(
             results: results,
             configurationStore: configurationStore, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults
+            snapshotDefaults: defaults, accessGuard: widgetAccessGuard
         )
         WidgetSnapshotStore.saveBuilderConfiguration(
             CodexBarWidgetBuilderConfiguration(

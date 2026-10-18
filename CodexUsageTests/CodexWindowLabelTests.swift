@@ -52,7 +52,9 @@ final class CodexWindowLabelTests: XCTestCase {
                                       subtitle: "Synthetic", bars: [oldBar], fetchedAt: now)
         let current = ProviderUsageResult(accountID: account.id, providerID: .codex, title: account.displayName,
                                           subtitle: "Synthetic", bars: [bar], fetchedAt: now)
-        WidgetSnapshotPublisher.publish(results: [old], configurationStore: store, snapshotDefaults: defaults, now: now)
+        WidgetSnapshotPublisher.publish(results: [old], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         let oldTile = try XCTUnwrap(WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first?.bars.first)
         let savedID = "bar.\(oldTile.id)"
         store.updateMetricWidth(.full, accountID: account.id, metricID: metricID)
@@ -61,7 +63,9 @@ final class CodexWindowLabelTests: XCTestCase {
         XCTAssertFalse(store.isMetricVisible(accountID: account.id, metricID: metricID))
         let reloaded = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: WindowLabelSecretStore())
         XCTAssertFalse(reloaded.isMetricVisible(accountID: account.id, metricID: metricID))
-        WidgetSnapshotPublisher.publish(results: [current], configurationStore: reloaded, snapshotDefaults: defaults, now: now)
+        WidgetSnapshotPublisher.publish(results: [current], configurationStore: reloaded,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         let tile = try XCTUnwrap(snapshot.results.first?.bars.first)
         XCTAssertEqual(tile.id, oldTile.id)
@@ -69,7 +73,8 @@ final class CodexWindowLabelTests: XCTestCase {
         XCTAssertEqual(tile.label, "30-day usage limit")
         XCTAssertNotNil(snapshot.builderTile(resolvingSavedID: savedID))
         reloaded.updateMetricVisibility(true, accountID: account.id, metricID: metricID)
-        let watch = WatchSnapshotPublisher.makeSnapshot(results: [current], configurationStore: reloaded, now: now)
+        let watch = WatchSnapshotPublisher.makeSnapshot(results: [current], configurationStore: reloaded,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: now)
         let metric = try XCTUnwrap(watch.accounts.first?.metrics.first)
         XCTAssertEqual(metric.id, metricID)
         XCTAssertEqual(metric.label, "30-day usage limit")

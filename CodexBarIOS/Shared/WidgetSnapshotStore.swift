@@ -61,21 +61,24 @@ public struct CodexBarWidgetSnapshot: Codable, Equatable, Sendable {
     public let results: [CodexBarWidgetProviderSnapshot]
     public let isProLocked: Bool
     public let proAccessEndsAt: Date?
+    public let accessPublication: WidgetAccessPublication?
 
     public init(
         generatedAt: Date,
         results: [CodexBarWidgetProviderSnapshot],
         isProLocked: Bool = false,
-        proAccessEndsAt: Date? = nil
+        proAccessEndsAt: Date? = nil,
+        accessPublication: WidgetAccessPublication? = nil
     ) {
         self.generatedAt = generatedAt
         self.results = results
         self.isProLocked = isProLocked
         self.proAccessEndsAt = proAccessEndsAt
+        self.accessPublication = accessPublication
     }
 
     private enum CodingKeys: String, CodingKey {
-        case generatedAt, results, isProLocked, proAccessEndsAt
+        case generatedAt, results, isProLocked, proAccessEndsAt, accessPublication
     }
 
     public init(from decoder: Decoder) throws {
@@ -84,6 +87,7 @@ public struct CodexBarWidgetSnapshot: Codable, Equatable, Sendable {
         results = try container.decode([CodexBarWidgetProviderSnapshot].self, forKey: .results)
         isProLocked = try container.decodeIfPresent(Bool.self, forKey: .isProLocked) ?? true
         proAccessEndsAt = try container.decodeIfPresent(Date.self, forKey: .proAccessEndsAt)
+        accessPublication = try container.decodeIfPresent(WidgetAccessPublication.self, forKey: .accessPublication)
     }
 
     public func isLocked(at date: Date) -> Bool {

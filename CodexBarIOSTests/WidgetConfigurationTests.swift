@@ -72,7 +72,7 @@ final class WidgetConfigurationTests: XCTestCase {
         WidgetSnapshotPublisher.publish(
             results: [result],
             configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
 
         let bar = try XCTUnwrap(
@@ -179,7 +179,7 @@ final class WidgetConfigurationTests: XCTestCase {
         WidgetSnapshotPublisher.publish(
             results: [completedResult],
             configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
         let completedSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         let savedCompletedTileID = try XCTUnwrap(
@@ -203,7 +203,7 @@ final class WidgetConfigurationTests: XCTestCase {
         WidgetSnapshotPublisher.publish(
             results: [quotaResult],
             configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
         let quotaSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         let quotaTile = try XCTUnwrap(quotaSnapshot.builderTiles.first { $0.id.hasPrefix("bar.") })
@@ -215,7 +215,7 @@ final class WidgetConfigurationTests: XCTestCase {
         WidgetSnapshotPublisher.publish(
             results: [completedResult],
             configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
         let restoredCompletedSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         XCTAssertEqual(
@@ -260,7 +260,7 @@ final class WidgetConfigurationTests: XCTestCase {
         WidgetSnapshotPublisher.publish(
             results: [result],
             configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
 
@@ -322,7 +322,7 @@ final class WidgetConfigurationTests: XCTestCase {
             WidgetSnapshotPublisher.publish(
                 results: [result],
                 configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-                snapshotDefaults: defaults
+                snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
             )
             return WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         }
@@ -365,7 +365,7 @@ final class WidgetConfigurationTests: XCTestCase {
         WidgetSnapshotPublisher.publish(
             results: [reorderedUniqueLabels],
             configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
         let reorderedUniqueSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         XCTAssertEqual(
@@ -399,7 +399,7 @@ final class WidgetConfigurationTests: XCTestCase {
         WidgetSnapshotPublisher.publish(
             results: [duplicateLabels],
             configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
         let duplicateLabelSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         XCTAssertEqual(
@@ -454,7 +454,8 @@ final class WidgetConfigurationTests: XCTestCase {
 
     func testGroupChoicesHandleUngroupedNamesAndIdentifierFallbacks() async throws {
         let snapshot = Self.fixtureSnapshot
-        let query = CodexBarWidgetGroupChoiceQuery(loadSnapshot: { snapshot })
+        let accessFixture = try WidgetAccessFixture()
+        let query = CodexBarWidgetGroupChoiceQuery(loadSnapshot: { snapshot }, accessContext: accessFixture.context)
         let choices = try await query.suggestedEntities()
         let titlesByID = Dictionary(uniqueKeysWithValues: choices.map { ($0.id, $0.title) })
 
@@ -473,8 +474,9 @@ final class WidgetConfigurationTests: XCTestCase {
 
     func testTileQueryFiltersAndMatchesCaseInsensitivelyWithInjectedSnapshot() async throws {
         let snapshot = Self.fixtureSnapshot
+        let accessFixture = try WidgetAccessFixture()
         let query = CodexBarWidgetTileChoiceQuery(
-            loadSnapshot: { snapshot },
+            loadSnapshot: { snapshot }, accessContext: accessFixture.context,
             group: CodexBarWidgetGroupChoice(id: "work", title: "Work"),
             focus: .codex
         )

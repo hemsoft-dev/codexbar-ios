@@ -570,7 +570,8 @@ final class UnifiedGeminiUsageProviderTests: XCTestCase {
         XCTAssertEqual(result.configurableMetrics[3].kind, .unavailableUsage("Unavailable"))
         XCTAssertEqual(result.configurableMetrics[4].kind, .unavailableUsage("Disabled"))
 
-        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), snapshotDefaults: defaults)
+        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+        snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil))
         let widgetBars = WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first?.bars
         XCTAssertEqual(widgetBars?.count, currentIDs.count)
         XCTAssertEqual(widgetBars?.compactMap(\.metricID), currentIDs)
@@ -1010,7 +1011,8 @@ extension GeminiUsageProviderTests {
             let result = ProviderUsageResult(
                 accountID: account.id, providerID: .gemini, title: account.displayName, subtitle: "Gemini usage", bars: bars, fetchedAt: now
             )
-            WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), snapshotDefaults: defaults, now: now)
+            WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
             let saved = try XCTUnwrap(WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first)
             XCTAssertEqual(saved.accountID, account.id)
             XCTAssertEqual(saved.bars.count, 6)

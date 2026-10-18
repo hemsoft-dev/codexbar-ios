@@ -171,7 +171,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         let savedConfigurations = fixture.configurationStore.configurations
         let savedTileID = try XCTUnwrap(WidgetSnapshotStore.loadBuilderConfiguration(defaults: fixture.widgetDefaults).tileID(at: 0))
         let initialWidget = fixture.widgetSnapshot
-        let originalChoice = try await CodexBarWidgetTileChoiceQuery(loadSnapshot: { initialWidget }).entities(for: [savedTileID])
+        let originalChoice = try await CodexBarWidgetTileChoiceQuery(loadSnapshot: { initialWidget }, accessContext: fixture.widgetAccessContext()).entities(for: [savedTileID])
         XCTAssertEqual(originalChoice.map(\.id), [savedTileID])
         XCTAssertEqual(originalChoice.map(\.title), ["Codex - Usage"])
         XCTAssertEqual(initialWidget.builderTile(resolvingSavedID: savedTileID)?.fractionUsed, 0.1)
@@ -186,7 +186,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         XCTAssertEqual(fixture.phoneDefaults.data(forKey: "usageHistorySnapshots"), historyBytes)
         XCTAssertEqual(fixture.widgetDefaults.data(forKey: "widgetBuilderConfiguration"), builderBytes)
         let lockedWidget = fixture.widgetSnapshot
-        let lockedChoice = try await CodexBarWidgetTileChoiceQuery(loadSnapshot: { lockedWidget }).entities(for: [savedTileID])
+        let lockedChoice = try await CodexBarWidgetTileChoiceQuery(loadSnapshot: { lockedWidget }, accessContext: fixture.widgetAccessContext()).entities(for: [savedTileID])
         XCTAssertEqual(lockedChoice.map(\.id), [savedTileID])
         XCTAssertEqual(lockedChoice.map(\.title), ["Saved Tile"])
         let reloadedStore = ProviderConfigurationStore(
@@ -208,7 +208,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         XCTAssertEqual(fixture.widgetDefaults.data(forKey: "widgetBuilderConfiguration"), builderBytes)
         XCTAssertEqual(fixture.phoneDefaults.data(forKey: "usageHistorySnapshots"), historyBytes)
         let restoredWidget = fixture.widgetSnapshot
-        let restoredChoice = try await CodexBarWidgetTileChoiceQuery(loadSnapshot: { restoredWidget }).entities(for: [savedTileID])
+        let restoredChoice = try await CodexBarWidgetTileChoiceQuery(loadSnapshot: { restoredWidget }, accessContext: fixture.widgetAccessContext()).entities(for: [savedTileID])
         XCTAssertEqual(restoredChoice.map(\.id), [savedTileID])
         XCTAssertEqual(restoredChoice.map(\.title), ["Codex - Usage"])
         XCTAssertEqual(restoredWidget.builderTile(resolvingSavedID: savedTileID)?.fractionUsed, 0.1)
@@ -616,6 +616,15 @@ private final class SurfaceProPublicationFixture {
         )
     }
 
+    func widgetAccessContext() -> WidgetAccessContext {
+        let sample = clock.sample
+        let suite = widgetSuite
+        return WidgetAccessContext(
+            guardStore: WidgetAccessGuard(directory: directory), sample: { sample },
+            currentPublication: { WidgetSnapshotStore.loadSnapshot(defaults: UserDefaults(suiteName: suite)).accessPublication }
+        )
+    }
+
     func connect(delay: Duration = .zero) {
         widgetCoordinator = WidgetSnapshotCoordinator(
             refreshService: refreshService, configurationStore: configurationStore, entitlement: entitlement,
@@ -623,7 +632,7 @@ private final class SurfaceProPublicationFixture {
                 guard let self else { return }
                 WidgetSnapshotPublisher.publish(
                     results: results, configurationStore: store, access: access,
-                    snapshotDefaults: widgetDefaults, now: clock.sample.wallDate
+                    snapshotDefaults: widgetDefaults, accessGuard: WidgetAccessGuard(directory: directory), now: clock.sample.wallDate, accessSample: clock.sample
                 )
                 onWidget?(WidgetSnapshotStore.loadSnapshot(defaults: widgetDefaults))
             }, publishSettings: { _ in }
@@ -645,7 +654,7 @@ private final class SurfaceProPublicationFixture {
     func publishSavedResults(access: SnapshotProAccess, generatedAt: Date? = nil) {
         WidgetSnapshotPublisher.publish(
             results: savedResults, configurationStore: configurationStore, access: access,
-            snapshotDefaults: widgetDefaults, now: generatedAt ?? instant
+            snapshotDefaults: widgetDefaults, accessGuard: WidgetAccessGuard(directory: directory), now: generatedAt ?? instant, accessSample: clock.sample
         )
         WatchSnapshotPublisher.publish(
             results: savedResults, configurationStore: configurationStore, access: access,

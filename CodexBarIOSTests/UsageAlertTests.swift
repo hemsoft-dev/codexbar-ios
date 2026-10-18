@@ -801,7 +801,7 @@ final class UsageAlertTests: XCTestCase {
         WidgetSnapshotPublisher.publish(
             results: [result],
             configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
         let widgetProvider = try XCTUnwrap(
             WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first

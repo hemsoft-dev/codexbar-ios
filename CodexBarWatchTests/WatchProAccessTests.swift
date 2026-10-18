@@ -7,6 +7,172 @@ final class WatchProAccessTests: XCTestCase {
     private let base = Date(timeIntervalSince1970: 2_000_000_000)
     private let legacyKey = "watch.dashboard.last-good-snapshot"
 
+    @MainActor
+    func testLiveAdapterKeepsOriginalContinuousDeadlineWhenTaskStartsLate() async throws {
+        let slept = expectation(description: "Live adapter reached injected clock sleep")
+        let fired = expectation(description: "Already elapsed deadline publishes immediately")
+        let probe = WatchSleepProbe(onSleep: { slept.fulfill() })
+        let clock = WatchControlledClock(probe: probe)
+        let origin = clock.now
+        let timing = WatchAccessTiming.live(clock: clock, now: { self.base })
+        let cancellation = timing.schedule(base.addingTimeInterval(10)) { fired.fulfill() }
+        defer { cancellation.cancel() }
+        // The MainActor task cannot start until this test yields. Time already passed.
+        probe.advance(by: .seconds(30))
+        await fulfillment(of: [slept], timeout: 1)
+        let sleep = try XCTUnwrap(probe.requests.first)
+        XCTAssertEqual(sleep.deadline, origin.advanced(by: .seconds(10)))
+        XCTAssertEqual(sleep.tolerance, .zero)
+        await fulfillment(of: [fired], timeout: 1)
+    }
+
+    @MainActor
+    func testForegroundRollbackDoesNotPostponeLiveContinuousDeadlineForSameSnapshot() async throws {
+        let slept = expectation(description: "Initial live sleep started")
+        let locked = expectation(description: "Original continuous boundary committed lock")
+        let probe = WatchSleepProbe(onSleep: { slept.fulfill() })
+        let clock = WatchControlledClock(probe: probe)
+        var wallDate = base
+        let store = WatchDashboardStore(
+            defaults: isolatedDefaults(), complicationStore: .init(defaults: isolatedDefaults()),
+            reloadComplications: {}, session: nil,
+            accessTiming: .live(clock: clock, now: { wallDate })
+        )
+        let observation = store.$snapshot.compactMap { $0 }.filter(\.isProLocked).sink { _ in locked.fulfill() }
+        defer { observation.cancel() }
+        XCTAssertTrue(try store.receive(snapshot(deadline: base.addingTimeInterval(10), sequence: 80).applicationContext()))
+        await fulfillment(of: [slept], timeout: 1)
+        probe.advance(by: .seconds(4))
+        wallDate = base.addingTimeInterval(-100)
+        store.reevaluateAccess()
+        probe.advance(by: .seconds(6))
+        await fulfillment(of: [locked], timeout: 1)
+        XCTAssertTrue(store.state(at: base).isProLocked, "A stale TimelineView date cannot hide an unpublished lock")
+        XCTAssertEqual(probe.requests.count, 1, "The same grant retains its original continuous sleep")
+    }
+
+    @MainActor
+    func testEqualSequenceHarmlessRefreshKeepsOriginalLiveBoundaryAfterRollback() async throws {
+        try await checkRefreshKeepsOriginalBoundary(refreshedSequence: 80)
+    }
+
+    @MainActor
+    func testNewerUsagePublicationWithSameDeadlineKeepsOriginalLiveBoundaryAfterRollback() async throws {
+        try await checkRefreshKeepsOriginalBoundary(refreshedSequence: 81)
+    }
+
+    @MainActor
+    private func checkRefreshKeepsOriginalBoundary(refreshedSequence: UInt64) async throws {
+        let slept = expectation(description: "Initial live sleep started")
+        let locked = expectation(description: "Current snapshot locked at original continuous boundary")
+        let probe = WatchSleepProbe(onSleep: { slept.fulfill() })
+        var wallDate = base
+        let store = WatchDashboardStore(
+            defaults: isolatedDefaults(), complicationStore: .init(defaults: isolatedDefaults()),
+            reloadComplications: {}, session: nil,
+            accessTiming: .live(clock: WatchControlledClock(probe: probe), now: { wallDate })
+        )
+        let observation = store.$snapshot.compactMap { $0 }.filter(\.isProLocked).sink { _ in locked.fulfill() }
+        defer { observation.cancel() }
+        let deadline = base.addingTimeInterval(10)
+        XCTAssertTrue(try store.receive(snapshot(deadline: deadline, sequence: 80).applicationContext()))
+        await fulfillment(of: [slept], timeout: 1)
+        probe.advance(by: .seconds(4))
+        wallDate = base.addingTimeInterval(-100)
+        let refreshed = snapshot(date: base.addingTimeInterval(4), deadline: deadline, sequence: refreshedSequence)
+        XCTAssertTrue(try store.receive(refreshed.applicationContext()))
+        probe.advance(by: .seconds(6))
+        await fulfillment(of: [locked], timeout: 1)
+        XCTAssertEqual(probe.requests.count, 1, "Harmless usage refresh must not move the access boundary")
+        XCTAssertTrue(store.state(at: base).isProLocked)
+        XCTAssertEqual(store.snapshot?.publicationSequence, refreshedSequence)
+        XCTAssertEqual(store.snapshot?.generatedAt, refreshed.generatedAt)
+    }
+
+    @MainActor
+    func testExpiryIsPublishedBeforeComplicationReloadEvenWithOldTimelineDate() throws {
+        let clock = WatchAccessTestClock(now: base)
+        var store: WatchDashboardStore?
+        var checksExpiryReload = false
+        var publishedLock = false
+        var checkedReload = false
+        store = makeStore(defaults: isolatedDefaults(), shared: .init(defaults: isolatedDefaults()), clock: clock) {
+            guard checksExpiryReload else { return }
+            checkedReload = true
+            XCTAssertTrue(publishedLock)
+            XCTAssertTrue(store?.snapshot?.isProLocked == true)
+            XCTAssertTrue(store?.state(at: self.base).samples.isEmpty == true)
+        }
+        let dashboard = try XCTUnwrap(store)
+        let observation = dashboard.$snapshot.sink { publishedLock = $0?.isProLocked == true }
+        defer { observation.cancel() }
+        let deadline = base.addingTimeInterval(10)
+        XCTAssertTrue(try dashboard.receive(snapshot(deadline: deadline, sequence: 81).applicationContext()))
+        checksExpiryReload = true
+        clock.advance(to: deadline)
+        XCTAssertTrue(checkedReload)
+    }
+
+    func testFiniteExpiredRetainedAccountsAreHiddenFromActualComplicationQueries() async throws {
+        let suite = "WatchProAccessTests.\(UUID().uuidString)"
+        let defaults = isolatedDefaults(suite: suite)
+        let shared = WatchComplicationSnapshotStore(defaults: defaults)
+        try shared.saveIfChanged(snapshot(deadline: Date().addingTimeInterval(-1), sequence: 82))
+        let accounts = WatchComplicationAccountQuery(loadSnapshot: {
+            WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).load()
+        })
+        let metrics = WatchComplicationMetricQuery(loadSnapshot: {
+            WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).load()
+        })
+        let suggestions = try await accounts.suggestedEntities()
+        let metricSuggestions = try await metrics.suggestedEntities()
+        let savedAccount = try await accounts.entities(for: ["codex.work"])
+        let savedMetric = try await metrics.entities(for: ["codex.work::weekly"])
+        XCTAssertTrue(suggestions.isEmpty)
+        XCTAssertTrue(metricSuggestions.isEmpty)
+        XCTAssertEqual(savedAccount.first?.providerName, "Saved Account")
+        XCTAssertEqual(savedAccount.first?.id, "codex.work")
+        XCTAssertEqual(savedMetric.first?.metricLabel, "Saved Metric")
+        XCTAssertEqual(savedMetric.first?.id, "codex.work::weekly")
+        XCTAssertFalse(try XCTUnwrap(shared.load()).accounts.isEmpty)
+    }
+
+    func testActualComplicationQueriesAtBoundaryColdRollbackAndNewPhoneRecoveryPreserveRawBytes() async throws {
+        let suite = "WatchProAccessTests.\(UUID().uuidString)"
+        let defaults = isolatedDefaults(suite: suite)
+        let shared = WatchComplicationSnapshotStore(defaults: defaults)
+        let deadline = base.addingTimeInterval(10)
+        try shared.saveIfChanged(snapshot(deadline: deadline, sequence: 83))
+        let originalBytes = defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey)
+        for offset in [-0.001, 0, 0.001, -5] {
+            let date = deadline.addingTimeInterval(offset)
+            let accounts = WatchComplicationAccountQuery(loadSnapshot: {
+                WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).loadForAccess(now: date)
+            }, now: { date })
+            let metrics = WatchComplicationMetricQuery(loadSnapshot: {
+                WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).loadForAccess(now: date)
+            }, now: { date })
+            let suggestions = try await accounts.suggestedEntities()
+            let metricSuggestions = try await metrics.suggestedEntities()
+            let savedAccounts = try await accounts.entities(for: ["account"])
+            let savedMetrics = try await metrics.entities(for: ["account::usage"])
+            let locked = offset != -0.001
+            XCTAssertEqual(suggestions.isEmpty, locked)
+            XCTAssertEqual(metricSuggestions.isEmpty, locked)
+            XCTAssertEqual(savedAccounts.first?.providerName, locked ? "Saved Account" : "Codex")
+            XCTAssertEqual(savedMetrics.first?.metricLabel, locked ? "Saved Metric" : "5-hour limit")
+            XCTAssertEqual(savedAccounts.first?.id, "account")
+            XCTAssertEqual(savedMetrics.first?.id, "account::usage")
+        }
+        XCTAssertEqual(defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey), originalBytes)
+        try shared.saveIfChanged(snapshot(deadline: deadline.addingTimeInterval(100), sequence: 84))
+        let recovered = WatchComplicationAccountQuery(loadSnapshot: {
+            WatchComplicationSnapshotStore(defaults: UserDefaults(suiteName: suite)!).loadForAccess(now: deadline.addingTimeInterval(-5))
+        }, now: { deadline.addingTimeInterval(-5) })
+        let suggestions = try await recovered.suggestedEntities()
+        XCTAssertFalse(suggestions.isEmpty)
+    }
+
     func testAccessMetadataRoundTripsAndLegacyPayloadFailsClosed() throws {
         let defaults = isolatedDefaults()
         let store = WatchComplicationSnapshotStore(defaults: defaults)
@@ -341,6 +507,29 @@ final class WatchProAccessTests: XCTestCase {
     }
 
     @MainActor
+    func testQueuedNewerUsageCannotReviveAlreadyExpiredDeadlineAfterRollback() throws {
+        let shared = WatchComplicationSnapshotStore(defaults: isolatedDefaults())
+        let clock = WatchAccessTestClock(now: base)
+        let store = makeStore(defaults: isolatedDefaults(), shared: shared, clock: clock)
+        let deadline = base.addingTimeInterval(10)
+        XCTAssertTrue(try store.receive(snapshot(deadline: deadline, sequence: 80).applicationContext()))
+        clock.advance(to: deadline)
+        XCTAssertTrue(store.state(at: base).isProLocked)
+        clock.now = base.addingTimeInterval(-100)
+        XCTAssertTrue(try store.receive(snapshot(date: base.addingTimeInterval(4), deadline: deadline, sequence: 81).applicationContext()))
+        XCTAssertTrue(store.state(at: base).isProLocked, "Queued usage cannot reopen an already observed access deadline")
+        XCTAssertEqual(store.snapshot?.publicationSequence, 81)
+        XCTAssertEqual(clock.scheduled.count, 1)
+        let renewal = deadline.addingTimeInterval(100)
+        XCTAssertTrue(try store.receive(snapshot(deadline: renewal, sequence: 82).applicationContext()))
+        XCTAssertFalse(store.state(at: base).isProLocked)
+        clock.advance(to: renewal)
+        XCTAssertTrue(store.state(at: base).isProLocked)
+        XCTAssertTrue(try store.receive(snapshot(sequence: 83).applicationContext()))
+        XCTAssertFalse(store.state(at: base).isProLocked)
+    }
+
+    @MainActor
     func testRenewalCancelsOldDeadlineAndPermanentGrantCancelsAllDeadlines() throws {
         let clock = WatchAccessTestClock(now: base)
         let store = makeStore(defaults: isolatedDefaults(), shared: .init(defaults: isolatedDefaults()), clock: clock)
@@ -540,5 +729,87 @@ private final class WatchAccessTestBoundary {
     init(deadline: Date, action: @escaping @MainActor @Sendable () -> Void) {
         self.deadline = deadline
         self.action = action
+    }
+}
+
+private struct WatchControlledClock: Clock {
+    typealias Instant = ContinuousClock.Instant
+    let probe: WatchSleepProbe
+    var now: Instant { probe.now }
+    var minimumResolution: Duration { .nanoseconds(1) }
+
+    func sleep(until deadline: Instant, tolerance: Duration?) async throws {
+        let id = UUID()
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                probe.register(id: id, deadline: deadline, tolerance: tolerance, continuation: continuation)
+            }
+        } onCancel: {
+            probe.cancel(id: id)
+        }
+    }
+}
+
+// The probe's state and continuations are accessed only while holding lock.
+private final class WatchSleepProbe: @unchecked Sendable {
+    struct Request {
+        let deadline: ContinuousClock.Instant
+        let tolerance: Duration?
+    }
+    private struct Waiter {
+        let deadline: ContinuousClock.Instant
+        let continuation: CheckedContinuation<Void, any Error>
+    }
+    private let lock = NSLock()
+    private var instant = ContinuousClock().now
+    private var recorded: [Request] = []
+    private var waiters: [UUID: Waiter] = [:]
+    private var cancelled: Set<UUID> = []
+    private let onSleep: @Sendable () -> Void
+
+    init(onSleep: @escaping @Sendable () -> Void) { self.onSleep = onSleep }
+
+    var now: ContinuousClock.Instant {
+        lock.lock()
+        defer { lock.unlock() }
+        return instant
+    }
+
+    var requests: [Request] {
+        lock.lock()
+        defer { lock.unlock() }
+        return recorded
+    }
+
+    func advance(by duration: Duration) {
+        lock.lock()
+        instant = instant.advanced(by: duration)
+        let ready = waiters.filter { $0.value.deadline <= instant }
+        for id in ready.keys { waiters.removeValue(forKey: id) }
+        lock.unlock()
+        for waiter in ready.values { waiter.continuation.resume() }
+    }
+
+    func register(
+        id: UUID, deadline: ContinuousClock.Instant, tolerance: Duration?,
+        continuation: CheckedContinuation<Void, any Error>
+    ) {
+        lock.lock()
+        recorded.append(Request(deadline: deadline, tolerance: tolerance))
+        let isFirstRequest = recorded.count == 1
+        let wasCancelled = cancelled.remove(id) != nil
+        let isReady = deadline <= instant
+        if !wasCancelled && !isReady { waiters[id] = Waiter(deadline: deadline, continuation: continuation) }
+        lock.unlock()
+        if isFirstRequest { onSleep() }
+        if wasCancelled { continuation.resume(throwing: CancellationError()) } else if isReady { continuation.resume() }
+    }
+
+    func cancel(id: UUID) {
+        lock.lock()
+        let waiter = waiters.removeValue(forKey: id)
+        if waiter == nil { cancelled.insert(id) }
+        lock.unlock()
+        waiter?.continuation.resume(throwing: CancellationError())
     }
 }

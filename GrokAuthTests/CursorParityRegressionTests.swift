@@ -97,11 +97,13 @@ final class CursorParityRegressionTests: XCTestCase, @unchecked Sendable {
         let result = try XCTUnwrap(CursorUsageProvider.parseUsage(
             Data(#"{"planUsage":{"autoPercentUsed":0.1,"apiPercentUsed":3}}"#.utf8), configuration: account
         ))
-        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, snapshotDefaults: defaults)
+        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil))
         let widget = try XCTUnwrap(WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first?.bars.first)
         XCTAssertEqual(widget.usageText, "1%")
         XCTAssertEqual(widget.fractionUsed, 0.001, accuracy: 0.000_001)
-        let watch = WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store)
+        let watch = WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil))
         let metric = try XCTUnwrap(watch.accounts.first?.metrics.first)
         XCTAssertEqual(metric.exactValue, "1%")
         XCTAssertEqual(try XCTUnwrap(metric.usedFraction), 0.001, accuracy: 0.000_001)

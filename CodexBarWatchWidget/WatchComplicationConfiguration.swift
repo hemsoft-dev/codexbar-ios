@@ -20,7 +20,7 @@ struct WatchComplicationTimelineLoader {
         resolver: WatchComplicationResolver = WatchComplicationResolver(),
         now: @escaping () -> Date = { Date() },
         loadSnapshot: @escaping () -> WatchDashboardSnapshot? = {
-            WatchComplicationSnapshotStore().load()
+            WatchComplicationSnapshotStore().loadForAccess()
         }
     ) {
         self.resolver = resolver
@@ -152,13 +152,19 @@ struct WatchComplicationAccountEntity: AppEntity {
 
 struct WatchComplicationAccountQuery: EntityQuery {
     private let loadSnapshot: @Sendable () -> WatchDashboardSnapshot?
+    private let now: @Sendable () -> Date
 
     init() {
-        loadSnapshot = { WatchComplicationSnapshotStore().load() }
+        loadSnapshot = { WatchComplicationSnapshotStore().loadForAccess() }
+        now = { Date() }
     }
 
-    init(loadSnapshot: @escaping @Sendable () -> WatchDashboardSnapshot?) {
+    init(
+        loadSnapshot: @escaping @Sendable () -> WatchDashboardSnapshot?,
+        now: @escaping @Sendable () -> Date = { Date() }
+    ) {
         self.loadSnapshot = loadSnapshot
+        self.now = now
     }
 
     func entities(for identifiers: [String]) async throws -> [WatchComplicationAccountEntity] {
@@ -176,7 +182,7 @@ struct WatchComplicationAccountQuery: EntityQuery {
     }
 
     private func accountCatalog() -> WatchComplicationChoiceCatalog {
-        WatchComplicationChoiceCatalog(snapshot: loadSnapshot())
+        WatchComplicationChoiceCatalog(snapshot: loadSnapshot(), now: now())
     }
 }
 
@@ -210,13 +216,19 @@ struct WatchComplicationMetricEntity: AppEntity {
 
 struct WatchComplicationMetricQuery: EntityQuery {
     private let loadSnapshot: @Sendable () -> WatchDashboardSnapshot?
+    private let now: @Sendable () -> Date
 
     init() {
-        loadSnapshot = { WatchComplicationSnapshotStore().load() }
+        loadSnapshot = { WatchComplicationSnapshotStore().loadForAccess() }
+        now = { Date() }
     }
 
-    init(loadSnapshot: @escaping @Sendable () -> WatchDashboardSnapshot?) {
+    init(
+        loadSnapshot: @escaping @Sendable () -> WatchDashboardSnapshot?,
+        now: @escaping @Sendable () -> Date = { Date() }
+    ) {
         self.loadSnapshot = loadSnapshot
+        self.now = now
     }
 
     func entities(for identifiers: [String]) async throws -> [WatchComplicationMetricEntity] {
@@ -234,7 +246,7 @@ struct WatchComplicationMetricQuery: EntityQuery {
     }
 
     private func metricCatalog() -> WatchComplicationChoiceCatalog {
-        WatchComplicationChoiceCatalog(snapshot: loadSnapshot())
+        WatchComplicationChoiceCatalog(snapshot: loadSnapshot(), now: now())
     }
 }
 

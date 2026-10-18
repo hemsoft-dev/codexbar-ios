@@ -228,6 +228,15 @@
 		A46700000000000000010004 /* SurfaceProPublicationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000004 /* SurfaceProPublicationTests.swift */; };
 		A46700000000000000010005 /* WatchProAccessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000005 /* WatchProAccessTests.swift */; };
 		A46700000000000000020001 /* WatchComplicationConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32000000000000000000003 /* WatchComplicationConfiguration.swift */; };
+		A46700000000000000031001 /* WidgetAccessGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030001 /* WidgetAccessGuard.swift */; };
+		A46700000000000000031002 /* WidgetAccessGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030001 /* WidgetAccessGuard.swift */; };
+		A46700000000000000031003 /* ProEntitlementClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000007 /* ProEntitlementClock.swift */; };
+		A46700000000000000031004 /* ProClockSupport.c in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000008 /* ProClockSupport.c */; };
+		A46700000000000000032002 /* WidgetAccessFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030002 /* WidgetAccessFixture.swift */; };
+		A46700000000000000032003 /* WidgetAccessGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030003 /* WidgetAccessGuardTests.swift */; };
+		A46700000000000000032004 /* WidgetAccessQueryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030004 /* WidgetAccessQueryTests.swift */; };
+		A46700000000000000031005 /* ProEntitlementValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000001 /* ProEntitlementValue.swift */; };
+		A46700000000000000032005 /* WidgetPublicationRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030005 /* WidgetPublicationRecoveryTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -524,6 +533,11 @@
 		A46700000000000000000003 /* WidgetProAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetProAccessTests.swift; sourceTree = "<group>"; };
 		A46700000000000000000004 /* SurfaceProPublicationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceProPublicationTests.swift; sourceTree = "<group>"; };
 		A46700000000000000000005 /* WatchProAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProAccessTests.swift; sourceTree = "<group>"; };
+		A46700000000000000030001 /* WidgetAccessGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAccessGuard.swift; sourceTree = "<group>"; };
+		A46700000000000000030002 /* WidgetAccessFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAccessFixture.swift; sourceTree = "<group>"; };
+		A46700000000000000030003 /* WidgetAccessGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAccessGuardTests.swift; sourceTree = "<group>"; };
+		A46700000000000000030004 /* WidgetAccessQueryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAccessQueryTests.swift; sourceTree = "<group>"; };
+		A46700000000000000030005 /* WidgetPublicationRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPublicationRecoveryTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -795,6 +809,10 @@
 				20000000000000000000004A /* UsageAlertTests.swift */,
 				20000000000000000000004D /* UsageHistoryTests.swift */,
 				C20000000000000000000001 /* WidgetConfigurationTests.swift */,
+				A46700000000000000030002 /* WidgetAccessFixture.swift */,
+				A46700000000000000030003 /* WidgetAccessGuardTests.swift */,
+				A46700000000000000030004 /* WidgetAccessQueryTests.swift */,
+				A46700000000000000030005 /* WidgetPublicationRecoveryTests.swift */,
 				A46700000000000000000003 /* WidgetProAccessTests.swift */,
 			);
 			path = CodexBarIOSTests;
@@ -833,6 +851,7 @@
 			isa = PBXGroup;
 			children = (
 				A46400000000000000000001 /* ProEntitlementValue.swift */,
+				A46700000000000000030001 /* WidgetAccessGuard.swift */,
 				A46400000000000000000007 /* ProEntitlementClock.swift */,
 				A22700000000000000000005 /* CursorUsageIdentity.swift */,
 				A42100000000000000000105 /* ClaudeFableUsageIdentity.swift */,
@@ -1192,6 +1211,7 @@
 				A46400000000000000010003 /* ProEntitlementResolver.swift in Sources */,
 				A46400000000000000010002 /* ProStoreEvidence.swift in Sources */,
 				A46400000000000000010001 /* ProEntitlementValue.swift in Sources */,
+				A46700000000000000031001 /* WidgetAccessGuard.swift in Sources */,
 				A46400000000000000010007 /* ProEntitlementClock.swift in Sources */,
 				A46400000000000000010008 /* ProClockSupport.c in Sources */,
 				A22700000000000000000001 /* CursorUsageIdentity.swift in Sources */,
@@ -1346,6 +1366,10 @@
 				100000000000000000000051 /* UsageAlertTests.swift in Sources */,
 				10000000000000000000004D /* UsageHistoryTests.swift in Sources */,
 				C10000000000000000000003 /* WidgetConfigurationTests.swift in Sources */,
+				A46700000000000000032002 /* WidgetAccessFixture.swift in Sources */,
+				A46700000000000000032003 /* WidgetAccessGuardTests.swift in Sources */,
+				A46700000000000000032004 /* WidgetAccessQueryTests.swift in Sources */,
+				A46700000000000000032005 /* WidgetPublicationRecoveryTests.swift in Sources */,
 				A46700000000000000010003 /* WidgetProAccessTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1362,6 +1386,10 @@
 				10000000000000000000002C /* CodexBarWidgetViews.swift in Sources */,
 				100000000000000000000048 /* CodexBarWidgetAccessoryViews.swift in Sources */,
 				100000000000000000000047 /* CodexBarWidgetModels.swift in Sources */,
+				A46700000000000000031002 /* WidgetAccessGuard.swift in Sources */,
+				A46700000000000000031005 /* ProEntitlementValue.swift in Sources */,
+				A46700000000000000031003 /* ProEntitlementClock.swift in Sources */,
+				A46700000000000000031004 /* ProClockSupport.c in Sources */,
 				10000000000000000000002D /* WidgetSnapshotStore.swift in Sources */,
 				10000000000000000000003E /* UserFacingDateTimeFormatter.swift in Sources */,
 				10000000000000000000002E /* WidgetRefreshInterval.swift in Sources */,
@@ -1747,6 +1775,8 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = CodexBarIOSWidget/CodexBarIOSWidget.entitlements;
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
+				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
@@ -1776,6 +1806,8 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = CodexBarIOSWidget/CodexBarIOSWidget.entitlements;
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
+				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W2A23PX5BP;

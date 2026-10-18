@@ -136,9 +136,12 @@ final class CodexCreditsPoolTests: XCTestCase {
         let parsed = try parse(credits: ["has_credits": true, "unlimited": false, "balance": "62500.75"])
         let result = ProviderUsageResult(accountID: account.id, providerID: .codex, title: account.displayName,
                                          subtitle: parsed.subtitle, bars: parsed.bars, fetchedAt: now)
-        let watch = WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store, now: now)
+        let watch = WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: now)
         XCTAssertFalse(try XCTUnwrap(watch.accounts.first).metrics.contains { $0.id == metricID })
-        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, snapshotDefaults: defaults, now: now)
+        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         let tile = try XCTUnwrap(snapshot.results.first?.bars.first { $0.metricID == metricID })
         XCTAssertEqual(tile.usageText, "62,501 credits")
@@ -146,7 +149,8 @@ final class CodexCreditsPoolTests: XCTestCase {
         let savedID = "bar.\(tile.id)"
         XCTAssertNotNil(snapshot.builderTile(resolvingSavedID: savedID))
         store.updateMetricVisibility(true, accountID: account.id, metricID: metricID)
-        let shown = WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store, now: now)
+        let shown = WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: now)
         let watchPool = try XCTUnwrap(shown.accounts.first?.metrics.first { $0.id == metricID })
         XCTAssertEqual(watchPool.exactValue, "62,501 credits")
         XCTAssertNil(watchPool.usedFraction)
@@ -156,7 +160,9 @@ final class CodexCreditsPoolTests: XCTestCase {
         XCTAssertTrue(UsageAlertEvaluator.evaluate(results: [poolOnly], settings: UsageAlertSettings(isEnabled: true),
                                                    activeAlertIDs: []).activeAlertIDs.isEmpty)
         store.updateMetricVisibility(false, accountID: account.id, metricID: metricID)
-        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, snapshotDefaults: defaults, now: now)
+        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         XCTAssertNotNil(WidgetSnapshotStore.loadSnapshot(defaults: defaults).builderTile(resolvingSavedID: savedID))
     }
 
@@ -197,7 +203,8 @@ final class CodexCreditsPoolTests: XCTestCase {
             let result = ProviderUsageResult(accountID: account.id, providerID: .codex, title: "Synthetic", subtitle: "",
                                              bars: parsed.bars, unavailableUsageMetrics: parsed.unavailableUsageMetrics, fetchedAt: now)
             store.updateMetricVisibility(true, accountID: account.id, metricID: metricID)
-            let metric = try XCTUnwrap(WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store, now: now)
+            let metric = try XCTUnwrap(WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store,
+                access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: now)
                 .accounts.first?.metrics.first { $0.id == metricID })
             XCTAssertEqual(metric.exactValue, expected)
             XCTAssertNil(metric.usedFraction)
@@ -205,13 +212,16 @@ final class CodexCreditsPoolTests: XCTestCase {
             XCTAssertEqual(metric.visualizationStyle.resolvedForWatch(allowsGauge: false), .statusText)
             XCTAssertFalse(metric.visualizationStyle.showsHeaderExactValueOnWatch(allowsGauge: false))
             store.updateMetricVisibility(false, accountID: account.id, metricID: metricID)
-            XCTAssertFalse(WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store, now: now)
+            XCTAssertFalse(WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store,
+                access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: now)
                 .accounts.first?.metrics.contains { $0.id == metricID } ?? false)
             store.updateWatchMetricVisibility(.show, accountID: account.id, metricID: metricID)
-            XCTAssertTrue(WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store, now: now)
+            XCTAssertTrue(WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store,
+                access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: now)
                 .accounts.first?.metrics.contains { $0.id == metricID } ?? false)
             store.updateWatchMetricVisibility(.inherit, accountID: account.id, metricID: metricID)
-            XCTAssertFalse(WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store, now: now)
+            XCTAssertFalse(WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store,
+                access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: now)
                 .accounts.first?.metrics.contains { $0.id == metricID } ?? false)
         }
     }

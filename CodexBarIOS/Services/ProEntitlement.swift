@@ -29,6 +29,9 @@ public final class ProEntitlement: ObservableObject {
     private var refreshRequest = 0
     private var unverifiedProducts: Set<ProProductID> = []
     private var started = false
+    // Only a newly accepted verification can restore missing widget clock storage.
+    private var widgetVerificationGenerations: [ProStoreEnvironment: UUID] = [:]
+    var widgetVerificationGeneration: UUID? { widgetVerificationGenerations[value.environment] }
     private var currentEnvironment: ProStoreEnvironment?
     private var appVerificationEnvironment: ProStoreEnvironment?
     #if DEBUG
@@ -200,6 +203,10 @@ public final class ProEntitlement: ObservableObject {
                 }
             }
             return false
+        }
+        if resolved.clockAnchor?.latestSignedAt != value.clockAnchor?.latestSignedAt
+            || (resolved.proAccessEndsAt != value.proAccessEndsAt && !verifiedProducts.isEmpty) {
+            widgetVerificationGenerations[resolved.environment] = UUID()
         }
         value = resolved
         subscription = statuses.values.max {

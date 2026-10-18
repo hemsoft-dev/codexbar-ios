@@ -58,8 +58,8 @@ struct WatchComplicationMetricChoice: Equatable, Sendable {
 struct WatchComplicationChoiceCatalog {
     private let snapshot: WatchDashboardSnapshot?
 
-    init(snapshot: WatchDashboardSnapshot?) {
-        self.snapshot = snapshot
+    init(snapshot: WatchDashboardSnapshot?, now: Date = Date()) {
+        self.snapshot = snapshot?.isLocked(at: now) == false ? snapshot : nil
     }
 
     var accounts: [WatchComplicationAccountChoice] {
@@ -541,6 +541,30 @@ struct WatchComplicationSnapshotStore {
             return nil
         }
         return try? WatchDashboardSnapshot.decode(data)
+    }
+
+    func loadForAccess(now: Date = Date()) -> WatchDashboardSnapshot? {
+        guard let snapshot = load(), let deadline = snapshot.proAccessEndsAt else { return load() }
+        guard deadline.timeIntervalSinceReferenceDate.isFinite, now.timeIntervalSinceReferenceDate.isFinite else {
+            return snapshot.lockingAccess()
+        }
+        // A queued newer usage revision cannot revive an already denied deadline.
+        // A renewed deadline or permanent phone grant has independent access.
+        if snapshot.isProLocked || now >= deadline {
+            recordExpiration(deadline)
+            return snapshot.lockingAccess()
+        }
+        return defaults.object(forKey: expirationKey(deadline)) == nil ? snapshot : snapshot.lockingAccess()
+    }
+
+    func recordExpiration(_ deadline: Date) {
+        guard deadline.timeIntervalSinceReferenceDate.isFinite else { return }
+        // Only set this receipt; concurrent observers never clear or overwrite it.
+        defaults.set(true, forKey: expirationKey(deadline))
+    }
+
+    private func expirationKey(_ deadline: Date) -> String {
+        "watch.complication.expired-deadline.\(deadline.timeIntervalSinceReferenceDate)"
     }
 
     @discardableResult
