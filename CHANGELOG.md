@@ -102,6 +102,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Document the cross-platform CodexBar Pro distribution and billing plan, with
+  dated store policies, privacy and purchase-state requirements, and decisions
+  required before another platform sells Pro.
+  ([#459](https://github.com/hemsoft-dev/codexbar-ios/issues/459))
+
 - Document verified subscription billing contracts and access gaps for Cursor,
   Google AI, personal Copilot, OpenCode Go and paid Greptile. Add a manual,
   offline OpenCode contract replay and a separate implementation follow-up.
