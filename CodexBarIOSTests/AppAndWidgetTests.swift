@@ -2334,7 +2334,7 @@ final class AppAndWidgetTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
 
@@ -2388,7 +2388,7 @@ final class AppAndWidgetTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [highBalance, lowBalance],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
 
@@ -2429,7 +2429,7 @@ final class AppAndWidgetTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [openRouterResult, claudeResult],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
 
@@ -2471,7 +2471,7 @@ final class AppAndWidgetTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults,
             now: fetchedAt
         )
@@ -2523,7 +2523,7 @@ final class AppAndWidgetTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [freshResult],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults,
             now: fetchedAt
         )
@@ -2547,7 +2547,7 @@ final class AppAndWidgetTests: XCTestCase {
         )
         WidgetSnapshotPublisher.publish(
             results: [staleResult],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults,
             now: fetchedAt
         )
@@ -2585,7 +2585,7 @@ final class AppAndWidgetTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults,
             now: fetchedAt
         )
@@ -4804,7 +4804,7 @@ final class AppAndWidgetTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
 
@@ -4883,7 +4883,7 @@ final class AppAndWidgetTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
 

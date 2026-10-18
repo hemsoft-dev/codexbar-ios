@@ -78,6 +78,9 @@ struct WatchDashboardState: Equatable, Sendable {
     let title: String
     let statusText: String
     let samples: [WatchUsageSample]
+    let isProLocked: Bool
+
+    static let lockedMessage = "Unlock the watch app with CodexBar Pro on iPhone"
 
     static let empty = WatchDashboardState(
         title: "CodexBar",
@@ -92,6 +95,12 @@ struct WatchDashboardState: Equatable, Sendable {
         decodingError: String?
     ) {
         title = "CodexBar"
+        isProLocked = snapshot?.isLocked(at: now) == true
+        guard !isProLocked else {
+            statusText = Self.lockedMessage
+            samples = []
+            return
+        }
         guard let snapshot else {
             statusText = decodingError ?? "Open CodexBar on iPhone"
             samples = []
@@ -133,10 +142,11 @@ struct WatchDashboardState: Equatable, Sendable {
         }
     }
 
-    init(title: String, statusText: String, samples: [WatchUsageSample]) {
+    init(title: String, statusText: String, samples: [WatchUsageSample], isProLocked: Bool = false) {
         self.title = title
         self.statusText = statusText
         self.samples = samples
+        self.isProLocked = isProLocked
     }
 
     private static func lastUpdatedText(_ generatedAt: Date, now: Date) -> String {

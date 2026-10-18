@@ -1,6 +1,9 @@
 import AppIntents
 import Foundation
 import WidgetKit
+#if CODEXBAR_WATCH_TESTS
+@testable import CodexBarWatch
+#endif
 
 struct WatchComplicationEntry: TimelineEntry {
     let date: Date
@@ -148,6 +151,16 @@ struct WatchComplicationAccountEntity: AppEntity {
 }
 
 struct WatchComplicationAccountQuery: EntityQuery {
+    private let loadSnapshot: @Sendable () -> WatchDashboardSnapshot?
+
+    init() {
+        loadSnapshot = { WatchComplicationSnapshotStore().load() }
+    }
+
+    init(loadSnapshot: @escaping @Sendable () -> WatchDashboardSnapshot?) {
+        self.loadSnapshot = loadSnapshot
+    }
+
     func entities(for identifiers: [String]) async throws -> [WatchComplicationAccountEntity] {
         accountCatalog()
             .accounts(for: identifiers)
@@ -163,7 +176,7 @@ struct WatchComplicationAccountQuery: EntityQuery {
     }
 
     private func accountCatalog() -> WatchComplicationChoiceCatalog {
-        WatchComplicationChoiceCatalog(snapshot: WatchComplicationSnapshotStore().load())
+        WatchComplicationChoiceCatalog(snapshot: loadSnapshot())
     }
 }
 
@@ -196,6 +209,16 @@ struct WatchComplicationMetricEntity: AppEntity {
 }
 
 struct WatchComplicationMetricQuery: EntityQuery {
+    private let loadSnapshot: @Sendable () -> WatchDashboardSnapshot?
+
+    init() {
+        loadSnapshot = { WatchComplicationSnapshotStore().load() }
+    }
+
+    init(loadSnapshot: @escaping @Sendable () -> WatchDashboardSnapshot?) {
+        self.loadSnapshot = loadSnapshot
+    }
+
     func entities(for identifiers: [String]) async throws -> [WatchComplicationMetricEntity] {
         metricCatalog()
             .metrics(for: identifiers)
@@ -211,7 +234,7 @@ struct WatchComplicationMetricQuery: EntityQuery {
     }
 
     private func metricCatalog() -> WatchComplicationChoiceCatalog {
-        WatchComplicationChoiceCatalog(snapshot: WatchComplicationSnapshotStore().load())
+        WatchComplicationChoiceCatalog(snapshot: loadSnapshot())
     }
 }
 

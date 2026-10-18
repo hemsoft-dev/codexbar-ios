@@ -800,7 +800,7 @@ final class UsageAlertTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         let widgetProvider = try XCTUnwrap(
@@ -811,7 +811,7 @@ final class UsageAlertTests: XCTestCase {
 
         let watchSnapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil)
         )
         XCTAssertEqual(watchSnapshot.accounts.first?.metrics.first?.severity, .warning)
     }

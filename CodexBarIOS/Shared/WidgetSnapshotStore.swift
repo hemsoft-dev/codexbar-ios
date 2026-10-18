@@ -59,13 +59,42 @@ public enum CodexBarWidgetConstants {
 public struct CodexBarWidgetSnapshot: Codable, Equatable, Sendable {
     public let generatedAt: Date
     public let results: [CodexBarWidgetProviderSnapshot]
+    public let isProLocked: Bool
+    public let proAccessEndsAt: Date?
 
-    public init(generatedAt: Date, results: [CodexBarWidgetProviderSnapshot]) {
+    public init(
+        generatedAt: Date,
+        results: [CodexBarWidgetProviderSnapshot],
+        isProLocked: Bool = false,
+        proAccessEndsAt: Date? = nil
+    ) {
         self.generatedAt = generatedAt
         self.results = results
+        self.isProLocked = isProLocked
+        self.proAccessEndsAt = proAccessEndsAt
     }
 
-    public static let empty = CodexBarWidgetSnapshot(generatedAt: .distantPast, results: [])
+    private enum CodingKeys: String, CodingKey {
+        case generatedAt, results, isProLocked, proAccessEndsAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        generatedAt = try container.decode(Date.self, forKey: .generatedAt)
+        results = try container.decode([CodexBarWidgetProviderSnapshot].self, forKey: .results)
+        isProLocked = try container.decodeIfPresent(Bool.self, forKey: .isProLocked) ?? true
+        proAccessEndsAt = try container.decodeIfPresent(Date.self, forKey: .proAccessEndsAt)
+    }
+
+    public func isLocked(at date: Date) -> Bool {
+        isProLocked || proAccessEndsAt.map { date >= $0 } == true
+    }
+
+    public static let empty = CodexBarWidgetSnapshot(
+        generatedAt: .distantPast,
+        results: [],
+        isProLocked: true
+    )
     public static let preview = CodexBarWidgetSnapshot(
         generatedAt: Date(),
         results: [
@@ -115,7 +144,8 @@ public struct CodexBarWidgetSnapshot: Codable, Equatable, Sendable {
                 title: "OpenRouter",
                 balance: 18.72
             ),
-        ]
+        ],
+        isProLocked: false
     )
 
     private static func previewUsageProvider(

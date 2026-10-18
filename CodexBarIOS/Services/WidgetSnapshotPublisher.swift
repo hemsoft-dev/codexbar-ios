@@ -6,11 +6,12 @@ enum WidgetSnapshotPublisher {
     static func publish(
         results: [ProviderUsageResult],
         configurationStore: ProviderConfigurationStore,
+        access: SnapshotProAccess = .locked,
         snapshotDefaults: UserDefaults? = WidgetSnapshotStore.userDefaults(),
         now: Date = Date(),
         dateTimeFormatter: UserFacingDateTimeFormatter = .current
     ) {
-        let displayable = orderedDisplayableResults(
+        let displayable = access.isProLocked ? [] : orderedDisplayableResults(
             results: results,
             configurationStore: configurationStore,
             now: now
@@ -111,7 +112,9 @@ enum WidgetSnapshotPublisher {
                         )
                     )
                 )
-            }
+            },
+            isProLocked: access.isProLocked,
+            proAccessEndsAt: access.proAccessEndsAt
         )
 
         WidgetSnapshotStore.saveSnapshot(snapshot, defaults: snapshotDefaults)

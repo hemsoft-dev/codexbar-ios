@@ -3,6 +3,14 @@ import Foundation
 public enum CodexBarDeepLink {
     public static let scheme = "codexbar"
 
+    public static var proURL: URL? { URL(string: "codexbar://pro") }
+
+    public static func isProURL(_ url: URL) -> Bool {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return false }
+        return components.scheme?.lowercased() == scheme && components.host?.lowercased() == "pro"
+            && (components.path.isEmpty || components.path == "/") && components.query == nil
+    }
+
     private static let providerHost = "provider"
     private static let accountQueryName = "account"
 

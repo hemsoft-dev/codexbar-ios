@@ -40,6 +40,8 @@ private struct WatchInlineComplication: View {
 
     private var inlineText: String {
         switch sample.availability {
+        case .locked:
+            return "CodexBar Pro • Unlock on iPhone"
         case .empty:
             return "CodexBar • Open iPhone app"
         case .unavailable:
@@ -52,6 +54,8 @@ private struct WatchInlineComplication: View {
 
     private var statusSymbol: String {
         switch sample.availability {
+        case .locked:
+            return "lock.fill"
         case .empty:
             return "iphone"
         case .unavailable:
@@ -74,7 +78,13 @@ private struct WatchCircularComplication: View {
     let sample: WatchComplicationSample
 
     var body: some View {
-        if sample.supportsGauge {
+        if sample.availability == .locked {
+            VStack(spacing: 2) {
+                Image(systemName: "lock.fill")
+                Text("Pro")
+                    .font(.caption2.bold())
+            }
+        } else if sample.supportsGauge {
             Gauge(value: sample.clampedUsedFraction) {
                 Image(systemName: sample.isStale ? "clock.badge.exclamationmark" : "gauge")
             } currentValueLabel: {
@@ -120,7 +130,14 @@ private struct WatchRectangularComplication: View {
     let sample: WatchComplicationSample
 
     var body: some View {
-        if sample.availability == .value {
+        if sample.availability == .locked {
+            VStack(alignment: .leading, spacing: 2) {
+                Label("CodexBar Pro", systemImage: "lock.fill")
+                    .font(.caption.weight(.semibold))
+                Text("Unlock on iPhone")
+                    .font(.caption2)
+            }
+        } else if sample.availability == .value {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 3) {
                     Text(sample.accountContextLabel)
@@ -173,7 +190,12 @@ private struct WatchCornerComplication: View {
 
     @ViewBuilder
     var body: some View {
-        if sample.supportsGauge {
+        if sample.availability == .locked {
+            Image(systemName: "lock.fill")
+                .widgetLabel {
+                    Text("Unlock with Pro on iPhone")
+                }
+        } else if sample.supportsGauge {
             valueText
                 .widgetLabel {
                     Gauge(value: sample.clampedUsedFraction) {

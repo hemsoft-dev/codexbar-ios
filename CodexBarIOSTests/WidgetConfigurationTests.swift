@@ -3,6 +3,16 @@ import XCTest
 @testable import CodexBarIOS
 
 final class WidgetConfigurationTests: XCTestCase {
+    func testProDeepLinkHasSeparateUserInitiatedDestination() throws {
+        let url = try XCTUnwrap(CodexBarDeepLink.proURL)
+        XCTAssertEqual(url.absoluteString, "codexbar://pro")
+        XCTAssertTrue(CodexBarDeepLink.isProURL(url))
+        XCTAssertNil(CodexBarDeepLink.providerAccountID(from: url))
+        XCTAssertFalse(CodexBarDeepLink.isProURL(URL(string: "https://pro")!))
+        XCTAssertFalse(CodexBarDeepLink.isProURL(URL(string: "codexbar://pro/details")!))
+        XCTAssertFalse(CodexBarDeepLink.isProURL(URL(string: "codexbar://pro?account=saved")!))
+    }
+
     func testEveryWidgetFocusMapsToItsProvider() {
         let mappings: [(CodexBarWidgetFocus, String?)] = [
             (.dashboardOrder, nil),
@@ -61,7 +71,7 @@ final class WidgetConfigurationTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
 
@@ -98,7 +108,7 @@ final class WidgetConfigurationTests: XCTestCase {
         let watchMetric = try XCTUnwrap(
             WatchSnapshotPublisher.makeSnapshot(
                 results: [result],
-                configurationStore: store
+                configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil)
             ).accounts.first?.metrics.first
         )
         XCTAssertNil(watchMetric.usedFraction)
@@ -129,7 +139,7 @@ final class WidgetConfigurationTests: XCTestCase {
         let metric = try XCTUnwrap(
             WatchSnapshotPublisher.makeSnapshot(
                 results: [result],
-                configurationStore: store
+                configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil)
             ).accounts.first?.metrics.first
         )
 
@@ -168,7 +178,7 @@ final class WidgetConfigurationTests: XCTestCase {
         )
         WidgetSnapshotPublisher.publish(
             results: [completedResult],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         let completedSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
@@ -192,7 +202,7 @@ final class WidgetConfigurationTests: XCTestCase {
         )
         WidgetSnapshotPublisher.publish(
             results: [quotaResult],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         let quotaSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
@@ -204,7 +214,7 @@ final class WidgetConfigurationTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [completedResult],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         let restoredCompletedSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
@@ -249,7 +259,7 @@ final class WidgetConfigurationTests: XCTestCase {
         )
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
@@ -311,7 +321,7 @@ final class WidgetConfigurationTests: XCTestCase {
             )
             WidgetSnapshotPublisher.publish(
                 results: [result],
-                configurationStore: store,
+                configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
                 snapshotDefaults: defaults
             )
             return WidgetSnapshotStore.loadSnapshot(defaults: defaults)
@@ -354,7 +364,7 @@ final class WidgetConfigurationTests: XCTestCase {
         )
         WidgetSnapshotPublisher.publish(
             results: [reorderedUniqueLabels],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         let reorderedUniqueSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
@@ -388,7 +398,7 @@ final class WidgetConfigurationTests: XCTestCase {
         )
         WidgetSnapshotPublisher.publish(
             results: [duplicateLabels],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         let duplicateLabelSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)

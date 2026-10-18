@@ -4166,7 +4166,7 @@ final class ProviderParsingTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [accountResult],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
@@ -4249,7 +4249,7 @@ final class ProviderParsingTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         let widgetBars = try XCTUnwrap(
@@ -4314,7 +4314,7 @@ final class ProviderParsingTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults,
             now: fetchedAt
         )
@@ -4356,7 +4356,7 @@ final class ProviderParsingTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
@@ -4869,7 +4869,7 @@ final class ProviderParsingTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults,
             now: now,
             dateTimeFormatter: newYork

@@ -212,7 +212,7 @@ enum AppStoreScreenshotFixtures {
         let defaults = widgetDefaults
         WidgetSnapshotPublisher.publish(
             results: results,
-            configurationStore: configurationStore,
+            configurationStore: configurationStore, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             snapshotDefaults: defaults
         )
         WidgetSnapshotStore.saveBuilderConfiguration(

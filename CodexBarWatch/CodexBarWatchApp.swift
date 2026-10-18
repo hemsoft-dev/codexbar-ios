@@ -24,10 +24,16 @@ struct CodexBarWatchApp: App {
 
 private struct ProductionWatchDashboardRoot: View {
     @StateObject private var dashboardStore = WatchDashboardStore()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             WatchDashboardView(state: dashboardStore.state(at: context.date))
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                dashboardStore.reevaluateAccess()
+            }
         }
     }
 }

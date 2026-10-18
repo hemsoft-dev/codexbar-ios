@@ -144,6 +144,7 @@ struct WatchComplicationChoiceCatalog {
 }
 
 enum WatchComplicationAvailability: Equatable, Sendable {
+    case locked
     case empty
     case unavailable
     case value
@@ -160,6 +161,21 @@ struct WatchComplicationSample: Equatable, Sendable {
     let resetText: String?
     let freshnessText: String
     let isStale: Bool
+
+    static let lockedMessage = "Unlock the watch app with CodexBar Pro on iPhone"
+
+    static let locked = WatchComplicationSample(
+        availability: .locked,
+        providerName: "CodexBar",
+        accountLabel: "",
+        metricLabel: "Unlock with Pro",
+        exactValue: "",
+        usedFraction: nil,
+        severity: .normal,
+        resetText: nil,
+        freshnessText: "On iPhone",
+        isStale: false
+    )
 
     static let empty = WatchComplicationSample(
         availability: .empty,
@@ -197,6 +213,8 @@ struct WatchComplicationSample: Equatable, Sendable {
 
     var cornerContextLabel: String {
         switch availability {
+        case .locked:
+            return "Unlock with CodexBar Pro"
         case .empty:
             return "CodexBar"
         case .unavailable:
@@ -228,7 +246,8 @@ struct WatchComplicationSample: Equatable, Sendable {
     }
 
     var accessibilityLabel: String {
-        [
+        if availability == .locked { return Self.lockedMessage }
+        return [
             providerName,
             accountLabel,
             metricLabel,
@@ -252,6 +271,7 @@ struct WatchComplicationResolver {
         guard let snapshot else {
             return .empty
         }
+        guard !snapshot.isLocked(at: date) else { return .locked }
 
         let accounts = snapshot.accounts.filter { !$0.metrics.isEmpty }
         guard !accounts.isEmpty else {
@@ -298,6 +318,17 @@ struct WatchComplicationResolver {
         selection: WatchComplicationSelection,
         now: Date
     ) -> Date {
+        let usageDate = usageReloadDate(snapshot: snapshot, selection: selection, now: now)
+        guard let snapshot, !snapshot.isLocked(at: now),
+              let deadline = snapshot.proAccessEndsAt else { return usageDate }
+        return min(usageDate, deadline)
+    }
+
+    private func usageReloadDate(
+        snapshot: WatchDashboardSnapshot?,
+        selection: WatchComplicationSelection,
+        now: Date
+    ) -> Date {
         guard let snapshot else {
             return now.addingTimeInterval(30 * 60)
         }
@@ -333,6 +364,18 @@ struct WatchComplicationResolver {
         selection: WatchComplicationSelection,
         now: Date
     ) -> [Date] {
+        guard let snapshot else { return [now] }
+        guard !snapshot.isLocked(at: now) else { return [now] }
+        let usageDates = usageTimelineEntryDates(snapshot: snapshot, selection: selection, now: now)
+        guard let deadline = snapshot.proAccessEndsAt else { return usageDates }
+        return Array(Set(usageDates.filter { $0 < deadline } + [deadline])).sorted()
+    }
+
+    private func usageTimelineEntryDates(
+        snapshot: WatchDashboardSnapshot?,
+        selection: WatchComplicationSelection,
+        now: Date
+    ) -> [Date] {
         guard let snapshot else {
             return [now]
         }
@@ -343,7 +386,7 @@ struct WatchComplicationResolver {
         }
         let fetchedAt = displayed.metric.fetchedAt ?? displayed.account.fetchedAt
 
-        let staleDate = nextReloadDate(snapshot: snapshot, selection: selection, now: now)
+        let staleDate = usageReloadDate(snapshot: snapshot, selection: selection, now: now)
         guard !Self.isStale(
             snapshot: snapshot,
             metric: displayed.metric,

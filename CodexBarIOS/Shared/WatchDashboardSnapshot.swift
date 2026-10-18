@@ -2,6 +2,7 @@ import Foundation
 
 public enum WatchDashboardPayloadError: Error, Equatable {
     case unsupportedSchemaVersion(Int)
+    case invalidPublicationSequence
 }
 
 enum WatchDashboardApplicationContext: Equatable, Sendable {
@@ -287,23 +288,33 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
     public static let applicationContextDataKey = "codexbar.dashboard.snapshot"
     public static let applicationContextVersionKey = "codexbar.dashboard.schema"
     public static let snapshotRequestKey = "codexbar.dashboard.request"
+    public static let snapshotAfterSequenceKey = "codexbar.dashboard.afterSequence"
     public static let snapshotUnavailableKey = "codexbar.dashboard.unavailable"
 
     public let schemaVersion: Int
     public let generatedAt: Date
     public let refreshIntervalSeconds: TimeInterval?
     public let accounts: [WatchAccountSnapshot]
+    public let isProLocked: Bool
+    public let proAccessEndsAt: Date?
+    public let publicationSequence: UInt64?
 
     public init(
         schemaVersion: Int = Self.currentSchemaVersion,
         generatedAt: Date,
         refreshIntervalSeconds: TimeInterval?,
-        accounts: [WatchAccountSnapshot]
+        accounts: [WatchAccountSnapshot],
+        isProLocked: Bool = false,
+        proAccessEndsAt: Date? = nil,
+        publicationSequence: UInt64? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.generatedAt = generatedAt
         self.refreshIntervalSeconds = refreshIntervalSeconds
         self.accounts = accounts
+        self.isProLocked = isProLocked
+        self.proAccessEndsAt = proAccessEndsAt
+        self.publicationSequence = publicationSequence
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -311,6 +322,9 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
         case generatedAt
         case refreshIntervalSeconds
         case accounts
+        case isProLocked
+        case proAccessEndsAt
+        case publicationSequence
     }
 
     public init(from decoder: Decoder) throws {
@@ -326,7 +340,10 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
                 TimeInterval.self,
                 forKey: .refreshIntervalSeconds
             ),
-            accounts: decodedAccounts.compactMap(\.value)
+            accounts: decodedAccounts.compactMap(\.value),
+            isProLocked: try container.decodeIfPresent(Bool.self, forKey: .isProLocked) ?? true,
+            proAccessEndsAt: try container.decodeIfPresent(Date.self, forKey: .proAccessEndsAt),
+            publicationSequence: try container.decodeIfPresent(UInt64.self, forKey: .publicationSequence)
         )
     }
 
@@ -336,6 +353,9 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
         try container.encode(generatedAt, forKey: .generatedAt)
         try container.encodeIfPresent(refreshIntervalSeconds, forKey: .refreshIntervalSeconds)
         try container.encode(accounts, forKey: .accounts)
+        try container.encode(isProLocked, forKey: .isProLocked)
+        try container.encodeIfPresent(proAccessEndsAt, forKey: .proAccessEndsAt)
+        try container.encodeIfPresent(publicationSequence, forKey: .publicationSequence)
     }
 
     public func encoded() throws -> Data {
@@ -346,6 +366,9 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
         let snapshot = try decoder.decode(Self.self, from: data)
         guard snapshot.schemaVersion == currentSchemaVersion else {
             throw WatchDashboardPayloadError.unsupportedSchemaVersion(snapshot.schemaVersion)
+        }
+        guard snapshot.publicationSequence.map({ $0 < UInt64.max - 1 }) ?? true else {
+            throw WatchDashboardPayloadError.invalidPublicationSequence
         }
         return snapshot
     }
@@ -364,7 +387,15 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
     }
 
     public static var snapshotRequestMessage: [String: Any] {
-        [snapshotRequestKey: true]
+        snapshotRequestMessage(after: nil)
+    }
+
+    public static func snapshotRequestMessage(after sequence: UInt64?) -> [String: Any] {
+        var message: [String: Any] = [snapshotRequestKey: true]
+        if let sequence {
+            message[snapshotAfterSequenceKey] = NSNumber(value: sequence)
+        }
+        return message
     }
 
     public static var snapshotUnavailableReply: [String: Any] {
@@ -381,8 +412,53 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
                 schemaVersion: schemaVersion,
                 generatedAt: .distantPast,
                 refreshIntervalSeconds: refreshIntervalSeconds,
-                accounts: accounts
+                accounts: accounts,
+                isProLocked: isProLocked,
+                proAccessEndsAt: proAccessEndsAt
             )
+        )
+    }
+
+    public func isLocked(at date: Date) -> Bool {
+        isProLocked || proAccessEndsAt.map { date >= $0 } == true
+    }
+
+    // Sequence orders publications across phone clock changes. At an equal
+    // revision, only a stricter access decision can supersede persisted access.
+    public func isNewer(than other: WatchDashboardSnapshot) -> Bool {
+        switch (publicationSequence, other.publicationSequence) {
+        case let (.some(candidate), .some(current)) where candidate != current:
+            return candidate > current
+        case (.some, .none):
+            return true
+        case (.none, .some):
+            return false
+        case (.none, .none) where generatedAt != other.generatedAt:
+            return generatedAt > other.generatedAt
+        default:
+            if isProLocked != other.isProLocked {
+                return isProLocked
+            }
+            if proAccessEndsAt != other.proAccessEndsAt {
+                guard let proAccessEndsAt else { return false }
+                return other.proAccessEndsAt.map { proAccessEndsAt < $0 } ?? true
+            }
+            return generatedAt > other.generatedAt
+                && schemaVersion == other.schemaVersion
+                && refreshIntervalSeconds == other.refreshIntervalSeconds
+                && accounts == other.accounts
+        }
+    }
+
+    public func lockingAccess() -> Self {
+        Self(
+            schemaVersion: schemaVersion,
+            generatedAt: generatedAt,
+            refreshIntervalSeconds: refreshIntervalSeconds,
+            accounts: accounts,
+            isProLocked: true,
+            proAccessEndsAt: proAccessEndsAt,
+            publicationSequence: publicationSequence
         )
     }
 

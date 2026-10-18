@@ -222,6 +222,12 @@
 		A46600000000000000010009 /* FreeTierPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000009 /* FreeTierPresentationTests.swift */; };
 		A4660000000000000001000A /* PlanRefreshAndAlertsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4660000000000000000000A /* PlanRefreshAndAlertsTests.swift */; };
 		A4660000000000000001000B /* FreeTierJourneyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4660000000000000000000B /* FreeTierJourneyTests.swift */; };
+		A46700000000000000010001 /* SnapshotProAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000001 /* SnapshotProAccess.swift */; };
+		A46700000000000000010002 /* PhoneWatchPublicationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000002 /* PhoneWatchPublicationStore.swift */; };
+		A46700000000000000010003 /* WidgetProAccessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000003 /* WidgetProAccessTests.swift */; };
+		A46700000000000000010004 /* SurfaceProPublicationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000004 /* SurfaceProPublicationTests.swift */; };
+		A46700000000000000010005 /* WatchProAccessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000005 /* WatchProAccessTests.swift */; };
+		A46700000000000000020001 /* WatchComplicationConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32000000000000000000003 /* WatchComplicationConfiguration.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -513,6 +519,11 @@
 		A46600000000000000000009 /* FreeTierPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeTierPresentationTests.swift; sourceTree = "<group>"; };
 		A4660000000000000000000A /* PlanRefreshAndAlertsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRefreshAndAlertsTests.swift; sourceTree = "<group>"; };
 		A4660000000000000000000B /* FreeTierJourneyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeTierJourneyTests.swift; sourceTree = "<group>"; };
+		A46700000000000000000001 /* SnapshotProAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotProAccess.swift; sourceTree = "<group>"; };
+		A46700000000000000000002 /* PhoneWatchPublicationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneWatchPublicationStore.swift; sourceTree = "<group>"; };
+		A46700000000000000000003 /* WidgetProAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetProAccessTests.swift; sourceTree = "<group>"; };
+		A46700000000000000000004 /* SurfaceProPublicationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceProPublicationTests.swift; sourceTree = "<group>"; };
+		A46700000000000000000005 /* WatchProAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProAccessTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -636,6 +647,8 @@
 			children = (
 				A46600000000000000000004 /* PlanAccessFixture.swift */,
 				A46600000000000000000003 /* PlanAccessCoordinator.swift */,
+				A46700000000000000000002 /* PhoneWatchPublicationStore.swift */,
+				A46700000000000000000001 /* SnapshotProAccess.swift */,
 				A46600000000000000000002 /* HistoryAccessPolicy.swift */,
 				A46600000000000000000001 /* AccountPlanAccess.swift */,
 				A46500000000000000000003 /* OriginalPurchaserFixture.swift */,
@@ -755,6 +768,7 @@
 			isa = PBXGroup;
 			children = (
 				A4660000000000000000000A /* PlanRefreshAndAlertsTests.swift */,
+				A46700000000000000000004 /* SurfaceProPublicationTests.swift */,
 				A46600000000000000000009 /* FreeTierPresentationTests.swift */,
 				A46600000000000000000008 /* HistoryAccessPolicyTests.swift */,
 				A46600000000000000000007 /* AccountPlanAccessTests.swift */,
@@ -781,6 +795,7 @@
 				20000000000000000000004A /* UsageAlertTests.swift */,
 				20000000000000000000004D /* UsageHistoryTests.swift */,
 				C20000000000000000000001 /* WidgetConfigurationTests.swift */,
+				A46700000000000000000003 /* WidgetProAccessTests.swift */,
 			);
 			path = CodexBarIOSTests;
 			sourceTree = "<group>";
@@ -861,6 +876,7 @@
 			children = (
 				D2000000000000000000000B /* WatchComplicationCompatibilityTests.swift */,
 				D20000000000000000000009 /* WatchDashboardStateTests.swift */,
+				A46700000000000000000005 /* WatchProAccessTests.swift */,
 			);
 			path = CodexBarWatchTests;
 			sourceTree = "<group>";
@@ -1162,6 +1178,8 @@
 				A46600000000000000010005 /* ActiveAccountChooser.swift in Sources */,
 				A46600000000000000010004 /* PlanAccessFixture.swift in Sources */,
 				A46600000000000000010003 /* PlanAccessCoordinator.swift in Sources */,
+				A46700000000000000010002 /* PhoneWatchPublicationStore.swift in Sources */,
+				A46700000000000000010001 /* SnapshotProAccess.swift in Sources */,
 				A46600000000000000010002 /* HistoryAccessPolicy.swift in Sources */,
 				A46600000000000000010001 /* AccountPlanAccess.swift in Sources */,
 				A46400000000000000010006 /* StoreKitProStoreSource.swift in Sources */,
@@ -1301,6 +1319,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A4660000000000000001000A /* PlanRefreshAndAlertsTests.swift in Sources */,
+				A46700000000000000010004 /* SurfaceProPublicationTests.swift in Sources */,
 				A46600000000000000010009 /* FreeTierPresentationTests.swift in Sources */,
 				A46600000000000000010008 /* HistoryAccessPolicyTests.swift in Sources */,
 				A46600000000000000010007 /* AccountPlanAccessTests.swift in Sources */,
@@ -1327,6 +1346,7 @@
 				100000000000000000000051 /* UsageAlertTests.swift in Sources */,
 				10000000000000000000004D /* UsageHistoryTests.swift in Sources */,
 				C10000000000000000000003 /* WidgetConfigurationTests.swift in Sources */,
+				A46700000000000000010003 /* WidgetProAccessTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1374,6 +1394,8 @@
 			files = (
 				D10000000000000000000008 /* WatchComplicationCompatibilityTests.swift in Sources */,
 				D10000000000000000000006 /* WatchDashboardStateTests.swift in Sources */,
+				A46700000000000000020001 /* WatchComplicationConfiguration.swift in Sources */,
+				A46700000000000000010005 /* WatchProAccessTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1847,6 +1869,7 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOS.watchkitapp.tests;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) CODEXBAR_WATCH_TESTS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -1872,6 +1895,7 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOS.watchkitapp.tests;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) CODEXBAR_WATCH_TESTS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;

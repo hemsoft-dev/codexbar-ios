@@ -97,9 +97,42 @@ enum WatchSnapshotRequestFailure: Equatable, Sendable {
     }
 }
 
+private struct WatchOrderingRecoverySignature: Equatable {
+    let sequence: UInt64
+    let semanticData: Data
+}
+
+@MainActor
+struct WatchAccessTiming {
+    typealias Scheduler = (Date, @escaping @MainActor @Sendable () -> Void) -> AnyCancellable
+    let now: () -> Date
+    let schedule: Scheduler
+
+    static var live: WatchAccessTiming {
+        WatchAccessTiming(now: { Date() }, schedule: { deadline, action in
+            let delay = max(0, deadline.timeIntervalSinceNow)
+            let task = Task { @MainActor in
+                do {
+                    try await Task.sleep(for: .seconds(delay))
+                } catch {
+                    return
+                }
+                guard !Task.isCancelled else { return }
+                action()
+            }
+            return AnyCancellable { task.cancel() }
+        })
+    }
+}
+
 @MainActor
 final class WatchDashboardStore: NSObject, ObservableObject {
     typealias SnapshotRequester = (
+        @escaping @MainActor (WatchDashboardSnapshotResponse) -> Void,
+        @escaping @MainActor (WatchSnapshotRequestFailure) -> Void
+    ) -> Void
+    typealias SequencedSnapshotRequester = (
+        UInt64?,
         @escaping @MainActor (WatchDashboardSnapshotResponse) -> Void,
         @escaping @MainActor (WatchSnapshotRequestFailure) -> Void
     ) -> Void
@@ -120,10 +153,13 @@ final class WatchDashboardStore: NSObject, ObservableObject {
     private let complicationStore: WatchComplicationSnapshotStore
     private let reloadComplications: () -> Void
     private let session: WCSession?
-    private let requestSnapshot: SnapshotRequester?
-    private let queueSnapshotRequest: SnapshotRequestQueuer?
+    private let requestSnapshot: SequencedSnapshotRequester?
+    private let queueSnapshotRequest: ((UInt64?) -> Void)?
     private let hasOutstandingSnapshotRequest: OutstandingSnapshotRequestProvider
     private let requestCoalescingDelay: Duration
+    private let accessTiming: WatchAccessTiming
+    private var orderingRecoverySignatures: [WatchOrderingRecoverySignature] = []
+    private var accessBoundaryCancellation: AnyCancellable?
     private var activationState: WCSessionActivationState
     nonisolated private let delegateEventSequencer = WatchConnectivityEventSequencer()
     private var nextDelegateEventSequence: UInt64 = 0
@@ -144,13 +180,16 @@ final class WatchDashboardStore: NSObject, ObservableObject {
         queueSnapshotRequest: SnapshotRequestQueuer? = nil,
         hasOutstandingSnapshotRequest: OutstandingSnapshotRequestProvider? = nil,
         initialActivationState: WCSessionActivationState? = nil,
-        requestCoalescingDelay: Duration = .milliseconds(100)
+        requestCoalescingDelay: Duration = .milliseconds(100),
+        accessTiming: WatchAccessTiming? = nil,
+        requestSnapshotAfterSequence: SequencedSnapshotRequester? = nil
     ) {
         self.defaults = defaults
         self.complicationStore = complicationStore
         self.reloadComplications = reloadComplications
         self.session = session
         self.requestCoalescingDelay = requestCoalescingDelay
+        self.accessTiming = accessTiming ?? .live
         if let hasOutstandingSnapshotRequest {
             self.hasOutstandingSnapshotRequest = hasOutstandingSnapshotRequest
         } else if let session {
@@ -165,13 +204,15 @@ final class WatchDashboardStore: NSObject, ObservableObject {
         hasQueuedSnapshotRequest = self.hasOutstandingSnapshotRequest()
         activationState = initialActivationState
             ?? session?.activationState
-            ?? (requestSnapshot == nil ? .notActivated : .activated)
-        if let requestSnapshot {
-            self.requestSnapshot = requestSnapshot
+            ?? (requestSnapshot == nil && requestSnapshotAfterSequence == nil ? .notActivated : .activated)
+        if let requestSnapshotAfterSequence {
+            self.requestSnapshot = requestSnapshotAfterSequence
+        } else if let requestSnapshot {
+            self.requestSnapshot = { _, reply, failure in requestSnapshot(reply, failure) }
         } else if let session {
-            self.requestSnapshot = { replyHandler, errorHandler in
+            self.requestSnapshot = { sequence, replyHandler, errorHandler in
                 session.sendMessage(
-                    WatchDashboardSnapshot.snapshotRequestMessage,
+                    WatchDashboardSnapshot.snapshotRequestMessage(after: sequence),
                     replyHandler: { reply in
                         let response = WatchDashboardSnapshotResponse(reply)
                         Task { @MainActor in
@@ -190,10 +231,10 @@ final class WatchDashboardStore: NSObject, ObservableObject {
             self.requestSnapshot = nil
         }
         if let queueSnapshotRequest {
-            self.queueSnapshotRequest = queueSnapshotRequest
+            self.queueSnapshotRequest = { _ in queueSnapshotRequest() }
         } else if let session {
-            self.queueSnapshotRequest = {
-                session.transferUserInfo(WatchDashboardSnapshot.snapshotRequestMessage)
+            self.queueSnapshotRequest = { sequence in
+                session.transferUserInfo(WatchDashboardSnapshot.snapshotRequestMessage(after: sequence))
             }
         } else {
             self.queueSnapshotRequest = nil
@@ -203,9 +244,7 @@ final class WatchDashboardStore: NSObject, ObservableObject {
         let legacySnapshot = legacyData.flatMap { try? WatchDashboardSnapshot.decode($0) }
         let sharedSnapshot = complicationStore.load()
         if let legacySnapshot,
-           sharedSnapshot == nil
-                || legacySnapshot.generatedAt
-                    > (sharedSnapshot?.generatedAt ?? .distantPast) {
+           sharedSnapshot.map({ legacySnapshot.isNewer(than: $0) }) ?? true {
             snapshot = legacySnapshot
             migratedSnapshotNeedsReload = (
                 try? complicationStore.saveIfChanged(
@@ -223,6 +262,7 @@ final class WatchDashboardStore: NSObject, ObservableObject {
             snapshot = nil
         }
         super.init()
+        reevaluateAccess()
 
         if migratedSnapshotNeedsReload {
             reloadComplications()
@@ -258,8 +298,9 @@ final class WatchDashboardStore: NSObject, ObservableObject {
     func receive(_ applicationContext: WatchDashboardApplicationContext) -> Bool {
         do {
             let decoded = try applicationContext.decode()
-            guard decoded.generatedAt >= (snapshot?.generatedAt ?? .distantPast) else {
+            guard snapshot.map({ decoded == $0 || decoded.isNewer(than: $0) }) ?? true else {
                 Self.logger.notice("Ignored older snapshot delivery")
+                requestOrderingRecovery(afterRejecting: decoded)
                 return false
             }
             let encoded = try decoded.encoded()
@@ -269,6 +310,7 @@ final class WatchDashboardStore: NSObject, ObservableObject {
             )
             defaults.set(encoded, forKey: Self.persistedSnapshotKey)
             snapshot = decoded
+            reevaluateAccess()
             decodingError = nil
             activeSnapshotRequestID = nil
             hasQueuedSnapshotRequest = hasOutstandingSnapshotRequest()
@@ -283,6 +325,50 @@ final class WatchDashboardStore: NSObject, ObservableObject {
             )
             return false
         }
+    }
+
+    // Foreground entry and delivery both reschedule this exact deadline. A local
+    // expiry is persisted at the same revision, so replay or wall-clock rollback
+    // cannot reveal usage again before a newer phone publication arrives.
+    func reevaluateAccess() {
+        accessBoundaryCancellation?.cancel()
+        accessBoundaryCancellation = nil
+        guard let snapshot, !snapshot.isProLocked,
+              let deadline = snapshot.proAccessEndsAt else { return }
+        if deadline <= accessTiming.now() {
+            lockExpiredSnapshot(snapshot)
+            return
+        }
+        accessBoundaryCancellation = accessTiming.schedule(deadline) { [weak self] in
+            guard let self, self.snapshot == snapshot else { return }
+            self.lockExpiredSnapshot(snapshot)
+        }
+    }
+
+    private func lockExpiredSnapshot(_ snapshot: WatchDashboardSnapshot) {
+        accessBoundaryCancellation?.cancel()
+        accessBoundaryCancellation = nil
+        let locked = snapshot.lockingAccess()
+        if let encoded = try? locked.encoded() {
+            defaults.set(encoded, forKey: Self.persistedSnapshotKey)
+            if (try? complicationStore.saveIfChanged(locked, encodedData: encoded)) == true {
+                reloadComplications()
+            }
+        }
+        self.snapshot = locked
+    }
+
+    private func requestOrderingRecovery(afterRejecting rejected: WatchDashboardSnapshot) {
+        guard let current = snapshot?.publicationSequence,
+              let rejectedSequence = rejected.publicationSequence, rejectedSequence <= current,
+              let semanticData = try? rejected.semanticData() else { return }
+        let signature = WatchOrderingRecoverySignature(sequence: rejectedSequence, semanticData: semanticData)
+        guard !orderingRecoverySignatures.contains(signature) else { return }
+        orderingRecoverySignatures.append(signature)
+        if orderingRecoverySignatures.count > 16 {
+            orderingRecoverySignatures.removeFirst()
+        }
+        scheduleCurrentSnapshotRequest()
     }
 
     func updateReachability(_ isReachable: Bool) {
@@ -391,6 +477,7 @@ final class WatchDashboardStore: NSObject, ObservableObject {
         }
         Self.logger.info("Requesting immediate snapshot from reachable iPhone")
         requestSnapshot(
+            snapshot?.publicationSequence,
             { [weak self] response in
                 self?.receiveSnapshotResponse(response, requestID: requestID)
             },
@@ -439,7 +526,7 @@ final class WatchDashboardStore: NSObject, ObservableObject {
         if failure != .pairingUnavailable,
            !hasQueuedSnapshotRequest,
            let queueSnapshotRequest {
-            queueSnapshotRequest()
+            queueSnapshotRequest(snapshot?.publicationSequence)
             hasQueuedSnapshotRequest = true
         }
         decodingError = failure.recoveryMessage

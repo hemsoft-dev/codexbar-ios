@@ -8,14 +8,23 @@ struct CodexBarWidgetEntry: TimelineEntry {
     let snapshot: CodexBarWidgetSnapshot
     let configuration: CodexBarWidgetConfigurationIntent
     let isPreview: Bool
+
+    var isProLocked: Bool {
+        !isPreview && snapshot.isLocked(at: date)
+    }
 }
 
 struct CodexBarWidgetTimelinePlan {
     let entry: CodexBarWidgetEntry
+    let expirationEntry: CodexBarWidgetEntry?
     let nextRefreshDate: Date
 
+    var entries: [CodexBarWidgetEntry] {
+        [entry] + (expirationEntry.map { [$0] } ?? [])
+    }
+
     var timeline: Timeline<CodexBarWidgetEntry> {
-        Timeline(entries: [entry], policy: .after(nextRefreshDate))
+        Timeline(entries: entries, policy: .after(nextRefreshDate))
     }
 }
 
@@ -71,6 +80,24 @@ struct CodexBarWidgetTimelineLoader: Sendable {
         let date = now()
         let snapshot = loadSnapshot(false)
         let interval = configuration.refreshPolicy.interval(fallback: loadRefreshInterval())
+        let expirationEntry: CodexBarWidgetEntry?
+        if !snapshot.isLocked(at: date), let deadline = snapshot.proAccessEndsAt {
+            // A reload request may be deferred by WidgetKit. Keep the access boundary
+            // in the timeline even when the ordinary refresh is requested sooner.
+            expirationEntry = CodexBarWidgetEntry(
+                date: deadline,
+                snapshot: CodexBarWidgetSnapshot(
+                    generatedAt: snapshot.generatedAt,
+                    results: [],
+                    isProLocked: true,
+                    proAccessEndsAt: deadline
+                ),
+                configuration: configuration,
+                isPreview: false
+            )
+        } else {
+            expirationEntry = nil
+        }
         return CodexBarWidgetTimelinePlan(
             entry: CodexBarWidgetEntry(
                 date: date,
@@ -78,7 +105,11 @@ struct CodexBarWidgetTimelineLoader: Sendable {
                 configuration: configuration,
                 isPreview: false
             ),
-            nextRefreshDate: date.addingTimeInterval(interval.seconds)
+            expirationEntry: expirationEntry,
+            nextRefreshDate: min(
+                date.addingTimeInterval(interval.seconds),
+                expirationEntry?.date ?? .distantFuture
+            )
         )
     }
 }
