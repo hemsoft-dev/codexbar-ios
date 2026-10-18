@@ -94,6 +94,8 @@ light/dark appearance and default/accessibility text sizes on iPhone and iPad:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   -project CodexBarIOS.xcodeproj -scheme CodexBarIOSUITests \
   -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+  -parallel-testing-enabled NO \
+  -maximum-concurrent-test-simulator-destinations 1 \
   -only-testing:CodexBarIOSUITests/CodexCreditsPoolUITests/testPreciseSubscriptionPillsOnExpandedAndCollapsedCards test
 ```
 

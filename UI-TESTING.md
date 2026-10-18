@@ -160,6 +160,8 @@ it. Animations retain the normal app behavior.
   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
     -project CodexBarIOS.xcodeproj -scheme CodexBarIOSUITests \
     -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+    -parallel-testing-enabled NO \
+    -maximum-concurrent-test-simulator-destinations 1 \
     -only-testing:CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingPermissionDisclosure \
     -resultBundlePath build/github-billing-permissions.xcresult test
   ```
@@ -452,6 +454,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   -xctestrun .build/renewal-ui/Build/Products/subscription-renewals.xctestrun \
   -destination 'platform=iOS Simulator,id=<discovered-iphone-or-ipad-id>' \
   -parallel-testing-enabled NO \
+  -maximum-concurrent-test-simulator-destinations 1 \
   -only-testing:CodexBarIOSUITests/CodexCreditsPoolUITests/testCompactCardHeadersAndIndependentControls \
   test-without-building
 ```
