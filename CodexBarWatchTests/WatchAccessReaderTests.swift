@@ -211,7 +211,8 @@ private final class WatchReaderFixture: @unchecked Sendable {
                 metrics: [WatchMetricSnapshot(id: "usage", label: "5-hour limit", usedFraction: 0.37, exactValue: "37%")]
             ),
             ],
-            isProLocked: locked, proAccessEndsAt: deadlineOffset.map { base.addingTimeInterval($0) }, publicationSequence: sequence
+            isProLocked: locked, proAccessEndsAt: deadlineOffset.map { base.addingTimeInterval($0) },
+            proAccessEffectiveAt: base, publicationSequence: sequence
         )
     }
 }

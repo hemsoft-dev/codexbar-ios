@@ -1,4 +1,7 @@
 import Foundation
+#if CODEXBAR_PHONE_WATCH_TESTS
+@testable import CodexBarIOS
+#endif
 
 enum WatchComplicationConstants {
     static let appGroupIdentifier = "group.com.hemsoft.CodexBarIOS"
@@ -596,15 +599,28 @@ struct WatchComplicationSnapshotStore {
     }
 
     func publish(
-        _ snapshot: WatchDashboardSnapshot, encodedData: Data? = nil, sample: ProEntitlementClockSample? = nil
+        _ snapshot: WatchDashboardSnapshot, encodedData: Data? = nil, sample: ProEntitlementClockSample? = nil,
+        origin: WatchAccessPublication? = nil
     ) throws -> WatchSnapshotPublication {
         let data = try encodedData ?? snapshot.encoded()
         let sample = sample ?? clockSample(Date())
-        let installed = accessClock.accept(snapshot, sample: sample)
-        if let deadline = snapshot.proAccessEndsAt, sample.wallDate >= deadline { recordExpiration(deadline) }
+        let installed = installAccess(for: snapshot, sample: sample, origin: origin)
         let changed = defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey) != data
         if changed { defaults.set(data, forKey: WatchComplicationConstants.snapshotDefaultsKey) }
         return WatchSnapshotPublication(changed: changed, accessInstalled: installed)
+    }
+
+    @discardableResult
+    func installAccess(
+        for snapshot: WatchDashboardSnapshot, sample: ProEntitlementClockSample, origin: WatchAccessPublication? = nil
+    ) -> Bool {
+        let installed = accessClock.accept(snapshot, sample: sample, origin: origin)
+        if let deadline = snapshot.proAccessEndsAt {
+            let observed = [sample.wallDate, snapshot.proAccessEffectiveAt, origin?.anchor?.effectiveDate(at: sample)]
+                .compactMap { $0 }.filter { $0.timeIntervalSinceReferenceDate.isFinite }
+            if observed.contains(where: { $0 >= deadline }) { recordExpiration(deadline) }
+        }
+        return installed
     }
 }
 

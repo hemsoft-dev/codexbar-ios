@@ -4,6 +4,7 @@ import Foundation
 struct SnapshotProAccess: Equatable {
     let isProLocked: Bool
     let proAccessEndsAt: Date?
+    let proAccessEffectiveAt: Date?
     let clockAnchor: ProEntitlementClockAnchor?
     let verificationGeneration: UUID?
     let environment: ProStoreEnvironment
@@ -11,12 +12,13 @@ struct SnapshotProAccess: Equatable {
     static let locked = Self(isProLocked: true, proAccessEndsAt: nil)
 
     init(
-        isProLocked: Bool, proAccessEndsAt: Date?,
+        isProLocked: Bool, proAccessEndsAt: Date?, proAccessEffectiveAt: Date? = nil,
         clockAnchor: ProEntitlementClockAnchor? = nil, verificationGeneration: UUID? = nil,
         environment: ProStoreEnvironment = .production
     ) {
         self.isProLocked = isProLocked
         self.proAccessEndsAt = proAccessEndsAt
+        self.proAccessEffectiveAt = proAccessEffectiveAt
         self.clockAnchor = clockAnchor
         self.verificationGeneration = verificationGeneration
         self.environment = environment
@@ -24,10 +26,6 @@ struct SnapshotProAccess: Equatable {
 
     @MainActor
     init(entitlement: ProEntitlement?) {
-        isProLocked = !(entitlement?.hasAccess ?? false)
-        proAccessEndsAt = entitlement?.value.proAccessEndsAt
-        clockAnchor = entitlement?.value.clockAnchor
-        verificationGeneration = entitlement?.widgetVerificationGeneration
-        environment = entitlement?.value.environment ?? .production
+        self = entitlement?.snapshotAccess() ?? .locked
     }
 }

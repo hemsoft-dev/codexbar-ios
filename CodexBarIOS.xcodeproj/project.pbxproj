@@ -246,6 +246,9 @@
 		A46700000000000000042005 /* ProClockSupport.c in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000008 /* ProClockSupport.c */; };
 		A46700000000000000042006 /* ProClockSupport.c in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000008 /* ProClockSupport.c */; };
 		A46700000000000000042007 /* WatchAccessTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040003 /* WatchAccessTestSupport.swift */; };
+		A46700000000000000043051 /* WatchAccessClockStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040002 /* WatchAccessClockStore.swift */; };
+		A46700000000000000043052 /* WatchComplicationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32000000000000000000001 /* WatchComplicationSupport.swift */; };
+		A46700000000000000043053 /* WatchComplicationConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32000000000000000000003 /* WatchComplicationConfiguration.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1357,6 +1360,9 @@
 			files = (
 				A4660000000000000001000A /* PlanRefreshAndAlertsTests.swift in Sources */,
 				A46700000000000000010004 /* SurfaceProPublicationTests.swift in Sources */,
+				A46700000000000000043053 /* WatchComplicationConfiguration.swift in Sources */,
+				A46700000000000000043052 /* WatchComplicationSupport.swift in Sources */,
+				A46700000000000000043051 /* WatchAccessClockStore.swift in Sources */,
 				A46600000000000000010009 /* FreeTierPresentationTests.swift in Sources */,
 				A46600000000000000010008 /* HistoryAccessPolicyTests.swift in Sources */,
 				A46600000000000000010007 /* AccountPlanAccessTests.swift in Sources */,
@@ -1758,6 +1764,7 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOSTests;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) CODEXBAR_PHONE_WATCH_TESTS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1789,6 +1796,7 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOSTests;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) CODEXBAR_PHONE_WATCH_TESTS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

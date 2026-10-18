@@ -68,6 +68,16 @@ public final class ProEntitlement: ObservableObject {
 
     var accessState: ProAccessState { ProAccessState(hasAccess: hasAccess, isResolved: isResolved) }
 
+    func snapshotAccess() -> SnapshotProAccess {
+        let sample = clock(now())
+        return SnapshotProAccess(
+            isProLocked: !value.hasAccess(at: sample), proAccessEndsAt: value.proAccessEndsAt,
+            proAccessEffectiveAt: value.proAccessEndsAt == nil ? nil : value.clockAnchor?.effectiveDate(at: sample),
+            clockAnchor: value.clockAnchor, verificationGeneration: widgetVerificationGeneration,
+            environment: value.environment
+        )
+    }
+
     /// Attach both listeners before the first snapshot so launch cannot miss a delivery.
     public func start() async {
         guard !started else { return }

@@ -83,7 +83,8 @@ enum WatchSnapshotPublisher {
                 generatedAt: retainedSnapshot.generatedAt,
                 refreshIntervalSeconds: configurationStore.autoRefreshInterval.seconds,
                 accounts: retainedSnapshot.accounts.filter { eligibleIDs.contains($0.id) },
-                isProLocked: false, proAccessEndsAt: access.proAccessEndsAt
+                isProLocked: false, proAccessEndsAt: access.proAccessEndsAt,
+                proAccessEffectiveAt: access.proAccessEffectiveAt
             )
         }
         let orderedResults = access.isProLocked ? [] : orderedDisplayableResults(
@@ -216,7 +217,8 @@ enum WatchSnapshotPublisher {
                 )
             },
             isProLocked: access.isProLocked,
-            proAccessEndsAt: access.proAccessEndsAt
+            proAccessEndsAt: access.proAccessEndsAt,
+            proAccessEffectiveAt: access.proAccessEffectiveAt
         )
     }
 

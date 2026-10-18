@@ -47,6 +47,7 @@ final class PhoneWatchPublicationStore {
             schemaVersion: candidate.schemaVersion, generatedAt: candidate.generatedAt,
             refreshIntervalSeconds: candidate.refreshIntervalSeconds, accounts: candidate.accounts,
             isProLocked: candidate.isProLocked, proAccessEndsAt: candidate.proAccessEndsAt,
+            proAccessEffectiveAt: candidate.proAccessEffectiveAt,
             publicationSequence: sequence
         )
         let data = try ordered.encoded()

@@ -1,5 +1,8 @@
 import AppIntents
 import Foundation
+#if CODEXBAR_PHONE_WATCH_TESTS
+@testable import CodexBarIOS
+#endif
 import WidgetKit
 #if CODEXBAR_WATCH_TESTS
 @testable import CodexBarWatch

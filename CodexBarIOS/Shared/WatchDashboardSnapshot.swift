@@ -297,6 +297,10 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
     public let accounts: [WatchAccountSnapshot]
     public let isProLocked: Bool
     public let proAccessEndsAt: Date?
+    /// Phone-effective calendar time when access was observed; never a phone uptime counter.
+    /// At first receipt, deadline minus this floor bounds remaining access. Unknown
+    /// transport delay during dual clock rollback cannot be reconstructed from it.
+    public let proAccessEffectiveAt: Date?
     public let publicationSequence: UInt64?
 
     public init(
@@ -306,6 +310,7 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
         accounts: [WatchAccountSnapshot],
         isProLocked: Bool = false,
         proAccessEndsAt: Date? = nil,
+        proAccessEffectiveAt: Date? = nil,
         publicationSequence: UInt64? = nil
     ) {
         self.schemaVersion = schemaVersion
@@ -314,6 +319,7 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
         self.accounts = accounts
         self.isProLocked = isProLocked
         self.proAccessEndsAt = proAccessEndsAt
+        self.proAccessEffectiveAt = proAccessEffectiveAt
         self.publicationSequence = publicationSequence
     }
 
@@ -324,6 +330,7 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
         case accounts
         case isProLocked
         case proAccessEndsAt
+        case proAccessEffectiveAt
         case publicationSequence
     }
 
@@ -343,6 +350,7 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
             accounts: decodedAccounts.compactMap(\.value),
             isProLocked: try container.decodeIfPresent(Bool.self, forKey: .isProLocked) ?? true,
             proAccessEndsAt: try container.decodeIfPresent(Date.self, forKey: .proAccessEndsAt),
+            proAccessEffectiveAt: try container.decodeIfPresent(Date.self, forKey: .proAccessEffectiveAt),
             publicationSequence: try container.decodeIfPresent(UInt64.self, forKey: .publicationSequence)
         )
     }
@@ -355,6 +363,7 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
         try container.encode(accounts, forKey: .accounts)
         try container.encode(isProLocked, forKey: .isProLocked)
         try container.encodeIfPresent(proAccessEndsAt, forKey: .proAccessEndsAt)
+        try container.encodeIfPresent(proAccessEffectiveAt, forKey: .proAccessEffectiveAt)
         try container.encodeIfPresent(publicationSequence, forKey: .publicationSequence)
     }
 
@@ -414,7 +423,8 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
                 refreshIntervalSeconds: refreshIntervalSeconds,
                 accounts: accounts,
                 isProLocked: isProLocked,
-                proAccessEndsAt: proAccessEndsAt
+                proAccessEndsAt: proAccessEndsAt,
+                proAccessEffectiveAt: proAccessEffectiveAt
             )
         )
     }
@@ -443,6 +453,10 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
                 guard let proAccessEndsAt else { return false }
                 return other.proAccessEndsAt.map { proAccessEndsAt < $0 } ?? true
             }
+            if proAccessEndsAt != nil, proAccessEffectiveAt != other.proAccessEffectiveAt {
+                guard let floor = proAccessEffectiveAt, floor.timeIntervalSinceReferenceDate.isFinite else { return false }
+                return other.proAccessEffectiveAt.map { floor > $0 } ?? true
+            }
             return generatedAt > other.generatedAt
                 && schemaVersion == other.schemaVersion
                 && refreshIntervalSeconds == other.refreshIntervalSeconds
@@ -458,6 +472,7 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
             accounts: accounts,
             isProLocked: true,
             proAccessEndsAt: proAccessEndsAt,
+            proAccessEffectiveAt: proAccessEffectiveAt,
             publicationSequence: publicationSequence
         )
     }

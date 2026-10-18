@@ -39,6 +39,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         }
         XCTAssertEqual(Set(fixture.widgetSnapshot.results.compactMap { $0.bars.first?.fractionUsed }), [0.1, 0.2])
         XCTAssertEqual(Set(try fixture.watchSnapshot().accounts.compactMap { $0.metrics.first?.usedFraction }), [0.1, 0.2])
+        XCTAssertEqual(try fixture.watchSnapshot().proAccessEffectiveAt, fixture.instant)
         var previousSemanticData = try fixture.watchSnapshot().semanticData()
 
         let renewedExpiry = fixture.instant.addingTimeInterval(7_200)
@@ -67,6 +68,7 @@ final class SurfaceProPublicationTests: XCTestCase {
             await fixture.deliver(.lifetime, signedOffset: 3, expiry: nil)
         }
         XCTAssertEqual(fixture.entitlement.accessState, initialState)
+        XCTAssertNil(try fixture.watchSnapshot().proAccessEffectiveAt)
         XCTAssertNotEqual(try fixture.watchSnapshot().semanticData(), previousSemanticData)
 
         await expectBoth(fixture, locked: false, deadline: shorterExpiry.addingTimeInterval(259_200)) {
@@ -84,6 +86,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         let deadline = expiry.addingTimeInterval(259_200)
         await fixture.deliver(.monthly, signedOffset: 0, expiry: expiry)
         await expectBoth(fixture, locked: false, deadline: deadline) { fixture.connect() }
+        XCTAssertEqual(try fixture.watchSnapshot().proAccessEffectiveAt, fixture.instant)
         let evidenceBytes = try fixture.entitlementBytes()
         let persistedEvidence = try Data(contentsOf: fixture.cacheURL)
         let originalResults = fixture.widgetSnapshot.results
@@ -108,6 +111,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: fixture.cacheURL), persistedEvidence)
         XCTAssertTrue(fixture.widgetSnapshot.results.isEmpty)
         XCTAssertTrue(try fixture.watchSnapshot().accounts.isEmpty)
+        XCTAssertNil(try fixture.watchSnapshot().proAccessEffectiveAt)
 
         fixture.clock.sample = SurfaceProPublicationClock.sample(at: fixture.instant.addingTimeInterval(1))
         await expectBoth(fixture, locked: false, deadline: deadline) {
@@ -118,6 +122,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: fixture.cacheURL), persistedEvidence)
         XCTAssertEqual(fixture.widgetSnapshot.results, originalResults)
         XCTAssertEqual(try fixture.watchSnapshot().accounts, originalAccounts)
+        XCTAssertEqual(try fixture.watchSnapshot().proAccessEffectiveAt, fixture.instant.addingTimeInterval(1))
         fixture.source.beforeSnapshot = nil
         fixture.source.resumeSnapshot?.resume()
         fixture.source.resumeSnapshot = nil
@@ -130,7 +135,8 @@ final class SurfaceProPublicationTests: XCTestCase {
         let oldDate = fixture.instant.addingTimeInterval(-600)
         let oldDeadline = fixture.instant.addingTimeInterval(900)
         fixture.publishSavedResults(
-            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: oldDeadline), generatedAt: oldDate
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: oldDeadline, proAccessEffectiveAt: oldDate),
+            generatedAt: oldDate
         )
         let oldSnapshot = try fixture.watchSnapshot()
         let expiry = fixture.instant.addingTimeInterval(3_600)
@@ -141,6 +147,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         let initial = try fixture.watchSnapshot()
         XCTAssertEqual(initial.accounts, oldSnapshot.accounts)
         XCTAssertEqual(initial.generatedAt, oldDate)
+        XCTAssertEqual(initial.proAccessEffectiveAt, fixture.instant)
         XCTAssertTrue(fixture.refreshService.results.isEmpty)
 
         let renewedExpiry = fixture.instant.addingTimeInterval(7_200)
@@ -149,6 +156,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         }
         XCTAssertEqual(try fixture.watchSnapshot().accounts, oldSnapshot.accounts)
         XCTAssertEqual(try fixture.watchSnapshot().generatedAt, oldDate)
+        XCTAssertEqual(try fixture.watchSnapshot().proAccessEffectiveAt, fixture.instant.addingTimeInterval(1))
 
         await expectBoth(fixture, locked: true, deadline: nil) {
             await fixture.deliver(.monthly, signedOffset: 2, expiry: renewedExpiry, revoked: true)
@@ -224,6 +232,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         let grant = try fixture.reply()
         XCTAssertFalse(grant.isProLocked)
         XCTAssertEqual(grant.accounts.count, 2)
+        XCTAssertEqual(grant.proAccessEffectiveAt, fixture.instant)
         fixture.transport.fails = true
         // This schedules a pending grant publication before denial invalidates it.
         fixture.configurationStore.updateAutoRefreshInterval(.fiveMinutes)
@@ -239,11 +248,23 @@ final class SurfaceProPublicationTests: XCTestCase {
         XCTAssertTrue(locked.isProLocked)
         XCTAssertTrue(locked.accounts.isEmpty)
         XCTAssertEqual(locked.proAccessEndsAt, expiry.addingTimeInterval(259_200))
+        XCTAssertNil(locked.proAccessEffectiveAt)
         XCTAssertEqual(fixture.transport.attempts.count, attemptsBeforeRequest + 1)
         XCTAssertGreaterThan(try XCTUnwrap(locked.publicationSequence), try XCTUnwrap(grant.publicationSequence))
         XCTAssertTrue(fixture.refreshService.results.isEmpty)
         XCTAssertEqual(try fixture.reply().publicationSequence, locked.publicationSequence)
         XCTAssertTrue(try fixture.reply().isProLocked)
+
+        fixture.clock.sample = ProEntitlementClockSample(
+            wallDate: fixture.instant.addingTimeInterval(-100),
+            continuousSeconds: fixture.instant.timeIntervalSince1970 + 5, continuityID: "surface-test-boot"
+        )
+        let recovered = try fixture.reply()
+        XCTAssertFalse(recovered.isProLocked)
+        XCTAssertEqual(recovered.proAccessEffectiveAt, fixture.instant.addingTimeInterval(5))
+        XCTAssertEqual(recovered.proAccessEndsAt, grant.proAccessEndsAt)
+        XCTAssertEqual(fixture.sender.retainedSnapshot?.proAccessEffectiveAt, recovered.proAccessEffectiveAt)
+        XCTAssertGreaterThan(try XCTUnwrap(recovered.publicationSequence), try XCTUnwrap(locked.publicationSequence))
     }
 
     func testDeniedActivationReplacesPersistedGrantAndRestartKeepsMonotonicSequenceAcrossRollback() async throws {
@@ -469,7 +490,9 @@ final class SurfaceProPublicationTests: XCTestCase {
         let oldDate = fixture.instant.addingTimeInterval(-600)
         let old = WatchSnapshotPublisher.makeSnapshot(
             results: fixture.savedResults, configurationStore: fixture.configurationStore,
-            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: fixture.instant.addingTimeInterval(900)),
+            access: SnapshotProAccess(
+                isProLocked: false, proAccessEndsAt: fixture.instant.addingTimeInterval(900), proAccessEffectiveAt: oldDate
+            ),
             now: oldDate
         )
         let migrated = PhoneWatchConnectivityCoordinator(
@@ -478,6 +501,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         )
         XCTAssertEqual(migrated.retainedSnapshot?.accounts, old.accounts)
         XCTAssertEqual(migrated.retainedSnapshot?.generatedAt, oldDate)
+        XCTAssertEqual(migrated.retainedSnapshot?.proAccessEffectiveAt, oldDate)
         let expiry = fixture.instant.addingTimeInterval(3_600)
         await fixture.deliver(.monthly, signedOffset: 0, expiry: expiry)
         let coordinator = WatchSnapshotCoordinator(
@@ -495,6 +519,7 @@ final class SurfaceProPublicationTests: XCTestCase {
         XCTAssertEqual(published.accounts, old.accounts)
         XCTAssertEqual(published.generatedAt, oldDate)
         XCTAssertEqual(published.proAccessEndsAt, expiry.addingTimeInterval(259_200))
+        XCTAssertEqual(published.proAccessEffectiveAt, fixture.instant)
         XCTAssertFalse(published.isProLocked)
         XCTAssertTrue(fixture.refreshService.results.isEmpty)
         withExtendedLifetime(coordinator) {}
@@ -511,6 +536,109 @@ final class SurfaceProPublicationTests: XCTestCase {
         XCTAssertTrue(fixture.sender.handleMessage(WatchDashboardSnapshot.snapshotRequestMessage) { reply = $0 })
 
         XCTAssertEqual(WatchDashboardSnapshotResponse(reply), .unavailable)
+    }
+
+    func testSnapshotAccessUsesOneCanonicalClockReadForDecisionAndEffectiveDate() async throws {
+        let fixture = try SurfaceProPublicationFixture()
+        defer { fixture.cleanUp() }
+        let expiry = fixture.instant.addingTimeInterval(3_600)
+        await fixture.deliver(.monthly, signedOffset: 0, expiry: expiry)
+        fixture.clock.sample = ProEntitlementClockSample(
+            wallDate: fixture.instant.addingTimeInterval(-100),
+            continuousSeconds: fixture.instant.timeIntervalSince1970 + 4, continuityID: "surface-test-boot"
+        )
+        fixture.clock.sampleAfterRead = ProEntitlementClockSample(
+            wallDate: fixture.instant.addingTimeInterval(-100),
+            continuousSeconds: fixture.instant.timeIntervalSince1970 + 262_801, continuityID: "surface-test-boot"
+        )
+        let readsBefore = fixture.clock.readCount
+
+        let access = SnapshotProAccess(entitlement: fixture.entitlement)
+
+        XCTAssertEqual(fixture.clock.readCount, readsBefore + 1)
+        XCTAssertFalse(access.isProLocked)
+        XCTAssertEqual(access.proAccessEffectiveAt, fixture.instant.addingTimeInterval(4))
+        XCTAssertEqual(access.proAccessEndsAt, expiry.addingTimeInterval(259_200))
+        XCTAssertFalse(fixture.entitlement.hasAccess, "The next clock sample has already crossed the deadline")
+    }
+
+    func testEffectiveDateAloneAdvancesPublicationOrderAndPersistsAcrossRestart() async throws {
+        let fixture = try SurfaceProPublicationFixture()
+        defer { fixture.cleanUp() }
+        await fixture.deliver(.monthly, signedOffset: 0, expiry: fixture.instant.addingTimeInterval(3_600))
+        fixture.connect()
+        let initial = try fixture.reply()
+        fixture.clock.sample = ProEntitlementClockSample(
+            wallDate: fixture.instant,
+            continuousSeconds: fixture.instant.timeIntervalSince1970 + 4, continuityID: "surface-test-boot"
+        )
+
+        fixture.watchCoordinator?.publishCurrentSnapshot()
+
+        let advanced = try fixture.watchSnapshot()
+        XCTAssertEqual(advanced.accounts, initial.accounts)
+        XCTAssertEqual(advanced.generatedAt, initial.generatedAt)
+        XCTAssertEqual(advanced.isProLocked, initial.isProLocked)
+        XCTAssertEqual(advanced.proAccessEndsAt, initial.proAccessEndsAt)
+        XCTAssertEqual(advanced.proAccessEffectiveAt, fixture.instant.addingTimeInterval(4))
+        XCTAssertNotEqual(try advanced.semanticData(), try initial.semanticData())
+        XCTAssertGreaterThan(try XCTUnwrap(advanced.publicationSequence), try XCTUnwrap(initial.publicationSequence))
+        let attempts = fixture.transport.attempts.count
+        fixture.watchCoordinator?.publishCurrentSnapshot()
+        XCTAssertEqual(fixture.transport.attempts.count, attempts, "An identical effective date remains deduplicated")
+        let restarted = PhoneWatchConnectivityCoordinator(session: nil, defaults: fixture.transportDefaults)
+        XCTAssertEqual(restarted.retainedSnapshot, advanced)
+    }
+
+    func testFirstWatchGrantAfterBothWallClocksRollbackUsesCanonicalPhoneRemainingTime() async throws {
+        let fixture = try SurfaceProPublicationFixture()
+        defer { fixture.cleanUp() }
+        let expiry = fixture.instant.addingTimeInterval(3_600)
+        let deadline = expiry.addingTimeInterval(259_200)
+        await fixture.deliver(.monthly, signedOffset: 0, expiry: expiry)
+        fixture.clock.sample = ProEntitlementClockSample(
+            wallDate: fixture.instant.addingTimeInterval(-100),
+            continuousSeconds: fixture.instant.timeIntervalSince1970 + 262_790, continuityID: "surface-test-boot"
+        )
+        XCTAssertTrue(fixture.entitlement.hasAccess)
+        fixture.connect()
+        let publication = try fixture.reply()
+        XCTAssertEqual(publication.proAccessEndsAt, deadline)
+        XCTAssertEqual(publication.proAccessEffectiveAt, deadline.addingTimeInterval(-10))
+        XCTAssertFalse(publication.isProLocked)
+        let watchClock = SurfaceWatchClock(date: fixture.clock.sample.wallDate)
+        let shared = WatchComplicationSnapshotStore(
+            defaults: fixture.widgetDefaults, accessClock: WatchAccessClockStore(directory: fixture.directory),
+            clockSample: { _ in watchClock.sample }
+        )
+        try shared.saveIfChanged(publication, sample: watchClock.sample)
+        XCTAssertEqual(try XCTUnwrap(shared.loadAccess()).remaining, 10)
+        let loader = WatchComplicationTimelineLoader(now: { watchClock.sample.wallDate }, loadAccess: { shared.loadAccess() })
+        let held = loader.entry(configuration: WatchComplicationConfigurationIntent())
+        XCTAssertEqual(held.sample.availability, .value)
+        let suite = fixture.widgetSuite
+        let directory = fixture.directory
+        let loadSnapshot: @Sendable () -> WatchDashboardSnapshot? = {
+            guard let defaults = UserDefaults(suiteName: suite) else { return nil }
+            return WatchComplicationSnapshotStore(
+                defaults: defaults, accessClock: WatchAccessClockStore(directory: directory),
+                clockSample: { _ in watchClock.sample }
+            ).loadForAccess()
+        }
+        let accountQuery = WatchComplicationAccountQuery(loadSnapshot: loadSnapshot, now: { watchClock.sample.wallDate })
+        let metricQuery = WatchComplicationMetricQuery(loadSnapshot: loadSnapshot, now: { watchClock.sample.wallDate })
+        let initialAccounts = try await accountQuery.suggestedEntities()
+        let initialMetrics = try await metricQuery.suggestedEntities()
+        XCTAssertFalse(initialAccounts.isEmpty)
+        XCTAssertFalse(initialMetrics.isEmpty)
+        watchClock.advance(11)
+        XCTAssertTrue(try XCTUnwrap(shared.loadForAccess()).isProLocked)
+        XCTAssertEqual(held.sample.availability, .locked)
+        let accounts = try await accountQuery.suggestedEntities()
+        let metrics = try await metricQuery.suggestedEntities()
+        XCTAssertTrue(accounts.isEmpty)
+        XCTAssertTrue(metrics.isEmpty)
+        XCTAssertEqual(shared.load()?.proAccessEndsAt, deadline)
     }
 
     private func expectBoth(
@@ -580,7 +708,7 @@ private final class SurfaceProPublicationFixture {
         let clock = clock
         entitlement = ProEntitlement(
             source: source, cache: ProEntitlementCache(fileURL: directory.appendingPathComponent("entitlement.json")),
-            now: { clock.sample.wallDate }, clock: { _ in clock.sample }
+            now: { clock.sample.wallDate }, clock: { _ in clock.read() }
         )
         configurationStore = ProviderConfigurationStore(
             initialPlanAccess: .unrestricted, defaults: phoneDefaults,
@@ -709,8 +837,20 @@ private final class SurfaceProPublicationFixture {
 @MainActor
 private final class SurfaceProPublicationClock {
     var sample: ProEntitlementClockSample
+    var sampleAfterRead: ProEntitlementClockSample?
+    private(set) var readCount = 0
 
     init(_ instant: Date) { sample = Self.sample(at: instant) }
+
+    func read() -> ProEntitlementClockSample {
+        readCount += 1
+        let current = sample
+        if let sampleAfterRead {
+            sample = sampleAfterRead
+            self.sampleAfterRead = nil
+        }
+        return current
+    }
 
     static func sample(at instant: Date) -> ProEntitlementClockSample {
         ProEntitlementClockSample(wallDate: instant, continuousSeconds: instant.timeIntervalSince1970, continuityID: "surface-test-boot")
@@ -744,4 +884,15 @@ private final class SurfaceProPublicationTransport {
         delivered.append(data)
         onSnapshot?(try WatchDashboardSnapshot.decode(data))
     }
+}
+
+private final class SurfaceWatchClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private let date: Date
+    private var elapsed: TimeInterval = 0
+    init(date: Date) { self.date = date }
+    var sample: ProEntitlementClockSample {
+        lock.withLock { ProEntitlementClockSample(wallDate: date, continuousSeconds: 500 + elapsed, continuityID: "independent-watch-boot") }
+    }
+    func advance(_ seconds: TimeInterval) { lock.withLock { elapsed += seconds } }
 }

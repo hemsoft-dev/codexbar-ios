@@ -32,11 +32,18 @@ final class WatchProAccessTests: XCTestCase {
         let locked = expectation(description: "Original continuous boundary committed lock")
         let probe = WatchSleepProbe(onSleep: { slept.fulfill() })
         let clock = WatchControlledClock(probe: probe)
+        let origin = clock.now
         var wallDate = base
         let store = WatchDashboardStore(
             defaults: isolatedDefaults(), complicationStore: .init(testDefaults: isolatedDefaults()),
             reloadComplications: {}, session: nil,
-            accessTiming: .live(clock: clock, now: { wallDate })
+            accessTiming: .live(clock: clock, now: { wallDate }, sample: {
+                let elapsed = origin.duration(to: clock.now).components
+                return ProEntitlementClockSample(
+                    wallDate: wallDate, continuousSeconds: 500 + Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18,
+                    continuityID: "watch-test-boot"
+                )
+            })
         )
         let observation = store.$snapshot.compactMap { $0 }.filter(\.isProLocked).sink { _ in locked.fulfill() }
         defer { observation.cancel() }
@@ -66,11 +73,19 @@ final class WatchProAccessTests: XCTestCase {
         let slept = expectation(description: "Initial live sleep started")
         let locked = expectation(description: "Current snapshot locked at original continuous boundary")
         let probe = WatchSleepProbe(onSleep: { slept.fulfill() })
+        let clock = WatchControlledClock(probe: probe)
+        let origin = clock.now
         var wallDate = base
         let store = WatchDashboardStore(
             defaults: isolatedDefaults(), complicationStore: .init(testDefaults: isolatedDefaults()),
             reloadComplications: {}, session: nil,
-            accessTiming: .live(clock: WatchControlledClock(probe: probe), now: { wallDate })
+            accessTiming: .live(clock: clock, now: { wallDate }, sample: {
+                let elapsed = origin.duration(to: clock.now).components
+                return ProEntitlementClockSample(
+                    wallDate: wallDate, continuousSeconds: 500 + Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18,
+                    continuityID: "watch-test-boot"
+                )
+            })
         )
         let observation = store.$snapshot.compactMap { $0 }.filter(\.isProLocked).sink { _ in locked.fulfill() }
         defer { observation.cancel() }
@@ -180,6 +195,7 @@ final class WatchProAccessTests: XCTestCase {
         try store.saveIfChanged(snapshot(deadline: deadline, sequence: 8))
         let decoded = try XCTUnwrap(WatchComplicationSnapshotStore(testDefaults: defaults).load())
         XCTAssertEqual(decoded.proAccessEndsAt, deadline)
+        XCTAssertEqual(decoded.proAccessEffectiveAt, base)
         XCTAssertEqual(decoded.publicationSequence, 8)
         for (offset, expected) in [(-0.001, false), (0.0, true), (0.001, true)] {
             let state = WatchDashboardState(
@@ -193,6 +209,7 @@ final class WatchProAccessTests: XCTestCase {
         var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: decoded.encoded()) as? [String: Any])
         legacy.removeValue(forKey: "isProLocked")
         legacy.removeValue(forKey: "proAccessEndsAt")
+        legacy.removeValue(forKey: "proAccessEffectiveAt")
         legacy.removeValue(forKey: "publicationSequence")
         defaults.set(try JSONSerialization.data(withJSONObject: legacy), forKey: WatchComplicationConstants.snapshotDefaultsKey)
         let legacyDecoded = try XCTUnwrap(WatchComplicationSnapshotStore(testDefaults: defaults).load())
@@ -681,7 +698,7 @@ final class WatchProAccessTests: XCTestCase {
                 metrics: [WatchMetricSnapshot(id: "usage", label: "5-hour limit", usedFraction: 0.37, exactValue: "37%", resetsAt: resetsAt)]
             ),
             ],
-            isProLocked: locked, proAccessEndsAt: deadline, publicationSequence: sequence
+            isProLocked: locked, proAccessEndsAt: deadline, proAccessEffectiveAt: base, publicationSequence: sequence
         )
     }
 
