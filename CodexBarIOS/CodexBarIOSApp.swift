@@ -43,14 +43,17 @@ struct CodexBarIOSApp: App {
         }
         #endif
         #if DEBUG
-        let entitlement = screenshotConfiguration != nil ? PlanAccessFixture().entitlement : ProEntitlement.live()
+        let entitlement = screenshotConfiguration.map { PlanAccessFixture(hasProAccess: $0.scene.hasProAccess).entitlement }
+            ?? ProEntitlement.live()
+        let applicationDefaults = screenshotConfiguration == nil ? UserDefaults.standard : AppStoreScreenshotFixtures.applicationDefaults
         #else
         let entitlement = ProEntitlement.live()
+        let applicationDefaults = UserDefaults.standard
         #endif
         _proEntitlement = StateObject(wrappedValue: entitlement)
-        _originalPurchaserNotice = StateObject(wrappedValue: OriginalPurchaserNotice())
-        _appUpdateController = StateObject(wrappedValue: AppUpdateController())
-        let statusPreferences = GitHubStatusPreferences()
+        _originalPurchaserNotice = StateObject(wrappedValue: OriginalPurchaserNotice(defaults: applicationDefaults))
+        _appUpdateController = StateObject(wrappedValue: AppUpdateController(defaults: applicationDefaults))
+        let statusPreferences = GitHubStatusPreferences(defaults: applicationDefaults)
         _githubStatusPreferences = StateObject(wrappedValue: statusPreferences)
         _githubStatusMonitor = StateObject(
             wrappedValue: GitHubStatusMonitor(
@@ -60,7 +63,7 @@ struct CodexBarIOSApp: App {
         )
         #if DEBUG
         if let screenshotConfiguration {
-            let configurationStore = ProviderConfigurationStore.appStoreScreenshotDemo()
+            let configurationStore = ProviderConfigurationStore.appStoreScreenshotDemo(singleAccount: !screenshotConfiguration.scene.hasProAccess)
             configurationStore.updateAppAppearance(screenshotConfiguration.appearance)
             if screenshotConfiguration.scene == .dashboardDark {
                 configurationStore.updateDashboardCardOrder([
@@ -88,10 +91,9 @@ struct CodexBarIOSApp: App {
                 for: results,
                 extendedRange: screenshotConfiguration.scene == .history
             )
-            AppStoreScreenshotFixtures.seedWidgetPreview(
-                results: results,
-                configurationStore: configurationStore
-            )
+            if screenshotConfiguration.scene.hasProAccess {
+                AppStoreScreenshotFixtures.seedWidgetPreview(results: results, configurationStore: configurationStore)
+            }
             let refreshService = UsageRefreshService(providers: DemoUsageProvider.samples, initialResults: results)
             _refreshService = StateObject(wrappedValue: refreshService)
             let coordinator = PlanAccessCoordinator(
@@ -158,11 +160,15 @@ struct CodexBarIOSApp: App {
                         await refreshService.refresh(configurations: configurationStore.visibleConfigurations)
                     }
                     if let screenshotConfiguration {
+                        await proEntitlement.refresh()
                         let settleNanoseconds = UInt64(
                             screenshotConfiguration.settleDelay * 1_000_000_000
                         )
                         try? await Task.sleep(nanoseconds: settleNanoseconds)
-                        AppStoreScreenshotFixtures.markReady(scene: screenshotConfiguration.scene)
+                        AppStoreScreenshotFixtures.markReady(
+                            scene: screenshotConfiguration.scene, entitlement: proEntitlement,
+                            configurationStore: configurationStore, historyStore: historyStore
+                        )
                     } else {
                         bootstrapCoordinator.start()
                     }
@@ -241,7 +247,9 @@ struct CodexBarIOSApp: App {
             refreshService: refreshService, configurationStore: configurationStore, historyStore: historyStore,
             appUpdateController: appUpdateController, githubStatusPreferences: githubStatusPreferences,
             githubStatusMonitor: githubStatusMonitor, usageAlertNotifier: IsolatedPlanFixtureEffects(),
+            appReviewPromptPolicy: AppReviewPromptPolicy(defaults: AppStoreScreenshotFixtures.applicationDefaults),
             performsLifecycleWork: false,
+            entitlement: proEntitlement,
             widgetSnapshotCoordinator: WidgetSnapshotCoordinator(
                 refreshService: refreshService, configurationStore: configurationStore,
                 publishSnapshot: { _, _ in }, publishSettings: { _ in }
@@ -256,7 +264,7 @@ struct CodexBarIOSApp: App {
     @ViewBuilder
     private func screenshotRootView(for scene: AppStoreScreenshotScene) -> some View {
         switch scene {
-        case .dashboardOverview, .dashboardDark, .gemini, .grok, .githubBilling:
+        case .freeOverview, .dashboardOverview, .dashboardDark, .gemini, .grok, .githubBilling:
             isolatedScreenshotContentView()
         case .widgetBuilder:
             NavigationStack {
@@ -282,7 +290,8 @@ struct CodexBarIOSApp: App {
         case .history:
             if let result = refreshService.results.first(where: { $0.providerID == .codex }) {
                 LiveProviderUsageHistoryDetailView(
-                    result: result, historyStore: historyStore, configurationStore: configurationStore
+                    result: result, historyStore: historyStore, configurationStore: configurationStore,
+                    initialRange: .threeMonths
                 )
             } else {
                 ContentUnavailableView("No History", systemImage: "chart.xyaxis.line")

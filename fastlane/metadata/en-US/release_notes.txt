@@ -1,13 +1,11 @@
-CodexBar 1.4.0 adds more provider metrics, guided sign-in, and longer usage history.
+CodexBar 2.0 introduces the free plan and CodexBar Pro.
 
-- Connect Google Gemini and see Gemini Apps, Gemini Models, and Other models in one account, with separate five-hour and weekly limits, reset times, and usage projections where available.
-- Connect Grok to see verified paid weekly usage and Extra Usage Credits when available, separately from Cursor's Grok Bot allowance.
-- Monitor GitHub Billing through its own sign-in, with personal and organization spending, included allowances, budgets, and month-end projections where supported.
-- Connect OpenCode Go and Zen through browser approval and workspace selection, without pasting credentials.
-- Choose browser or private sign-in for ChatGPT / Codex and OpenCode. Distinct Codex accounts stay separate, and duplicate identities remain blocked.
-- Track every reported Codex usage window, including separate Codex Spark limits. Optionally show the reported Codex Credits balance, with a separate choice for each account.
-- See Cursor Models, Other Models, and Grok Bot usage separately. Over-limit readings and on-demand spending stay visible. Expired Cursor sign-in renews when possible; guided reconnection preserves your saved card choices.
-- Explore up to 90 days of daily usage history alongside recent detailed samples, with clearer dates at the chart edges on iPhone and iPad.
-- See Greptile's provider-returned free-allowance renewal date through a verified dashboard session. Fresh Google-backed Greptile billing sign-in or reconnection may be unavailable in this version.
+- The free plan includes one active account from any supported provider, a customizable dashboard and seven days of history. GitHub service-status notices stay free.
+- Pro adds all saved accounts, Home Screen and Lock Screen widgets, Apple Watch and complications, up to 90 days of daily history, and usage alerts. Choose monthly, yearly or lifetime Pro. Eligible yearly subscribers can start with a seven-day free trial.
+- Thanks for buying the original CodexBar app. You keep lifetime Pro after Apple verifies your purchase, with no new purchase required. A one-time thank-you confirms your access. Family members must install before October 31, 2026 at 8:00 PM EDT, which is November 1, 2026 at 00:00 UTC, to qualify. Support can help with a lifetime offer code if they miss the deadline.
+- Manage Pro and Restore Purchases in Settings > CodexBar Pro. See verified renewal dates, upcoming plan changes and payment recovery. If purchase information cannot be verified, restore or refresh it before buying again.
+- If Pro ends, choose the account that keeps refreshing. Saved accounts, credentials, history, layouts and alert preferences stay on your device. Widgets and Watch show an unlock message and resume with saved selections when Pro returns.
 
-This update also clarifies Claude's five-hour and weekly windows and Codex's 30-day window, improves saved-account and History recovery, and makes account menus easier to open on iPad. Metrics depend on the connected provider and account; missing data is not replaced with guessed usage.
+This release also adds X Subscription's shared weekly pool and Extra Usage Credits with one xAI sign-in. See verified provider subscription renewal dates where supported, including Claude, Grok, Cursor and OpenCode. Greptile dashboard accounts show actual free-credit usage and renewal dates. Claude accounts can view and confirm available saved usage resets.
+
+Provider data depends on your account and the service. Missing values stay unavailable. Fresh Google-backed Greptile billing sign-in or reconnection may still be unavailable.

@@ -69,6 +69,12 @@ building, testing, or releasing the app.
 
 ### Changed
 
+- Clarify which features come with the free plan and CodexBar Pro, how to
+  restore purchases, and how original purchasers and their family members keep
+  lifetime access. Explain Apple's purchase processing and the access records
+  CodexBar keeps on your device.
+  ([#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469))
+
 - Widgets, the Apple Watch app, and complications require CodexBar Pro. They
   show an unlock message when access ends, including while the iPhone is
   offline. Upgrading restores them with your saved selections intact.
@@ -129,6 +135,10 @@ building, testing, or releasing the app.
   ([#421](https://github.com/hemsoft-dev/codexbar-ios/issues/421))
 
 ### Developer Experience
+
+- Preserve each storefront build attempt and record its verified bundle versions
+  and simulator metadata in the capture evidence.
+  ([#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469))
 
 - Add isolated local StoreKit purchase and Restore tests plus a manual commerce
   UI scheme. These checks do not add automatic CI work.

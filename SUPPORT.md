@@ -73,7 +73,47 @@ details, and other identifying content will not be published as part of that
 conversion. Do not post security or privacy-sensitive details in a public
 GitHub issue.
 
+## CodexBar Pro and restoring purchases
+
+This section is prepared for CodexBar 2.0. Its current compiled family deadline
+is provisional until [release qualification](https://github.com/hemsoft-dev/codexbar-ios/issues/470)
+finalizes it. Check this page for the confirmed deadline when 2.0 ships.
+
+Open **Settings > CodexBar Pro > Restore Purchases** while using the Apple
+Account that made the purchase. Stay online while Apple checks your purchases.
+If purchase information cannot be verified, use **Restore Purchases** or
+**Refresh Purchase Information** before trying another purchase. A canceled
+subscription keeps Pro until its paid period ends. **Manage Subscription**
+opens Apple's subscription sheet; a lifetime purchase does not renew.
+
+People who bought the original paid CodexBar app keep lifetime Pro after Apple
+verifies their original purchase. No new purchase is required. Recognition
+uses verified, non-revoked production purchase evidence from the paid-app era.
+Sandbox and TestFlight purchase records do not qualify as original purchases.
+If access is missing, restore first, then contact support with your app version
+and a description of the problem. Never send passwords, tokens or full purchase identifiers.
+
+Family members of an original purchaser qualify when they install CodexBar
+before **October 31, 2026 at 8:00 PM EDT**, which is **2026-11-01T00:00:00Z**. Family
+Sharing is off for the new Pro subscriptions and lifetime product. A family
+member who missed the cutoff can contact support. After reviewing the case,
+support can provide a one-time free
+[offer code for the lifetime product](https://developer.apple.com/help/app-store-connect/manage-in-app-purchases/create-offer-codes-for-in-app-purchases/).
+This is a lifetime in-app purchase offer code, not an app download promo code.
+
+To switch from a subscription to lifetime Pro, turn off subscription renewal
+through Apple's management sheet first, then return to **Settings > CodexBar
+Pro**. A lifetime purchase does not refund the unused subscription period or
+cancel a subscription for you. If you later restart a CodexBar Pro subscription
+in your Apple Account settings, Apple will charge for it even though you have
+lifetime Pro.
+
+If the app reports a subscription payment problem, use **Manage Payment Method**
+to check your Apple Account billing details. CodexBar cannot change your payment
+method or resolve Apple's charges.
+
 If the Apple Watch dashboard is empty or stale, open CodexBar on the paired
 iPhone, refresh the dashboard, and then open CodexBar on the watch. The last
 valid watch snapshot remains visible while the phone is temporarily
-unavailable; a stale or disconnected label explains when it was last updated.
+unavailable and Pro access remains valid. A stale or disconnected label explains
+when it was last updated.
