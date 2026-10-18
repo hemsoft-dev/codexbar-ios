@@ -114,11 +114,15 @@ final class SubscriptionRenewalTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         defaults.set("dark", forKey: "appAppearance")
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore(), widgetSnapshotDefaults: defaults)
+        let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
+            defaults: defaults, secretStore: EmptySecretStore(), widgetSnapshotDefaults: defaults)
         XCTAssertTrue(store.showsSubscriptionRenewals)
         store.updateShowsSubscriptionRenewals(false)
         XCTAssertFalse(store.showsSubscriptionRenewals)
-        let reload = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore(), widgetSnapshotDefaults: defaults)
+        let reload = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
+            defaults: defaults, secretStore: EmptySecretStore(), widgetSnapshotDefaults: defaults)
         XCTAssertFalse(reload.showsSubscriptionRenewals)
         reload.updateShowsSubscriptionRenewals(true)
         XCTAssertTrue(defaults.bool(forKey: "showsSubscriptionRenewals"))

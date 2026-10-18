@@ -66,9 +66,12 @@ struct ProviderUsageCard: View {
     let showsSubscriptionRenewals: Bool
     let statusText: String
     let history: UsageHistorySeries
+    let historyAccessPolicy: HistoryAccessPolicy
     let alerts: [UsageAlertDetail]
     let isHistoryEnabled: Bool
     let isRefreshing: Bool
+    let isPausedByPlan: Bool
+    let onMakeActive: () -> Void
     let isExpanded: Bool
     let refreshErrorMessage: String?
     let recoveryAction: ProviderUsageRecoveryAction
@@ -140,9 +143,12 @@ struct ProviderUsageCard: View {
         statusText: String,
         showsSubscriptionRenewals: Bool = true,
         history: UsageHistorySeries,
+        historyAccessPolicy: HistoryAccessPolicy = .pro,
         alerts: [UsageAlertDetail] = [],
         isHistoryEnabled: Bool = true,
         isRefreshing: Bool = false,
+        isPausedByPlan: Bool = false,
+        onMakeActive: @escaping () -> Void = {},
         isExpanded: Bool = true,
         refreshErrorMessage: String? = nil,
         recoveryAction: ProviderUsageRecoveryAction = .retryRefresh,
@@ -183,9 +189,12 @@ struct ProviderUsageCard: View {
         self.showsSubscriptionRenewals = showsSubscriptionRenewals
         self.statusText = statusText
         self.history = history
+        self.historyAccessPolicy = historyAccessPolicy
         self.alerts = alerts
         self.isHistoryEnabled = isHistoryEnabled
         self.isRefreshing = isRefreshing
+        self.isPausedByPlan = isPausedByPlan
+        self.onMakeActive = onMakeActive
         self.isExpanded = isExpanded
         self.refreshErrorMessage = refreshErrorMessage
         self.recoveryAction = recoveryAction
@@ -239,9 +248,14 @@ struct ProviderUsageCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             cardHeader
+                .opacity(isPausedByPlan ? 0.6 : 1)
 
+            if isPausedByPlan {
+                PausedAccountNotice(accountID: result.accountID, onMakeActive: onMakeActive)
+            }
             if isExpanded {
                 cardBody
+                    .opacity(isPausedByPlan ? 0.6 : 1)
                     .transition(
                         accessibilityReduceMotion
                             ? .identity
@@ -1008,7 +1022,7 @@ struct ProviderUsageCard: View {
     }
 
     var showsRecoveryAction: Bool {
-        refreshErrorMessage != nil && !isRefreshing && !isPerformingRecovery
+        !isPausedByPlan && refreshErrorMessage != nil && !isRefreshing && !isPerformingRecovery
     }
 
     var showsRetryAction: Bool {
@@ -1061,7 +1075,7 @@ struct ProviderUsageCard: View {
     }
 
     private var canUseClaudeReset: Bool {
-        result.providerID == .claude && result.failureMessage == nil && refreshErrorMessage == nil
+        !isPausedByPlan && result.providerID == .claude && result.failureMessage == nil && refreshErrorMessage == nil
             && !isRefreshing && !isPerformingRecovery && !isUsingClaudeReset && onUseClaudeReset != nil
             && result.claudeUsageResetInventory?.credentialBinding != nil
     }
@@ -1104,7 +1118,7 @@ struct ProviderUsageCard: View {
     }
 
     var showsCodexResetRedemptionActions: Bool {
-        bankedResets?.canConsume == true
+        !isPausedByPlan && bankedResets?.canConsume == true
             && onUseCodexReset != nil
             && !isResetActionUnavailable
     }
@@ -1316,6 +1330,11 @@ struct ProviderUsageCard: View {
     }
 
     func metricDetailHistorySeries(for metric: ProviderUsageMetric) -> UsageHistorySeries? {
+        unfilteredMetricDetailHistorySeries(for: metric)?
+            .filtered(to: .threeMonths, accessPolicy: historyAccessPolicy)
+    }
+
+    private func unfilteredMetricDetailHistorySeries(for metric: ProviderUsageMetric) -> UsageHistorySeries? {
         guard isHistoryEnabled else {
             return nil
         }
@@ -1996,6 +2015,7 @@ private struct UsageAlertSummaryView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+        .accessibilityIdentifier("usage-alert-summary")
     }
 
     private var accessibilityLabel: String {
@@ -2125,14 +2145,23 @@ struct ProviderUsageHistoryDetailView: View {
 
     let result: ProviderUsageResult
     let seriesOptions: [UsageHistorySeriesOption]
+    let accessPolicy: HistoryAccessPolicy
+    let onRequestPro: () -> Void
 
     @State private var selectedDate: Date?
     @State private var selectedSeriesID: String
     @State private var selectedRange = UsageHistoryRange.sevenDays
 
-    init(result: ProviderUsageResult, seriesOptions: [UsageHistorySeriesOption]) {
+    init(
+        result: ProviderUsageResult,
+        seriesOptions: [UsageHistorySeriesOption],
+        accessPolicy: HistoryAccessPolicy = HistoryAccessPolicy(hasProAccess: true),
+        onRequestPro: @escaping () -> Void = {}
+    ) {
         self.result = result
         self.seriesOptions = seriesOptions
+        self.accessPolicy = accessPolicy
+        self.onRequestPro = onRequestPro
         _selectedSeriesID = State(initialValue: seriesOptions.first?.id ?? "primary")
     }
 
@@ -2154,17 +2183,9 @@ struct ProviderUsageHistoryDetailView: View {
                         }
                     }
 
-                    Picker("History range", selection: $selectedRange) {
-                        ForEach(UsageHistoryRange.allCases) { range in
-                            Text(range.compactTitle)
-                                .accessibilityLabel(range.title)
-                                .tag(range)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: selectedRange) {
-                        selectedDate = nil
-                    }
+                    HistoryRangePicker(selection: accessibleRangeSelection, accessPolicy: accessPolicy, onRequestPro: onRequestPro)
+                        .onChange(of: selectedRange) { selectedDate = nil }
+                        .onChange(of: accessPolicy) { selectedDate = nil }
 
                     if series.points.isEmpty {
                         ContentUnavailableView(
@@ -2198,11 +2219,18 @@ struct ProviderUsageHistoryDetailView: View {
         }
     }
 
+    private var accessibleRangeSelection: Binding<UsageHistoryRange> {
+        Binding(
+            get: { accessPolicy.allows(range: selectedRange) ? selectedRange : .sevenDays },
+            set: { selectedRange = $0 }
+        )
+    }
+
     private var series: UsageHistorySeries {
         let unfilteredSeries = seriesOptions.first(where: { $0.id == selectedSeriesID })?.series
             ?? seriesOptions.first?.series
             ?? UsageHistorySeries(accountID: result.accountID, points: [], isBalance: false)
-        return unfilteredSeries.filtered(to: selectedRange)
+        return unfilteredSeries.filtered(to: selectedRange, accessPolicy: accessPolicy)
     }
 
     private var accountHeader: some View {

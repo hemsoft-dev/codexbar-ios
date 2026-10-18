@@ -63,6 +63,10 @@ enum OpenCodeZenBootstrapImporter {
             return
         }
 
+        // Startup imports can wait for access without presenting an unsolicited Pro screen.
+        guard !configurationStore.configurations(for: .openCodeZen).isEmpty
+            || configurationStore.canAddAccount(for: .openCodeZen) else { return }
+
         defer {
             try? fileManager.removeItem(at: importURL)
         }

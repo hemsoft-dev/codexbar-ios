@@ -88,7 +88,7 @@ final class CursorParityRegressionTests: XCTestCase, @unchecked Sendable {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
         let account = ProviderAccountConfiguration(
             id: "cursor-widget-fixture", providerID: .cursor, accountLabel: "Synthetic Cursor", authMethod: .browserSession
         )

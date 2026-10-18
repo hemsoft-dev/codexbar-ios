@@ -544,8 +544,8 @@ final class UnifiedGeminiUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let account = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let account = try XCTUnwrap(store.addAccount(for: .gemini))
         XCTAssertTrue(store.saveSecret("__Secure-1PSID=apps-cookie", for: account))
         XCTAssertTrue(store.saveGeminiCodingSecret(
             #"{"access_token":"coding-token"}"#,
@@ -1002,8 +1002,8 @@ extension GeminiUsageProviderTests {
         let suite = "GeminiProjection.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let account = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let account = try XCTUnwrap(store.addAccount(for: .gemini))
         XCTAssertTrue(store.saveSecret("__Secure-1PSID=fixture", for: account))
         for fraction in [0.2, 0.6] {
             let bars = try projectionBars(fraction: fraction, now: now)

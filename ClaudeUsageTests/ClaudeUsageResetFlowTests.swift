@@ -143,8 +143,12 @@ final class ClaudeUsageResetFlowTests: XCTestCase, @unchecked Sendable {
     ) -> Harness {
         let suite = "ClaudeResetFlow.\(UUID())"
         let defaults = UserDefaults(suiteName: suite)!
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: FlowSecrets(), widgetSnapshotDefaults: defaults)
-        var account = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
+            defaults: defaults, secretStore: FlowSecrets(), widgetSnapshotDefaults: defaults)
+        guard var account = store.addAccount(for: .claude) else {
+            preconditionFailure("The explicit Pro fixture must accept an account.")
+        }
         account.isEnabled = mode != "disabled"
         XCTAssertTrue(store.update(account))
         let provider = FlowProvider(outcome: outcome, error: error, paused: paused, refreshMode: refreshMode)

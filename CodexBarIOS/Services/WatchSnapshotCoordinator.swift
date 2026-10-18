@@ -236,7 +236,8 @@ enum WatchSnapshotPublisher {
             uniqueKeysWithValues: results.map { ($0.accountID, $0) }
         )
         let displayable: [ProviderUsageResult] = configurationStore.configurations.compactMap { configuration in
-            guard configurationStore.shouldDisplayOnDashboard(configuration) else {
+            guard configurationStore.shouldDisplayOnDashboard(configuration),
+                  !configurationStore.accountAccess.isPaused(accountID: configuration.id) else {
                 return nil
             }
             return resultsByAccountID[configuration.id]
@@ -365,6 +366,9 @@ final class WatchSnapshotCoordinator {
         }
 
         refreshService.$results.dropFirst().sink { [weak self] _ in
+            self?.scheduleSnapshotPublish()
+        }.store(in: &cancellables)
+        configurationStore.$accountAccess.dropFirst().sink { [weak self] _ in
             self?.scheduleSnapshotPublish()
         }.store(in: &cancellables)
         configurationStore.$configurations.dropFirst().sink { [weak self] _ in

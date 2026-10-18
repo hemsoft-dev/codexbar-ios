@@ -9,8 +9,8 @@ final class AntigravityUsageProviderTests: XCTestCase {
             let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
             defer { defaults.removePersistentDomain(forName: suite) }
             let secrets = MemorySecretStore()
-            let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-            let account = store.addAccount(for: .gemini)
+            let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+            let account = try XCTUnwrap(store.addAccount(for: .gemini))
             let original = #"{"access_token":"working"}"#
             XCTAssertTrue(store.saveGeminiCodingSecret(original, for: account, confirmedSameAccount: true))
             let fixture = IsolatedTestURLSession { request in
@@ -51,8 +51,8 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let account = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let account = try XCTUnwrap(store.addAccount(for: .gemini))
         if hasAppsSession {
             XCTAssertTrue(store.saveSecret("__Secure-1PSID=apps", for: account))
         }
@@ -101,8 +101,8 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = SelectiveReadFailureSecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let account = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let account = try XCTUnwrap(store.addAccount(for: .gemini))
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -441,9 +441,9 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let suite = "GoogleChoices.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let account = store.addAccount(for: .gemini)
-        let legacy = store.addAccount(for: .antigravity)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let account = try XCTUnwrap(store.addAccount(for: .gemini))
+        let legacy = try XCTUnwrap(store.addAccount(for: .antigravity))
         let model = ProviderSettingsViewModel(configurationStore: store, accountID: account.id)
         XCTAssertEqual(model.availableMetrics.map(\.id), Self.googleIDs)
         XCTAssertTrue(model.availableMetrics.allSatisfy { $0.kind == .unavailableUsage("Setup required") })
@@ -464,8 +464,8 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let account = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let account = try XCTUnwrap(store.addAccount(for: .gemini))
         XCTAssertTrue(store.saveSecret("apps-session", for: account))
         let result = try Self.unifiedResult(account)
         let model = ProviderSettingsViewModel(configurationStore: store, accountID: account.id)
@@ -483,7 +483,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         await service.refresh(configurations: [account])
         XCTAssertFalse(try XCTUnwrap(service.results.first).hasCurrentBars)
         XCTAssertEqual(store.metricLayouts[account.id], layout)
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         XCTAssertEqual(restored.metricLayouts[account.id], layout)
         XCTAssertEqual(model.availableMetrics.map(\.id), Self.googleIDs)
     }
@@ -494,10 +494,10 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let apps = store.addAccount(for: .gemini)
-        let coding = store.addAccount(for: .antigravity)
-        let unrelated = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let apps = try XCTUnwrap(store.addAccount(for: .gemini))
+        let coding = try XCTUnwrap(store.addAccount(for: .antigravity))
+        let unrelated = try XCTUnwrap(store.addAccount(for: .gemini))
         XCTAssertTrue(store.saveSecret("apps-secret", for: apps))
         XCTAssertTrue(store.saveSecret(#"{"access_token":"coding-token"}"#, for: coding))
         store.reconcileMetricLayout(accountID: apps.id, availableMetricIDs: Self.googleIDs)
@@ -536,7 +536,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         XCTAssertEqual(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: apps)), "apps-secret")
         XCTAssertNotNil(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: coding)))
         XCTAssertFalse(store.hasGeminiCodingSecret(for: unrelated))
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         let restoredHistory = UsageHistoryStore(defaults: defaults)
         restoredHistory.migrateGoogleAccounts(links: restored.confirmedGoogleAccountLinks, configurations: restored.visibleConfigurations)
         restoredHistory.record(results: [try Self.unifiedResult(apps)], now: Self.now)
@@ -551,10 +551,10 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        var apps = store.addAccount(for: .gemini)
-        var coding = store.addAccount(for: .antigravity)
-        let other = store.addAccount(for: .antigravity)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        var apps = try XCTUnwrap(store.addAccount(for: .gemini))
+        var coding = try XCTUnwrap(store.addAccount(for: .antigravity))
+        let other = try XCTUnwrap(store.addAccount(for: .antigravity))
         XCTAssertTrue(store.saveSecret(#"{"access_token":"token"}"#, for: coding))
         XCTAssertFalse(store.linkGeminiCodingAccount(coding, to: apps, confirmedSameAccount: false))
         apps.verifiedGoogleSubject = "google-a"
@@ -569,7 +569,9 @@ final class AntigravityUsageProviderTests: XCTestCase {
         XCTAssertTrue(store.linkGeminiCodingAccount(coding, to: apps, confirmedSameAccount: false))
         XCTAssertEqual(store.unlinkedGeminiCodingAccounts, [other])
         XCTAssertFalse(store.linkGeminiCodingAccount(other, to: apps, confirmedSameAccount: true))
-        XCTAssertNotNil(ProviderConfigurationStore(defaults: defaults, secretStore: secrets).configuration(accountID: other.id))
+        XCTAssertNotNil(ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
+            defaults: defaults, secretStore: secrets).configuration(accountID: other.id))
     }
 
     @MainActor
@@ -578,10 +580,10 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        var apps = store.addAccount(for: .gemini)
-        var coding = store.addAccount(for: .antigravity)
-        var other = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        var apps = try XCTUnwrap(store.addAccount(for: .gemini))
+        var coding = try XCTUnwrap(store.addAccount(for: .antigravity))
+        var other = try XCTUnwrap(store.addAccount(for: .gemini))
         coding.accountLabel = "Google Gemini 3"
         XCTAssertTrue(store.update(coding))
         let token = #"{"access_token":"coding-token"}"#
@@ -595,7 +597,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         XCTAssertFalse(store.update(other), "Visible names remain case-insensitively unique.")
         XCTAssertEqual(store.configuration(accountID: coding.id), coding)
         XCTAssertEqual(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: coding)), token)
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         XCTAssertEqual(restored.configuration(accountID: apps.id)?.displayName, "GOOGLE GEMINI 3")
         XCTAssertEqual(restored.configuration(accountID: coding.id), coding)
         XCTAssertEqual(restored.confirmedGoogleAccountLinks, [coding.id: apps.id])
@@ -603,7 +605,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         XCTAssertFalse(restored.update(other))
         apps.accountLabel = "Personal Google"
         XCTAssertTrue(restored.update(apps))
-        XCTAssertEqual(restored.addAccount(for: .gemini).accountLabel, "Google Gemini 3")
+        XCTAssertEqual(try XCTUnwrap(restored.addAccount(for: .gemini)).accountLabel, "Google Gemini 3")
     }
 
     @MainActor
@@ -612,9 +614,9 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let apps = store.addAccount(for: .gemini)
-        let legacy = store.addAccount(for: .antigravity)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let apps = try XCTUnwrap(store.addAccount(for: .gemini))
+        let legacy = try XCTUnwrap(store.addAccount(for: .antigravity))
         let metricID = "antigravity.gemini-weekly"
         store.updateMetricVisibility(false, accountID: legacy.id, metricID: metricID)
         store.updateMetricWidth(.half, accountID: legacy.id, metricID: metricID)
@@ -643,14 +645,14 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let apps = store.addAccount(for: .gemini)
-        let coding = store.addAccount(for: .antigravity)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let apps = try XCTUnwrap(store.addAccount(for: .gemini))
+        let coding = try XCTUnwrap(store.addAccount(for: .antigravity))
         let token = try AntigravityCredentials.parse(#"{"access_token":"token"}"#).encoded()
         XCTAssertTrue(store.saveSecret(token, for: coding))
         try secrets.saveSecret(token, account: ProviderConfigurationStore.geminiCodingKeychainAccount(accountID: apps.id))
         defaults.set([coding.id: apps.id], forKey: "pendingGoogleAccountLinks")
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         XCTAssertEqual(restored.confirmedGoogleAccountLinks, [coding.id: apps.id])
         XCTAssertTrue(restored.unlinkedGeminiCodingAccounts.isEmpty)
         XCTAssertTrue(restored.hasGeminiCodingSecret(for: apps))
@@ -663,12 +665,12 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let old = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let old = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         let metricID = "antigravity.gemini-weekly"
         old.updateMetricVisibility(false, accountID: "dashboard.setup.antigravity", metricID: metricID)
         old.updateMetricWidth(.half, accountID: "dashboard.setup.antigravity", metricID: metricID)
-        let apps = old.addAccount(for: .gemini)
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let apps = try XCTUnwrap(old.addAccount(for: .gemini))
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         XCTAssertEqual(restored.visibleConfigurations, [apps])
         XCTAssertFalse(restored.isMetricVisible(accountID: apps.id, metricID: metricID))
         XCTAssertEqual(restored.metricWidth(accountID: apps.id, metricID: metricID), .half)
@@ -680,9 +682,9 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let suite = "GoogleSelections.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let apps = store.addAccount(for: .gemini)
-        let legacy = store.addAccount(for: .antigravity)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let apps = try XCTUnwrap(store.addAccount(for: .gemini))
+        let legacy = try XCTUnwrap(store.addAccount(for: .antigravity))
         XCTAssertTrue(store.saveSecret(#"{"access_token":"token"}"#, for: legacy))
         XCTAssertTrue(store.linkGeminiCodingAccount(legacy, to: apps, confirmedSameAccount: true))
         let result = try Self.unifiedResult(apps)
@@ -720,9 +722,9 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let apps = store.addAccount(for: .gemini)
-        let other = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let apps = try XCTUnwrap(store.addAccount(for: .gemini))
+        let other = try XCTUnwrap(store.addAccount(for: .gemini))
         XCTAssertTrue(store.saveSecret("apps-cookie", for: apps))
         XCTAssertFalse(store.saveGeminiCodingSecret(#"{"access_token":"token"}"#, for: apps, confirmedSameAccount: false))
         XCTAssertFalse(store.saveGeminiCodingSecret("apps-cookie", for: apps, confirmedSameAccount: true))
@@ -740,14 +742,14 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let apps = store.addAccount(for: .gemini)
-        let legacy = store.addAccount(for: .antigravity)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let apps = try XCTUnwrap(store.addAccount(for: .gemini))
+        let legacy = try XCTUnwrap(store.addAccount(for: .antigravity))
         XCTAssertTrue(store.saveSecret(#"{"access_token":"token"}"#, for: legacy))
         XCTAssertTrue(store.linkGeminiCodingAccount(legacy, to: apps, confirmedSameAccount: true))
         XCTAssertTrue(store.disconnectGeminiCoding(for: apps))
         XCTAssertNil(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: legacy)))
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         XCTAssertFalse(restored.hasGeminiCodingSecret(for: apps))
         XCTAssertEqual(restored.confirmedGoogleAccountLinks, [legacy.id: apps.id])
         XCTAssertTrue(restored.unlinkedGeminiCodingAccounts.isEmpty)
@@ -760,8 +762,8 @@ final class AntigravityUsageProviderTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = RetriableDeleteSecretStore()
         secrets.shouldFailDelete = false
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let apps = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let apps = try XCTUnwrap(store.addAccount(for: .gemini))
         XCTAssertTrue(store.saveGeminiCodingSecret(#"{"access_token":"token"}"#, for: apps, confirmedSameAccount: true))
         secrets.failingAccount = ProviderConfigurationStore.geminiCodingKeychainAccount(accountID: apps.id)
         XCTAssertFalse(store.resetAccounts())
@@ -780,9 +782,9 @@ final class AntigravityUsageProviderTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = RetriableDeleteSecretStore()
         secrets.shouldFailDelete = false
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let apps = store.addAccount(for: .gemini)
-        let legacy = store.addAccount(for: .antigravity)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let apps = try XCTUnwrap(store.addAccount(for: .gemini))
+        let legacy = try XCTUnwrap(store.addAccount(for: .antigravity))
         XCTAssertTrue(store.saveSecret(#"{"access_token":"token"}"#, for: legacy))
         XCTAssertTrue(store.saveSecret("apps-cookie", for: apps))
         XCTAssertTrue(store.linkGeminiCodingAccount(legacy, to: apps, confirmedSameAccount: true))
@@ -805,8 +807,8 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let suite = "GoogleRefreshIdentity.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let apps = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let apps = try XCTUnwrap(store.addAccount(for: .gemini))
         XCTAssertTrue(store.saveGeminiCodingSecret(#"{"access_token":"token"}"#, for: apps, confirmedSameAccount: true))
         let gate = UsageProviderGate()
         let provider = StaleCompletionTestUsageProvider(providerID: .gemini, gate: gate, fails: false)
@@ -836,8 +838,8 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = SelectiveReadFailureSecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let apps = store.addAccount(for: .gemini)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let apps = try XCTUnwrap(store.addAccount(for: .gemini))
         XCTAssertTrue(store.saveSecret("apps-cookie", for: apps))
         XCTAssertTrue(store.saveGeminiCodingSecret(#"{"access_token":"token"}"#, for: apps, confirmedSameAccount: true))
         secrets.failingAccount = ProviderConfigurationStore.keychainAccount(for: apps)

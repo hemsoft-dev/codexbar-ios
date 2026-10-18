@@ -3,9 +3,15 @@ import Foundation
 
 @MainActor
 public final class ProEntitlement: ObservableObject {
-    @Published public private(set) var value: ProEntitlementValue
+    @Published public private(set) var value: ProEntitlementValue {
+        didSet { accessChanges.send(accessState) }
+    }
     @Published public private(set) var statusMessage: String?
-    @Published public private(set) var isResolved = false
+    @Published public private(set) var isResolved = false {
+        didSet { accessChanges.send(accessState) }
+    }
+    /// Unlike @Published, this delivers after the evidence and resolution flag are committed.
+    let accessChanges = PassthroughSubject<ProAccessState, Never>()
     @Published private(set) var subscription: ProSubscriptionEvidence?
     private(set) var appPurchase: ProVerification<ProAppPurchase> = .unavailable
 
@@ -56,6 +62,8 @@ public final class ProEntitlement: ObservableObject {
     }
 
     public var hasAccess: Bool { value.hasAccess(at: clock(now())) }
+
+    var accessState: ProAccessState { ProAccessState(hasAccess: hasAccess, isResolved: isResolved) }
 
     /// Attach both listeners before the first snapshot so launch cannot miss a delivery.
     public func start() async {
@@ -324,4 +332,9 @@ public final class ProEntitlement: ObservableObject {
         boundaryTask?.cancel()
     }
     #endif
+}
+
+struct ProAccessState: Equatable {
+    let hasAccess: Bool
+    let isResolved: Bool
 }

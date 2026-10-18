@@ -174,9 +174,9 @@ final class CursorSpendingRegressionTests: XCTestCase, @unchecked Sendable {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = GrokTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let first = store.addAccount(for: .cursor)
-        let second = store.addAccount(for: .cursor)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let first = try XCTUnwrap(store.addAccount(for: .cursor))
+        let second = try XCTUnwrap(store.addAccount(for: .cursor))
         _ = store.reconcileMetricLayout(accountID: first.id, availableMetricIDs: ["cursor.cursor-models"])
         store.updateMetricVisibility(false, accountID: first.id, metricID: "cursor.cursor-models")
         store.updateMetricVisibility(false, accountID: first.id, metricID: "cursor.grok-bot-weekly")
@@ -185,7 +185,7 @@ final class CursorSpendingRegressionTests: XCTestCase, @unchecked Sendable {
             Data(#"{"planUsage":{"autoPercentUsed":0,"apiPercentUsed":0}}"#.utf8), configuration: first
         ))
         _ = store.reconcileMetricLayout(accountID: first.id, availableMetricIDs: result.configurableMetrics.map(\.id))
-        let restored = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let restored = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         XCTAssertFalse(restored.isMetricVisible(accountID: first.id, metricID: "cursor.cursor-models"))
         XCTAssertFalse(restored.isMetricVisible(accountID: first.id, metricID: "cursor.grok-bot-weekly"))
         XCTAssertTrue(restored.isMetricVisible(accountID: first.id, metricID: "cursor.on-demand"))

@@ -9,13 +9,13 @@ final class OpenCodeCredentialStorageTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = OpenCodeTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        var first = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        var first = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         first.openCodeWorkspaceId = "wrk_first"
         first.authMethod = .browserSession
         first.showsHistory = false
         XCTAssertTrue(store.replaceCredential("first", for: first))
-        let second = store.addAccount(for: .openCodeZen)
+        let second = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         XCTAssertTrue(store.saveSecret("second", for: second))
         let layout = store.metricLayouts[first.id]
         XCTAssertTrue(store.saveSecret("", for: first))
@@ -28,13 +28,13 @@ final class OpenCodeCredentialStorageTests: XCTestCase {
     }
 
     @MainActor
-    func testFailedKeychainWriteDoesNotClaimConnectionOrReplaceWorkspace() {
+    func testFailedKeychainWriteDoesNotClaimConnectionOrReplaceWorkspace() throws {
         let suite = "OpenCodeAuthTests.\(UUID())"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = OpenCodeTestSecrets()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let account = store.addAccount(for: .openCodeZen)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = try XCTUnwrap(store.addAccount(for: .openCodeZen))
         var selected = account
         selected.openCodeWorkspaceId = "wrk_selected"
         selected.authMethod = .browserSession

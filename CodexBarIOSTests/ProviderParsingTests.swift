@@ -2121,7 +2121,7 @@ final class ProviderParsingTests: XCTestCase {
         }
 
         let secretStore = MemorySecretStore()
-        let configurationStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let configurationStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         let payload = """
         {
           "openCodeGoWorkspaceId": "wrk_from_windows",
@@ -2202,7 +2202,7 @@ final class ProviderParsingTests: XCTestCase {
         try Data(payload.utf8).write(to: importURL)
 
         let secretStore = MemorySecretStore()
-        let configurationStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let configurationStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         OpenCodeZenBootstrapImporter.importIfNeeded(
             configurationStore: configurationStore,
             fileManager: fileManager,
@@ -2250,7 +2250,7 @@ final class ProviderParsingTests: XCTestCase {
         try Data(payload.utf8).write(to: importURL)
 
         let secretStore = MemorySecretStore()
-        let configurationStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let configurationStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         OpenCodeZenBootstrapImporter.importIfNeeded(
             configurationStore: configurationStore,
             fileManager: fileManager,
@@ -2310,7 +2310,7 @@ final class ProviderParsingTests: XCTestCase {
         try Data(payload.utf8).write(to: importURL)
 
         let secretStore = MemorySecretStore()
-        let configurationStore = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
+        let configurationStore = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
         OpenCodeZenBootstrapImporter.importIfNeeded(
             configurationStore: configurationStore,
             fileManager: fileManager,
@@ -2370,6 +2370,7 @@ final class ProviderParsingTests: XCTestCase {
             .write(to: importURL)
 
         let configurationStore = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore()
         )
@@ -4137,8 +4138,8 @@ final class ProviderParsingTests: XCTestCase {
             "opus-weekly-limit",
         ])
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .claude))
         store.saveSecret("claude-token", for: configuration)
         let accountResult = ProviderUsageResult(
             accountID: configuration.id,
@@ -4221,8 +4222,8 @@ final class ProviderParsingTests: XCTestCase {
         ])
         XCTAssertEqual(parsed.bars.map(\.used), [42, 68])
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        let configuration = try XCTUnwrap(store.addAccount(for: .claude))
         store.saveSecret("claude-token", for: configuration)
         let result = ProviderUsageResult(
             accountID: configuration.id,
@@ -4280,8 +4281,8 @@ final class ProviderParsingTests: XCTestCase {
             subscriptionType: "max",
             fetchedAt: fetchedAt
         ))
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let configuration = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let configuration = try XCTUnwrap(store.addAccount(for: .claude))
         store.saveSecret("claude-token", for: configuration)
         let result = ProviderUsageResult(
             accountID: configuration.id,
@@ -4341,8 +4342,8 @@ final class ProviderParsingTests: XCTestCase {
             subscriptionType: "max"
         ))
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let configuration = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let configuration = try XCTUnwrap(store.addAccount(for: .claude))
         store.saveSecret("claude-token", for: configuration)
         let result = ProviderUsageResult(
             accountID: configuration.id,
@@ -4829,8 +4830,8 @@ final class ProviderParsingTests: XCTestCase {
             defaults.removePersistentDomain(forName: suiteName)
         }
         let secretStore = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secretStore)
-        let configuration = store.addAccount(for: .codex)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         store.saveSecret("test-token", for: configuration)
         let start = Date(timeIntervalSince1970: 1_767_225_600)
         let now = start.addingTimeInterval(60 * 60)

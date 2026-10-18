@@ -211,6 +211,17 @@
 		A46500000000000000010002 /* OriginalPurchaserNotice.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46500000000000000000002 /* OriginalPurchaserNotice.swift */; };
 		A46500000000000000010003 /* OriginalPurchaserFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46500000000000000000003 /* OriginalPurchaserFixture.swift */; };
 		A46500000000000000010004 /* OriginalPurchaserNoticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46500000000000000000004 /* OriginalPurchaserNoticeView.swift */; };
+		A46600000000000000010001 /* AccountPlanAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000001 /* AccountPlanAccess.swift */; };
+		A46600000000000000010002 /* HistoryAccessPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000002 /* HistoryAccessPolicy.swift */; };
+		A46600000000000000010003 /* PlanAccessCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000003 /* PlanAccessCoordinator.swift */; };
+		A46600000000000000010004 /* PlanAccessFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000004 /* PlanAccessFixture.swift */; };
+		A46600000000000000010005 /* ActiveAccountChooser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000005 /* ActiveAccountChooser.swift */; };
+		A46600000000000000010006 /* ProPresentationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000006 /* ProPresentationView.swift */; };
+		A46600000000000000010007 /* AccountPlanAccessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000007 /* AccountPlanAccessTests.swift */; };
+		A46600000000000000010008 /* HistoryAccessPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000008 /* HistoryAccessPolicyTests.swift */; };
+		A46600000000000000010009 /* FreeTierPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000009 /* FreeTierPresentationTests.swift */; };
+		A4660000000000000001000A /* PlanRefreshAndAlertsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4660000000000000000000A /* PlanRefreshAndAlertsTests.swift */; };
+		A4660000000000000001000B /* FreeTierJourneyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4660000000000000000000B /* FreeTierJourneyTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -491,6 +502,17 @@
 		A46500000000000000000002 /* OriginalPurchaserNotice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalPurchaserNotice.swift; sourceTree = "<group>"; };
 		A46500000000000000000003 /* OriginalPurchaserFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalPurchaserFixture.swift; sourceTree = "<group>"; };
 		A46500000000000000000004 /* OriginalPurchaserNoticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalPurchaserNoticeView.swift; sourceTree = "<group>"; };
+		A46600000000000000000001 /* AccountPlanAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPlanAccess.swift; sourceTree = "<group>"; };
+		A46600000000000000000002 /* HistoryAccessPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryAccessPolicy.swift; sourceTree = "<group>"; };
+		A46600000000000000000003 /* PlanAccessCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanAccessCoordinator.swift; sourceTree = "<group>"; };
+		A46600000000000000000004 /* PlanAccessFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanAccessFixture.swift; sourceTree = "<group>"; };
+		A46600000000000000000005 /* ActiveAccountChooser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveAccountChooser.swift; sourceTree = "<group>"; };
+		A46600000000000000000006 /* ProPresentationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProPresentationView.swift; sourceTree = "<group>"; };
+		A46600000000000000000007 /* AccountPlanAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPlanAccessTests.swift; sourceTree = "<group>"; };
+		A46600000000000000000008 /* HistoryAccessPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryAccessPolicyTests.swift; sourceTree = "<group>"; };
+		A46600000000000000000009 /* FreeTierPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeTierPresentationTests.swift; sourceTree = "<group>"; };
+		A4660000000000000000000A /* PlanRefreshAndAlertsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRefreshAndAlertsTests.swift; sourceTree = "<group>"; };
+		A4660000000000000000000B /* FreeTierJourneyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeTierJourneyTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -612,6 +634,10 @@
 		700000000000000000000004 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				A46600000000000000000004 /* PlanAccessFixture.swift */,
+				A46600000000000000000003 /* PlanAccessCoordinator.swift */,
+				A46600000000000000000002 /* HistoryAccessPolicy.swift */,
+				A46600000000000000000001 /* AccountPlanAccess.swift */,
 				A46500000000000000000003 /* OriginalPurchaserFixture.swift */,
 				A46500000000000000000002 /* OriginalPurchaserNotice.swift */,
 				A46500000000000000000001 /* ProOriginalPurchaserPolicy.swift */,
@@ -696,6 +722,8 @@
 		700000000000000000000005 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A46600000000000000000006 /* ProPresentationView.swift */,
+				A46600000000000000000005 /* ActiveAccountChooser.swift */,
 				A46500000000000000000004 /* OriginalPurchaserNoticeView.swift */,
 				F20000000000000000000002 /* DiagnosticReportView.swift */,
 				20000000000000000000000A /* ProviderUsageCard.swift */,
@@ -726,6 +754,10 @@
 		700000000000000000000007 /* CodexBarIOSTests */ = {
 			isa = PBXGroup;
 			children = (
+				A4660000000000000000000A /* PlanRefreshAndAlertsTests.swift */,
+				A46600000000000000000009 /* FreeTierPresentationTests.swift */,
+				A46600000000000000000008 /* HistoryAccessPolicyTests.swift */,
+				A46600000000000000000007 /* AccountPlanAccessTests.swift */,
 				20000000000000000000000E /* AppAndWidgetTests.swift */,
 				A60000000000000000000281 /* MetricLayoutCompatibilityTests.swift */,
 				A40000000000000000000227 /* ProviderUsageCardHiddenSeverityTests.swift */,
@@ -849,6 +881,7 @@
 		A30700000000000000000041 /* CodexBarIOSUITests */ = {
 			isa = PBXGroup;
 			children = (
+				A4660000000000000000000B /* FreeTierJourneyTests.swift */,
 				A30700000000000000000011 /* AccountJourneysUITests.swift */,
 				A37700000000000000000006 /* SettingsEvidenceUITests.swift */,
 				A35300000000000000000002 /* OpenCodeSignInUITests.swift */,
@@ -1125,6 +1158,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A46600000000000000010006 /* ProPresentationView.swift in Sources */,
+				A46600000000000000010005 /* ActiveAccountChooser.swift in Sources */,
+				A46600000000000000010004 /* PlanAccessFixture.swift in Sources */,
+				A46600000000000000010003 /* PlanAccessCoordinator.swift in Sources */,
+				A46600000000000000010002 /* HistoryAccessPolicy.swift in Sources */,
+				A46600000000000000010001 /* AccountPlanAccess.swift in Sources */,
 				A46400000000000000010006 /* StoreKitProStoreSource.swift in Sources */,
 				A46400000000000000010005 /* ProEntitlement.swift in Sources */,
 				A46500000000000000010004 /* OriginalPurchaserNoticeView.swift in Sources */,
@@ -1261,6 +1300,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A4660000000000000001000A /* PlanRefreshAndAlertsTests.swift in Sources */,
+				A46600000000000000010009 /* FreeTierPresentationTests.swift in Sources */,
+				A46600000000000000010008 /* HistoryAccessPolicyTests.swift in Sources */,
+				A46600000000000000010007 /* AccountPlanAccessTests.swift in Sources */,
 				10000000000000000000000C /* AppAndWidgetTests.swift in Sources */,
 				A50000000000000000000281 /* MetricLayoutCompatibilityTests.swift in Sources */,
 				A30000000000000000000227 /* ProviderUsageCardHiddenSeverityTests.swift in Sources */,
@@ -1354,6 +1397,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A4660000000000000001000B /* FreeTierJourneyTests.swift in Sources */,
 				A30700000000000000000001 /* AccountJourneysUITests.swift in Sources */,
 				A37700000000000000000005 /* SettingsEvidenceUITests.swift in Sources */,
 				A35300000000000000000001 /* OpenCodeSignInUITests.swift in Sources */,
@@ -1618,6 +1662,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/ProClockSupport/include",
+				);
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/ProClockSupport/include",
+				);
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
@@ -1641,6 +1693,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/ProClockSupport/include",
+				);
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/ProClockSupport/include",
+				);
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W2A23PX5BP;

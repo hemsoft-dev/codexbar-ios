@@ -483,6 +483,8 @@ public final class ProviderConfigurationStore: ObservableObject {
     @Published public private(set) var isGroupRecoveryRequired: Bool
     @Published public private(set) var hasIncompleteAccountReset: Bool
     @Published public private(set) var lastError: String?
+    @Published public private(set) var accountAccess: AccountPlanAccess
+    @Published public var requestedProPresentation = false
 
     private let defaults: UserDefaults
     private let secretStore: SecretStore
@@ -503,8 +505,11 @@ public final class ProviderConfigurationStore: ObservableObject {
     private var secretAvailabilityError: String?
     private var unsupportedMetricLayoutData: [String: Data]
     private var opaqueMetricLayoutData: Data?
+    private var accountAccessOrder: [String] = []
+    private var explicitActiveAccountChoiceRequested = false
 
     public init(
+        initialPlanAccess: AccountPlanAccess = .unresolved,
         defaults: UserDefaults = .standard,
         secretStore: SecretStore = KeychainService(),
         widgetSnapshotDefaults: UserDefaults? = WidgetSnapshotStore.userDefaults()
@@ -562,6 +567,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         self.isGroupRecoveryRequired = groupLoadResult.error != nil
         self.hasIncompleteAccountReset = defaults.bool(forKey: DefaultsKey.incompleteAccountReset)
         self.lastError = configurationLoadResult.error ?? groupLoadResult.error
+        self.accountAccess = initialPlanAccess
         if metricLayoutLoadResult.opaqueData == nil,
            metricLayoutLoadResult.needsMigration
             || loadedMetricLayouts.count != metricLayoutLoadResult.layouts.count {
@@ -577,6 +583,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         migrateGoogleSetupLayouts()
         resumePendingGoogleLinks()
         refreshSecretAvailability()
+        applyPlanAccess(hasProAccess: initialPlanAccess.hasProAccess, isResolved: initialPlanAccess.isResolved)
     }
 
     public var isPersistenceRecoveryRequired: Bool {
@@ -698,12 +705,13 @@ public final class ProviderConfigurationStore: ObservableObject {
     }
 
     @discardableResult
-    public func addAccount(for providerID: ProviderID) -> ProviderAccountConfiguration {
+    public func addAccount(for providerID: ProviderID) -> ProviderAccountConfiguration? {
         addAccount(for: providerID, copilotScope: .personal)
     }
 
     @discardableResult
-    public func addAccount(for providerID: ProviderID, copilotScope: CopilotAccountScope) -> ProviderAccountConfiguration {
+    public func addAccount(for providerID: ProviderID, copilotScope: CopilotAccountScope) -> ProviderAccountConfiguration? {
+        guard allowConfigurationMutation(), allowAccountInsertion(for: providerID) else { return nil }
         var configuration = ProviderAccountConfiguration
             .defaultConfiguration(for: providerID)
             .withNewAccountID()
@@ -712,15 +720,12 @@ public final class ProviderConfigurationStore: ObservableObject {
         }
         configuration.accountLabel = suggestedAccountLabel(for: providerID)
         if providerID.usesXAIConsumerAuth { configuration.grokGeneratedLabel = configuration.accountLabel }
-        guard allowConfigurationMutation() else {
-            return configuration
-        }
-
         let previousConfigurations = configurations
         configurations.append(configuration)
         sortConfigurations()
         if !saveConfigurations() {
             configurations = previousConfigurations
+            return nil
         } else {
             metricLayouts[configuration.id] = AccountMetricLayout()
             migrateGoogleSetupLayouts()
@@ -751,6 +756,7 @@ public final class ProviderConfigurationStore: ObservableObject {
 
         let previousConfigurations = configurations
         let isNewAccount = !configurations.contains { $0.id == normalized.id }
+        guard !isNewAccount || allowAccountInsertion(for: normalized.providerID) else { return false }
         if let index = configurations.firstIndex(where: { $0.id == normalized.id }) {
             configurations[index] = normalized
         } else {
@@ -789,6 +795,7 @@ public final class ProviderConfigurationStore: ObservableObject {
 
         var updatedConfigurations = configurations
         let isNewAccount = !configurations.contains { $0.id == normalized.id }
+        guard !isNewAccount || allowAccountInsertion(for: normalized.providerID) else { return false }
         if let index = updatedConfigurations.firstIndex(where: { $0.id == normalized.id }) {
             updatedConfigurations[index] = normalized
         } else {
@@ -805,6 +812,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             }
             defaults.set(data, forKey: configurationsKey)
             configurations = updatedConfigurations
+            reconcileAccountAccess()
             if isNewAccount, metricLayouts[normalized.id] == nil {
                 metricLayouts[normalized.id] = AccountMetricLayout()
                 saveMetricLayouts()
@@ -897,6 +905,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             let data = try JSONEncoder().encode(replacement)
             defaults.set(data, forKey: configurationsKey)
             configurations = replacement
+            reconcileAccountAccess()
             secretAvailability = [:]
             isConfigurationRecoveryRequired = false
             lastError = isGroupRecoveryRequired ? Self.groupLoadErrorMessage : nil
@@ -971,6 +980,8 @@ public final class ProviderConfigurationStore: ObservableObject {
         var seenAccountIDs = Set<String>()
         dashboardCardOrder = accountIDs.filter { seenAccountIDs.insert($0).inserted }
         defaults.set(dashboardCardOrder, forKey: dashboardCardOrderKey)
+        accountAccessOrder = []
+        reconcileAccountAccess()
     }
 
     public func isDashboardCardCollapsed(accountID: String) -> Bool {
@@ -1770,6 +1781,8 @@ public final class ProviderConfigurationStore: ObservableObject {
             lastError = "Account names must be unique."
             return nil
         }
+        guard configurations.contains(where: { $0.id == configuration.id })
+            || allowAccountInsertion(for: configuration.providerID) else { return nil }
 
         let identityChanged: Bool
         do {
@@ -1808,6 +1821,8 @@ public final class ProviderConfigurationStore: ObservableObject {
             lastError = "Only Cursor accounts can be disconnected here."
             return nil
         }
+        guard configurations.contains(where: { $0.id == configuration.id })
+            || allowAccountInsertion(for: configuration.providerID) else { return nil }
 
         do {
             try secretStore.deleteSecret(account: keychainAccount(for: configuration))
@@ -1896,6 +1911,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             let data = try JSONEncoder().encode(configurations)
             defaults.set(data, forKey: configurationsKey)
             lastError = nil
+            reconcileAccountAccess()
             return true
         } catch {
             lastError = error.localizedDescription
@@ -2495,9 +2511,9 @@ public final class ProviderConfigurationStore: ObservableObject {
 #if DEBUG
 public extension ProviderConfigurationStore {
     static func appStoreScreenshotDemo() -> ProviderConfigurationStore {
-        let suiteName = "com.hemsoft.CodexBarIOS.appStoreScreenshots"
+        let suiteName = "com.hemsoft.CodexBarIOS.appStoreScreenshots.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
-            return ProviderConfigurationStore(secretStore: AppStoreScreenshotSecretStore(accounts: []))
+            preconditionFailure("Could not create isolated screenshot account storage.")
         }
 
         defaults.removePersistentDomain(forName: suiteName)
@@ -2604,7 +2620,10 @@ public extension ProviderConfigurationStore {
         let accounts = Set(configurations.map(Self.keychainAccount(for:))).union([
             Self.geminiCodingKeychainAccount(accountID: AppStoreScreenshotFixtureID.geminiAccount),
         ])
-        return ProviderConfigurationStore(defaults: defaults, secretStore: AppStoreScreenshotSecretStore(accounts: accounts))
+        return ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted, defaults: defaults,
+            secretStore: AppStoreScreenshotSecretStore(accounts: accounts), widgetSnapshotDefaults: defaults
+        )
     }
 }
 
@@ -2883,6 +2902,133 @@ extension ProviderConfigurationStore {
 
 }
 
+public extension ProviderConfigurationStore {
+    var freeActiveAccountID: String? {
+        defaults.string(forKey: "freeActiveAccountID")
+    }
+
+    var activeAccountCandidates: [ProviderAccountConfiguration] {
+        let candidates = visibleConfigurations.filter(\.isEnabled)
+        let order = accountAccessOrder.isEmpty ? dashboardCardOrder : accountAccessOrder
+        let indexes = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($0.element, $0.offset) })
+        return candidates.enumerated().sorted {
+            let left = indexes[$0.element.id] ?? Int.max
+            let right = indexes[$1.element.id] ?? Int.max
+            return left == right ? $0.offset < $1.offset : left < right
+        }.map(\.element)
+    }
+
+    func canAddAccount(for providerID: ProviderID) -> Bool {
+        accountAccess.permitsInsertion(for: providerID, configurations: configurations)
+    }
+
+    func requestProPresentation() {
+        requestedProPresentation = true
+    }
+
+    func dismissProPresentation() {
+        requestedProPresentation = false
+    }
+
+    func applyPlanAccess(hasProAccess: Bool, isResolved: Bool, dashboardOrder: [String]? = nil) {
+        if let dashboardOrder {
+            accountAccessOrder = uniqueAccountIDs(dashboardOrder)
+        }
+        if isResolved {
+            let previouslyHadPro = defaults.object(forKey: "lastResolvedPlanHadProAccess") as? Bool
+            if hasProAccess {
+                explicitActiveAccountChoiceRequested = false
+                defaults.set(false, forKey: "freeActiveAccountChoicePending")
+            } else if previouslyHadPro == true {
+                defaults.set(true, forKey: "freeActiveAccountChoicePending")
+            }
+            defaults.set(hasProAccess, forKey: "lastResolvedPlanHadProAccess")
+        }
+        reconcileAccountAccess(hasProAccess: hasProAccess, isResolved: isResolved)
+    }
+
+    /// The dashboard supplies its current smart order before an access transition.
+    /// A valid saved choice survives later changes in card order.
+    func updateAccountAccessOrder(_ accountIDs: [String]) {
+        accountAccessOrder = uniqueAccountIDs(accountIDs)
+        reconcileAccountAccess()
+    }
+
+    func requestActiveAccountChoice() {
+        guard accountAccess.isResolved, !accountAccess.hasProAccess, !visibleConfigurations.isEmpty else { return }
+        explicitActiveAccountChoiceRequested = true
+        reconcileAccountAccess()
+    }
+
+    func dismissActiveAccountChoice() {
+        explicitActiveAccountChoiceRequested = false
+        defaults.set(false, forKey: "freeActiveAccountChoicePending")
+        reconcileAccountAccess()
+    }
+
+    @discardableResult
+    func chooseActiveAccount(_ accountID: String) -> Bool {
+        guard accountAccess.isResolved, !accountAccess.hasProAccess,
+              activeAccountCandidates.contains(where: { $0.id == accountID }) else { return false }
+        defaults.set(accountID, forKey: "freeActiveAccountID")
+        explicitActiveAccountChoiceRequested = false
+        defaults.set(false, forKey: "freeActiveAccountChoicePending")
+        reconcileAccountAccess()
+        return true
+    }
+
+    private func allowAccountInsertion(for providerID: ProviderID) -> Bool {
+        guard canAddAccount(for: providerID) else {
+            lastError = "CodexBar Pro is required to add another account."
+            requestProPresentation()
+            return false
+        }
+        return true
+    }
+
+    private func reconcileAccountAccess(hasProAccess: Bool? = nil, isResolved: Bool? = nil) {
+        let hasProAccess = hasProAccess ?? accountAccess.hasProAccess
+        let isResolved = isResolved ?? accountAccess.isResolved
+        var activeID: String?
+        var pausedIDs = Set<String>()
+        var needsChoice = false
+        if isResolved, hasProAccess, let savedID = freeActiveAccountID {
+            let candidates = activeAccountCandidates.map(\.id)
+            if !candidates.contains(savedID) {
+                defaults.set(candidates.first, forKey: "freeActiveAccountID")
+            }
+        }
+        if isResolved, !hasProAccess {
+            let candidateIDs = activeAccountCandidates.map(\.id)
+            activeID = freeActiveAccountID
+            if activeID == nil || !candidateIDs.contains(activeID ?? "") {
+                activeID = candidateIDs.first
+                defaults.set(activeID, forKey: "freeActiveAccountID")
+                defaults.set(candidateIDs.count > 1, forKey: "freeActiveAccountChoicePending")
+            }
+            if candidateIDs.count <= 1 {
+                defaults.set(false, forKey: "freeActiveAccountChoicePending")
+            }
+            pausedIDs = Set(candidateIDs.filter { $0 != activeID })
+            needsChoice = !visibleConfigurations.isEmpty
+                && (explicitActiveAccountChoiceRequested || defaults.bool(forKey: "freeActiveAccountChoicePending"))
+        }
+        let updated = AccountPlanAccess(
+            hasProAccess: hasProAccess,
+            isResolved: isResolved,
+            activeAccountID: activeID,
+            pausedAccountIDs: pausedIDs,
+            needsActiveAccountChoice: needsChoice
+        )
+        if updated != accountAccess { accountAccess = updated }
+    }
+
+    private func uniqueAccountIDs(_ accountIDs: [String]) -> [String] {
+        var seen = Set<String>()
+        return accountIDs.filter { seen.insert($0).inserted }
+    }
+}
+
 extension ProviderConfigurationStore {
     private func deleteAccountSecret(_ account: String, grokAccounts: Set<String>) throws {
         if grokAccounts.contains(account) {
@@ -2966,6 +3112,9 @@ extension ProviderConfigurationStore {
             unsupportedMetricLayoutData = [:]
             opaqueMetricLayoutData = nil
             usageAlertActiveIDs = []
+            explicitActiveAccountChoiceRequested = false
+            defaults.removeObject(forKey: "freeActiveAccountID")
+            defaults.removeObject(forKey: "freeActiveAccountChoicePending")
             defaults.removeObject(forKey: configurationsKey)
             defaults.removeObject(forKey: groupsKey)
             defaults.removeObject(forKey: dashboardCardOrderKey)
@@ -2977,6 +3126,7 @@ extension ProviderConfigurationStore {
             isGroupRecoveryRequired = false
             hasIncompleteAccountReset = false
             lastError = nil
+            reconcileAccountAccess()
             return true
         }
 

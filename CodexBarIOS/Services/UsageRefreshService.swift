@@ -18,6 +18,10 @@ public final class UsageRefreshService: ObservableObject {
     private var batchRefreshCompletionWaiters: [CheckedContinuation<Void, Never>] = []
     private var hasCurrentConfigurationSnapshot = false
     private var currentConfigurationsByAccountID: [String: ProviderAccountConfiguration] = [:]
+    private var retainedConfigurationsByAccountID: [String: ProviderAccountConfiguration] = [:]
+    private var configurationSnapshot: [ProviderAccountConfiguration] = []
+    // Standalone provider tests may omit a plan; the app binds its policy before any refresh.
+    private var accountAccess: AccountPlanAccess?
     private var refreshGenerationsByAccountID: [String: UUID] = [:]
     private var codexResetAttempts: [String: CodexResetAttempt] = [:]
     private var claudeResetAccounts: Set<String> = []
@@ -44,7 +48,8 @@ public final class UsageRefreshService: ObservableObject {
 
     public var successfulRefreshResults: [ProviderUsageResult] {
         results.filter { result in
-            guard !refreshingAccountIDs.contains(result.accountID) else {
+            guard !refreshingAccountIDs.contains(result.accountID),
+                  accountAccess == nil || currentConfigurationsByAccountID[result.accountID].map(canRefresh) == true else {
                 return false
             }
             return refreshErrorsByAccountID[result.accountID] == nil
@@ -152,15 +157,14 @@ public final class UsageRefreshService: ObservableObject {
     }
 
     private func performRefresh(configurations: [ProviderAccountConfiguration]) async {
-        let enabledConfigurations = configurations.filter { $0.isEnabled && $0.providerID != .antigravity }
+        let enabledConfigurations = configurations.filter(canRefresh)
         while let refreshingAccountID = enabledConfigurations.lazy
             .map(\.id)
             .first(where: refreshingAccountIDs.contains) {
             await waitForRefreshToFinish(accountID: refreshingAccountID)
         }
 
-        let enabledAccountIDs = Set(enabledConfigurations.map(\.id))
-        pruneCachedState(to: enabledAccountIDs)
+        pruneCachedState(to: Set(retainedConfigurationsByAccountID.keys))
 
         var requests: [(ProviderAccountConfiguration, any UsageProvider)] = []
         for configuration in enabledConfigurations {
@@ -242,7 +246,7 @@ public final class UsageRefreshService: ObservableObject {
             }
         }
 
-        lastRefreshError = enabledConfigurations.lazy
+        lastRefreshError = enabledConfigurations.filter(canRefresh).lazy
             .compactMap { self.refreshErrorsByAccountID[$0.id] }
             .first
     }
@@ -250,8 +254,7 @@ public final class UsageRefreshService: ObservableObject {
     @discardableResult
     public func refresh(configuration: ProviderAccountConfiguration) async -> ProviderUsageResult? {
         guard
-            configuration.isEnabled,
-            configuration.providerID != .antigravity,
+            canRefresh(configuration),
             let provider = providers.first(where: { $0.providerID == configuration.providerID })
         else {
             return nil
@@ -363,8 +366,14 @@ public final class UsageRefreshService: ObservableObject {
             throw CodexBankedResetConsumptionError.unsupported
         }
 
+        guard canRefresh(configuration), !hasCurrentConfigurationSnapshot || isCurrent(configuration) else {
+            throw CodexBankedResetConsumptionError.notConfigured
+        }
+        let generation = registerCurrentConfiguration(configuration)
         if let activeTask = codexResetTasks[configuration.id] {
-            return try await activeTask.value
+            let outcome = try await activeTask.value
+            guard isCurrent(configuration, generation: generation) else { throw CodexBankedResetConsumptionError.notConfigured }
+            return outcome
         }
 
         let attempt = codexResetAttempts[configuration.id] ?? CodexResetAttempt(
@@ -385,6 +394,7 @@ public final class UsageRefreshService: ObservableObject {
             let outcome = try await task.value
             codexResetTasks[configuration.id] = nil
             codexResetAttempts[configuration.id] = nil
+            guard isCurrent(configuration, generation: generation) else { throw CodexBankedResetConsumptionError.notConfigured }
             return outcome
         } catch {
             codexResetTasks[configuration.id] = nil
@@ -610,46 +620,48 @@ public final class UsageRefreshService: ObservableObject {
         }
     }
 
-    func updateCurrentConfigurations(
-        _ configurations: [ProviderAccountConfiguration]
-    ) {
-        let hadCurrentConfigurationSnapshot = hasCurrentConfigurationSnapshot
+    /// The same predicate protects batch work, individual requests and reconciliation.
+    func canRefresh(_ configuration: ProviderAccountConfiguration) -> Bool {
+        configuration.isEnabled && configuration.providerID != .antigravity
+            && (accountAccess?.permitsRefresh(configuration) ?? true)
+    }
+
+    func updateAccountAccess(_ access: AccountPlanAccess) {
+        guard accountAccess != access else { return }
+        accountAccess = access
+        updateCurrentConfigurations(configurationSnapshot)
+    }
+
+    func updateCurrentConfigurations(_ configurations: [ProviderAccountConfiguration]) {
+        let hadSnapshot = hasCurrentConfigurationSnapshot
         hasCurrentConfigurationSnapshot = true
-        let enabledConfigurations = configurations.filter { $0.isEnabled && $0.providerID != .antigravity }
-        let nextConfigurations = Dictionary(
-            uniqueKeysWithValues: enabledConfigurations.map { ($0.id, $0) }
-        )
-        let accountIDs = Set(currentConfigurationsByAccountID.keys)
-            .union(nextConfigurations.keys)
-        var invalidatedAccountIDs: Set<String> = []
+        configurationSnapshot = configurations
+        let retained = Dictionary(uniqueKeysWithValues: configurations.filter {
+            $0.isEnabled && $0.providerID != .antigravity
+        }.map { ($0.id, $0) })
+        let eligible = Dictionary(uniqueKeysWithValues: configurations.filter(canRefresh).map { ($0.id, $0) })
+        let accountIDs = Set(currentConfigurationsByAccountID.keys).union(eligible.keys)
         for accountID in accountIDs {
-            let currentConfiguration = currentConfigurationsByAccountID[accountID]
-            let nextConfiguration = nextConfigurations[accountID]
-            guard currentConfiguration != nextConfiguration else {
-                continue
-            }
-            guard refreshInputsChanged(from: currentConfiguration, to: nextConfiguration) else {
-                continue
-            }
-            invalidatedAccountIDs.insert(accountID)
-            if nextConfiguration == nil,
-               !refreshingAccountIDs.contains(accountID) {
+            let previous = currentConfigurationsByAccountID[accountID]
+            let next = eligible[accountID]
+            guard refreshInputsChanged(from: previous, to: next) else { continue }
+            if next == nil && !refreshingAccountIDs.contains(accountID) {
                 refreshGenerationsByAccountID.removeValue(forKey: accountID)
             } else {
                 refreshGenerationsByAccountID[accountID] = UUID()
             }
         }
-        currentConfigurationsByAccountID = nextConfigurations
-
-        let enabledAccountIDs = Set(nextConfigurations.keys)
-        let evictedAccountIDs = hadCurrentConfigurationSnapshot ? invalidatedAccountIDs : []
-        pruneCachedState(to: enabledAccountIDs.subtracting(evictedAccountIDs))
-        let nextLastRefreshError = enabledConfigurations.lazy
-            .compactMap { self.refreshErrorsByAccountID[$0.id] }
-            .first
-        if nextLastRefreshError != lastRefreshError {
-            lastRefreshError = nextLastRefreshError
-        }
+        // A plan pause invalidates requests but retains observations. Credential/configuration
+        // changes and disabling still discard results through their existing invalidation path.
+        let changedInputs = Set(retained.keys.filter { accountID in
+            guard let previous = retainedConfigurationsByAccountID[accountID] else { return false }
+            return refreshInputsChanged(from: previous, to: retained[accountID])
+        })
+        currentConfigurationsByAccountID = eligible
+        retainedConfigurationsByAccountID = retained
+        pruneCachedState(to: Set(retained.keys).subtracting(hadSnapshot ? changedInputs : []))
+        let nextError = configurations.filter(canRefresh).lazy.compactMap { self.refreshErrorsByAccountID[$0.id] }.first
+        if nextError != lastRefreshError { lastRefreshError = nextError }
     }
 
     private func pruneCachedState(to enabledAccountIDs: Set<String>) {
@@ -686,14 +698,14 @@ public final class UsageRefreshService: ObservableObject {
     }
 
     private func isCurrent(_ configuration: ProviderAccountConfiguration) -> Bool {
-        currentConfigurationsByAccountID[configuration.id] == configuration
+        canRefresh(configuration) && currentConfigurationsByAccountID[configuration.id] == configuration
     }
 
     private func isCurrent(
         _ configuration: ProviderAccountConfiguration,
         generation: UUID
     ) -> Bool {
-        guard let currentConfiguration = currentConfigurationsByAccountID[configuration.id] else {
+        guard canRefresh(configuration), let currentConfiguration = currentConfigurationsByAccountID[configuration.id] else {
             return false
         }
         return !refreshInputsChanged(from: configuration, to: currentConfiguration)

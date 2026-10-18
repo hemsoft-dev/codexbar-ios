@@ -276,7 +276,7 @@ final class GreptileRenewalRegressionTests: XCTestCase, @unchecked Sendable {
         let suite = "GreptileCredits.\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: GreptileFixtureSecrets(values: [:]))
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: GreptileFixtureSecrets(values: [:]))
         let account = browserAccount()
         _ = store.update(account)
         store.updateMetricVisibility(false, accountID: account.id, metricID: GreptileUsageIdentity.completedReviewsMetricID)
@@ -391,7 +391,7 @@ final class GreptileRenewalRegressionTests: XCTestCase, @unchecked Sendable {
         let suite = "GreptileRenewalRegressionTests.\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
         XCTAssertTrue(store.canReconnectGreptile(credential(), for: account))
         XCTAssertFalse(store.canReconnectGreptile(credential(organization: "another-org"), for: account))
         XCTAssertFalse(store.canReconnectGreptile(credential(subject: "another-user"), for: account))
@@ -469,7 +469,7 @@ final class GreptileRenewalRegressionTests: XCTestCase, @unchecked Sendable {
             let suite = "GreptileRenewalRegressionTests.\(UUID())"
             let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
             defer { defaults.removePersistentDomain(forName: suite) }
-            let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
+            let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
             XCTAssertFalse(store.canReconnectGreptile(credential(), for: account))
             XCTAssertTrue(store.lastError?.contains(method == .apiKey ? "separate" : "could not be read") == true)
             XCTAssertEqual(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: account)), "synthetic-legacy-key")
@@ -688,8 +688,8 @@ final class GreptileRenewalRegressionTests: XCTestCase, @unchecked Sendable {
         let suite = "GreptileRenewalRegressionTests.\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets)
-        let account = store.addAccount(for: .greptile)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets)
+        let account = try XCTUnwrap(store.addAccount(for: .greptile))
         var updates: [Bool] = []
         let observer = store.greptileCredentialUpdates.sink { update in
             XCTAssertEqual(update.accountID, account.id)

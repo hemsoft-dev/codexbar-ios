@@ -85,6 +85,10 @@ final class DashboardOrchestrator: ObservableObject {
             )
         }.store(in: &cancellables)
         refreshService.updateCurrentConfigurations(configurationStore.visibleConfigurations)
+        refreshService.updateAccountAccess(configurationStore.accountAccess)
+        configurationStore.$accountAccess.dropFirst().sink { [weak self] access in
+            self?.reconcileAccountAccess(access)
+        }.store(in: &cancellables)
         configurationStore.$configurations.dropFirst().sink { [weak refreshService, weak historyStore] in
             let configurations = $0
             refreshService?.updateCurrentConfigurations(configurations)
@@ -155,8 +159,11 @@ final class DashboardOrchestrator: ObservableObject {
     }
 
     var currentUsageAlertsByAccountID: [String: [UsageAlertDetail]] {
+        guard configurationStore.accountAccess.hasProAccess else { return [:] }
         let evaluation = UsageAlertEvaluator.evaluate(
-            results: refreshService.results,
+            results: refreshService.results.filter { result in
+                configurationStore.configuration(accountID: result.accountID).map(refreshService.canRefresh) == true
+            },
             settings: configurationStore.usageAlertSettings,
             activeAlertIDs: configurationStore.usageAlertActiveIDs
         )
@@ -257,7 +264,7 @@ final class DashboardOrchestrator: ObservableObject {
     func refreshAccount(_ configuration: ProviderAccountConfiguration) async -> ProviderUsageResult? {
         guard
             let currentConfiguration = configurationStore.configuration(accountID: configuration.id),
-            currentConfiguration.isEnabled,
+            refreshService.canRefresh(currentConfiguration),
             refreshService.hasSameRefreshInputs(configuration, currentConfiguration)
         else {
             return nil
@@ -277,7 +284,7 @@ final class DashboardOrchestrator: ObservableObject {
     func loadAccountMetrics(_ configuration: ProviderAccountConfiguration) async -> ProviderUsageResult? {
         guard
             let currentConfiguration = configurationStore.configuration(accountID: configuration.id),
-            currentConfiguration.isEnabled,
+            refreshService.canRefresh(currentConfiguration),
             refreshService.hasSameRefreshInputs(configuration, currentConfiguration)
         else {
             return nil
@@ -339,6 +346,10 @@ final class DashboardOrchestrator: ObservableObject {
         for configuration: ProviderAccountConfiguration,
         creditID: String?
     ) async -> CodexBankedResetRedemptionFeedback {
+        guard let current = configurationStore.configuration(accountID: configuration.id),
+              refreshService.canRefresh(current), refreshService.hasSameRefreshInputs(configuration, current) else {
+            return CodexBankedResetRedemptionFeedback(message: "Make this account active before using a reset.", isSuccess: false)
+        }
         do {
             let outcome = try await refreshService.consumeCodexBankedReset(
                 for: configuration,
@@ -391,7 +402,8 @@ final class DashboardOrchestrator: ObservableObject {
     }
 
     func requestAlertAuthorization() async -> Bool {
-        await usageAlertNotifier.requestAuthorization()
+        guard configurationStore.accountAccess.hasProAccess else { return false }
+        return await usageAlertNotifier.requestAuthorization()
     }
 
     func runAutoRefreshLoop() async {
@@ -424,7 +436,15 @@ final class DashboardOrchestrator: ObservableObject {
     }
 
     private var displayedResults: [ProviderUsageResult] {
-        refreshService.results.filter { result in
+        let cachedIDs = Set(refreshService.results.map(\.accountID))
+        // History is a display-only cold-start fallback. Its original observation time is retained,
+        // and it never enters successfulRefreshResults, alert evaluation or history recording.
+        let pausedFallbacks = configurationStore.visibleConfigurations.compactMap { configuration -> ProviderUsageResult? in
+            guard configurationStore.accountAccess.pausedAccountIDs.contains(configuration.id),
+                  !cachedIDs.contains(configuration.id) else { return nil }
+            return historyStore.lastStoredResult(for: configuration)
+        }
+        return (refreshService.results + pausedFallbacks).filter { result in
             configurationStore.configuration(accountID: result.accountID)
                 .map(configurationStore.shouldDisplayOnDashboard) ?? false
         }
@@ -472,10 +492,23 @@ final class DashboardOrchestrator: ObservableObject {
         ) && appReviewPromptPolicy.registerSuccessfulRefresh()
     }
 
+    private func reconcileAccountAccess(_ access: AccountPlanAccess) {
+        let previouslyEligible = Set(configurationStore.configurations.filter(refreshService.canRefresh).map(\.id))
+        refreshService.updateAccountAccess(access)
+        let nowEligible = Set(configurationStore.configurations.filter(refreshService.canRefresh).map(\.id))
+        guard !nowEligible.subtracting(previouslyEligible).isEmpty else { return }
+        // The current batch owns any queued refresh. Canceling its task would also
+        // cancel the queued provider work; generations already reject obsolete results.
+        Task { [weak self] in
+            _ = await self?.refreshNow()
+        }
+    }
+
     private func processUsageAlerts(
         results: [ProviderUsageResult],
         preserving preservedAccountIDs: Set<String>
     ) async {
+        guard configurationStore.accountAccess.hasProAccess else { return }
         let existingActiveAlertIDs = configurationStore.usageAlertActiveIDs
         let preservedActiveAlertIDs = configurationStore.usageAlertSettings.isEnabled
             ? UsageAlertEvaluator.activeAlertIDs(
@@ -493,6 +526,8 @@ final class DashboardOrchestrator: ObservableObject {
 
         var deliveredActiveAlertIDs = preservedActiveAlertIDs.union(evaluation.activeAlertIDs)
         for notification in evaluation.notifications {
+            // Recheck after every suspension: an expiry during one delivery stops later notices.
+            guard configurationStore.accountAccess.hasProAccess else { return }
             do {
                 try await usageAlertNotifier.deliver(notification)
             } catch {
@@ -504,6 +539,7 @@ final class DashboardOrchestrator: ObservableObject {
                 )
             }
         }
+        guard configurationStore.accountAccess.hasProAccess else { return }
         configurationStore.updateUsageAlertActiveIDs(deliveredActiveAlertIDs)
     }
 }
@@ -540,6 +576,9 @@ final class WidgetSnapshotCoordinator {
             self?.scheduleSnapshotPublish()
         }.store(in: &cancellables)
 
+        configurationStore.$accountAccess.dropFirst().sink { [weak self] _ in
+            self?.scheduleSnapshotPublish()
+        }.store(in: &cancellables)
         configurationStore.$configurations.dropFirst().sink { [weak self] _ in
             self?.scheduleSnapshotPublish()
         }.store(in: &cancellables)

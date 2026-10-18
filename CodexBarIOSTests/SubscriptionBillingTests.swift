@@ -340,7 +340,7 @@ final class SubscriptionBillingTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
         let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
         XCTAssertTrue(store.update(account))
         XCTAssertTrue(store.saveSecret("usage-token", for: account))
@@ -367,7 +367,7 @@ final class SubscriptionBillingTests: XCTestCase {
             let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
             defer { defaults.removePersistentDomain(forName: suite) }
             let secrets = BillingMutationSecretStore()
-            let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+            let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
             let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
             XCTAssertTrue(store.update(account))
             XCTAssertTrue(store.saveSecret("usage-token", for: account))
@@ -395,7 +395,7 @@ final class SubscriptionBillingTests: XCTestCase {
             let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
             defer { defaults.removePersistentDomain(forName: suite) }
             let secrets = BillingMutationSecretStore()
-            let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+            let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
             let account = ProviderAccountConfiguration(id: "personal-\(provider.rawValue)", providerID: provider, authMethod: .browserSession)
             XCTAssertTrue(store.update(account))
             let primary = ProviderConfigurationStore.keychainAccount(for: account)
@@ -407,7 +407,9 @@ final class SubscriptionBillingTests: XCTestCase {
             XCTAssertNil(try secrets.readSecret(account: primary))
             XCTAssertEqual(try secrets.readSecret(account: billingKey), "billing-token")
             XCTAssertNotNil(store.configuration(accountID: account.id))
-            let reloaded = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+            let reloaded = ProviderConfigurationStore(
+                initialPlanAccess: .unrestricted,
+                defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
             XCTAssertNotNil(reloaded.configuration(accountID: account.id))
             secrets.failingDeleteAccount = nil
             XCTAssertTrue(reloaded.resetAccounts())
@@ -423,7 +425,7 @@ final class SubscriptionBillingTests: XCTestCase {
             let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
             defer { defaults.removePersistentDomain(forName: suite) }
             let secrets = BillingMutationSecretStore()
-            let store = ProviderConfigurationStore(defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+            let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
             let account = ProviderAccountConfiguration(id: "personal-\(provider.rawValue)", providerID: provider, authMethod: .browserSession)
             XCTAssertTrue(store.update(account))
             let primary = ProviderConfigurationStore.keychainAccount(for: account)

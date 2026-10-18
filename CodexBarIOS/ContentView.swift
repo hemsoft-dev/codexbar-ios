@@ -253,6 +253,7 @@ struct ContentView: View {
                         )
                     }
                     .onChange(of: cardItems.map(\.id)) { _, accountIDs in
+                        configurationStore.updateAccountAccessOrder(accountIDs)
                         scrollToPendingDeepLink(
                             scrollProxy: scrollProxy,
                             availableAccountIDs: accountIDs,
@@ -347,6 +348,13 @@ struct ContentView: View {
                 }
             }
         }
+        .accountPlanPresentation(
+            configurationStore: configurationStore,
+            usageResultForAccount: lastKnownResult,
+            isActive: !isShowingSettings && addAccountFlowRequest == nil
+                && accountConfigurationNavigation.presentation == nil && selectedHistoryResult == nil
+                && problemReportPresentation == nil && claudeAuthenticationController.authURL == nil
+        )
         .sheet(
             isPresented: $isShowingSettings,
             onDismiss: {
@@ -388,11 +396,7 @@ struct ContentView: View {
                     onAccountIdentityChanged: { accountID in
                         historyStore.removeSnapshots(for: accountID)
                     },
-                    usageResultForAccount: { accountID in
-                        orchestrator.dashboardCardItems.first {
-                            $0.id == accountID
-                        }?.result
-                    },
+                    usageResultForAccount: lastKnownResult,
                     onAccountRefresh: { configuration in
                         await orchestrator.loadAccountMetrics(configuration)
                     },
@@ -482,13 +486,10 @@ struct ContentView: View {
             }
         )
         .sheet(item: $selectedHistoryResult) { result in
-            ProviderUsageHistoryDetailView(
+            LiveProviderUsageHistoryDetailView(
                 result: result,
-                seriesOptions: historyStore.historySeriesOptions(
-                    for: result,
-                    severityThresholds:
-                        configurationStore.usageAlertSettings.severityThresholds
-                )
+                historyStore: historyStore,
+                configurationStore: configurationStore
             )
         }
         .sheet(item: $problemReportPresentation) { context in
@@ -549,6 +550,14 @@ struct ContentView: View {
             \.usageSeverityThresholds,
             configurationStore.usageAlertSettings.severityThresholds
         )
+        .environment(\.accountLastResultProvider, lastKnownResult)
+    }
+
+    private func lastKnownResult(accountID: String) -> ProviderUsageResult? {
+        refreshService.results.first { $0.accountID == accountID }
+            ?? configurationStore.configuration(accountID: accountID).flatMap {
+                historyStore.lastStoredResult(for: $0)
+            }
     }
 
     private var visibleGitHubStatusSnapshot: GitHubServiceStatusSnapshot? {
@@ -682,9 +691,12 @@ struct ContentView: View {
                     severityThresholds:
                         configurationStore.usageAlertSettings.severityThresholds
                 ),
+                historyAccessPolicy: historyStore.accessPolicy,
                 alerts: alerts,
                 isHistoryEnabled: item.configuration.showsHistory,
                 isRefreshing: item.isRefreshing,
+                isPausedByPlan: configurationStore.accountAccess.isPaused(accountID: item.id),
+                onMakeActive: configurationStore.requestActiveAccountChoice,
                 isExpanded: !configurationStore.isDashboardCardCollapsed(accountID: result.accountID),
                 refreshErrorMessage: item.errorMessage,
                 recoveryAction: item.recoveryAction,
@@ -840,6 +852,12 @@ struct ContentView: View {
                     )
                 }
             )
+        } else if configurationStore.accountAccess.isPaused(accountID: item.id) {
+            PausedAccountPlaceholder(
+                configuration: item.configuration,
+                onMakeActive: configurationStore.requestActiveAccountChoice,
+                onConfigure: { configureDashboardAccount(item.configuration) }
+            )
         } else {
             ProviderUsagePlaceholderCard(
                 configuration: item.configuration,
@@ -857,6 +875,10 @@ struct ContentView: View {
     }
 
     private func performRecovery(for item: DashboardProviderCardItem) {
+        guard !configurationStore.accountAccess.isPaused(accountID: item.id) else {
+            configurationStore.requestActiveAccountChoice()
+            return
+        }
         switch DashboardRecoveryRoute.resolve(
             action: item.recoveryAction,
             providerID: item.configuration.providerID
@@ -1461,17 +1483,72 @@ private struct AutoRefreshRing: View {
     }
 }
 
-#Preview {
-    let statusPreferences = GitHubStatusPreferences()
-    ContentView(
-        refreshService: .demo(),
-        configurationStore: ProviderConfigurationStore(),
-        historyStore: UsageHistoryStore(),
-        appUpdateController: AppUpdateController(),
-        githubStatusPreferences: statusPreferences,
-        githubStatusMonitor: GitHubStatusMonitor(
-            preferences: statusPreferences,
-            notifier: LocalUsageAlertNotifier.shared
+#if DEBUG
+@MainActor
+private enum ContentPreview {
+    static func makeView() -> some View {
+        let defaults = UserDefaults(suiteName: "CodexBar.ContentPreview.\(UUID().uuidString)")!
+        let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted, defaults: defaults,
+            secretStore: ContentPreviewSecretStore(), widgetSnapshotDefaults: nil
         )
-    )
+        let samples = DemoUsageProvider.samples.filter { [.codex, .claude, .openRouter].contains($0.providerID) }
+        for sample in samples { _ = store.update(.defaultConfiguration(for: sample.providerID)) }
+        let results = samples.map { sample in
+            ProviderUsageResult(
+                accountID: sample.providerID.rawValue, providerID: sample.providerID,
+                title: sample.providerID.displayName, plan: sample.plan, subtitle: "Preview",
+                bars: sample.bars, creditsRemaining: sample.creditsRemaining, fetchedAt: Date()
+            )
+        }
+        let refreshService = UsageRefreshService(providers: samples, initialResults: results)
+        let statusPreferences = GitHubStatusPreferences(defaults: defaults)
+        let effects = ContentPreviewEffects()
+        return ContentView(
+            refreshService: refreshService,
+            configurationStore: store,
+            historyStore: UsageHistoryStore(defaults: defaults, accessPolicy: .pro),
+            appUpdateController: AppUpdateController(defaults: defaults, releaseFetcher: ContentPreviewNetwork()),
+            githubStatusPreferences: statusPreferences,
+            githubStatusMonitor: GitHubStatusMonitor(
+                preferences: statusPreferences, fetcher: ContentPreviewNetwork(), notifier: effects
+            ),
+            usageAlertNotifier: effects,
+            appReviewPromptPolicy: AppReviewPromptPolicy(defaults: defaults),
+            performsLifecycleWork: false,
+            widgetSnapshotCoordinator: WidgetSnapshotCoordinator(
+                refreshService: refreshService, configurationStore: store,
+                publishSnapshot: { _, _ in }, publishSettings: { _ in }
+            ),
+            watchSnapshotCoordinator: WatchSnapshotCoordinator(
+                refreshService: refreshService, configurationStore: store,
+                sender: effects, publishSnapshot: { _, _, _ in }
+            )
+        )
+    }
+}
+
+private struct ContentPreviewSecretStore: SecretStore {
+    func readSecret(account: String) throws -> String? { "preview-credential" }
+    func saveSecret(_ secret: String, account: String) throws {}
+    func deleteSecret(account: String) throws {}
+}
+
+private struct ContentPreviewNetwork: AppStoreReleaseFetching, GitHubStatusFetching {
+    func fetchRelease() async throws -> AppStoreRelease { throw URLError(.notConnectedToInternet) }
+    func fetchStatus(checkedAt: Date) async throws -> GitHubServiceStatusSnapshot { throw URLError(.notConnectedToInternet) }
+}
+
+@MainActor
+private final class ContentPreviewEffects: UsageAlertNotifying, GitHubStatusNotifying, WatchSnapshotSending {
+    func requestAuthorization() async -> Bool { false }
+    func deliver(_ notification: UsageAlertNotification) async throws {}
+    func deliverGitHubStatus(_ notification: GitHubStatusNotification) async throws {}
+    func activate(onSnapshotNeeded: @escaping @MainActor (Bool) -> Void) {}
+    func publish(_ snapshot: WatchDashboardSnapshot, force: Bool) -> Bool { false }
+}
+#endif
+
+#Preview {
+    ContentPreview.makeView()
 }

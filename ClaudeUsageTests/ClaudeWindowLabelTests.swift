@@ -72,8 +72,8 @@ final class ClaudeWindowLabelTests: XCTestCase {
         let suite = "ClaudeWindowLabelTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: ClaudeFixtureSecretStore())
-        let account = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: ClaudeFixtureSecretStore())
+        let account = try XCTUnwrap(store.addAccount(for: .claude))
         XCTAssertTrue(store.saveSecret("synthetic", for: account))
         let parsed = try XCTUnwrap(ClaudeUsageParser.parse(Data(#"""
             {"five_hour":{"utilization":42,"resets_at":"2030-01-01T00:00:00Z"},
@@ -138,8 +138,8 @@ final class ClaudeWindowLabelTests: XCTestCase {
         let suite = "ClaudeWindowLabelTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: ClaudeFixtureSecretStore())
-        let account = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: ClaudeFixtureSecretStore())
+        let account = try XCTUnwrap(store.addAccount(for: .claude))
         XCTAssertTrue(store.saveSecret("synthetic", for: account))
         for scoped in [false, true] {
             for label in ["5-hour", "Other models 5-hour", "Localized shared window"] {
@@ -170,8 +170,8 @@ final class ClaudeWindowLabelTests: XCTestCase {
         let suite = "ClaudeWindowLabelTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: ClaudeFixtureSecretStore())
-        let account = store.addAccount(for: .claude)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: ClaudeFixtureSecretStore())
+        let account = try XCTUnwrap(store.addAccount(for: .claude))
         XCTAssertTrue(store.saveSecret("synthetic", for: account))
         let parsed = try XCTUnwrap(ClaudeUsageParser.parse(Data(#"""
             {"five_hour":{"utilization":42},"seven_day":{"utilization":64},

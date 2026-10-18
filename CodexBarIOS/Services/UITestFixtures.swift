@@ -29,7 +29,10 @@ final class UITestFixtures {
     let statusMonitor: GitHubStatusMonitor
     let appUpdateController: AppUpdateController
     let originalPurchaserFixture: OriginalPurchaserFixture?
-    private let usesDefaultText: Bool
+    let planFixture: PlanAccessFixture
+    var entitlement: ProEntitlement { originalPurchaserFixture?.entitlement ?? planFixture.entitlement }
+    private let showsPlanTransitions: Bool
+    let dynamicTypeSize: DynamicTypeSize
 
     private lazy var widgetSnapshotCoordinator = WidgetSnapshotCoordinator(
         refreshService: refreshService,
@@ -53,10 +56,14 @@ final class UITestFixtures {
             defaults.removePersistentDomain(forName: suite)
         }
         self.defaults = defaults
+        let planScenario = environment["CODEXBAR_UI_TEST_SCENARIO"] ?? ""
+        planFixture = PlanAccessFixture(hasProAccess: !planScenario.hasPrefix("plan-free"))
+        showsPlanTransitions = planScenario == "plan-transition"
         originalPurchaserFixture = OriginalPurchaserFixture(scenario: environment["CODEXBAR_UI_TEST_SCENARIO"], defaults: defaults)
-        usesDefaultText = environment["CODEXBAR_UI_TEST_DEFAULT_TEXT"] == "1"
+        dynamicTypeSize = environment["CODEXBAR_UI_TEST_DEFAULT_TEXT"] == "1" ? .large : .accessibility2
         URLProtocol.registerClass(UITestNetworkBlocker.self)
         configurationStore = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: UITestSecretStore(suite: suite),
             widgetSnapshotDefaults: defaults
@@ -70,6 +77,7 @@ final class UITestFixtures {
         appUpdateController = AppUpdateController(defaults: defaults)
 
         let scenario = environment["CODEXBAR_UI_TEST_SCENARIO"]
+        PlanTierFixture.seedAccountsIfNeeded(in: configurationStore, scenario: scenario)
         let recovery = scenario == "recovery"
         let metricEvidence = scenario?.hasPrefix("metric-evidence-") == true
         if metricEvidence && configurationStore.configurations.isEmpty {
@@ -112,7 +120,8 @@ final class UITestFixtures {
             }
         }
         Self.seedXSubscriptionAccounts(in: configurationStore, scenario: scenario)
-        let results = Self.initialResults(in: configurationStore, scenario: scenario, googleSources: googleSources, defaults: defaults)
+        let results = PlanTierFixture.initialResults(in: configurationStore, scenario: scenario)
+            ?? Self.initialResults(in: configurationStore, scenario: scenario, googleSources: googleSources, defaults: defaults)
         let providers: [any UsageProvider]
         if google {
             providers = [UITestGoogleProvider(sources: googleSources)]
@@ -135,7 +144,11 @@ final class UITestFixtures {
                 UITestXSubscriptionProvider(providerID: .xSubscription, scenario: scenario),
             ]
         }
-        refreshService = UsageRefreshService(providers: Self.providersForPlanPills(providers, scenario: scenario, suiteName: suite), initialResults: results)
+        refreshService = UsageRefreshService(
+            providers: PlanTierFixture.providers(
+                overriding: Self.providersForPlanPills(providers, scenario: scenario, suiteName: suite), scenario: scenario
+            ), initialResults: results
+        )
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
             || scenario?.hasPrefix("subscription-renewals") == true
             || (greptile && environment["CODEXBAR_UI_TEST_MORE_INFORMATION"] == "1")
@@ -146,6 +159,7 @@ final class UITestFixtures {
             let accounts = configurationStore.configurations
             Task { await service.refresh(configurations: accounts) }
         }
+        PlanTierFixture.seedHistoryIfNeeded(in: historyStore, accounts: configurationStore.visibleConfigurations, scenario: scenario)
         if recovery && historyStore.snapshots.isEmpty {
             seedHistory()
         }
@@ -169,7 +183,7 @@ final class UITestFixtures {
         guard ["claude-resets-two-accounts", "claude-fable-two-accounts", "claude-fable-renamed"].contains(scenario ?? "") else { return }
         let second = ProviderAccountConfiguration(id: "ui-claude-second", providerID: .claude,
                                                   accountLabel: "Second Claude", authMethod: .browserSession)
-        _ = store.update(second)
+        precondition(store.update(second))
         _ = store.saveSecret("ui-test-credential", for: second)
     }
 
@@ -279,7 +293,9 @@ final class UITestFixtures {
             widgetSnapshotCoordinator: widgetSnapshotCoordinator,
             watchSnapshotCoordinator: watchSnapshotCoordinator
         )
-        .dynamicTypeSize(usesDefaultText ? .large : .accessibility2)
+        .safeAreaInset(edge: .bottom) {
+            if showsPlanTransitions { PlanTransitionFixtureControls(fixture: planFixture) }
+        }
     }
 
     nonisolated static func codexCredential(for identity: String) -> String {
@@ -329,7 +345,7 @@ final class UITestFixtures {
             if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_CURSOR_ONLY"] == "1", provider != .cursor { continue }
             var account = ProviderAccountConfiguration(id: id, providerID: provider, accountLabel: title, authMethod: .browserSession)
             if provider == .openCodeZen { account.openCodeWorkspaceId = "fixture-workspace" }
-            _ = store.update(account)
+            precondition(store.update(account))
             let secret = provider == .grok ? (try? Self.planPillGrokCredential.encoded()) ?? "invalid-synthetic-credential" : "ui-test-credential"
             precondition(store.saveSecret(provider == .cursor ? UITestCursorBillingFixture.credential : secret, for: account))
         }
@@ -370,11 +386,11 @@ final class UITestFixtures {
         guard let scenario, scenario.hasPrefix("google-plan-"), store.configurations.isEmpty else { return }
         let variant = String(scenario.dropFirst("google-plan-".count))
         let google = ProviderAccountConfiguration(id: variant, providerID: .gemini, accountLabel: "Personal Google", authMethod: .browserSession)
-        _ = store.update(google)
+        precondition(store.update(google))
         precondition(store.saveSecret("ui-test-credential", for: google))
         var openCode = ProviderAccountConfiguration(id: "opencode", providerID: .openCodeZen, accountLabel: "OpenCode Go + Zen", authMethod: .browserSession)
         openCode.openCodeWorkspaceId = "fixture-workspace"
-        _ = store.update(openCode)
+        precondition(store.update(openCode))
         precondition(store.saveSecret("ui-test-credential", for: openCode))
     }
 
@@ -406,7 +422,7 @@ final class UITestFixtures {
                 id: id, providerID: provider, accountLabel: title,
                 grokGeneratedLabel: provider == .grok ? title : nil, authMethod: provider == .grok ? .browserSession : .apiKey
             )
-            _ = store.update(account)
+            precondition(store.update(account))
             precondition(store.saveSecret(provider == .codex ? Self.codexCredential(for: id) : "ui-test-credential", for: account),
                          "Synthetic plan fixture credentials must be saved")
             if provider == .grok {
@@ -454,7 +470,7 @@ final class UITestFixtures {
                 id: "ui-codex-\(identity)", providerID: .codex,
                 accountLabel: label, authMethod: .browserSession
             )
-            _ = store.update(account)
+            precondition(store.update(account))
             _ = store.saveSecret(codexCredential(for: identity), for: account)
         }
     }
@@ -464,7 +480,7 @@ final class UITestFixtures {
             id: "ui-greptile-free", providerID: .greptile,
             accountLabel: "Greptile Free Fixture", authMethod: scenario.hasPrefix("greptile-renewal-") ? .browserSession : .apiKey
         )
-        _ = store.update(account)
+        precondition(store.update(account))
         _ = store.saveSecret(account.authMethod == .browserSession ? (try? greptileCredential.encoded()) ?? "" : "ui-test-credential", for: account)
         if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_FULL_WIDTH"] == "1" {
             store.updateMetricWidth(.full, accountID: account.id, metricID: GreptileUsageIdentity.completedReviewsMetricID)
@@ -576,7 +592,7 @@ final class UITestFixtures {
             id: "ui-claude", providerID: .claude,
             accountLabel: "Synthetic Claude", authMethod: .browserSession
         )
-        _ = store.update(account)
+        precondition(store.update(account))
         let credential = scenario?.hasPrefix("claude-plan-") == true ? claudeProfileCredential : "ui-test-credential"
         _ = store.saveSecret(credential, for: account)
     }
@@ -642,7 +658,7 @@ final class UITestFixtures {
             id: "ui-metric-evidence", providerID: .openRouter,
             accountLabel: "Synthetic Metrics", authMethod: .apiKey
         )
-        _ = store.update(account)
+        precondition(store.update(account))
         _ = store.saveSecret("ui-test-credential", for: account)
     }
 
@@ -689,7 +705,7 @@ final class UITestFixtures {
             groupID: group?.id,
             authMethod: .apiKey
         )
-        _ = configurationStore.update(account)
+        precondition(configurationStore.update(account))
         _ = configurationStore.saveSecret("ui-test-credential", for: account)
         // Place a distinct URL destination beyond the viewport on either device family.
         for index in 1...5 {
@@ -700,7 +716,7 @@ final class UITestFixtures {
                 groupID: group?.id,
                 authMethod: .apiKey
             )
-            _ = configurationStore.update(navigationAccount)
+            precondition(configurationStore.update(navigationAccount))
             _ = configurationStore.saveSecret("ui-test-credential", for: navigationAccount)
         }
     }
@@ -710,7 +726,7 @@ final class UITestFixtures {
             for (id, label) in [("pro", "Personal Cursor"), ("pro_plus", "Work Cursor"), ("unknown", "Unknown Cursor")] {
                 let account = ProviderAccountConfiguration(id: "ui-cursor-\(id)", providerID: .cursor,
                                                            accountLabel: label, authMethod: .browserSession)
-                _ = store.update(account)
+                precondition(store.update(account))
                 _ = store.saveSecret("cursor-plan-\(id)", for: account)
             }
             return
@@ -725,7 +741,7 @@ final class UITestFixtures {
             authMethod: .browserSession
         )
         for account in cursorOnly ? [cursor] : [grok, cursor] {
-            _ = store.update(account)
+            precondition(store.update(account))
             let secret = Self.isCursorSessionScenario(scenario)
                 ? cursorSessionCredential(expired: scenario == "grok-cursor-session-no-prior") : "ui-test-credential"
             _ = store.saveSecret(secret, for: account)
@@ -800,7 +816,7 @@ final class UITestFixtures {
                                              grokGeneratedLabel: "X Subscription", authMethod: .browserSession),
             ]
         for account in accounts {
-            _ = store.update(account)
+            precondition(store.update(account))
             _ = store.saveSecret("ui-test-credential", for: account)
         }
     }
@@ -941,7 +957,7 @@ final class UITestFixtures {
         default: [personal, organization]
         }
         for account in accounts {
-            _ = store.update(account)
+            precondition(store.update(account))
             _ = store.saveSecret("ui-test-credential", for: account)
         }
     }
@@ -1465,7 +1481,7 @@ final class UITestFixtures {
             accountLabel: "Gemini Fixture",
             authMethod: .browserSession
         )
-        _ = store.update(account)
+        precondition(store.update(account))
         if sources.contains(.gemini) {
             _ = store.saveSecret("ui-test-credential", for: account)
         }

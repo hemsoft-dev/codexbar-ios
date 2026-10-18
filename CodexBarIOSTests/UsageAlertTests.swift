@@ -9,6 +9,7 @@ final class UsageAlertTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -27,6 +28,7 @@ final class UsageAlertTests: XCTestCase {
         ])
 
         let reloadedStore = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -80,6 +82,7 @@ final class UsageAlertTests: XCTestCase {
         defaults.set(legacyData, forKey: "usageAlertSettings")
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -123,6 +126,7 @@ final class UsageAlertTests: XCTestCase {
         )
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: FailingReadSecretStore()
         )
@@ -149,6 +153,7 @@ final class UsageAlertTests: XCTestCase {
         defaults.set(futureData, forKey: "usageAlertSettings")
 
         _ = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -163,6 +168,7 @@ final class UsageAlertTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -772,11 +778,12 @@ final class UsageAlertTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: MemorySecretStore(),
             widgetSnapshotDefaults: defaults
         )
-        let configuration = store.addAccount(for: .codex)
+        let configuration = try XCTUnwrap(store.addAccount(for: .codex))
         XCTAssertTrue(store.saveSecret("test-token", for: configuration))
         store.updateUsageAlertWarningThreshold(0.50)
         store.updateUsageAlertCriticalThreshold(0.80)

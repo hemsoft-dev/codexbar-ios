@@ -9,7 +9,7 @@ final class MetricLayoutCompatibilityTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let accountID = "cursor.personal"
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         _ = store.reconcileMetricLayout(
             accountID: accountID,
             availableMetricIDs: [
@@ -69,6 +69,7 @@ final class MetricLayoutCompatibilityTests: XCTestCase {
         let completedID = GreptileUsageIdentity.completedReviewsMetricID
         let quotaID = GreptileUsageIdentity.reviewQuotaMetricID
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -110,6 +111,7 @@ final class MetricLayoutCompatibilityTests: XCTestCase {
         let completedID = GreptileUsageIdentity.completedReviewsMetricID
         let quotaID = GreptileUsageIdentity.reviewQuotaMetricID
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -146,6 +148,7 @@ final class MetricLayoutCompatibilityTests: XCTestCase {
         let completedID = GreptileUsageIdentity.completedReviewsMetricID
         let quotaID = GreptileUsageIdentity.reviewQuotaMetricID
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -173,6 +176,7 @@ final class MetricLayoutCompatibilityTests: XCTestCase {
         let completedID = GreptileUsageIdentity.completedReviewsMetricID
         let quotaID = GreptileUsageIdentity.reviewQuotaMetricID
         let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
             defaults: defaults,
             secretStore: EmptySecretStore()
         )
@@ -198,7 +202,7 @@ final class MetricLayoutCompatibilityTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let store = ProviderConfigurationStore(defaults: defaults, secretStore: EmptySecretStore())
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: EmptySecretStore())
         let metricPairs = [
             (
                 GreptileUsageIdentity.completedReviewsMetricID,
