@@ -118,6 +118,10 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Fixed
 
+- Cursor usage charts without a Total meter now show the same point in every
+  view when a sample and its daily summary share a time.
+  ([#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490))
+
 - Keep widget labels, usage values and progress readable when the system removes
   their background or applies a tinted appearance, including Lock Screen widgets.
   ([#473](https://github.com/hemsoft-dev/codexbar-ios/issues/473))
