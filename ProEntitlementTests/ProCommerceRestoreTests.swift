@@ -91,7 +91,7 @@ final class ProCommerceRestoreTests: XCTestCase {
         return ProStoreSnapshot(purchases: [status.purchase], subscriptions: [status], subscriptionStatusAvailable: true)
     }
 
-    private func service(_ source: ProCommerceTestSource, _ cache: TestProCache = TestProCache()) -> ProEntitlement {
-        ProEntitlement(source: source, cache: cache, now: { self.instant }, clock: testProClock)
+    private func service(_ source: ProCommerceTestSource, _ cache: TestProCache? = nil) -> ProEntitlement {
+        ProEntitlement(source: source, cache: cache ?? TestProCache(), now: { self.instant }, clock: testProClock)
     }
 }
