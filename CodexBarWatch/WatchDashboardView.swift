@@ -10,7 +10,7 @@ struct WatchDashboardView: View {
             Section {
                 if state.samples.isEmpty {
                     VStack(spacing: 8) {
-                        Image(systemName: "iphone.and.arrow.forward")
+                        Image(systemName: state.isProLocked ? "lock.fill" : "iphone.and.arrow.forward")
                             .font(.title2)
                             .foregroundStyle(.tint)
                             .accessibilityHidden(true)

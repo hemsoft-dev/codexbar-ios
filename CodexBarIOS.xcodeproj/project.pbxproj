@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A46700000000000000043001 /* WatchAccessReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040004 /* WatchAccessReaderTests.swift */; };
 		A45100000000000000000201 /* UITestOpenCodeRenewalProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45100000000000000000202 /* UITestOpenCodeRenewalProvider.swift */; };
 		A45100000000000000000101 /* OpenCodeSubscriptionBilling.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45100000000000000000102 /* OpenCodeSubscriptionBilling.swift */; };
 		A44600000000000000000601 /* UITestSubscriptionBillingProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A44600000000000000000602 /* UITestSubscriptionBillingProtocol.swift */; };
@@ -222,6 +223,32 @@
 		A46600000000000000010009 /* FreeTierPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46600000000000000000009 /* FreeTierPresentationTests.swift */; };
 		A4660000000000000001000A /* PlanRefreshAndAlertsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4660000000000000000000A /* PlanRefreshAndAlertsTests.swift */; };
 		A4660000000000000001000B /* FreeTierJourneyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4660000000000000000000B /* FreeTierJourneyTests.swift */; };
+		A46700000000000000010001 /* SnapshotProAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000001 /* SnapshotProAccess.swift */; };
+		A46700000000000000010002 /* PhoneWatchPublicationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000002 /* PhoneWatchPublicationStore.swift */; };
+		A46700000000000000010003 /* WidgetProAccessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000003 /* WidgetProAccessTests.swift */; };
+		A46700000000000000010004 /* SurfaceProPublicationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000004 /* SurfaceProPublicationTests.swift */; };
+		A46700000000000000010005 /* WatchProAccessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000000005 /* WatchProAccessTests.swift */; };
+		A46700000000000000020001 /* WatchComplicationConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32000000000000000000003 /* WatchComplicationConfiguration.swift */; };
+		A46700000000000000031001 /* WidgetAccessGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030001 /* WidgetAccessGuard.swift */; };
+		A46700000000000000031002 /* WidgetAccessGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030001 /* WidgetAccessGuard.swift */; };
+		A46700000000000000031003 /* ProEntitlementClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000007 /* ProEntitlementClock.swift */; };
+		A46700000000000000031004 /* ProClockSupport.c in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000008 /* ProClockSupport.c */; };
+		A46700000000000000032002 /* WidgetAccessFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030002 /* WidgetAccessFixture.swift */; };
+		A46700000000000000032003 /* WidgetAccessGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030003 /* WidgetAccessGuardTests.swift */; };
+		A46700000000000000032004 /* WidgetAccessQueryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030004 /* WidgetAccessQueryTests.swift */; };
+		A46700000000000000031005 /* ProEntitlementValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000001 /* ProEntitlementValue.swift */; };
+		A46700000000000000032005 /* WidgetPublicationRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000030005 /* WidgetPublicationRecoveryTests.swift */; };
+		A46700000000000000041001 /* WatchAccessRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040001 /* WatchAccessRecoveryTests.swift */; };
+		A46700000000000000042001 /* WatchAccessClockStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040002 /* WatchAccessClockStore.swift */; };
+		A46700000000000000042002 /* WatchAccessClockStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040002 /* WatchAccessClockStore.swift */; };
+		A46700000000000000042003 /* ProEntitlementClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000007 /* ProEntitlementClock.swift */; };
+		A46700000000000000042004 /* ProEntitlementClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000007 /* ProEntitlementClock.swift */; };
+		A46700000000000000042005 /* ProClockSupport.c in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000008 /* ProClockSupport.c */; };
+		A46700000000000000042006 /* ProClockSupport.c in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000008 /* ProClockSupport.c */; };
+		A46700000000000000042007 /* WatchAccessTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040003 /* WatchAccessTestSupport.swift */; };
+		A46700000000000000043051 /* WatchAccessClockStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040002 /* WatchAccessClockStore.swift */; };
+		A46700000000000000043052 /* WatchComplicationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32000000000000000000001 /* WatchComplicationSupport.swift */; };
+		A46700000000000000043053 /* WatchComplicationConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32000000000000000000003 /* WatchComplicationConfiguration.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -306,6 +333,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A46700000000000000040004 /* WatchAccessReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccessReaderTests.swift; sourceTree = "<group>"; };
 		A45100000000000000000202 /* UITestOpenCodeRenewalProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestOpenCodeRenewalProvider.swift; sourceTree = "<group>"; };
 		A45100000000000000000102 /* OpenCodeSubscriptionBilling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSubscriptionBilling.swift; sourceTree = "<group>"; };
 		A44600000000000000000602 /* UITestSubscriptionBillingProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestSubscriptionBillingProtocol.swift; sourceTree = "<group>"; };
@@ -513,6 +541,19 @@
 		A46600000000000000000009 /* FreeTierPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeTierPresentationTests.swift; sourceTree = "<group>"; };
 		A4660000000000000000000A /* PlanRefreshAndAlertsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRefreshAndAlertsTests.swift; sourceTree = "<group>"; };
 		A4660000000000000000000B /* FreeTierJourneyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeTierJourneyTests.swift; sourceTree = "<group>"; };
+		A46700000000000000000001 /* SnapshotProAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotProAccess.swift; sourceTree = "<group>"; };
+		A46700000000000000000002 /* PhoneWatchPublicationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneWatchPublicationStore.swift; sourceTree = "<group>"; };
+		A46700000000000000000003 /* WidgetProAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetProAccessTests.swift; sourceTree = "<group>"; };
+		A46700000000000000000004 /* SurfaceProPublicationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceProPublicationTests.swift; sourceTree = "<group>"; };
+		A46700000000000000000005 /* WatchProAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProAccessTests.swift; sourceTree = "<group>"; };
+		A46700000000000000030001 /* WidgetAccessGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAccessGuard.swift; sourceTree = "<group>"; };
+		A46700000000000000030002 /* WidgetAccessFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAccessFixture.swift; sourceTree = "<group>"; };
+		A46700000000000000030003 /* WidgetAccessGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAccessGuardTests.swift; sourceTree = "<group>"; };
+		A46700000000000000030004 /* WidgetAccessQueryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAccessQueryTests.swift; sourceTree = "<group>"; };
+		A46700000000000000030005 /* WidgetPublicationRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPublicationRecoveryTests.swift; sourceTree = "<group>"; };
+		A46700000000000000040001 /* WatchAccessRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccessRecoveryTests.swift; sourceTree = "<group>"; };
+		A46700000000000000040002 /* WatchAccessClockStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccessClockStore.swift; sourceTree = "<group>"; };
+		A46700000000000000040003 /* WatchAccessTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccessTestSupport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -636,6 +677,8 @@
 			children = (
 				A46600000000000000000004 /* PlanAccessFixture.swift */,
 				A46600000000000000000003 /* PlanAccessCoordinator.swift */,
+				A46700000000000000000002 /* PhoneWatchPublicationStore.swift */,
+				A46700000000000000000001 /* SnapshotProAccess.swift */,
 				A46600000000000000000002 /* HistoryAccessPolicy.swift */,
 				A46600000000000000000001 /* AccountPlanAccess.swift */,
 				A46500000000000000000003 /* OriginalPurchaserFixture.swift */,
@@ -755,6 +798,7 @@
 			isa = PBXGroup;
 			children = (
 				A4660000000000000000000A /* PlanRefreshAndAlertsTests.swift */,
+				A46700000000000000000004 /* SurfaceProPublicationTests.swift */,
 				A46600000000000000000009 /* FreeTierPresentationTests.swift */,
 				A46600000000000000000008 /* HistoryAccessPolicyTests.swift */,
 				A46600000000000000000007 /* AccountPlanAccessTests.swift */,
@@ -781,6 +825,11 @@
 				20000000000000000000004A /* UsageAlertTests.swift */,
 				20000000000000000000004D /* UsageHistoryTests.swift */,
 				C20000000000000000000001 /* WidgetConfigurationTests.swift */,
+				A46700000000000000030002 /* WidgetAccessFixture.swift */,
+				A46700000000000000030003 /* WidgetAccessGuardTests.swift */,
+				A46700000000000000030004 /* WidgetAccessQueryTests.swift */,
+				A46700000000000000030005 /* WidgetPublicationRecoveryTests.swift */,
+				A46700000000000000000003 /* WidgetProAccessTests.swift */,
 			);
 			path = CodexBarIOSTests;
 			sourceTree = "<group>";
@@ -818,7 +867,9 @@
 			isa = PBXGroup;
 			children = (
 				A46400000000000000000001 /* ProEntitlementValue.swift */,
+				A46700000000000000030001 /* WidgetAccessGuard.swift */,
 				A46400000000000000000007 /* ProEntitlementClock.swift */,
+				A46700000000000000040002 /* WatchAccessClockStore.swift */,
 				A22700000000000000000005 /* CursorUsageIdentity.swift */,
 				A42100000000000000000105 /* ClaudeFableUsageIdentity.swift */,
 				A22600000000000000000005 /* GreptileUsageIdentity.swift */,
@@ -861,6 +912,10 @@
 			children = (
 				D2000000000000000000000B /* WatchComplicationCompatibilityTests.swift */,
 				D20000000000000000000009 /* WatchDashboardStateTests.swift */,
+				A46700000000000000000005 /* WatchProAccessTests.swift */,
+				A46700000000000000040001 /* WatchAccessRecoveryTests.swift */,
+				A46700000000000000040004 /* WatchAccessReaderTests.swift */,
+				A46700000000000000040003 /* WatchAccessTestSupport.swift */,
 			);
 			path = CodexBarWatchTests;
 			sourceTree = "<group>";
@@ -1162,6 +1217,8 @@
 				A46600000000000000010005 /* ActiveAccountChooser.swift in Sources */,
 				A46600000000000000010004 /* PlanAccessFixture.swift in Sources */,
 				A46600000000000000010003 /* PlanAccessCoordinator.swift in Sources */,
+				A46700000000000000010002 /* PhoneWatchPublicationStore.swift in Sources */,
+				A46700000000000000010001 /* SnapshotProAccess.swift in Sources */,
 				A46600000000000000010002 /* HistoryAccessPolicy.swift in Sources */,
 				A46600000000000000010001 /* AccountPlanAccess.swift in Sources */,
 				A46400000000000000010006 /* StoreKitProStoreSource.swift in Sources */,
@@ -1174,6 +1231,7 @@
 				A46400000000000000010003 /* ProEntitlementResolver.swift in Sources */,
 				A46400000000000000010002 /* ProStoreEvidence.swift in Sources */,
 				A46400000000000000010001 /* ProEntitlementValue.swift in Sources */,
+				A46700000000000000031001 /* WidgetAccessGuard.swift in Sources */,
 				A46400000000000000010007 /* ProEntitlementClock.swift in Sources */,
 				A46400000000000000010008 /* ProClockSupport.c in Sources */,
 				A22700000000000000000001 /* CursorUsageIdentity.swift in Sources */,
@@ -1301,6 +1359,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				A4660000000000000001000A /* PlanRefreshAndAlertsTests.swift in Sources */,
+				A46700000000000000010004 /* SurfaceProPublicationTests.swift in Sources */,
+				A46700000000000000043053 /* WatchComplicationConfiguration.swift in Sources */,
+				A46700000000000000043052 /* WatchComplicationSupport.swift in Sources */,
+				A46700000000000000043051 /* WatchAccessClockStore.swift in Sources */,
 				A46600000000000000010009 /* FreeTierPresentationTests.swift in Sources */,
 				A46600000000000000010008 /* HistoryAccessPolicyTests.swift in Sources */,
 				A46600000000000000010007 /* AccountPlanAccessTests.swift in Sources */,
@@ -1327,6 +1389,11 @@
 				100000000000000000000051 /* UsageAlertTests.swift in Sources */,
 				10000000000000000000004D /* UsageHistoryTests.swift in Sources */,
 				C10000000000000000000003 /* WidgetConfigurationTests.swift in Sources */,
+				A46700000000000000032002 /* WidgetAccessFixture.swift in Sources */,
+				A46700000000000000032003 /* WidgetAccessGuardTests.swift in Sources */,
+				A46700000000000000032004 /* WidgetAccessQueryTests.swift in Sources */,
+				A46700000000000000032005 /* WidgetPublicationRecoveryTests.swift in Sources */,
+				A46700000000000000010003 /* WidgetProAccessTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1342,6 +1409,10 @@
 				10000000000000000000002C /* CodexBarWidgetViews.swift in Sources */,
 				100000000000000000000048 /* CodexBarWidgetAccessoryViews.swift in Sources */,
 				100000000000000000000047 /* CodexBarWidgetModels.swift in Sources */,
+				A46700000000000000031002 /* WidgetAccessGuard.swift in Sources */,
+				A46700000000000000031005 /* ProEntitlementValue.swift in Sources */,
+				A46700000000000000031003 /* ProEntitlementClock.swift in Sources */,
+				A46700000000000000031004 /* ProClockSupport.c in Sources */,
 				10000000000000000000002D /* WidgetSnapshotStore.swift in Sources */,
 				10000000000000000000003E /* UserFacingDateTimeFormatter.swift in Sources */,
 				10000000000000000000002E /* WidgetRefreshInterval.swift in Sources */,
@@ -1355,6 +1426,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A46700000000000000042005 /* ProClockSupport.c in Sources */,
+				A46700000000000000042003 /* ProEntitlementClock.swift in Sources */,
+				A46700000000000000042001 /* WatchAccessClockStore.swift in Sources */,
 				A22700000000000000000003 /* CursorUsageIdentity.swift in Sources */,
 				A42100000000000000000103 /* ClaudeFableUsageIdentity.swift in Sources */,
 				A22600000000000000000003 /* GreptileUsageIdentity.swift in Sources */,
@@ -1372,8 +1446,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A46700000000000000042007 /* WatchAccessTestSupport.swift in Sources */,
 				D10000000000000000000008 /* WatchComplicationCompatibilityTests.swift in Sources */,
 				D10000000000000000000006 /* WatchDashboardStateTests.swift in Sources */,
+				A46700000000000000020001 /* WatchComplicationConfiguration.swift in Sources */,
+				A46700000000000000010005 /* WatchProAccessTests.swift in Sources */,
+				A46700000000000000041001 /* WatchAccessRecoveryTests.swift in Sources */,
+				A46700000000000000043001 /* WatchAccessReaderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1381,6 +1460,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A46700000000000000042006 /* ProClockSupport.c in Sources */,
+				A46700000000000000042004 /* ProEntitlementClock.swift in Sources */,
+				A46700000000000000042002 /* WatchAccessClockStore.swift in Sources */,
 				A22700000000000000000004 /* CursorUsageIdentity.swift in Sources */,
 				A42100000000000000000104 /* ClaudeFableUsageIdentity.swift in Sources */,
 				A22600000000000000000004 /* GreptileUsageIdentity.swift in Sources */,
@@ -1682,6 +1764,7 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOSTests;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) CODEXBAR_PHONE_WATCH_TESTS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1713,6 +1796,7 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOSTests;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) CODEXBAR_PHONE_WATCH_TESTS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1725,6 +1809,8 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = CodexBarIOSWidget/CodexBarIOSWidget.entitlements;
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
+				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
@@ -1754,6 +1840,8 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = CodexBarIOSWidget/CodexBarIOSWidget.entitlements;
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
+				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = W2A23PX5BP;
@@ -1781,6 +1869,8 @@
 		DB0000000000000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
+				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CodexBarWatch/CodexBarWatch.entitlements;
@@ -1808,6 +1898,8 @@
 		DB0000000000000000000002 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
+				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CodexBarWatch/CodexBarWatch.entitlements;
@@ -1835,6 +1927,8 @@
 		DB0000000000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
+				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
@@ -1847,6 +1941,7 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOS.watchkitapp.tests;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) CODEXBAR_WATCH_TESTS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -1860,6 +1955,8 @@
 		DB0000000000000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
+				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
@@ -1872,6 +1969,7 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOS.watchkitapp.tests;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) CODEXBAR_WATCH_TESTS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -1885,6 +1983,8 @@
 		F3B000000000000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
+				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = CodexBarWatchWidget/CodexBarWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -1914,6 +2014,8 @@
 		F3B000000000000000000002 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
+				SWIFT_INCLUDE_PATHS = ("$(inherited)", "$(SRCROOT)/ProClockSupport/include");
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = CodexBarWatchWidget/CodexBarWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;

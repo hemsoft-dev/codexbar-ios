@@ -1,4 +1,7 @@
 import Foundation
+#if CODEXBAR_PHONE_WATCH_TESTS
+@testable import CodexBarIOS
+#endif
 
 enum WatchComplicationConstants {
     static let appGroupIdentifier = "group.com.hemsoft.CodexBarIOS"
@@ -58,8 +61,8 @@ struct WatchComplicationMetricChoice: Equatable, Sendable {
 struct WatchComplicationChoiceCatalog {
     private let snapshot: WatchDashboardSnapshot?
 
-    init(snapshot: WatchDashboardSnapshot?) {
-        self.snapshot = snapshot
+    init(snapshot: WatchDashboardSnapshot?, now: Date = Date()) {
+        self.snapshot = snapshot?.isLocked(at: now) == false ? snapshot : nil
     }
 
     var accounts: [WatchComplicationAccountChoice] {
@@ -144,6 +147,7 @@ struct WatchComplicationChoiceCatalog {
 }
 
 enum WatchComplicationAvailability: Equatable, Sendable {
+    case locked
     case empty
     case unavailable
     case value
@@ -160,6 +164,21 @@ struct WatchComplicationSample: Equatable, Sendable {
     let resetText: String?
     let freshnessText: String
     let isStale: Bool
+
+    static let lockedMessage = "Unlock the watch app with CodexBar Pro on iPhone"
+
+    static let locked = WatchComplicationSample(
+        availability: .locked,
+        providerName: "CodexBar",
+        accountLabel: "",
+        metricLabel: "Unlock with Pro",
+        exactValue: "",
+        usedFraction: nil,
+        severity: .normal,
+        resetText: nil,
+        freshnessText: "On iPhone",
+        isStale: false
+    )
 
     static let empty = WatchComplicationSample(
         availability: .empty,
@@ -197,6 +216,8 @@ struct WatchComplicationSample: Equatable, Sendable {
 
     var cornerContextLabel: String {
         switch availability {
+        case .locked:
+            return "Unlock with CodexBar Pro"
         case .empty:
             return "CodexBar"
         case .unavailable:
@@ -228,7 +249,8 @@ struct WatchComplicationSample: Equatable, Sendable {
     }
 
     var accessibilityLabel: String {
-        [
+        if availability == .locked { return Self.lockedMessage }
+        return [
             providerName,
             accountLabel,
             metricLabel,
@@ -252,6 +274,7 @@ struct WatchComplicationResolver {
         guard let snapshot else {
             return .empty
         }
+        guard !snapshot.isLocked(at: date) else { return .locked }
 
         let accounts = snapshot.accounts.filter { !$0.metrics.isEmpty }
         guard !accounts.isEmpty else {
@@ -298,6 +321,17 @@ struct WatchComplicationResolver {
         selection: WatchComplicationSelection,
         now: Date
     ) -> Date {
+        let usageDate = usageReloadDate(snapshot: snapshot, selection: selection, now: now)
+        guard let snapshot, !snapshot.isLocked(at: now),
+              let deadline = snapshot.proAccessEndsAt else { return usageDate }
+        return min(usageDate, deadline)
+    }
+
+    private func usageReloadDate(
+        snapshot: WatchDashboardSnapshot?,
+        selection: WatchComplicationSelection,
+        now: Date
+    ) -> Date {
         guard let snapshot else {
             return now.addingTimeInterval(30 * 60)
         }
@@ -333,6 +367,18 @@ struct WatchComplicationResolver {
         selection: WatchComplicationSelection,
         now: Date
     ) -> [Date] {
+        guard let snapshot else { return [now] }
+        guard !snapshot.isLocked(at: now) else { return [now] }
+        let usageDates = usageTimelineEntryDates(snapshot: snapshot, selection: selection, now: now)
+        guard let deadline = snapshot.proAccessEndsAt else { return usageDates }
+        return Array(Set(usageDates.filter { $0 < deadline } + [deadline])).sorted()
+    }
+
+    private func usageTimelineEntryDates(
+        snapshot: WatchDashboardSnapshot?,
+        selection: WatchComplicationSelection,
+        now: Date
+    ) -> [Date] {
         guard let snapshot else {
             return [now]
         }
@@ -343,7 +389,7 @@ struct WatchComplicationResolver {
         }
         let fetchedAt = displayed.metric.fetchedAt ?? displayed.account.fetchedAt
 
-        let staleDate = nextReloadDate(snapshot: snapshot, selection: selection, now: now)
+        let staleDate = usageReloadDate(snapshot: snapshot, selection: selection, now: now)
         guard !Self.isStale(
             snapshot: snapshot,
             metric: displayed.metric,
@@ -482,35 +528,99 @@ struct WatchComplicationResolver {
     }
 }
 
+struct WatchSnapshotPublication {
+    let changed: Bool
+    let accessInstalled: Bool
+}
+
 struct WatchComplicationSnapshotStore {
     private let defaults: UserDefaults
+    let accessClock: WatchAccessClockStore
+    private let clockSample: @Sendable (Date) -> ProEntitlementClockSample
+
+    init() {
+        self.init(
+            defaults: UserDefaults(suiteName: WatchComplicationConstants.appGroupIdentifier) ?? .standard,
+            accessClock: WatchAccessClockStore(directory: FileManager.default.containerURL(
+                forSecurityApplicationGroupIdentifier: WatchComplicationConstants.appGroupIdentifier
+            ))
+        )
+    }
 
     init(
-        defaults: UserDefaults = UserDefaults(
-            suiteName: WatchComplicationConstants.appGroupIdentifier
-        ) ?? .standard
+        defaults: UserDefaults, accessClock: WatchAccessClockStore,
+        clockSample: @escaping @Sendable (Date) -> ProEntitlementClockSample = { ProEntitlementSystemClock.sample(at: $0) }
     ) {
         self.defaults = defaults
+        self.accessClock = accessClock
+        self.clockSample = clockSample
     }
 
     func load() -> WatchDashboardSnapshot? {
-        guard let data = defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey) else {
-            return nil
-        }
+        guard let data = defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey) else { return nil }
         return try? WatchDashboardSnapshot.decode(data)
+    }
+
+    func loadForAccess(now: Date = Date()) -> WatchDashboardSnapshot? {
+        loadAccess(sample: clockSample(now))?.snapshot
+    }
+
+    func loadAccess(sample: ProEntitlementClockSample? = nil) -> WatchAccessDecision? {
+        guard let snapshot = load() else { return nil }
+        return accessDecision(for: snapshot, sample: sample ?? clockSample(Date()))
+    }
+
+    func accessDecision(for snapshot: WatchDashboardSnapshot, sample: ProEntitlementClockSample) -> WatchAccessDecision {
+        let decision = accessClock.decision(for: snapshot, sample: sample)
+        guard let deadline = snapshot.proAccessEndsAt else { return decision }
+        if decision.hasExpired { recordExpiration(deadline) }
+        if defaults.object(forKey: expirationKey(deadline)) != nil {
+            return WatchAccessDecision(source: snapshot, effectiveDate: nil, epoch: decision.epoch, hasExpired: true)
+        }
+        return decision
+    }
+
+    func recordExpiration(_ deadline: Date) {
+        guard deadline.timeIntervalSinceReferenceDate.isFinite else { return }
+        accessClock.recordExpiration(deadline)
+        // Only actual effective expiry or the original continuous boundary records this receipt.
+        defaults.set(true, forKey: expirationKey(deadline))
+    }
+
+    private func expirationKey(_ deadline: Date) -> String {
+        "watch.complication.expired-deadline.\(deadline.timeIntervalSinceReferenceDate)"
     }
 
     @discardableResult
     func saveIfChanged(
-        _ snapshot: WatchDashboardSnapshot,
-        encodedData: Data? = nil
+        _ snapshot: WatchDashboardSnapshot, encodedData: Data? = nil, sample: ProEntitlementClockSample? = nil
     ) throws -> Bool {
+        try publish(snapshot, encodedData: encodedData, sample: sample).changed
+    }
+
+    func publish(
+        _ snapshot: WatchDashboardSnapshot, encodedData: Data? = nil, sample: ProEntitlementClockSample? = nil,
+        origin: WatchAccessPublication? = nil
+    ) throws -> WatchSnapshotPublication {
         let data = try encodedData ?? snapshot.encoded()
-        guard defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey) != data else {
-            return false
+        let sample = sample ?? clockSample(Date())
+        let installed = installAccess(for: snapshot, sample: sample, origin: origin)
+        let changed = defaults.data(forKey: WatchComplicationConstants.snapshotDefaultsKey) != data
+        if changed { defaults.set(data, forKey: WatchComplicationConstants.snapshotDefaultsKey) }
+        return WatchSnapshotPublication(changed: changed, accessInstalled: installed)
+    }
+
+    @discardableResult
+    func installAccess(
+        for snapshot: WatchDashboardSnapshot, sample: ProEntitlementClockSample, origin: WatchAccessPublication? = nil
+    ) -> Bool {
+        let installed = accessClock.accept(snapshot, sample: sample, origin: origin)
+        if let deadline = snapshot.proAccessEndsAt {
+            let observed = [sample.wallDate, snapshot.proAccessEffectiveAt, origin?.anchor?.effectiveDate(at: sample)]
+                .compactMap { $0 }.filter { $0.timeIntervalSinceReferenceDate.isFinite }
+            if observed.contains(where: { $0 >= deadline }) { recordExpiration(deadline) }
         }
-        defaults.set(data, forKey: WatchComplicationConstants.snapshotDefaultsKey)
-        return true
+        return installed
     }
 }
 

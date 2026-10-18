@@ -315,7 +315,7 @@ final class WatchDashboardStateTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil
         )
@@ -341,7 +341,7 @@ final class WatchDashboardStateTests: XCTestCase {
         XCTAssertNotNil(store.decodingError)
         let reloaded = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil
         )
@@ -355,7 +355,7 @@ final class WatchDashboardStateTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil
         )
@@ -396,7 +396,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var requestCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, _ in
@@ -471,7 +471,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var requestCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, _ in requestCount += 1 },
@@ -526,7 +526,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var reloadCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: { reloadCount += 1 },
             session: nil,
             requestSnapshot: { replyHandler, _ in replyHandler(response) },
@@ -546,7 +546,7 @@ final class WatchDashboardStateTests: XCTestCase {
         let suiteName = "WatchDashboardStateTests.\(#function)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.removePersistentDomain(forName: suiteName)
-        let complicationStore = WatchComplicationSnapshotStore(defaults: defaults)
+        let complicationStore = WatchComplicationSnapshotStore(testDefaults: defaults)
         let older = WatchDashboardSnapshot(
             generatedAt: Date(timeIntervalSince1970: 2_000_000_000),
             refreshIntervalSeconds: 300,
@@ -594,7 +594,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var queuedRequestCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { reply, failure in
@@ -630,7 +630,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var queuedRequestCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { reply, failure in
@@ -660,7 +660,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var queuedRequestCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, _ in immediateRequestCount += 1 },
@@ -686,7 +686,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var queuedRequestCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, _ in },
@@ -717,7 +717,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var queuedRequestCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, _ in },
@@ -754,7 +754,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var transferIsOutstanding = true
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, _ in },
@@ -780,7 +780,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var replyHandler: (@MainActor (WatchDashboardSnapshotResponse) -> Void)?
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { handler, _ in replyHandler = handler },
@@ -848,7 +848,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var queuedRequestCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, errorHandler in
@@ -879,7 +879,7 @@ final class WatchDashboardStateTests: XCTestCase {
         )
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil
         )
@@ -909,7 +909,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var requestCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, _ in
@@ -943,7 +943,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var requestCount = 0
         var store: WatchDashboardStore? = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, _ in
@@ -969,7 +969,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var requestErrorHandler: ((WatchSnapshotRequestFailure) -> Void)?
         let store = WatchDashboardStore(
             defaults: defaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: defaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: defaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, errorHandler in
@@ -1008,7 +1008,7 @@ final class WatchDashboardStateTests: XCTestCase {
         var emptyRequestErrorHandler: ((WatchSnapshotRequestFailure) -> Void)?
         let emptyStore = WatchDashboardStore(
             defaults: emptyDefaults,
-            complicationStore: WatchComplicationSnapshotStore(defaults: emptyDefaults),
+            complicationStore: WatchComplicationSnapshotStore(testDefaults: emptyDefaults),
             reloadComplications: {},
             session: nil,
             requestSnapshot: { _, errorHandler in
@@ -1033,7 +1033,7 @@ final class WatchDashboardStateTests: XCTestCase {
         let suiteName = "WatchDashboardStateTests.\(#function)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.removePersistentDomain(forName: suiteName)
-        let complicationStore = WatchComplicationSnapshotStore(defaults: defaults)
+        let complicationStore = WatchComplicationSnapshotStore(testDefaults: defaults)
         let now = Date(timeIntervalSince1970: 2_000_000_000)
         let snapshot = WatchDashboardSnapshot(
             generatedAt: now,
@@ -1068,7 +1068,7 @@ final class WatchDashboardStateTests: XCTestCase {
         let suiteName = "WatchDashboardStateTests.\(#function)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.removePersistentDomain(forName: suiteName)
-        let complicationStore = WatchComplicationSnapshotStore(defaults: defaults)
+        let complicationStore = WatchComplicationSnapshotStore(testDefaults: defaults)
         let oldDate = Date(timeIntervalSince1970: 2_000_000_000)
         let oldSnapshot = WatchDashboardSnapshot(
             generatedAt: oldDate,
@@ -1122,7 +1122,7 @@ final class WatchDashboardStateTests: XCTestCase {
         let suiteName = "WatchDashboardStateTests.\(#function)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.removePersistentDomain(forName: suiteName)
-        let complicationStore = WatchComplicationSnapshotStore(defaults: defaults)
+        let complicationStore = WatchComplicationSnapshotStore(testDefaults: defaults)
         var reloadCount = 0
         let store = WatchDashboardStore(
             defaults: defaults,

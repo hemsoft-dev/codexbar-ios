@@ -225,7 +225,8 @@ struct CodexBarIOSApp: App {
             appUpdateController: appUpdateController,
             githubStatusPreferences: githubStatusPreferences,
             githubStatusMonitor: githubStatusMonitor,
-            performsLifecycleWork: performsLifecycleWork
+            performsLifecycleWork: performsLifecycleWork,
+            entitlement: proEntitlement
         )
     }
 

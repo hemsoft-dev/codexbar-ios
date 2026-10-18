@@ -8,14 +8,24 @@ struct CodexBarWidgetEntry: TimelineEntry {
     let snapshot: CodexBarWidgetSnapshot
     let configuration: CodexBarWidgetConfigurationIntent
     let isPreview: Bool
+    var accessContext = WidgetAccessContext()
+
+    var isProLocked: Bool {
+        !isPreview && (snapshot.isProLocked || accessContext.effectiveDate(for: snapshot) == nil)
+    }
 }
 
 struct CodexBarWidgetTimelinePlan {
     let entry: CodexBarWidgetEntry
+    let expirationEntry: CodexBarWidgetEntry?
     let nextRefreshDate: Date
 
+    var entries: [CodexBarWidgetEntry] {
+        [entry] + (expirationEntry.map { [$0] } ?? [])
+    }
+
     var timeline: Timeline<CodexBarWidgetEntry> {
-        Timeline(entries: [entry], policy: .after(nextRefreshDate))
+        Timeline(entries: entries, policy: .after(nextRefreshDate))
     }
 }
 
@@ -23,6 +33,7 @@ struct CodexBarWidgetTimelineLoader: Sendable {
     private let now: @Sendable () -> Date
     private let loadSnapshot: @Sendable (Bool) -> CodexBarWidgetSnapshot
     private let loadRefreshInterval: @Sendable () -> WidgetRefreshInterval
+    private let accessContext: WidgetAccessContext
 
     init(
         now: @escaping @Sendable () -> Date = { Date() },
@@ -31,11 +42,13 @@ struct CodexBarWidgetTimelineLoader: Sendable {
         },
         loadRefreshInterval: @escaping @Sendable () -> WidgetRefreshInterval = {
             WidgetSnapshotStore.loadRefreshInterval()
-        }
+        },
+        accessContext: WidgetAccessContext = WidgetAccessContext()
     ) {
         self.now = now
         self.loadSnapshot = loadSnapshot
         self.loadRefreshInterval = loadRefreshInterval
+        self.accessContext = accessContext
     }
 
     func placeholder(configuration: CodexBarWidgetConfigurationIntent) -> CodexBarWidgetEntry {
@@ -55,7 +68,8 @@ struct CodexBarWidgetTimelineLoader: Sendable {
             date: now(),
             snapshot: loadSnapshot(isPreview),
             configuration: configuration,
-            isPreview: isPreview
+            isPreview: isPreview,
+            accessContext: accessContext
         )
     }
 
@@ -71,14 +85,38 @@ struct CodexBarWidgetTimelineLoader: Sendable {
         let date = now()
         let snapshot = loadSnapshot(false)
         let interval = configuration.refreshPolicy.interval(fallback: loadRefreshInterval())
+        let expirationEntry: CodexBarWidgetEntry?
+        if let effectiveDate = accessContext.effectiveDate(for: snapshot), let deadline = snapshot.proAccessEndsAt {
+            let projectedDeadline = date.addingTimeInterval(max(0, deadline.timeIntervalSince(effectiveDate)))
+            // A reload request may be deferred by WidgetKit. Keep the access boundary
+            // in the timeline even when the ordinary refresh is requested sooner.
+            expirationEntry = CodexBarWidgetEntry(
+                date: projectedDeadline,
+                snapshot: CodexBarWidgetSnapshot(
+                    generatedAt: snapshot.generatedAt,
+                    results: [],
+                    isProLocked: true,
+                    proAccessEndsAt: deadline
+                ),
+                configuration: configuration,
+                isPreview: false
+            )
+        } else {
+            expirationEntry = nil
+        }
         return CodexBarWidgetTimelinePlan(
             entry: CodexBarWidgetEntry(
                 date: date,
                 snapshot: snapshot,
                 configuration: configuration,
-                isPreview: false
+                isPreview: false,
+                accessContext: accessContext
             ),
-            nextRefreshDate: date.addingTimeInterval(interval.seconds)
+            expirationEntry: expirationEntry,
+            nextRefreshDate: min(
+                date.addingTimeInterval(interval.seconds),
+                expirationEntry?.date ?? .distantFuture
+            )
         )
     }
 }
@@ -335,15 +373,19 @@ struct CodexBarWidgetGroupChoice: AppEntity {
 
 struct CodexBarWidgetGroupChoiceQuery: EntityStringQuery {
     private let loadSnapshot: @Sendable () -> CodexBarWidgetSnapshot
+    private let accessContext: WidgetAccessContext
 
     init() {
         loadSnapshot = { WidgetSnapshotStore.loadSnapshot() }
+        accessContext = WidgetAccessContext()
     }
 
     init(
-        loadSnapshot: @escaping @Sendable () -> CodexBarWidgetSnapshot
+        loadSnapshot: @escaping @Sendable () -> CodexBarWidgetSnapshot,
+        accessContext: WidgetAccessContext = WidgetAccessContext()
     ) {
         self.loadSnapshot = loadSnapshot
+        self.accessContext = accessContext
     }
 
     func entities(for identifiers: [CodexBarWidgetGroupChoice.ID]) async throws -> [CodexBarWidgetGroupChoice] {
@@ -369,7 +411,7 @@ struct CodexBarWidgetGroupChoiceQuery: EntityStringQuery {
     }
 
     private func choices() -> [CodexBarWidgetGroupChoice] {
-        loadSnapshot().groupChoices
+        accessContext.readable(loadSnapshot()).groupChoices
     }
 }
 
@@ -377,27 +419,31 @@ struct CodexBarWidgetTileChoiceQuery: EntityStringQuery {
     @IntentParameterDependency<CodexBarWidgetConfigurationIntent>(\.$group, \.$focus)
     var intent
     private let loadSnapshot: @Sendable () -> CodexBarWidgetSnapshot
+    private let accessContext: WidgetAccessContext
     private let groupOverride: CodexBarWidgetGroupChoice?
     private let focusOverride: CodexBarWidgetFocus?
 
     init() {
         loadSnapshot = { WidgetSnapshotStore.loadSnapshot() }
+        accessContext = WidgetAccessContext()
         groupOverride = nil
         focusOverride = nil
     }
 
     init(
         loadSnapshot: @escaping @Sendable () -> CodexBarWidgetSnapshot,
+        accessContext: WidgetAccessContext = WidgetAccessContext(),
         group: CodexBarWidgetGroupChoice? = nil,
         focus: CodexBarWidgetFocus? = nil
     ) {
         self.loadSnapshot = loadSnapshot
+        self.accessContext = accessContext
         self.groupOverride = group
         self.focusOverride = focus
     }
 
     func entities(for identifiers: [CodexBarWidgetTileChoice.ID]) async throws -> [CodexBarWidgetTileChoice] {
-        let snapshot = loadSnapshot()
+        let snapshot = accessContext.readable(loadSnapshot())
         let choices = Self.choices(
             snapshot: snapshot,
             group: groupOverride ?? intent?.group,
@@ -436,7 +482,7 @@ struct CodexBarWidgetTileChoiceQuery: EntityStringQuery {
 
     private func choices() -> [CodexBarWidgetTileChoice] {
         Self.choices(
-            snapshot: loadSnapshot(),
+            snapshot: accessContext.readable(loadSnapshot()),
             group: groupOverride ?? intent?.group,
             focus: focusOverride ?? intent?.focus ?? .dashboardOrder
         )

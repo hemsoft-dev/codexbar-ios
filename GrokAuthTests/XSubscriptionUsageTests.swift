@@ -345,12 +345,14 @@ final class XSubscriptionAccountTests: XCTestCase {
                 """.utf8),
             configuration: account, subject: "one", now: now, verifiedPlanName: "Premium"
         )
-        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, snapshotDefaults: defaults)
+        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil))
         let widget = try XCTUnwrap(WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first)
         XCTAssertEqual(widget.providerID, ProviderID.xSubscription.rawValue)
         XCTAssertEqual(widget.bars.compactMap(\.metricID), [XSubscriptionCopy.poolMetricID])
         XCTAssertEqual(try XCTUnwrap(widget.bars.first?.fractionUsed), 0.38, accuracy: 0.0001)
-        let watch = try XCTUnwrap(WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store).accounts.first)
+        let watch = try XCTUnwrap(WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil)).accounts.first)
         XCTAssertEqual(watch.providerName, "X Subscription")
         XCTAssertEqual(
             watch.metrics.map(\.id), [XSubscriptionCopy.poolMetricID, "xSubscription.monetary.balance.usd"],

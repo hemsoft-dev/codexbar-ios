@@ -56,6 +56,11 @@ building, testing, or releasing the app.
 
 ### Changed
 
+- Widgets, the Apple Watch app, and complications require CodexBar Pro. They
+  show an unlock message when access ends, including while the iPhone is
+  offline. Upgrading restores them with your saved selections intact.
+  ([#467](https://github.com/hemsoft-dev/codexbar-ios/issues/467))
+
 - Use CodexBar free with one active account and seven days of history. If Pro
   ends, choose which account keeps refreshing while the others show their last
   values. Saved accounts, credentials, history, and alert preferences remain on

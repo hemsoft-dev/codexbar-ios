@@ -41,6 +41,7 @@ final class DashboardOrchestrator: ObservableObject {
         historyStore: UsageHistoryStore,
         usageAlertNotifier: any UsageAlertNotifying,
         appReviewPromptPolicy: AppReviewPromptPolicy,
+        entitlement: ProEntitlement? = nil,
         widgetSnapshotCoordinator: WidgetSnapshotCoordinator? = nil,
         watchSnapshotCoordinator: WatchSnapshotCoordinator? = nil
     ) {
@@ -51,11 +52,13 @@ final class DashboardOrchestrator: ObservableObject {
         self.appReviewPromptPolicy = appReviewPromptPolicy
         self.widgetSnapshotCoordinator = widgetSnapshotCoordinator ?? WidgetSnapshotCoordinator(
             refreshService: refreshService,
-            configurationStore: configurationStore
+            configurationStore: configurationStore,
+            entitlement: entitlement
         )
         self.watchSnapshotCoordinator = watchSnapshotCoordinator ?? WatchSnapshotCoordinator(
             refreshService: refreshService,
-            configurationStore: configurationStore
+            configurationStore: configurationStore,
+            entitlement: entitlement
         )
 
         configurationStore.credentialChanges.sink { [weak refreshService] accountID in
@@ -548,11 +551,16 @@ final class DashboardOrchestrator: ObservableObject {
 final class WidgetSnapshotCoordinator {
     typealias SnapshotPublisher = @MainActor ([ProviderUsageResult], ProviderConfigurationStore) -> Void
     typealias SettingsPublisher = @MainActor (ProviderConfigurationStore) -> Void
+    typealias AccessPublisher = @MainActor (
+        [ProviderUsageResult], ProviderConfigurationStore, SnapshotProAccess
+    ) -> Void
 
     private let refreshService: UsageRefreshService
     private let configurationStore: ProviderConfigurationStore
     private let publishSnapshot: SnapshotPublisher
     private let publishSettings: SettingsPublisher
+    private let entitlement: ProEntitlement?
+    private let accessPublisher: AccessPublisher?
     private var cancellables: Set<AnyCancellable> = []
     private var snapshotPublishTask: Task<Void, Never>?
     private var settingsPublishTask: Task<Void, Never>?
@@ -560,16 +568,22 @@ final class WidgetSnapshotCoordinator {
     init(
         refreshService: UsageRefreshService,
         configurationStore: ProviderConfigurationStore,
-        publishSnapshot: @escaping SnapshotPublisher = { results, store in
-            WidgetSnapshotPublisher.publish(results: results, configurationStore: store)
-        },
+        entitlement: ProEntitlement? = nil,
+        publishSnapshot: SnapshotPublisher? = nil,
+        accessPublisher: AccessPublisher? = nil,
         publishSettings: @escaping SettingsPublisher = { store in
             WidgetSnapshotPublisher.publishSettings(configurationStore: store)
         }
     ) {
         self.refreshService = refreshService
         self.configurationStore = configurationStore
-        self.publishSnapshot = publishSnapshot
+        self.entitlement = entitlement
+        self.accessPublisher = accessPublisher
+        self.publishSnapshot = publishSnapshot ?? { results, store in
+            WidgetSnapshotPublisher.publish(
+                results: results, configurationStore: store, access: SnapshotProAccess(entitlement: entitlement)
+            )
+        }
         self.publishSettings = publishSettings
 
         refreshService.$results.dropFirst().sink { [weak self] _ in
@@ -600,10 +614,19 @@ final class WidgetSnapshotCoordinator {
         configurationStore.$widgetRefreshInterval.dropFirst().sink { [weak self] _ in
             self?.scheduleSettingsPublish()
         }.store(in: &cancellables)
+        // This committed stream also emits deadline changes and clock-only denial.
+        entitlement?.accessChanges.sink { [weak self] _ in
+            self?.scheduleSnapshotPublish()
+        }.store(in: &cancellables)
+        if entitlement != nil { scheduleSnapshotPublish() }
     }
 
     func publishCurrentSnapshot() {
-        publishSnapshot(refreshService.results, configurationStore)
+        if let accessPublisher {
+            accessPublisher(refreshService.results, configurationStore, SnapshotProAccess(entitlement: entitlement))
+        } else {
+            publishSnapshot(refreshService.results, configurationStore)
+        }
     }
 
     private func scheduleSnapshotPublish() {

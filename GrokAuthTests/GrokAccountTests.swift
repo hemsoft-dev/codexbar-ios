@@ -143,7 +143,8 @@ final class GrokAccountTests: XCTestCase {
         let refresh = UsageRefreshService(providers: [], initialResults: [result])
         refresh.updateGrokResultTitle("Grok", accountID: account.id)
         XCTAssertEqual(refresh.results.first?.title, "Grok")
-        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, snapshotDefaults: defaults)
+        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil))
         XCTAssertEqual(WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first?.title, "Grok")
     }
 

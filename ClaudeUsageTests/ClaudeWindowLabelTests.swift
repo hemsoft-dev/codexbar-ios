@@ -113,9 +113,13 @@ final class ClaudeWindowLabelTests: XCTestCase {
             UsageAlertEvaluator.evaluate(results: [old], settings: settings, activeAlertIDs: []).activeAlertIDs,
             UsageAlertEvaluator.evaluate(results: [current], settings: settings, activeAlertIDs: []).activeAlertIDs
         )
-        WidgetSnapshotPublisher.publish(results: [old], configurationStore: store, snapshotDefaults: defaults, now: now)
+        WidgetSnapshotPublisher.publish(results: [old], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         let oldTiles = try XCTUnwrap(WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first)
-        WidgetSnapshotPublisher.publish(results: [current], configurationStore: store, snapshotDefaults: defaults, now: now)
+        WidgetSnapshotPublisher.publish(results: [current], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         let tiles = try XCTUnwrap(snapshot.results.first)
         XCTAssertEqual(tiles.bars.map(\.id), oldTiles.bars.map(\.id))
@@ -124,7 +128,8 @@ final class ClaudeWindowLabelTests: XCTestCase {
         XCTAssertEqual(tiles.bars.map(\.label), ["5-hour", "Weekly"])
         XCTAssertEqual(tiles.bars.map(\.fractionUsed), [0.42, 0.64])
         for tile in oldTiles.bars { XCTAssertNotNil(snapshot.builderTile(resolvingSavedID: "bar.\(tile.id)")) }
-        let watch = WatchSnapshotPublisher.makeSnapshot(results: [current], configurationStore: store, now: now)
+        let watch = WatchSnapshotPublisher.makeSnapshot(results: [current], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: now)
         let watchMetrics = try XCTUnwrap(watch.accounts.first).metrics
         XCTAssertEqual(watchMetrics.map(\.id), Array(metricIDs.reversed()))
         XCTAssertEqual(watchMetrics.map(\.label), ["Weekly", "5-hour"])
@@ -156,7 +161,9 @@ final class ClaudeWindowLabelTests: XCTestCase {
                     accountID: account.id, providerID: .claude, title: "Synthetic Claude",
                     subtitle: "Synthetic", bars: bars, fetchedAt: now
                 )
-                WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, snapshotDefaults: defaults, now: now)
+                WidgetSnapshotPublisher.publish(results: [result], configurationStore: store,
+                    access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+                    snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
                 let tile = try XCTUnwrap(WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first?.bars.first)
                 let suffix = scoped ? "other-models-5-hour-usage-limit" : "5-hour-usage-limit"
                 XCTAssertEqual(tile.id, "\(account.id).0.\(suffix)")
@@ -182,14 +189,18 @@ final class ClaudeWindowLabelTests: XCTestCase {
             accountID: account.id, providerID: .claude, title: "Synthetic Claude",
             subtitle: "Synthetic", bars: parsed.bars, fetchedAt: now
         )
-        WidgetSnapshotPublisher.publish(results: [all], configurationStore: store, snapshotDefaults: defaults, now: now)
+        WidgetSnapshotPublisher.publish(results: [all], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         let before = try XCTUnwrap(WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first)
         XCTAssertEqual(before.bars[1].id, "\(account.id).1.5-hour-usage-limit")
         let filtered = ProviderUsageResult(
             accountID: account.id, providerID: .claude, title: all.title,
             subtitle: all.subtitle, bars: Array(parsed.bars.dropFirst()), fetchedAt: now
         )
-        WidgetSnapshotPublisher.publish(results: [filtered], configurationStore: store, snapshotDefaults: defaults, now: now)
+        WidgetSnapshotPublisher.publish(results: [filtered], configurationStore: store,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         let saved = try XCTUnwrap(snapshot.builderTile(resolvingSavedID: "bar.\(account.id).1.5-hour-usage-limit"))
         XCTAssertEqual(saved.title, "5-hour")

@@ -1,74 +1,109 @@
 import AppIntents
 import Foundation
+#if CODEXBAR_PHONE_WATCH_TESTS
+@testable import CodexBarIOS
+#endif
 import WidgetKit
+#if CODEXBAR_WATCH_TESTS
+@testable import CodexBarWatch
+#endif
 
 struct WatchComplicationEntry: TimelineEntry {
     let date: Date
-    let sample: WatchComplicationSample
+    private let projectedSample: WatchComplicationSample
     let configuration: WatchComplicationConfigurationIntent
+    private let accessEpoch: UUID?
+    private let loadAccess: (() -> WatchAccessDecision?)?
+
+    init(
+        date: Date, sample: WatchComplicationSample, configuration: WatchComplicationConfigurationIntent,
+        accessEpoch: UUID? = nil, loadAccess: (() -> WatchAccessDecision?)? = nil
+    ) {
+        self.date = date
+        projectedSample = sample
+        self.configuration = configuration
+        self.accessEpoch = accessEpoch
+        self.loadAccess = loadAccess
+    }
+
+    var sample: WatchComplicationSample {
+        // Future locked entries and explicit gallery previews never observe a synthetic future date.
+        guard projectedSample.availability != .locked, let loadAccess else { return projectedSample }
+        guard let decision = loadAccess(), decision.epoch == accessEpoch, !decision.isLocked else { return .locked }
+        return projectedSample
+    }
 }
 
 struct WatchComplicationTimelineLoader {
     private let resolver: WatchComplicationResolver
     private let now: () -> Date
-    private let loadSnapshot: () -> WatchDashboardSnapshot?
+    private let loadAccess: () -> WatchAccessDecision?
+    private let checksRetainedAccess: Bool
 
     init(
         resolver: WatchComplicationResolver = WatchComplicationResolver(),
         now: @escaping () -> Date = { Date() },
-        loadSnapshot: @escaping () -> WatchDashboardSnapshot? = {
-            WatchComplicationSnapshotStore().load()
-        }
+        loadSnapshot: (() -> WatchDashboardSnapshot?)? = nil,
+        loadAccess: (() -> WatchAccessDecision?)? = nil
     ) {
         self.resolver = resolver
         self.now = now
-        self.loadSnapshot = loadSnapshot
+        if let loadAccess {
+            self.loadAccess = loadAccess
+            checksRetainedAccess = true
+        } else if let loadSnapshot {
+            // Explicit fixture loaders retain their pure resolver behavior.
+            self.loadAccess = {
+                loadSnapshot().map { WatchAccessDecision(source: $0, effectiveDate: now(), epoch: nil, hasExpired: false) }
+            }
+            checksRetainedAccess = false
+        } else {
+            self.loadAccess = { WatchComplicationSnapshotStore().loadAccess() }
+            checksRetainedAccess = true
+        }
     }
 
     func entry(
         configuration: WatchComplicationConfigurationIntent,
         date: Date? = nil
     ) -> WatchComplicationEntry {
-        let entryDate = date ?? now()
-        let snapshot = loadSnapshot()
-        return WatchComplicationEntry(
-            date: entryDate,
-            sample: resolver.resolve(
-                snapshot: snapshot,
-                selection: configuration.selection(in: snapshot),
-                at: entryDate
-            ),
-            configuration: configuration
+        let wallNow = now()
+        let entryDate = date ?? wallNow
+        let decision = loadAccess()
+        let effective = decision?.effectiveDate ?? wallNow
+        return makeEntry(
+            configuration: configuration, decision: decision, date: entryDate,
+            effectiveDate: effective.addingTimeInterval(max(0, entryDate.timeIntervalSince(wallNow)))
         )
     }
 
-    func timeline(
-        configuration: WatchComplicationConfigurationIntent
-    ) -> Timeline<WatchComplicationEntry> {
-        let date = now()
-        let snapshot = loadSnapshot()
+    func timeline(configuration: WatchComplicationConfigurationIntent) -> Timeline<WatchComplicationEntry> {
+        let wallNow = now()
+        let decision = loadAccess()
+        let snapshot = decision?.snapshot
+        let effective = decision?.effectiveDate ?? wallNow
         let selection = configuration.selection(in: snapshot)
-        let entries = resolver.timelineEntryDates(
-            snapshot: snapshot,
-            selection: selection,
-            now: date
-        ).map { entryDate in
-            WatchComplicationEntry(
-                date: entryDate,
-                sample: resolver.resolve(
-                    snapshot: snapshot,
-                    selection: selection,
-                    at: entryDate
-                ),
-                configuration: configuration
+        let entries = resolver.timelineEntryDates(snapshot: snapshot, selection: selection, now: effective).map { effectiveEntry in
+            makeEntry(
+                configuration: configuration, decision: decision,
+                date: wallNow.addingTimeInterval(effectiveEntry.timeIntervalSince(effective)), effectiveDate: effectiveEntry
             )
         }
-        let nextReload = resolver.nextReloadDate(
-            snapshot: snapshot,
-            selection: selection,
-            now: date
-        )
+        let effectiveReload = resolver.nextReloadDate(snapshot: snapshot, selection: selection, now: effective)
+        let nextReload = wallNow.addingTimeInterval(effectiveReload.timeIntervalSince(effective))
         return Timeline(entries: entries, policy: .after(nextReload))
+    }
+
+    private func makeEntry(
+        configuration: WatchComplicationConfigurationIntent, decision: WatchAccessDecision?, date: Date, effectiveDate: Date
+    ) -> WatchComplicationEntry {
+        let snapshot = decision?.snapshot
+        return WatchComplicationEntry(
+            date: date,
+            sample: resolver.resolve(snapshot: snapshot, selection: configuration.selection(in: snapshot), at: effectiveDate),
+            configuration: configuration, accessEpoch: decision?.epoch,
+            loadAccess: checksRetainedAccess ? loadAccess : nil
+        )
     }
 }
 
@@ -148,6 +183,22 @@ struct WatchComplicationAccountEntity: AppEntity {
 }
 
 struct WatchComplicationAccountQuery: EntityQuery {
+    private let loadSnapshot: @Sendable () -> WatchDashboardSnapshot?
+    private let now: @Sendable () -> Date
+
+    init() {
+        loadSnapshot = { WatchComplicationSnapshotStore().loadForAccess() }
+        now = { Date() }
+    }
+
+    init(
+        loadSnapshot: @escaping @Sendable () -> WatchDashboardSnapshot?,
+        now: @escaping @Sendable () -> Date = { Date() }
+    ) {
+        self.loadSnapshot = loadSnapshot
+        self.now = now
+    }
+
     func entities(for identifiers: [String]) async throws -> [WatchComplicationAccountEntity] {
         accountCatalog()
             .accounts(for: identifiers)
@@ -163,7 +214,7 @@ struct WatchComplicationAccountQuery: EntityQuery {
     }
 
     private func accountCatalog() -> WatchComplicationChoiceCatalog {
-        WatchComplicationChoiceCatalog(snapshot: WatchComplicationSnapshotStore().load())
+        WatchComplicationChoiceCatalog(snapshot: loadSnapshot(), now: now())
     }
 }
 
@@ -196,6 +247,22 @@ struct WatchComplicationMetricEntity: AppEntity {
 }
 
 struct WatchComplicationMetricQuery: EntityQuery {
+    private let loadSnapshot: @Sendable () -> WatchDashboardSnapshot?
+    private let now: @Sendable () -> Date
+
+    init() {
+        loadSnapshot = { WatchComplicationSnapshotStore().loadForAccess() }
+        now = { Date() }
+    }
+
+    init(
+        loadSnapshot: @escaping @Sendable () -> WatchDashboardSnapshot?,
+        now: @escaping @Sendable () -> Date = { Date() }
+    ) {
+        self.loadSnapshot = loadSnapshot
+        self.now = now
+    }
+
     func entities(for identifiers: [String]) async throws -> [WatchComplicationMetricEntity] {
         metricCatalog()
             .metrics(for: identifiers)
@@ -211,7 +278,7 @@ struct WatchComplicationMetricQuery: EntityQuery {
     }
 
     private func metricCatalog() -> WatchComplicationChoiceCatalog {
-        WatchComplicationChoiceCatalog(snapshot: WatchComplicationSnapshotStore().load())
+        WatchComplicationChoiceCatalog(snapshot: loadSnapshot(), now: now())
     }
 }
 

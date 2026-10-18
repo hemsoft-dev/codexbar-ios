@@ -1583,7 +1583,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         let snapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: result.fetchedAt
         )
 
@@ -1617,7 +1617,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         XCTAssertTrue(store.removeAccount(configuration))
         let afterRemoval = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: result.fetchedAt
         )
         XCTAssertTrue(afterRemoval.accounts.isEmpty)
@@ -1663,7 +1663,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         let metrics = try XCTUnwrap(
             WatchSnapshotPublisher.makeSnapshot(
                 results: [result],
-                configurationStore: store,
+                configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
                 now: fetchedAt
             ).accounts.first?.metrics
         )
@@ -1718,13 +1718,13 @@ final class DashboardAndSettingsTests: XCTestCase {
         store.updateDashboardCardOrder([first.id, second.id])
         let original = WatchSnapshotPublisher.makeSnapshot(
             results: results,
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: now
         )
         store.updateDashboardCardOrder([second.id, first.id])
         let reordered = WatchSnapshotPublisher.makeSnapshot(
             results: results,
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: now
         )
 
@@ -1926,7 +1926,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         let hiddenSnapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: result.fetchedAt
         )
         XCTAssertEqual(
@@ -1937,7 +1937,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         store.updateMetricVisibility(true, accountID: configuration.id, metricID: sessionID)
         let restoredSnapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: result.fetchedAt
         )
         XCTAssertEqual(
@@ -1949,7 +1949,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         store.updateMetricVisibility(true, accountID: configuration.id, metricID: spentID)
         let allVisibleSnapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: result.fetchedAt
         )
         XCTAssertEqual(
@@ -2021,7 +2021,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         )
         let snapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: result.fetchedAt
         )
 
@@ -2066,7 +2066,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         let snapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: result.fetchedAt
         )
 
@@ -2136,7 +2136,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         let snapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: refreshedAt
         )
 
@@ -2184,7 +2184,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         let snapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: fetchedAt
         )
 
@@ -2213,7 +2213,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         )
         let resetSnapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [resetResult],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: fetchedAt
         )
         let resetMetric = try XCTUnwrap(resetSnapshot.accounts.first?.metrics.first)
@@ -2242,7 +2242,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         )
         let staleSnapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [staleResult],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: fetchedAt
         )
         XCTAssertNil(staleSnapshot.accounts.first?.metrics.first?.resetText)
@@ -2274,7 +2274,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         let snapshot = WatchSnapshotPublisher.makeSnapshot(
             results: [result],
-            configurationStore: store,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
             now: fetchedAt
         )
 
@@ -2313,7 +2313,13 @@ final class DashboardAndSettingsTests: XCTestCase {
             refreshService: service,
             configurationStore: store,
             sender: sender,
-            coalescingDelay: .milliseconds(5)
+            coalescingDelay: .milliseconds(5),
+            publishSnapshot: { results, store, force in
+                WatchSnapshotPublisher.publish(
+                    results: results, configurationStore: store,
+                    access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), sender: sender, force: force
+                )
+            }
         )
 
         XCTAssertEqual(sender.activationCount, 0)
@@ -2335,7 +2341,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         XCTAssertEqual(sender.publishedForces, [true, false])
         XCTAssertEqual(
-            sender.snapshots.last?.accounts[0].metrics[0].visualizationStyle,
+            try XCTUnwrap(sender.snapshots.last?.accounts.first?.metrics.first).visualizationStyle,
             .largeNumeric
         )
 
@@ -2519,7 +2525,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         }
         let sender = RecordingWatchSnapshotSender()
         _ = sender.publish(
-            WatchSnapshotPublisher.makeSnapshot(results: previousResults, configurationStore: store, now: fetchedAt),
+            WatchSnapshotPublisher.makeSnapshot(results: previousResults, configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: fetchedAt),
             force: false
         )
         XCTAssertEqual(sender.snapshots.last?.accounts.count, 2)
@@ -2529,24 +2535,27 @@ final class DashboardAndSettingsTests: XCTestCase {
 
     @MainActor
     func testPhoneWatchConnectivityCoordinatorHandlesSnapshotRequestsAndWatchStateChanges() throws {
-        let sender = PhoneWatchConnectivityCoordinator(session: nil)
+        let defaults = UserDefaults(suiteName: #function)!
+        defaults.removePersistentDomain(forName: #function)
+        defer { defaults.removePersistentDomain(forName: #function) }
+        let sender = PhoneWatchConnectivityCoordinator(session: nil, defaults: defaults)
         var snapshotNeededCount = 0
         sender.activate { _ in
             snapshotNeededCount += 1
         }
 
         XCTAssertFalse(sender.handleMessage(["unrelated": true]))
-        XCTAssertEqual(snapshotNeededCount, 0)
+        XCTAssertEqual(snapshotNeededCount, 1)
 
         XCTAssertFalse(
             sender.handleMessage([
                 WatchDashboardSnapshot.snapshotRequestKey: "not-a-boolean",
             ])
         )
-        XCTAssertEqual(snapshotNeededCount, 0)
+        XCTAssertEqual(snapshotNeededCount, 1)
 
         XCTAssertTrue(sender.handleMessage(WatchDashboardSnapshot.snapshotRequestMessage))
-        XCTAssertEqual(snapshotNeededCount, 1)
+        XCTAssertEqual(snapshotNeededCount, 2)
 
         var unavailableResponse: WatchDashboardSnapshotResponse?
         XCTAssertTrue(
@@ -2558,7 +2567,7 @@ final class DashboardAndSettingsTests: XCTestCase {
             )
         )
         XCTAssertEqual(unavailableResponse, .unavailable)
-        XCTAssertEqual(snapshotNeededCount, 2)
+        XCTAssertEqual(snapshotNeededCount, 3)
 
         let snapshot = WatchDashboardSnapshot(
             generatedAt: Date(timeIntervalSince1970: 2_000_000_000),
@@ -2575,17 +2584,17 @@ final class DashboardAndSettingsTests: XCTestCase {
                 }
             )
         )
-        XCTAssertEqual(try XCTUnwrap(response).decode(), snapshot)
-        XCTAssertEqual(snapshotNeededCount, 3)
+        XCTAssertEqual(response, .unavailable)
+        XCTAssertEqual(snapshotNeededCount, 4)
 
         XCTAssertFalse(sender.handleUserInfo(["unrelated": true]))
         XCTAssertTrue(
             sender.handleUserInfo(WatchDashboardSnapshot.snapshotRequestMessage)
         )
-        XCTAssertEqual(snapshotNeededCount, 4)
+        XCTAssertEqual(snapshotNeededCount, 5)
 
         sender.watchStateDidChange()
-        XCTAssertEqual(snapshotNeededCount, 4)
+        XCTAssertEqual(snapshotNeededCount, 5)
     }
 
     @MainActor

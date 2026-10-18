@@ -41,9 +41,14 @@ private extension WatchMetricVisualizationStyle {
 
 @MainActor
 protocol WatchSnapshotSending: AnyObject {
+    var retainedSnapshot: WatchDashboardSnapshot? { get }
     func activate(onSnapshotNeeded: @escaping @MainActor (_ force: Bool) -> Void)
     @discardableResult
     func publish(_ snapshot: WatchDashboardSnapshot, force: Bool) -> Bool
+}
+
+extension WatchSnapshotSending {
+    var retainedSnapshot: WatchDashboardSnapshot? { nil }
 }
 
 struct WatchSnapshotDeduplicator {
@@ -64,10 +69,25 @@ enum WatchSnapshotPublisher {
     static func makeSnapshot(
         results: [ProviderUsageResult],
         configurationStore: ProviderConfigurationStore,
+        access: SnapshotProAccess = .locked,
+        retainedSnapshot: WatchDashboardSnapshot? = nil,
         now: Date = Date(),
         dateTimeFormatter: UserFacingDateTimeFormatter = .current
     ) -> WatchDashboardSnapshot {
-        let orderedResults = orderedDisplayableResults(
+        if !access.isProLocked, results.isEmpty, let retainedSnapshot {
+            let eligibleIDs = Set(configurationStore.configurations.filter {
+                configurationStore.shouldDisplayOnDashboard($0)
+                    && !configurationStore.accountAccess.isPaused(accountID: $0.id)
+            }.map { snapshotAccountID(providerID: $0.providerID, configurationID: $0.id) })
+            return WatchDashboardSnapshot(
+                generatedAt: retainedSnapshot.generatedAt,
+                refreshIntervalSeconds: configurationStore.autoRefreshInterval.seconds,
+                accounts: retainedSnapshot.accounts.filter { eligibleIDs.contains($0.id) },
+                isProLocked: false, proAccessEndsAt: access.proAccessEndsAt,
+                proAccessEffectiveAt: access.proAccessEffectiveAt
+            )
+        }
+        let orderedResults = access.isProLocked ? [] : orderedDisplayableResults(
             results: results,
             configurationStore: configurationStore,
             now: now
@@ -195,7 +215,10 @@ enum WatchSnapshotPublisher {
                     fetchedAt: displayedDataFetchedAt,
                     metrics: metrics
                 )
-            }
+            },
+            isProLocked: access.isProLocked,
+            proAccessEndsAt: access.proAccessEndsAt,
+            proAccessEffectiveAt: access.proAccessEffectiveAt
         )
     }
 
@@ -212,6 +235,7 @@ enum WatchSnapshotPublisher {
     static func publish(
         results: [ProviderUsageResult],
         configurationStore: ProviderConfigurationStore,
+        access: SnapshotProAccess = .locked,
         sender: (any WatchSnapshotSending)? = nil,
         now: Date = Date(),
         force: Bool = false
@@ -221,6 +245,8 @@ enum WatchSnapshotPublisher {
             makeSnapshot(
                 results: results,
                 configurationStore: configurationStore,
+                access: access,
+                retainedSnapshot: resolvedSender.retainedSnapshot,
                 now: now
             ),
             force: force
@@ -339,6 +365,12 @@ final class WatchSnapshotCoordinator {
     private let configurationStore: ProviderConfigurationStore
     private let sender: any WatchSnapshotSending
     private let publishSnapshot: SnapshotPublisher
+    typealias AccessPublisher = @MainActor (
+        [ProviderUsageResult], ProviderConfigurationStore, SnapshotProAccess, Bool
+    ) -> Void
+
+    private let entitlement: ProEntitlement?
+    private let accessPublisher: AccessPublisher?
     private let coalescingDelay: Duration
     private var cancellables: Set<AnyCancellable> = []
     private var snapshotPublishTask: Task<Void, Never>?
@@ -347,19 +379,24 @@ final class WatchSnapshotCoordinator {
     init(
         refreshService: UsageRefreshService,
         configurationStore: ProviderConfigurationStore,
+        entitlement: ProEntitlement? = nil,
         sender: (any WatchSnapshotSending)? = nil,
         coalescingDelay: Duration = .milliseconds(250),
-        publishSnapshot: SnapshotPublisher? = nil
+        publishSnapshot: SnapshotPublisher? = nil,
+        accessPublisher: AccessPublisher? = nil
     ) {
         let resolvedSender = sender ?? PhoneWatchConnectivityCoordinator.shared
         self.refreshService = refreshService
         self.configurationStore = configurationStore
         self.sender = resolvedSender
+        self.entitlement = entitlement
+        self.accessPublisher = accessPublisher
         self.coalescingDelay = coalescingDelay
         self.publishSnapshot = publishSnapshot ?? { results, store, force in
             WatchSnapshotPublisher.publish(
                 results: results,
                 configurationStore: store,
+                access: SnapshotProAccess(entitlement: entitlement),
                 sender: resolvedSender,
                 force: force
             )
@@ -390,36 +427,49 @@ final class WatchSnapshotCoordinator {
             self?.scheduleSnapshotPublish()
         }.store(in: &cancellables)
 
+        entitlement?.accessChanges.sink { [weak self] _ in
+            self?.scheduleSnapshotPublish(delay: .zero)
+        }.store(in: &cancellables)
     }
 
     func start() {
         guard !hasStarted else { return }
         hasStarted = true
+        if entitlement != nil { publishCurrentSnapshot(force: true) }
         sender.activate { [weak self] force in
             self?.publishCurrentSnapshot(force: force)
         }
     }
 
     func publishCurrentSnapshot(force: Bool = false) {
+        if force { snapshotPublishTask?.cancel() }
         // Free access must remove previously sent Pro accounts even if the active provider is still loading.
         let hasResolvedFreeAccess = configurationStore.accountAccess.isResolved
             && !configurationStore.accountAccess.hasProAccess
-        let awaitsInitialResults = !hasResolvedFreeAccess && refreshService.results.isEmpty
+        let awaitsInitialResults = entitlement == nil && !hasResolvedFreeAccess && refreshService.results.isEmpty
             && configurationStore.configurations.contains(
                 where: configurationStore.shouldDisplayOnDashboard
             )
         guard !awaitsInitialResults else {
             return
         }
-        publishSnapshot(refreshService.results, configurationStore, force)
+        if let accessPublisher {
+            accessPublisher(refreshService.results, configurationStore, SnapshotProAccess(entitlement: entitlement), force)
+        } else {
+            publishSnapshot(refreshService.results, configurationStore, force)
+        }
     }
 
-    private func scheduleSnapshotPublish() {
+    private func scheduleSnapshotPublish(delay: Duration? = nil) {
         snapshotPublishTask?.cancel()
         snapshotPublishTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                try await Task.sleep(for: coalescingDelay)
+                if let delay, delay == .zero {
+                    await Task.yield()
+                } else {
+                    try await Task.sleep(for: delay ?? coalescingDelay)
+                }
             } catch {
                 return
             }
@@ -442,14 +492,28 @@ final class PhoneWatchConnectivityCoordinator: NSObject, WatchSnapshotSending {
     private var snapshotNeededHandler: (@MainActor (_ force: Bool) -> Void)?
     private var deduplicator = WatchSnapshotDeduplicator()
     private var latestSnapshot: WatchDashboardSnapshot?
+    private let publicationStore: PhoneWatchPublicationStore
+    private let sendApplicationContext: (([String: Any]) throws -> Void)?
 
-    init(session: WCSession? = WCSession.isSupported() ? .default : nil) {
+    var retainedSnapshot: WatchDashboardSnapshot? { publicationStore.snapshot }
+
+    init(
+        session: WCSession? = WCSession.isSupported() ? .default : nil,
+        defaults: UserDefaults = .standard,
+        sendApplicationContext: (([String: Any]) throws -> Void)? = nil,
+        initialApplicationContext: [String: Any]? = nil
+    ) {
         self.session = session
+        publicationStore = PhoneWatchPublicationStore(
+            defaults: defaults, initialApplicationContext: initialApplicationContext ?? session?.applicationContext
+        )
+        self.sendApplicationContext = sendApplicationContext
         super.init()
     }
 
     func activate(onSnapshotNeeded: @escaping @MainActor (_ force: Bool) -> Void) {
         snapshotNeededHandler = onSnapshotNeeded
+        requestCurrentSnapshot(force: true)
         guard let session else {
             phoneWatchConnectivityLogger.error("WatchConnectivity is unavailable on this iPhone")
             return
@@ -458,11 +522,7 @@ final class PhoneWatchConnectivityCoordinator: NSObject, WatchSnapshotSending {
         phoneWatchConnectivityLogger.info(
             "Activating session state=\(session.activationState.rawValue, privacy: .public) paired=\(session.isPaired, privacy: .public) watchAppInstalled=\(session.isWatchAppInstalled, privacy: .public)"
         )
-        if session.activationState == .activated {
-            onSnapshotNeeded(true)
-        } else {
-            session.activate()
-        }
+        if session.activationState != .activated { session.activate() }
     }
 
     @discardableResult
@@ -473,7 +533,7 @@ final class PhoneWatchConnectivityCoordinator: NSObject, WatchSnapshotSending {
         guard WatchDashboardSnapshot.isSnapshotRequest(message) else {
             return false
         }
-        handleSnapshotRequest()
+        handleSnapshotRequest(message)
         if let replyHandler {
             replyHandler(snapshotReply())
         }
@@ -486,13 +546,22 @@ final class PhoneWatchConnectivityCoordinator: NSObject, WatchSnapshotSending {
             return false
         }
         phoneWatchConnectivityLogger.info("Received queued snapshot request from Watch")
-        handleSnapshotRequest()
+        handleSnapshotRequest(userInfo)
         return true
     }
 
-    private func handleSnapshotRequest() {
+    private func handleSnapshotRequest(_ message: [String: Any] = [:]) {
+        if let sequence = message[WatchDashboardSnapshot.snapshotAfterSequenceKey] as? UInt64, sequence < UInt64.max - 1 {
+            publicationStore.observeReceiverSequence(sequence)
+        }
         phoneWatchConnectivityLogger.info("Handling snapshot request from Watch")
-        snapshotNeededHandler?(true)
+        requestCurrentSnapshot(force: true)
+    }
+
+    private func requestCurrentSnapshot(force: Bool) {
+        // A callback that cannot publish must never reply with pre-denial data.
+        if force { latestSnapshot = nil }
+        snapshotNeededHandler?(force)
     }
 
     private func snapshotReply() -> [String: Any] {
@@ -518,20 +587,19 @@ final class PhoneWatchConnectivityCoordinator: NSObject, WatchSnapshotSending {
 
     @discardableResult
     func publish(_ snapshot: WatchDashboardSnapshot, force: Bool) -> Bool {
-        latestSnapshot = snapshot
-        guard let session else {
-            phoneWatchConnectivityLogger.error("Cannot publish snapshot because WatchConnectivity is unavailable")
-            return false
-        }
         do {
-            guard try deduplicator.shouldSend(snapshot, force: force) else {
+            let ordered = try publicationStore.record(snapshot)
+            latestSnapshot = ordered
+            guard try deduplicator.shouldSend(ordered, force: force) else { return false }
+            let context = try ordered.applicationContext()
+            if let sendApplicationContext {
+                try sendApplicationContext(context)
+            } else if let session {
+                try session.updateApplicationContext(context)
+            } else {
                 return false
             }
-            try session.updateApplicationContext(snapshot.applicationContext())
-            try deduplicator.recordSent(snapshot)
-            phoneWatchConnectivityLogger.info(
-                "Published snapshot context state=\(session.activationState.rawValue, privacy: .public) reachable=\(session.isReachable, privacy: .public)"
-            )
+            try deduplicator.recordSent(ordered)
             return true
         } catch {
             phoneWatchConnectivityLogger.error(
@@ -554,7 +622,7 @@ extension PhoneWatchConnectivityCoordinator: WCSessionDelegate {
         )
         guard activationState == .activated, error == nil else { return }
         Task { @MainActor [weak self] in
-            self?.snapshotNeededHandler?(true)
+            self?.requestCurrentSnapshot(force: true)
         }
     }
 
@@ -563,8 +631,9 @@ extension PhoneWatchConnectivityCoordinator: WCSessionDelegate {
         didReceiveMessage message: [String: Any]
     ) {
         guard WatchDashboardSnapshot.isSnapshotRequest(message) else { return }
+        let sequence = message[WatchDashboardSnapshot.snapshotAfterSequenceKey] as? UInt64
         Task { @MainActor [weak self] in
-            self?.handleSnapshotRequest()
+            self?.handleSnapshotRequest(WatchDashboardSnapshot.snapshotRequestMessage(after: sequence))
         }
     }
 
@@ -578,12 +647,13 @@ extension PhoneWatchConnectivityCoordinator: WCSessionDelegate {
             return
         }
         let reply = PhoneWatchReplyHandler(replyHandler)
+        let sequence = message[WatchDashboardSnapshot.snapshotAfterSequenceKey] as? UInt64
         Task { @MainActor [weak self] in
             guard let self else {
                 reply.send(WatchDashboardSnapshot.snapshotUnavailableReply)
                 return
             }
-            self.handleSnapshotRequest()
+            self.handleSnapshotRequest(WatchDashboardSnapshot.snapshotRequestMessage(after: sequence))
             reply.send(self.snapshotReply())
         }
     }
@@ -594,8 +664,9 @@ extension PhoneWatchConnectivityCoordinator: WCSessionDelegate {
     ) {
         guard WatchDashboardSnapshot.isSnapshotRequest(userInfo) else { return }
         phoneWatchConnectivityLogger.info("Received queued snapshot request from Watch")
+        let sequence = userInfo[WatchDashboardSnapshot.snapshotAfterSequenceKey] as? UInt64
         Task { @MainActor [weak self] in
-            self?.handleSnapshotRequest()
+            self?.handleSnapshotRequest(WatchDashboardSnapshot.snapshotRequestMessage(after: sequence))
         }
     }
 

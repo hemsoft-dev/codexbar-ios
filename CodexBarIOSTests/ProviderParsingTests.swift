@@ -4166,8 +4166,8 @@ final class ProviderParsingTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [accountResult],
-            configurationStore: store,
-            snapshotDefaults: defaults
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         let widgetProvider = try XCTUnwrap(snapshot.results.first)
@@ -4249,8 +4249,8 @@ final class ProviderParsingTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
-            snapshotDefaults: defaults
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
         let widgetBars = try XCTUnwrap(
             WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first
@@ -4314,8 +4314,8 @@ final class ProviderParsingTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
-            snapshotDefaults: defaults,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil),
             now: fetchedAt
         )
         let widgetProvider = try XCTUnwrap(
@@ -4356,8 +4356,8 @@ final class ProviderParsingTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
-            snapshotDefaults: defaults
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
         )
         let snapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         let widgetProvider = try XCTUnwrap(snapshot.results.first)
@@ -4869,8 +4869,8 @@ final class ProviderParsingTests: XCTestCase {
 
         WidgetSnapshotPublisher.publish(
             results: [result],
-            configurationStore: store,
-            snapshotDefaults: defaults,
+            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil),
             now: now,
             dateTimeFormatter: newYork
         )

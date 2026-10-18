@@ -132,7 +132,8 @@ final class ClaudeFableWeeklyTests: XCTestCase {
             XCTAssertEqual(snapshot.bars.first { $0.stableKey == "weekly-scoped-fable" }?.used, value)
         }
         WidgetSnapshotPublisher.publish(results: [changedName, other], configurationStore: restored,
-                                        snapshotDefaults: defaults, now: now)
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+                                        snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         let widgets = WidgetSnapshotStore.loadSnapshot(defaults: defaults).results
         for (account, fraction) in [(first.id, 0.21), (second.id, 0.07)] {
             let widget = try XCTUnwrap(widgets.first { $0.accountID == account })
@@ -151,7 +152,8 @@ final class ClaudeFableWeeklyTests: XCTestCase {
                 resolvingSavedID: "bar.\(account).8.fable-experimental-weekly-usage-limit"
             ))
         }
-        let watch = WatchSnapshotPublisher.makeSnapshot(results: [changedName, other], configurationStore: restored, now: now)
+        let watch = WatchSnapshotPublisher.makeSnapshot(results: [changedName, other], configurationStore: restored,
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: now)
         for (account, value) in [(first.id, "21%"), (second.id, "7%")] {
             let watchID = WatchSnapshotPublisher.snapshotAccountID(providerID: .claude, configurationID: account)
             let metric = try XCTUnwrap(watch.accounts.first { $0.id == watchID }?.metrics.first { $0.id == id })
@@ -180,7 +182,8 @@ final class ClaudeFableWeeklyTests: XCTestCase {
         }
         let missing = bound(try parse(limits: []), to: first)
         WidgetSnapshotPublisher.publish(results: [missing, other], configurationStore: restored,
-                                        snapshotDefaults: defaults, now: now)
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+                                        snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         let withoutFable = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         for suffix in ["fable", "fable-5", "fable-5-1", "claude-fable", "claude-fable-5", "claude-fable-5-1", "fable-experimental"] {
             for index in [0, 1] {
@@ -191,7 +194,8 @@ final class ClaudeFableWeeklyTests: XCTestCase {
         XCTAssertEqual(withoutFable.builderTile(resolvingSavedID: "bar.\(second.id).0.fable-5-weekly-usage-limit")?.fractionUsed, 0.07)
         let futureModel = bound(try parse(limits: [limit(name: "Fable Experimental", percent: 9)]), to: first)
         WidgetSnapshotPublisher.publish(results: [futureModel, other], configurationStore: restored,
-                                        snapshotDefaults: defaults, now: now)
+            access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+                                        snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
         let futureTile = WidgetSnapshotStore.loadSnapshot(defaults: defaults).builderTile(
             resolvingSavedID: "bar.\(first.id).0.fable-experimental-weekly-usage-limit"
         )

@@ -17,6 +17,16 @@ struct CodexBarWidgetView: View {
 
     @ViewBuilder
     private var content: some View {
+        if entry.isProLocked {
+            ProLockedWidget(family: family)
+                .widgetURL(CodexBarDeepLink.proURL)
+        } else {
+            usageContent
+        }
+    }
+
+    @ViewBuilder
+    private var usageContent: some View {
         switch family {
         case .accessoryInline:
             AccessoryInlineWidget(tiles: selectedTiles.map(\.tile))
@@ -286,6 +296,49 @@ struct CodexBarWidgetView: View {
             6
         default:
             1
+        }
+    }
+}
+
+private struct ProLockedWidget: View {
+    let family: WidgetFamily
+    private var appearance = WidgetRenderingAppearance()
+
+    var body: some View {
+        content
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Unlock widgets with CodexBar Pro")
+            .containerBackground(.background, for: .widget)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch family {
+        case .accessoryInline:
+            Label("CodexBar Pro", systemImage: "lock.fill")
+        case .accessoryCircular:
+            VStack(spacing: 2) {
+                Image(systemName: "lock.fill")
+                Text("Pro").font(.caption2)
+            }
+        case .accessoryRectangular:
+            Label {
+                Text("Unlock widgets with CodexBar Pro")
+                    .font(.caption)
+                    .minimumScaleFactor(0.8)
+            } icon: {
+                Image(systemName: "lock.fill")
+            }
+        default:
+            VStack(alignment: .leading, spacing: 10) {
+                Label("CodexBar Pro", systemImage: "lock.fill")
+                    .font(.headline)
+                Text("Unlock widgets with CodexBar Pro")
+                    .font(.subheadline)
+                    .foregroundStyle(appearance.secondaryForeground)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
 }

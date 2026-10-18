@@ -44,6 +44,7 @@ struct ContentView: View {
         usageAlertNotifier: (any UsageAlertNotifying)? = nil,
         appReviewPromptPolicy: AppReviewPromptPolicy = AppReviewPromptPolicy(),
         performsLifecycleWork: Bool = true,
+        entitlement: ProEntitlement? = nil,
         widgetSnapshotCoordinator: WidgetSnapshotCoordinator? = nil,
         watchSnapshotCoordinator: WatchSnapshotCoordinator? = nil
     ) {
@@ -60,6 +61,7 @@ struct ContentView: View {
             historyStore: historyStore,
             usageAlertNotifier: usageAlertNotifier ?? LocalUsageAlertNotifier.shared,
             appReviewPromptPolicy: appReviewPromptPolicy,
+            entitlement: entitlement,
             widgetSnapshotCoordinator: widgetSnapshotCoordinator,
             watchSnapshotCoordinator: watchSnapshotCoordinator
         )
@@ -246,6 +248,10 @@ struct ContentView: View {
                     }
                     .background(Color(.systemGroupedBackground))
                     .onOpenURL { url in
+                        if CodexBarDeepLink.isProURL(url) {
+                            configurationStore.requestProPresentation()
+                            return
+                        }
                         handleDeepLink(
                             url,
                             scrollProxy: scrollProxy,

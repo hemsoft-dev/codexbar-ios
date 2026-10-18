@@ -688,7 +688,8 @@ final class AntigravityUsageProviderTests: XCTestCase {
         XCTAssertTrue(store.saveSecret(#"{"access_token":"token"}"#, for: legacy))
         XCTAssertTrue(store.linkGeminiCodingAccount(legacy, to: apps, confirmedSameAccount: true))
         let result = try Self.unifiedResult(apps)
-        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, snapshotDefaults: defaults, now: Self.now)
+        WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+        snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: Self.now)
         let widget = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         XCTAssertEqual(widget.results.count, 1)
         XCTAssertEqual(widget.results.first?.bars.count, Self.googleIDs.count)
@@ -702,7 +703,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         )
         XCTAssertNil(widget.builderTile(resolvingSavedID: "bar.\(legacy.id).2.Unknown renamed metric"))
         XCTAssertNil(widget.builderTile(resolvingSavedID: "bar.unlinked.antigravity.gemini-5h"))
-        let watch = WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store, now: Self.now)
+        let watch = WatchSnapshotPublisher.makeSnapshot(results: [result], configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil), now: Self.now)
         XCTAssertEqual(watch.accounts.count, 1)
         XCTAssertEqual(watch.accounts.first?.metrics.map(\.id), Self.googleIDs)
         XCTAssertEqual(watch.accounts.first?.legacyAccountIDs, [WatchSnapshotPublisher.snapshotAccountID(providerID: .antigravity, configurationID: legacy.id)])
@@ -710,7 +711,8 @@ final class AntigravityUsageProviderTests: XCTestCase {
             accountID: apps.id, providerID: .gemini, title: apps.displayName, subtitle: "Coding unavailable",
             bars: Array(result.bars.prefix(2)), fetchedAt: Self.now
         )
-        WidgetSnapshotPublisher.publish(results: [partial], configurationStore: store, snapshotDefaults: defaults, now: Self.now)
+        WidgetSnapshotPublisher.publish(results: [partial], configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+        snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: Self.now)
         let missing = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
         XCTAssertNil(missing.builderTile(resolvingSavedID: savedID))
         XCTAssertNil(missing.builderTile(resolvingSavedID: "bar.\(legacy.id).0.Gemini-Apps-five-hour"))

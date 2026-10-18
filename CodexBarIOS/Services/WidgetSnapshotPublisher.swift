@@ -6,16 +6,70 @@ enum WidgetSnapshotPublisher {
     static func publish(
         results: [ProviderUsageResult],
         configurationStore: ProviderConfigurationStore,
-        snapshotDefaults: UserDefaults? = WidgetSnapshotStore.userDefaults(),
+        access: SnapshotProAccess = .locked,
         now: Date = Date(),
         dateTimeFormatter: UserFacingDateTimeFormatter = .current
     ) {
-        let displayable = orderedDisplayableResults(
+        publish(
+            results: results, configurationStore: configurationStore, access: access,
+            snapshotDefaults: WidgetSnapshotStore.userDefaults(), accessGuard: .live,
+            now: now, dateTimeFormatter: dateTimeFormatter
+        )
+    }
+
+    // Injecting snapshot storage also requires an explicit guard. Fixture suites
+    // can never silently write the live App Group observation file.
+    static func publish(
+        results: [ProviderUsageResult],
+        configurationStore: ProviderConfigurationStore,
+        access: SnapshotProAccess = .locked,
+        snapshotDefaults: UserDefaults?,
+        accessGuard: WidgetAccessGuard,
+        now: Date = Date(),
+        dateTimeFormatter: UserFacingDateTimeFormatter = .current,
+        accessSample: ProEntitlementClockSample? = nil
+    ) {
+        let displayable = access.isProLocked ? [] : orderedDisplayableResults(
             results: results,
             configurationStore: configurationStore,
             now: now
         )
 
+        let previousSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: snapshotDefaults)
+        let previousPublication = previousSnapshot.accessPublication
+        let grant = access.proAccessEndsAt.flatMap { deadline in
+            access.clockAnchor.map { WidgetFiniteGrant(deadline: deadline, signedAt: $0.latestSignedAt, environment: access.environment) }
+        }
+        var acceptedVerifications = previousPublication?.acceptedVerifications ?? [:]
+        var observedPartitions = previousPublication?.observedPartitions ?? []
+        if let generation = access.verificationGeneration { acceptedVerifications[access.environment.rawValue] = generation }
+        if access.proAccessEndsAt != nil { observedPartitions.insert(access.environment.rawValue) }
+        let sameAccess = previousSnapshot.isProLocked == access.isProLocked
+            && previousSnapshot.proAccessEndsAt == access.proAccessEndsAt
+            && previousPublication?.finiteGrant == grant && previousPublication?.environment == access.environment
+        let proposedPublication = WidgetAccessPublication(
+            id: sameAccess ? (previousPublication?.id ?? UUID()) : UUID(), finiteGrant: grant,
+            verificationGeneration: access.verificationGeneration ?? acceptedVerifications[access.environment.rawValue],
+            acceptedVerifications: acceptedVerifications, observedPartitions: observedPartitions, environment: access.environment
+        )
+        let sample = accessSample ?? ProEntitlementSystemClock.sample(at: now)
+        let installed = accessGuard.publish(
+            proposedPublication, locked: access.isProLocked, anchor: access.clockAnchor,
+            replacing: previousPublication, sample: sample
+        )
+        var failedObservedPartitions = previousPublication?.observedPartitions ?? []
+        if let deadline = access.proAccessEndsAt,
+           access.clockAnchor?.effectiveDate(at: sample).map({ $0 < deadline }) != true {
+            failedObservedPartitions.insert(access.environment.rawValue)
+        }
+        // Failed initial installation remains retryable, but previously observed
+        // partitions and consumed verification generations survive every failure.
+        let publication = installed ? proposedPublication : WidgetAccessPublication(
+            id: proposedPublication.id, finiteGrant: grant,
+            verificationGeneration: previousPublication?.acceptedVerifications[access.environment.rawValue],
+            acceptedVerifications: previousPublication?.acceptedVerifications ?? [:],
+            observedPartitions: failedObservedPartitions, environment: access.environment
+        )
         let snapshot = CodexBarWidgetSnapshot(
             generatedAt: now,
             results: displayable.map { result in
@@ -111,7 +165,10 @@ enum WidgetSnapshotPublisher {
                         )
                     )
                 )
-            }
+            },
+            isProLocked: access.isProLocked,
+            proAccessEndsAt: access.proAccessEndsAt,
+            accessPublication: publication
         )
 
         WidgetSnapshotStore.saveSnapshot(snapshot, defaults: snapshotDefaults)
