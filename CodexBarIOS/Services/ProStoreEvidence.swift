@@ -87,6 +87,25 @@ struct ProStoreSnapshot: Sendable {
     var freshClockEvidence: ProFreshClockEvidence?
     var unverifiedProducts: Set<ProProductID> { Set(unverifiedPurchases.map(\.product)) }
 
+    /// Call only with a StoreKit-verified AppTransaction and its signed JSON payload.
+    mutating func appendVerifiedAppPurchase(
+        originalVersion: String, originalPurchaseDate: Date, environment: ProStoreEnvironment,
+        signedAt: Date, jsonRepresentation: Data
+    ) {
+        appVerificationEnvironment = environment
+        do {
+            // AppTransaction.revocationDate is absent from the release SDK. Decode its signed field instead.
+            let payload = try JSONDecoder().decode(ProAppTransactionPayload.self, from: jsonRepresentation)
+            appPurchase = .verified(ProAppPurchase(
+                originalVersion: originalVersion, originalPurchaseDate: originalPurchaseDate,
+                environment: environment, revoked: payload.appRevocationDate != nil, signedAt: signedAt
+            ))
+        } catch {
+            // Invalid signed data must deny a cached grant, unlike a temporarily unavailable AppTransaction.
+            appPurchase = .unverified
+        }
+    }
+
     var latestSignedAt: Date? {
         var dates = purchases.map(\.signedAt)
         dates += subscriptions.filter(\.renewalVerified).map(\.signedAt)
@@ -94,6 +113,10 @@ struct ProStoreSnapshot: Sendable {
         if let freshClockEvidence { dates.append(freshClockEvidence.signedAt) }
         return dates.filter { $0.timeIntervalSinceReferenceDate.isFinite }.max()
     }
+}
+
+private struct ProAppTransactionPayload: Decodable {
+    let appRevocationDate: Int64?
 }
 
 enum ProSubscriptionUpdate: Sendable {
