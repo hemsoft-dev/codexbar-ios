@@ -136,6 +136,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Preserve each storefront build attempt and record its verified bundle versions
+  and simulator metadata in the capture evidence.
+  ([#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469))
+
 - Add isolated local StoreKit purchase and Restore tests plus a manual commerce
   UI scheme. These checks do not add automatic CI work.
   ([#468](https://github.com/hemsoft-dev/codexbar-ios/issues/468))

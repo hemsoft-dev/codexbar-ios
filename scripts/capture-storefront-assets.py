@@ -29,7 +29,7 @@ def clean_environment():
 def run(*arguments, cwd=None, log=None, check=True):
     command = [str(value) for value in arguments]
     if log:
-        with Path(log).open('w') as output:
+        with Path(log).open('x') as output:
             completed = subprocess.run(command, cwd=cwd, env=clean_environment(),
                                        stdout=output, stderr=subprocess.STDOUT, check=check)
         return completed
@@ -79,15 +79,42 @@ def bundle_inventory(app):
     return {'path': str(app), 'sha256': digest, 'files': files, 'bundles': signatures}
 
 
+def verified_bundle_version(apps):
+    versions = set()
+    if not apps:
+        raise ValueError('No verified app inventories')
+    for app in apps.values():
+        if not app.get('bundles'):
+            raise ValueError('No verified bundles in app inventory')
+        for bundle in app['bundles']:
+            version, build_number = bundle['version'], bundle['build']
+            if version != '2.0.0' or not isinstance(build_number, str) or not build_number.isdigit() or int(build_number) < 5:
+                raise ValueError('Unexpected verified bundle version')
+            versions.add((version, build_number))
+    if len(versions) != 1:
+        raise ValueError('App and extension versions do not agree')
+    version, build_number = versions.pop()
+    return {'version': version, 'build': build_number}
+
+
 def read_devices(path):
     devices = json.loads(Path(path).read_text())
+    if not isinstance(devices, dict) or set(devices) != {'iphone', 'ipad', 'watch'}:
+        raise ValueError('Supply exactly the three issue-owned device families')
     available = json.loads(run('xcrun', 'simctl', 'list', 'devices', 'available', '-j'))
-    by_id = {device['udid']: device for group in available['devices'].values() for device in group}
+    by_id = {device['udid']: (device, runtime)
+             for runtime, group in available['devices'].items() for device in group}
+    verified = {}
+    seen = set()
     for family, device in devices.items():
-        actual = by_id[device['simulator_udid']]
-        if device.get('owner') != 'issue-469' or not actual['name'].startswith('CodexBar-469-'):
+        actual, runtime = by_id[device['simulator_udid']]
+        if (device.get('owner') != 'issue-469' or not actual['name'].startswith('CodexBar-469-')
+                or not actual.get('isAvailable', False) or actual['udid'] in seen):
             raise ValueError(f'Not an issue-owned {family} simulator')
-    return devices
+        seen.add(actual['udid'])
+        verified[family] = {'simulator_udid': actual['udid'], 'name': actual['name'],
+                            'runtime': runtime, 'owner': 'issue-469'}
+    return verified
 
 
 def build(args):
@@ -95,7 +122,7 @@ def build(args):
     work = args.work_dir.resolve()
     if work.is_relative_to(args.root.resolve()):
         raise ValueError('Native build products belong outside the repository')
-    work.mkdir(parents=True, exist_ok=True)
+    work.mkdir(parents=True, exist_ok=False)
     devices = read_devices(args.devices)
     commands = []
     apps = {}
@@ -121,7 +148,7 @@ def build(args):
             raise ValueError('Source changed during the final build')
     source_files = {name: sha256(args.root / name) for name in
                     run('git', 'ls-files', cwd=args.root).splitlines() if (args.root / name).is_file()}
-    receipt = {'source_commit': source, 'source_files': source_files, 'apps': apps, 'build': '5',
+    receipt = {'source_commit': source, 'source_files': source_files, 'apps': apps, **verified_bundle_version(apps),
                'xcode': run('xcodebuild', '-version'), 'devices': devices, 'commands': commands,
                'completed_at': now(), 'environment_keys': sorted(clean_environment())}
     write_json(work / 'build-provenance.json', receipt)
@@ -144,9 +171,14 @@ def capture(args):
     build_receipt = json.loads(args.build_receipt.read_text())
     if build_receipt['source_commit'] != source:
         raise ValueError('Build and checked-out source revisions differ')
-    for info in build_receipt['apps'].values():
-        if bundle_inventory(info['path'])['sha256'] != info['sha256']:
+    actual_apps = {}
+    for family, info in build_receipt['apps'].items():
+        actual_apps[family] = bundle_inventory(info['path'])
+        if actual_apps[family]['sha256'] != info['sha256']:
             raise ValueError('Final build has changed')
+    actual_version = verified_bundle_version(actual_apps)
+    if any(build_receipt.get(key) != value for key, value in actual_version.items()):
+        raise ValueError('Build receipt differs from verified bundle versions')
     manifest = json.loads(args.manifest.read_text())
     devices = read_devices(args.devices)
     receipt = {key: build_receipt[key] for key in ('source_commit', 'build', 'xcode')}

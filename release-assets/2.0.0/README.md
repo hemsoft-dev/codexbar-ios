@@ -44,7 +44,9 @@ Create disposable devices named `CodexBar-469-iPhone`, `CodexBar-469-iPad` and
 `CodexBar-469-Watch` with `simctl create` and the installed compatible runtimes.
 Record the returned IDs in a JSON file keyed `iphone`, `ipad` and `watch`. Each
 entry requires `simulator_udid`, `name`, `runtime` and `owner: "issue-469"`.
-The capture command adds the actual runtime build from the booted simulator.
+The driver records the device name and runtime identifier returned by `simctl`,
+replacing the input file's descriptive values. The capture command also records
+the actual runtime build from the booted simulator.
 Do not reuse the IDs of unrelated or historical capture devices.
 
 Use a credential-free native command wrapper for preparation and manual tools:
@@ -58,7 +60,11 @@ native() {
 ```
 
 The paths below assume `/tmp/codexbar-469-validation` is a fresh run directory.
-Keep failed attempts in distinct paths; do not overwrite their receipts.
+The build command requires a new `--work-dir` and refuses an existing directory,
+including an empty one. Keep failed attempts in distinct paths. Build logs are
+created exclusively so an existing log cannot be truncated. Every app and
+extension must report the same version and build; those verified values become
+the build receipt, and capture checks them again before writing its receipt.
 
 ## Native preparation and focused checks
 

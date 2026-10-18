@@ -80,10 +80,13 @@ check the planned captions. That mode makes no claim about image evidence.
 The local contract checks run with:
 
 ```sh
-python3 -m unittest discover -s scripts/tests/manual -p test_storefront_composition.py
+python3 -m unittest discover -s scripts/tests/manual -p 'test_storefront_*.py'
 ```
 
 These commands are manual developer checks. They add no automatic CI workload.
+The capture-driver tests use synthetic inventories and mock every subprocess.
+They verify bundle-version agreement, simulator metadata and preservation of
+existing build directories and logs without launching native tools.
 Inspect every raw and composed image at full size and thumbnail size. The
 validator checks file integrity, geometry and evidence consistency; it cannot
 judge whether the app actually displayed the expected state or whether text is
