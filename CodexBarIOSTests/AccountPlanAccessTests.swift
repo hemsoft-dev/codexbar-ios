@@ -93,8 +93,18 @@ final class AccountPlanAccessTests: XCTestCase {
     }
 
     @MainActor
-    func testAutomaticBootstrapWaitsAtLimitWithoutOpeningPro() throws {
-        let fixture = try AccountPlanFixture(plan: .free)
+    func testAutomaticBootstrapRetriesAfterPlanResolvesWithoutOpeningPro() async throws {
+        try await assertAutomaticBootstrapRetry(initialPlan: .unresolved)
+    }
+
+    @MainActor
+    func testAutomaticBootstrapRetriesAfterUpgradeWithoutOpeningPro() async throws {
+        try await assertAutomaticBootstrapRetry(initialPlan: .free)
+    }
+
+    @MainActor
+    private func assertAutomaticBootstrapRetry(initialPlan: AccountPlanAccess) async throws {
+        let fixture = try AccountPlanFixture(plan: initialPlan)
         defer { fixture.cleanUp() }
         _ = try XCTUnwrap(fixture.store.addAccount(for: .codex))
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -103,11 +113,67 @@ final class AccountPlanAccessTests: XCTestCase {
         let importURL = directory.appendingPathComponent(OpenCodeZenBootstrapImporter.importFileName)
         try Data("OPENCODE_ZEN_AUTH_COOKIE=fixture\nOPENCODE_ZEN_WORKSPACE_ID=wrk_fixture".utf8).write(to: importURL)
 
-        OpenCodeZenBootstrapImporter.importIfNeeded(configurationStore: fixture.store, importDirectory: directory)
+        let coordinator = OpenCodeZenBootstrapCoordinator(configurationStore: fixture.store, importDirectory: directory)
+        coordinator.start()
 
         XCTAssertFalse(fixture.store.requestedProPresentation)
         XCTAssertTrue(fixture.store.configurations(for: .openCodeZen).isEmpty)
         XCTAssertTrue(FileManager.default.fileExists(atPath: importURL.path))
+
+        let imported = expectation(description: "Deferred OpenCode account imported")
+        let subscription = fixture.store.$configurations.dropFirst()
+            .first(where: { $0.contains(where: { $0.providerID == .openCodeZen }) })
+            .sink { _ in imported.fulfill() }
+        defer { subscription.cancel() }
+        fixture.store.applyPlanAccess(hasProAccess: true, isResolved: true)
+        await fulfillment(of: [imported], timeout: 2)
+
+        let account = try XCTUnwrap(fixture.store.configurations(for: .openCodeZen).first)
+        XCTAssertTrue(fixture.store.hasSecret(for: account))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: importURL.path))
+        XCTAssertFalse(fixture.store.requestedProPresentation)
+        coordinator.start()
+        XCTAssertEqual(fixture.store.configurations(for: .openCodeZen).count, 1)
+    }
+
+    @MainActor
+    func testClockJumpImmediatelyUpdatesAccountRefreshAndHistoryAccess() async throws {
+        let fixture = try AccountPlanFixture()
+        defer { fixture.cleanUp() }
+        let accounts = try addThreeAccounts(to: fixture.store)
+        fixture.store.updateUsageAlertsEnabled(true)
+        let instant = Date(timeIntervalSince1970: 1_800_000_000)
+        var sample = ProEntitlementClockSample(wallDate: instant, continuousSeconds: 1_000, continuityID: "plan-test")
+        let expiry = instant.addingTimeInterval(3_600)
+        let cache = AccountPlanClockCache(ProEntitlementValue(
+            reason: .monthly, expiresAt: expiry, proAccessEndsAt: expiry.addingTimeInterval(ProEntitlementValue.offlineAllowance),
+            verifiedAt: instant, clockAnchor: ProEntitlementClockAnchor(
+                anchorDate: instant, continuousSeconds: 1_000, continuityID: "plan-test", latestSignedAt: instant
+            )
+        ))
+        let entitlement = ProEntitlement(source: AccountPlanClockSource(), cache: cache,
+                                         now: { sample.wallDate }, clock: { _ in sample })
+        await entitlement.refresh()
+        let refresh = UsageRefreshService(providers: [])
+        let history = UsageHistoryStore(defaults: fixture.defaults)
+        let coordinator = PlanAccessCoordinator(entitlement: entitlement, configurationStore: fixture.store,
+                                                refreshService: refresh, historyStore: history)
+        defer { withExtendedLifetime(coordinator) {} }
+        XCTAssertEqual(accounts.filter(refresh.canRefresh), accounts)
+        XCTAssertEqual(history.accessPolicy, .pro)
+
+        sample = ProEntitlementClockSample(wallDate: expiry.addingTimeInterval(ProEntitlementValue.offlineAllowance),
+                                          continuousSeconds: 1_001, continuityID: "plan-test")
+        XCTAssertFalse(entitlement.hasAccess)
+        entitlement.reevaluateLocalAccess()
+
+        XCTAssertFalse(fixture.store.accountAccess.hasProAccess)
+        XCTAssertEqual(accounts.filter(refresh.canRefresh).count, 1)
+        XCTAssertFalse(fixture.store.canAddAccount(for: .openRouter))
+        XCTAssertEqual(history.accessPolicy, .free)
+        XCTAssertEqual(fixture.store.configurations, accounts)
+        XCTAssertTrue(fixture.store.usageAlertSettings.isEnabled, "The saved preference survives the access change")
+        XCTAssertEqual(cache.value.reason, .none)
     }
 
     @MainActor
@@ -386,4 +452,22 @@ private struct AccountPlanFailingDeletes: SecretStore {
     func deleteSecret(account: String) throws {
         if accounts.contains(account) { throw KeychainError.unhandledStatus(-25308) }
     }
+}
+
+@MainActor
+private final class AccountPlanClockCache: ProEntitlementCaching {
+    var value: ProEntitlementValue
+    init(_ value: ProEntitlementValue) { self.value = value }
+    func load(environment: ProStoreEnvironment) -> ProEntitlementValue? { value.environment == environment ? value : nil }
+    func save(_ value: ProEntitlementValue) throws { self.value = value }
+    func invalidate(with deniedValue: ProEntitlementValue) throws { value = deniedValue }
+}
+
+@MainActor
+private final class AccountPlanClockSource: ProStoreSource {
+    func snapshot() async -> ProStoreSnapshot { ProStoreSnapshot() }
+    func transactionUpdates() -> AsyncStream<ProTransactionDelivery> { AsyncStream { $0.finish() } }
+    func subscriptionUpdates() -> AsyncStream<ProSubscriptionUpdate> { AsyncStream { $0.finish() } }
+    func purchase(_ product: ProProductID) async throws -> ProPurchaseOutcome { .cancelled }
+    func restore(refreshAppTransaction: Bool) async throws {}
 }

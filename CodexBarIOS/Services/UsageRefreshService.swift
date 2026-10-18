@@ -24,7 +24,7 @@ public final class UsageRefreshService: ObservableObject {
     private var accountAccess: AccountPlanAccess?
     private var refreshGenerationsByAccountID: [String: UUID] = [:]
     private var codexResetAttempts: [String: CodexResetAttempt] = [:]
-    private var claudeResetAccounts: Set<String> = []
+    private var claudeResetValidationsByAccountID: [String: ClaudeResetValidation] = [:]
     private var codexResetTasks: [String: Task<CodexBankedResetConsumptionOutcome, Error>] = [:]
 
     public init(
@@ -84,6 +84,7 @@ public final class UsageRefreshService: ObservableObject {
 
     /// Invalidate credential-dependent values before a replacement or disconnect can start another refresh.
     public func invalidateCredentials(accountID: String, preserveCachedResult: Bool = false) {
+        claudeResetValidationsByAccountID[accountID]?.wasInvalidated = true
         if currentConfigurationsByAccountID[accountID] != nil || refreshingAccountIDs.contains(accountID) {
             refreshGenerationsByAccountID[accountID] = UUID()
         }
@@ -345,13 +346,17 @@ public final class UsageRefreshService: ObservableObject {
               inventory.credentialBinding == credentialBinding,
               confirmedGrant.id == grantID, inventory.matchesConfirmation(grant: confirmedGrant, binding: credentialBinding, at: Date())
         else { throw ClaudeUsageResetError.unavailable }
-        guard claudeResetAccounts.insert(configuration.id).inserted else { throw ClaudeUsageResetError.inProgress }
-        defer { claudeResetAccounts.remove(configuration.id) }
-        let generation = registerCurrentConfiguration(configuration)
+        guard claudeResetValidationsByAccountID[configuration.id] == nil else { throw ClaudeUsageResetError.inProgress }
+        claudeResetValidationsByAccountID[configuration.id] = ClaudeResetValidation(configuration: configuration)
+        defer { claudeResetValidationsByAccountID.removeValue(forKey: configuration.id) }
         let outcome = try await provider.consumeClaudeReset(
             for: configuration, grantID: grantID, confirmedGrant: confirmedGrant, credentialBinding: credentialBinding
         )
-        guard isCurrent(configuration, generation: generation) else { throw ClaudeUsageResetError.credentialChanged }
+        // A plan pause cannot undo a confirmed provider action. Only an actual account
+        // or credential change invalidates this completion; follow-up refresh keeps its own access gate.
+        guard claudeResetValidationsByAccountID[configuration.id]?.wasInvalidated == false else {
+            throw ClaudeUsageResetError.credentialChanged
+        }
         return outcome
     }
 
@@ -637,6 +642,10 @@ public final class UsageRefreshService: ObservableObject {
         let retained = Dictionary(uniqueKeysWithValues: configurations.filter {
             $0.isEnabled && $0.providerID != .antigravity
         }.map { ($0.id, $0) })
+        for (accountID, validation) in claudeResetValidationsByAccountID
+            where refreshInputsChanged(from: validation.configuration, to: retained[accountID]) {
+            claudeResetValidationsByAccountID[accountID]?.wasInvalidated = true
+        }
         let eligible = Dictionary(uniqueKeysWithValues: configurations.filter(canRefresh).map { ($0.id, $0) })
         let accountIDs = Set(currentConfigurationsByAccountID.keys).union(eligible.keys)
         for accountID in accountIDs {
@@ -686,6 +695,10 @@ public final class UsageRefreshService: ObservableObject {
     private func registerCurrentConfiguration(
         _ configuration: ProviderAccountConfiguration
     ) -> UUID {
+        if let validation = claudeResetValidationsByAccountID[configuration.id],
+           !hasSameRefreshInputs(validation.configuration, configuration) {
+            claudeResetValidationsByAccountID[configuration.id]?.wasInvalidated = true
+        }
         if currentConfigurationsByAccountID[configuration.id] != configuration {
             currentConfigurationsByAccountID[configuration.id] = configuration
             refreshGenerationsByAccountID[configuration.id] = UUID()
@@ -720,6 +733,11 @@ public final class UsageRefreshService: ObservableObject {
             waiter.resume()
         }
     }
+}
+
+private struct ClaudeResetValidation {
+    let configuration: ProviderAccountConfiguration
+    var wasInvalidated = false
 }
 
 private struct RefreshInputs: Equatable {

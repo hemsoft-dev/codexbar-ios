@@ -729,11 +729,15 @@ struct DashboardProviderCardItem: Identifiable, Equatable {
         errorMessage: String?
     ) -> ProviderUsageResult? {
         let definitions = GoogleUsageMetricCatalog.definitions(for: configuration.providerID)
-        if configuration.providerID.usesXAIConsumerAuth, var observed {
-            observed.title = configuration.displayName
-            return observed
+        var titledObservation = observed
+        if let observed {
+            titledObservation?.title = configuration.providerID == .openCodeZen
+                ? configuration.openCodeDisplayName(hasGoUsage: !observed.bars.isEmpty, hasZenBalance: observed.creditsRemaining != nil)
+                : configuration.displayName
         }
-        guard configuration.providerID != .codex, !definitions.isEmpty, observed == nil || requiresSetup else { return observed }
+        guard configuration.providerID != .codex, !definitions.isEmpty, observed == nil || requiresSetup else {
+            return titledObservation
+        }
         let status = requiresSetup ? "Setup required" : (isRefreshing ? "Loading" : "Unavailable")
         return ProviderUsageResult(
             accountID: configuration.id,

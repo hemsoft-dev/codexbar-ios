@@ -6,6 +6,7 @@ struct CodexBarIOSApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var proEntitlement: ProEntitlement
     @StateObject private var planAccessCoordinator: PlanAccessCoordinator
+    @StateObject private var bootstrapCoordinator: OpenCodeZenBootstrapCoordinator
     @StateObject private var refreshService: UsageRefreshService
     @StateObject private var configurationStore: ProviderConfigurationStore
     @StateObject private var historyStore: UsageHistoryStore
@@ -27,6 +28,9 @@ struct CodexBarIOSApp: App {
                 refreshService: fixtures.refreshService, historyStore: fixtures.historyStore
             )
             _planAccessCoordinator = StateObject(wrappedValue: coordinator)
+            _bootstrapCoordinator = StateObject(wrappedValue: OpenCodeZenBootstrapCoordinator(
+                configurationStore: fixtures.configurationStore
+            ))
             _originalPurchaserNotice = StateObject(wrappedValue: fixtures.originalPurchaserFixture?.notice
                 ?? OriginalPurchaserNotice(defaults: fixtures.defaults))
             _refreshService = StateObject(wrappedValue: fixtures.refreshService)
@@ -95,6 +99,9 @@ struct CodexBarIOSApp: App {
                 refreshService: refreshService, historyStore: historyStore
             )
             _planAccessCoordinator = StateObject(wrappedValue: coordinator)
+            _bootstrapCoordinator = StateObject(wrappedValue: OpenCodeZenBootstrapCoordinator(
+                configurationStore: configurationStore
+            ))
             _configurationStore = StateObject(wrappedValue: configurationStore)
             _historyStore = StateObject(wrappedValue: historyStore)
             return
@@ -112,6 +119,9 @@ struct CodexBarIOSApp: App {
             refreshService: refreshService, historyStore: historyStore
         )
         _planAccessCoordinator = StateObject(wrappedValue: coordinator)
+        _bootstrapCoordinator = StateObject(wrappedValue: OpenCodeZenBootstrapCoordinator(
+            configurationStore: configurationStore
+        ))
     }
 
     var body: some Scene {
@@ -132,10 +142,13 @@ struct CodexBarIOSApp: App {
                 }
                 .onChange(of: scenePhase) { _, phase in
                     guard phase == .active else { return }
-                    #if DEBUG
-                    if UITestFixtures.current != nil || screenshotConfiguration != nil { return }
-                    #endif
-                    Task { await proEntitlement.refresh() }
+                    refreshPlanAccess()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+                    refreshPlanAccess()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                    refreshPlanAccess()
                 }
                 .task {
                     #if DEBUG
@@ -150,10 +163,10 @@ struct CodexBarIOSApp: App {
                         try? await Task.sleep(nanoseconds: settleNanoseconds)
                         AppStoreScreenshotFixtures.markReady(scene: screenshotConfiguration.scene)
                     } else {
-                        OpenCodeZenBootstrapImporter.importIfNeeded(configurationStore: configurationStore)
+                        bootstrapCoordinator.start()
                     }
                     #else
-                    OpenCodeZenBootstrapImporter.importIfNeeded(configurationStore: configurationStore)
+                    bootstrapCoordinator.start()
                     #endif
                 }
         }
@@ -162,6 +175,14 @@ struct CodexBarIOSApp: App {
         ) {
             await githubStatusMonitor.performBackgroundRefresh()
         }
+    }
+
+    private func refreshPlanAccess() {
+        #if DEBUG
+        if UITestFixtures.current != nil || screenshotConfiguration != nil { return }
+        #endif
+        proEntitlement.reevaluateLocalAccess()
+        Task { await proEntitlement.refresh() }
     }
 
     @ViewBuilder

@@ -2430,6 +2430,104 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
+    func testWatchSnapshotCoordinatorClearsPausedAccountsWhenFreeResolvesBeforeInitialResults() async throws {
+        let defaults = UserDefaults(suiteName: #function)!
+        defaults.removePersistentDomain(forName: #function)
+        defer { defaults.removePersistentDomain(forName: #function) }
+        let (store, service, sender) = try makeWatchSnapshotAccessFixture(
+            defaults: defaults,
+            initialAccess: .unresolved
+        )
+        let coordinator = WatchSnapshotCoordinator(
+            refreshService: service,
+            configurationStore: store,
+            sender: sender,
+            coalescingDelay: .milliseconds(5)
+        )
+        coordinator.start()
+        sender.completeActivation()
+        XCTAssertEqual(sender.snapshots.count, 1, "Unresolved startup must preserve the previous snapshot")
+
+        let snapshotPublished = expectation(description: "Free access clears old watch accounts without provider results")
+        sender.onPublish = { snapshotPublished.fulfill() }
+        store.applyPlanAccess(hasProAccess: false, isResolved: true)
+        await fulfillment(of: [snapshotPublished], timeout: 1)
+
+        XCTAssertTrue(service.results.isEmpty)
+        XCTAssertEqual(store.accountAccess.pausedAccountIDs.count, 1)
+        XCTAssertEqual(sender.snapshots.count, 2)
+        XCTAssertTrue(try XCTUnwrap(sender.snapshots.last).accounts.isEmpty)
+        XCTAssertEqual(sender.publishedForces, [false, false])
+        XCTAssertEqual(store.configurations.count, 2)
+        XCTAssertTrue(store.configurations.allSatisfy { store.hasSecret(for: $0) })
+        withExtendedLifetime(coordinator) {}
+    }
+
+    @MainActor
+    func testWatchSnapshotCoordinatorClearsPausedAccountsOnFreeStartupBeforeInitialResults() throws {
+        let defaults = UserDefaults(suiteName: #function)!
+        defaults.removePersistentDomain(forName: #function)
+        defer { defaults.removePersistentDomain(forName: #function) }
+        let (store, service, sender) = try makeWatchSnapshotAccessFixture(
+            defaults: defaults,
+            initialAccess: .free
+        )
+        let coordinator = WatchSnapshotCoordinator(
+            refreshService: service,
+            configurationStore: store,
+            sender: sender
+        )
+
+        coordinator.start()
+        sender.completeActivation()
+
+        XCTAssertTrue(service.results.isEmpty)
+        XCTAssertEqual(store.accountAccess.pausedAccountIDs.count, 1)
+        XCTAssertEqual(sender.snapshots.count, 2)
+        XCTAssertTrue(try XCTUnwrap(sender.snapshots.last).accounts.isEmpty)
+        XCTAssertEqual(sender.publishedForces, [false, true])
+        XCTAssertEqual(store.configurations.count, 2)
+        XCTAssertTrue(store.configurations.allSatisfy { store.hasSecret(for: $0) })
+        withExtendedLifetime(coordinator) {}
+    }
+
+    @MainActor
+    private func makeWatchSnapshotAccessFixture(
+        defaults: UserDefaults,
+        initialAccess: AccountPlanAccess
+    ) throws -> (ProviderConfigurationStore, UsageRefreshService, RecordingWatchSnapshotSender) {
+        let store = ProviderConfigurationStore(
+            initialPlanAccess: .unrestricted,
+            defaults: defaults,
+            secretStore: MemorySecretStore(),
+            widgetSnapshotDefaults: defaults
+        )
+        let configurations = try (0..<2).map { _ in try XCTUnwrap(store.addAccount(for: .codex)) }
+        for configuration in configurations {
+            XCTAssertTrue(store.saveSecret("fixture-secret", for: configuration))
+        }
+        let fetchedAt = Date(timeIntervalSince1970: 2_000_000_000)
+        let previousResults = configurations.map { configuration in
+            ProviderUsageResult(
+                accountID: configuration.id,
+                providerID: .codex,
+                title: "Codex",
+                subtitle: "Saved Pro account",
+                bars: [UsageBar(stableKey: "window", label: "Usage", used: 4, limit: 10)],
+                fetchedAt: fetchedAt
+            )
+        }
+        let sender = RecordingWatchSnapshotSender()
+        _ = sender.publish(
+            WatchSnapshotPublisher.makeSnapshot(results: previousResults, configurationStore: store, now: fetchedAt),
+            force: false
+        )
+        XCTAssertEqual(sender.snapshots.last?.accounts.count, 2)
+        store.applyPlanAccess(hasProAccess: initialAccess.hasProAccess, isResolved: initialAccess.isResolved)
+        return (store, UsageRefreshService(providers: [], initialResults: []), sender)
+    }
+
+    @MainActor
     func testPhoneWatchConnectivityCoordinatorHandlesSnapshotRequestsAndWatchStateChanges() throws {
         let sender = PhoneWatchConnectivityCoordinator(session: nil)
         var snapshotNeededCount = 0

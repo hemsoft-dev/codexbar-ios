@@ -88,6 +88,7 @@ public final class ProEntitlement: ObservableObject {
     }
 
     public func refresh() async {
+        reevaluateLocalAccess()
         refreshRequest += 1
         let request = refreshRequest
         while !Task.isCancelled {
@@ -312,17 +313,24 @@ public final class ProEntitlement: ObservableObject {
             do { try await Task.sleep(for: .seconds(delay)) } catch { return }
             guard let self else { return }
             self.boundaryTask = nil
-            self.applyLocalBoundary()
+            self.reevaluateLocalAccess()
             await self.refresh()
         }
     }
 
-    private func applyLocalBoundary() {
-        guard !value.hasAccess(at: clock(now())) else { scheduleBoundary(); return }
-        let expired = value.withoutAccess(at: clock(now()))
-        // Expiration is already established locally; network latency must not extend visible access.
-        value = expired
-        try? cache.save(expired)
+    /// Commit clock changes before any StoreKit await so all dependent policies see the same access.
+    public func reevaluateLocalAccess() {
+        let sample = clock(now())
+        if !value.hasAccess(at: sample), value.clockAnchor?.effectiveDate(at: sample) != nil {
+            let expired = value.withoutAccess(at: sample)
+            if expired != value {
+                value = expired
+                try? cache.save(expired)
+            }
+        }
+        // Clock uncertainty denies access but preserves evidence for automatic recovery.
+        accessChanges.send(accessState)
+        scheduleBoundary()
     }
 
     #if DEBUG

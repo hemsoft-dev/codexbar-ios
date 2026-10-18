@@ -401,7 +401,10 @@ final class WatchSnapshotCoordinator {
     }
 
     func publishCurrentSnapshot(force: Bool = false) {
-        let awaitsInitialResults = refreshService.results.isEmpty
+        // Free access must remove previously sent Pro accounts even if the active provider is still loading.
+        let hasResolvedFreeAccess = configurationStore.accountAccess.isResolved
+            && !configurationStore.accountAccess.hasProAccess
+        let awaitsInitialResults = !hasResolvedFreeAccess && refreshService.results.isEmpty
             && configurationStore.configurations.contains(
                 where: configurationStore.shouldDisplayOnDashboard
             )

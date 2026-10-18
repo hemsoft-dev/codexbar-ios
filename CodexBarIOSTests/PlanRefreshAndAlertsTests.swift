@@ -4,6 +4,111 @@ import XCTest
 
 final class PlanRefreshAndAlertsTests: XCTestCase {
     @MainActor
+    func testConfirmedClaudeResetSurvivesProLossAndReturn() async throws {
+        try await assertClaudeResetSurvivesAccessChange(startsWithPro: true)
+    }
+
+    @MainActor
+    func testConfirmedClaudeResetSurvivesActiveAccountSwitchAndReturn() async throws {
+        try await assertClaudeResetSurvivesAccessChange(startsWithPro: false)
+    }
+
+    @MainActor
+    func testClaudeResetInvalidationSurvivesPlanPauseAndReturn() async throws {
+        for mutation in ["credentials", "remove", "disable", "refreshInputs"] {
+            let entered = expectation(description: "Claude reset awaits provider before \(mutation)")
+            let gate = PlanTestGate { entered.fulfill() }
+            let harness = makeClaudeResetHarness(gate: gate)
+            let reset = Task { try await harness.consume() }
+            await fulfillment(of: [entered], timeout: 3)
+            harness.service.updateAccountAccess(freeAccess(active: harness.otherAccount, paused: harness.account))
+
+            var changed = harness.account
+            switch mutation {
+            case "credentials": harness.service.invalidateCredentials(accountID: changed.id)
+            case "remove": harness.service.updateCurrentConfigurations([harness.otherAccount])
+            case "disable":
+                changed.isEnabled = false
+                harness.service.updateCurrentConfigurations([changed, harness.otherAccount])
+            default:
+                changed.authMethod = .apiKey
+                harness.service.updateCurrentConfigurations([changed, harness.otherAccount])
+            }
+            // Restoring the same inputs and access must not revive a completion invalidated
+            // while the reset was pending, including credentials replaced during a plan pause.
+            harness.service.updateCurrentConfigurations([harness.account, harness.otherAccount])
+            harness.service.updateAccountAccess(.unrestricted)
+            await gate.release()
+            do {
+                _ = try await reset.value
+                XCTFail("Changed Claude account must reject the completion: \(mutation)")
+            } catch {
+                XCTAssertEqual(error as? ClaudeUsageResetError, .credentialChanged, mutation)
+            }
+            let calls = await harness.provider.consumptionCount()
+            XCTAssertEqual(calls, 1, mutation)
+        }
+    }
+
+    @MainActor
+    private func assertClaudeResetSurvivesAccessChange(startsWithPro: Bool) async throws {
+        for restoresAccess in [false, true] {
+            for outcome in [ClaudeUsageResetOutcome.reset, .alreadyRedeemed] {
+                let entered = expectation(description: "Claude reset awaits provider before access changes")
+                let gate = PlanTestGate { entered.fulfill() }
+                let harness = makeClaudeResetHarness(gate: gate, outcome: outcome)
+                let initialAccess = startsWithPro ? AccountPlanAccess.unrestricted
+                    : freeAccess(active: harness.account, paused: harness.otherAccount)
+                harness.service.updateAccountAccess(initialAccess)
+                let previousResults = harness.service.results
+                let reset = Task { try await harness.consume() }
+                await fulfillment(of: [entered], timeout: 3)
+
+                harness.service.updateAccountAccess(freeAccess(active: harness.otherAccount, paused: harness.account))
+                if restoresAccess { harness.service.updateAccountAccess(initialAccess) }
+                await gate.release()
+                do {
+                    let confirmed = try await reset.value
+                    XCTAssertEqual(confirmed, outcome)
+                } catch {
+                    XCTFail("Confirmed Claude reset became a failure after an access change: \(error)")
+                }
+                let calls = await harness.provider.consumptionCount()
+                XCTAssertEqual(calls, 1)
+                XCTAssertEqual(harness.service.results, previousResults)
+                XCTAssertTrue(harness.service.refreshErrorsByAccountID.isEmpty)
+                if !restoresAccess {
+                    let refresh = await harness.service.refresh(configuration: harness.account)
+                    XCTAssertNil(refresh)
+                }
+                let fetches = await harness.provider.fetchCount()
+                XCTAssertEqual(fetches, 0)
+            }
+        }
+    }
+
+    @MainActor
+    private func makeClaudeResetHarness(
+        gate: PlanTestGate, outcome: ClaudeUsageResetOutcome = .reset
+    ) -> PlanClaudeResetHarness {
+        let account = ProviderAccountConfiguration(id: "plan.claude.reset", providerID: .claude, authMethod: .cliToken)
+        let other = ProviderAccountConfiguration(id: "plan.claude.other", providerID: .claude, authMethod: .cliToken)
+        let grant = ClaudeUsageResetGrant(id: "plan-reset", title: "Saved reset", remainingCount: 1,
+                                         startsAt: nil, expiresAt: Date().addingTimeInterval(3_600),
+                                         clears: ["five_hour"], isPaused: false, isUsableNow: true, requiresLimit: false)
+        let inventory = ClaudeUsageResetInventory(isEligible: true, grants: [grant], selectedGrantID: grant.id,
+                                                 cooldownUntil: nil, credentialBinding: "plan-reset-binding")
+        let cached = ProviderUsageResult(accountID: account.id, providerID: .claude, title: "Claude",
+                                         subtitle: "Saved usage", bars: [UsageBar(label: "Usage", used: 95, limit: 100)],
+                                         claudeUsageResetInventory: inventory, fetchedAt: Date())
+        let provider = PlanClaudeResetProvider(gate: gate, outcome: outcome)
+        let service = UsageRefreshService(providers: [provider], initialResults: [cached])
+        service.updateCurrentConfigurations([account, other])
+        service.updateAccountAccess(.unrestricted)
+        return PlanClaudeResetHarness(account: account, otherAccount: other, grant: grant, service: service, provider: provider)
+    }
+
+    @MainActor
     func testFreeBatchAndIndividualRefreshOnlyActiveAndDoNotRecordPausedCache() async throws {
         let harness = try makeHarness(hasProAccess: false)
         defer { harness.removeDefaults() }
@@ -518,6 +623,50 @@ private actor PlanTestGate {
         continuation?.resume()
         continuation = nil
     }
+}
+
+@MainActor
+private struct PlanClaudeResetHarness {
+    let account: ProviderAccountConfiguration
+    let otherAccount: ProviderAccountConfiguration
+    let grant: ClaudeUsageResetGrant
+    let service: UsageRefreshService
+    let provider: PlanClaudeResetProvider
+
+    func consume() async throws -> ClaudeUsageResetOutcome {
+        try await service.consumeClaudeReset(for: account, grantID: grant.id, confirmedGrant: grant,
+                                             credentialBinding: "plan-reset-binding")
+    }
+}
+
+private actor PlanClaudeResetProvider: UsageProvider, ClaudeUsageResetConsuming {
+    nonisolated let providerID = ProviderID.claude
+    private let gate: PlanTestGate
+    private let outcome: ClaudeUsageResetOutcome
+    private var consumptions = 0
+    private var fetches = 0
+
+    init(gate: PlanTestGate, outcome: ClaudeUsageResetOutcome) {
+        self.gate = gate
+        self.outcome = outcome
+    }
+
+    func consumeClaudeReset(
+        for configuration: ProviderAccountConfiguration, grantID: String,
+        confirmedGrant: ClaudeUsageResetGrant, credentialBinding: String
+    ) async throws -> ClaudeUsageResetOutcome {
+        consumptions += 1
+        await gate.wait()
+        return outcome
+    }
+
+    func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
+        fetches += 1
+        return planResult(for: configuration, at: Date(), used: 10)
+    }
+
+    func consumptionCount() -> Int { consumptions }
+    func fetchCount() -> Int { fetches }
 }
 
 @MainActor

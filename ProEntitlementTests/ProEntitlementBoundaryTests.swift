@@ -1,9 +1,70 @@
+import Combine
 import Foundation
 import XCTest
 @testable import CodexBarIOS
 
 @MainActor
 final class ProEntitlementBoundaryTests: XCTestCase {
+    func testClockJumpPublishesExpirationBeforeAwaitingStoreKit() async throws {
+        let instant = Date(timeIntervalSince1970: 1_800_000_000)
+        let expiry = instant.addingTimeInterval(3_600)
+        var sample = ProEntitlementClockSample(wallDate: instant, continuousSeconds: 1_000, continuityID: "clock-test")
+        let source = TestProSource()
+        let cache = TestProCache()
+        try cache.save(ProEntitlementValue(
+            reason: .monthly, expiresAt: expiry, proAccessEndsAt: expiry.addingTimeInterval(ProEntitlementValue.offlineAllowance),
+            verifiedAt: instant, clockAnchor: ProEntitlementClockAnchor(
+                anchorDate: instant, continuousSeconds: 1_000, continuityID: "clock-test", latestSignedAt: instant
+            )
+        ))
+        let service = ProEntitlement(source: source, cache: cache, now: { sample.wallDate }, clock: { _ in sample })
+        await service.start()
+        var observed: ProAccessState?
+        let subscription = service.accessChanges.sink { observed = $0 }
+        defer { subscription.cancel(); source.finishStreams() }
+        sample = ProEntitlementClockSample(wallDate: expiry.addingTimeInterval(ProEntitlementValue.offlineAllowance),
+                                          continuousSeconds: 1_001, continuityID: "clock-test")
+        source.beforeSnapshot = {
+            XCTAssertEqual(observed, ProAccessState(hasAccess: false, isResolved: true))
+            XCTAssertEqual(service.value.reason, .none)
+            XCTAssertEqual(cache.saved, service.value)
+        }
+
+        await service.refresh()
+
+        XCTAssertFalse(service.hasAccess)
+        sample = ProEntitlementClockSample(wallDate: instant, continuousSeconds: 1_002, continuityID: "clock-test")
+        service.reevaluateLocalAccess()
+        XCTAssertFalse(service.hasAccess, "Moving the clock back cannot undo the locally recorded expiration")
+    }
+
+    func testUncertainClockPublishesDenialWithoutDiscardingRecoverableEvidence() async throws {
+        let instant = Date(timeIntervalSince1970: 1_800_000_000)
+        var sample = testProClock(instant)
+        let cache = TestProCache()
+        let expiry = instant.addingTimeInterval(3_600)
+        let evidence = ProEntitlementValue(
+            reason: .monthly, expiresAt: expiry, proAccessEndsAt: expiry.addingTimeInterval(ProEntitlementValue.offlineAllowance),
+            verifiedAt: instant, clockAnchor: testProAnchor(instant)
+        )
+        try cache.save(evidence)
+        let service = ProEntitlement(source: TestProSource(), cache: cache, now: { sample.wallDate }, clock: { _ in sample })
+        var observed: ProAccessState?
+        let subscription = service.accessChanges.sink { observed = $0 }
+        defer { subscription.cancel() }
+
+        sample = ProEntitlementClockSample(wallDate: instant.addingTimeInterval(-1), continuousSeconds: 1, continuityID: nil)
+        service.reevaluateLocalAccess()
+
+        XCTAssertEqual(observed?.hasAccess, false)
+        XCTAssertEqual(service.value, evidence)
+        XCTAssertEqual(cache.saved, evidence)
+        sample = testProClock(instant.addingTimeInterval(1))
+        service.reevaluateLocalAccess()
+        XCTAssertEqual(observed?.hasAccess, true)
+        XCTAssertEqual(service.value, evidence)
+    }
+
     func testSignedExpiryRechecksStoreKitBeforeOfflineAllowanceEnds() async throws {
         let source = TestProSource()
         let cache = TestProCache()

@@ -1,4 +1,40 @@
+import Combine
 import Foundation
+
+@MainActor
+final class OpenCodeZenBootstrapCoordinator: ObservableObject {
+    private let configurationStore: ProviderConfigurationStore
+    private let importDirectory: URL?
+    private var accessSubscription: AnyCancellable?
+    private var importTask: Task<Void, Never>?
+
+    init(configurationStore: ProviderConfigurationStore, importDirectory: URL? = nil) {
+        self.configurationStore = configurationStore
+        self.importDirectory = importDirectory
+    }
+
+    deinit { importTask?.cancel() }
+
+    func start() {
+        guard accessSubscription == nil else { return }
+        accessSubscription = configurationStore.$accountAccess.removeDuplicates().dropFirst().sink { [weak self] _ in
+            guard let self, self.importTask == nil else { return }
+            // @Published fires before accountAccess is committed. Retry on the next actor turn.
+            self.importTask = Task { @MainActor [weak self] in
+                guard let self, !Task.isCancelled else { return }
+                self.importIfNeeded()
+                self.importTask = nil
+            }
+        }
+        importIfNeeded()
+    }
+
+    private func importIfNeeded() {
+        OpenCodeZenBootstrapImporter.importIfNeeded(
+            configurationStore: configurationStore, importDirectory: importDirectory
+        )
+    }
+}
 
 @MainActor
 enum OpenCodeZenBootstrapImporter {
