@@ -8,6 +8,13 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 # Reuse the native SwiftPM module, not another worktree's build products.
 xcrun swift build --target CodexBarIOS
 bin_path="$(xcrun swift build --show-bin-path)"
+if [[ -f "$bin_path/CodexBarIOS.o" && -d "$bin_path/CodexBarIOS.swiftmodule" ]]; then
+  module_path="$bin_path"
+  object_files=("$bin_path/CodexBarIOS.o" "$bin_path/ProClockSupport.o")
+else
+  module_path="$bin_path/Modules"
+  object_files=("$bin_path"/CodexBarIOS.build/*.swift.o "$bin_path/ProClockSupport.build/ProClockSupport.c.o")
+fi
 probe_dir="$(mktemp -d "${TMPDIR:-/tmp}/codexbar-widget-layout.XXXXXX")"
 trap 'rm -rf "$probe_dir"' EXIT
 
@@ -27,7 +34,7 @@ for name in ["CodexBarWidgetModels", "CodexBarWidgetConfiguration", "CodexBarWid
     (destination / (name + ".swift")).write_text("@testable import CodexBarIOS\n" + source)
 PY
 
-xcrun swiftc -swift-version 6 -I "$bin_path/Modules" \
+xcrun swiftc -swift-version 6 -I "$module_path" -I "$repo_root/ProClockSupport/include" \
   "$probe_dir"/*.swift scripts/tests/widget-reset-layout-probe.swift \
-  "$bin_path"/CodexBarIOS.build/*.swift.o -o "$probe_dir/probe"
+  "${object_files[@]}" -o "$probe_dir/probe"
 "$probe_dir/probe"

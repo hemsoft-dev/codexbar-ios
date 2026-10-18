@@ -67,6 +67,16 @@ else
   exit 2
 fi
 
+# The shared app module imports the clock helper; link its C object as SwiftPM does.
+if [[ -f .build/debug/ProClockSupport.o ]]; then
+  object_files+=("$repo_root/.build/debug/ProClockSupport.o")
+elif [[ -f .build/debug/ProClockSupport.build/ProClockSupport.c.o ]]; then
+  object_files+=("$repo_root/.build/debug/ProClockSupport.build/ProClockSupport.c.o")
+else
+  echo "Missing worktree-local ProClockSupport object. Build the SwiftPM CodexBarIOS target first." >&2
+  exit 2
+fi
+
 python3 - "$repo_root" "$probe_dir" "$output_dir" "$source_ref" <<'PY'
 import hashlib
 import json
@@ -136,7 +146,8 @@ env -i HOME="$HOME" PATH="/usr/bin:/bin:/usr/sbin:/sbin" DEVELOPER_DIR="$DEVELOP
   2>&1 | filter_diagnostics
 
 env -i HOME="$HOME" PATH="/usr/bin:/bin:/usr/sbin:/sbin" DEVELOPER_DIR="$DEVELOPER_DIR" \
-  xcrun swiftc -swift-version 6 -Xfrontend -disable-availability-checking -I "$module_path" \
+  xcrun swiftc -swift-version 6 -Xfrontend -disable-availability-checking \
+  -I "$module_path" -I "$repo_root/ProClockSupport/include" \
   "$probe_dir"/sources/*.swift \
   "${object_files[@]}" -o "$bundle_dir/Contents/MacOS/probe" \
   2>&1 | filter_diagnostics
