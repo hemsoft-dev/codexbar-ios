@@ -184,6 +184,10 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 - Never score an `xccov merge` that changes coverage identities or denominators;
   fall back to each counter's best single input, a conservative lower bound.
   ([#494](https://github.com/hemsoft-dev/codexbar-ios/issues/494))
+
+- Reveal the lifetime confirm button before checking its price in the large-text
+  commerce journey, so it passes on the iOS 26.2 release runtime.
+  ([#498](https://github.com/hemsoft-dev/codexbar-ios/issues/498))
   ([#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490))
 
 - Add explicit manual release phases with exact test identities, separate
