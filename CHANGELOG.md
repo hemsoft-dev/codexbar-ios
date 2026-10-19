@@ -170,6 +170,7 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   entitlement clock's shared continuity marker on iPhone and Apple Watch. Run
   release qualification on the iOS 26.2 simulator, because iOS 26.3 through
   26.5 simulators break StoreKit testing from the command line.
+  ([#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490))
 
 - Keep native StoreKit subscription tests independent of Apple's accelerated test
   clock: resolve billing retry from the reported renewal and give natural expiry
@@ -188,7 +189,6 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 - Reveal the lifetime confirm button before checking its price in the large-text
   commerce journey, so it passes on the iOS 26.2 release runtime.
   ([#498](https://github.com/hemsoft-dev/codexbar-ios/issues/498))
-  ([#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490))
 
 - Add explicit manual release phases with exact test identities, separate
   StoreKit preparation and reset, and retained failure evidence. Combine ordinary
