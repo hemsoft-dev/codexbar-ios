@@ -581,3 +581,15 @@ touches no credential, persistence or network boundary. Reviewed commit
 `cedd7a74ef51b104969052d3a65141d801e04677` binds source snapshot
 `694c0669b8bf840138a6dffbc0856e5f60a87560fac17059450fe69409b22ad4`
 with the same 157 files and the same four accepted diagnostics.
+
+## October 19 iPad dashboard layout review
+
+Issue [#496](https://github.com/hemsoft-dev/codexbar-ios/issues/496) changes only
+`CodexBarIOS/ContentView.swift`. iPad lays out dashboard cards eagerly in a custom
+`DashboardCardColumnsLayout` instead of a lazy grid, which froze while scrolling on
+iOS 26. Reviewed commit `10d784c781e6f7870b4a510e0fa1416620e4a98a` binds source snapshot
+`4b82d0db9d273ae396db008236f18737e822d615cc4e09cfa87f0539bde55e52`
+with the same 157 production files. The change is view layout only. It adds no
+credential, persistence, network or export path, and touches none of the four
+accepted finding files or their consumers, so the accepted diagnostics are unchanged.
+The release candidate still needs its own hosted analysis.
