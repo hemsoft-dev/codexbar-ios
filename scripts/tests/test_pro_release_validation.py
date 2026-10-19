@@ -170,11 +170,45 @@ class RunnerCommandFailureTests(unittest.TestCase):
         self.exit_codes = {}
         self.extraction_error = False
         self.lazy_result_database = False
+        self.device_state = 'Booted'
         self.patches = [patch.object(self.runner, 'unchanged'),
-                        patch.object(RUNNER.subprocess, 'run', side_effect=self.process)]
+                        patch.object(RUNNER.subprocess, 'run', side_effect=self.process),
+                        patch.object(RUNNER, 'device_record', side_effect=lambda *_: dict(self.device, state=self.device_state))]
         for patcher in self.patches:
             patcher.start()
             self.addCleanup(patcher.stop)
+
+    def storekit_restarts(self):
+        restart = ['launchctl', 'stop', 'com.apple.storekitd']
+        return ['restart' if call[-3:] == restart else 'discovery' if '-enumerate-tests' in call
+                else 'test' if '-resultBundlePath' in call else None for call in self.calls]
+
+    def test_native_phases_restart_storekitd_before_discovery_and_execution(self):
+        self.runner.phase('native-preparation', self.build)
+        order = [step for step in self.storekit_restarts() if step]
+        self.assertEqual(order, ['restart', 'discovery', 'restart', 'test'])
+        restart = next(call for call in self.calls if call[-1] == 'com.apple.storekitd')
+        self.assertEqual(restart[:4], ['xcrun', 'simctl', 'spawn', self.device['deviceId']])
+        for name in ('storekitd-before-discovery', 'storekitd-before-test'):
+            self.assertEqual(EVIDENCE.read(self.root / f'native-preparation/{name}.command.json')['exit'], 0)
+
+    def test_shut_down_device_skips_the_storekitd_restart(self):
+        self.device_state = 'Shutdown'
+        self.runner.phase('native-preparation', self.build)
+        self.assertNotIn('restart', self.storekit_restarts())
+
+    def test_ordinary_builds_never_restart_storekitd(self):
+        ordinary = self.root / 'build-ios.json'
+        EVIDENCE.write(ordinary, dict(EVIDENCE.read(self.build), scheme='CodexBarIOS', native=False,
+                                      derivedData=str(self.root / 'DerivedData-ios')))
+        with patch.object(self.runner, 'arguments', return_value=['xcodebuild']), \
+                patch.object(RUNNER, 'discovery_tests', return_value=[]), patch.object(RUNNER, 'validate_results'), \
+                patch.object(RUNNER, 'validate_receipt'):
+            try:
+                self.runner.phase('ui-supplemental', ordinary)
+            except (ValueError, RUNNER.PhaseFailure):
+                pass
+        self.assertNotIn('restart', self.storekit_restarts())
 
     def process(self, argv, **kwargs):
         self.calls.append(argv)
@@ -276,8 +310,8 @@ class RunnerCommandFailureTests(unittest.TestCase):
     def test_discovery_failure_never_executes_storekit_tests(self):
         def fail_discovery(argv, **kwargs):
             self.calls.append(argv)
-            kwargs['stdout'].write('discovery failed\n')
-            return SimpleNamespace(returncode=70)
+            kwargs['stdout'].write('discovery failed\n' if '-enumerate-tests' in argv else 'storekitd stopped\n')
+            return SimpleNamespace(returncode=70 if '-enumerate-tests' in argv else 0)
         with patch.object(RUNNER.subprocess, 'run', side_effect=fail_discovery), self.assertRaises(RUNNER.PhaseFailure) as caught:
             self.runner.phase('native-preparation', self.build)
         self.assertEqual(caught.exception.code, 70)

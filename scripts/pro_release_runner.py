@@ -242,6 +242,16 @@ class Runner:
             raise failure
         return path
 
+    def restart_storekit(self, folder, name):
+        """Each xcodebuild reinstalls the app. storekitd can keep the previous install's dead
+        container, reject the receipt and fall back to sandbox requests (#500). Stopping it
+        lets launchd start a fresh instance on demand; a shut-down device has none running."""
+        current = device_record(self.device['deviceId'], self.device['family'], self.tools,
+                                self.device.get('runtimeBundlePath'))
+        if current['state'] == 'Booted':
+            command(folder, name, ['xcrun', 'simctl', 'spawn', self.device['deviceId'],
+                                   'launchctl', 'stop', 'com.apple.storekitd'])
+
     def phase(self, name, build_path, base=False):
         self.unchanged()
         build = read(build_path)
@@ -267,6 +277,8 @@ class Runner:
         discovery_argv = argv + ['test-without-building', '-enumerate-tests',
                 '-test-enumeration-style', 'flat', '-test-enumeration-format', 'json',
                 '-test-enumeration-output-path', str(discovery)]
+        if build['native']:
+            self.restart_storekit(folder, 'storekitd-before-discovery')
         command(folder, 'discovery', discovery_argv)
         discovered = discovery_tests(read(discovery))
         expected = sorted(tests) if phase else discovered
@@ -281,6 +293,8 @@ class Runner:
             argv += ['-test-timeouts-enabled', 'YES', '-default-test-execution-time-allowance', '90',
                      '-maximum-test-execution-time-allowance', '120']
         argv += ['-resultBundlePath', str(result), 'test-without-building']
+        if build['native']:
+            self.restart_storekit(folder, 'storekitd-before-test')
         receipt = dict(schema=1, phase=name, source=self.source, tools=self.tools, device=self.device,
                        platform='ios', configuration='Debug', expectedTests=expected, result=str(result),
                        buildReceipt=str(build_path), build_sha256=digest(build_path),

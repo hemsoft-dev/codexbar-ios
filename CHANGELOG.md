@@ -190,6 +190,11 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   commerce journey, so it passes on the iOS 26.2 release runtime.
   ([#498](https://github.com/hemsoft-dev/codexbar-ios/issues/498))
 
+- Restart the simulator's StoreKit daemon before each native StoreKit release
+  phase, so a reinstalled app is never checked against its previous, deleted
+  installation.
+  ([#500](https://github.com/hemsoft-dev/codexbar-ios/issues/500))
+
 - Add explicit manual release phases with exact test identities, separate
   StoreKit preparation and reset, and retained failure evidence. Combine ordinary
   and native StoreKit iOS coverage with Apple's raw report/archive merge and

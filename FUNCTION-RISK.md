@@ -122,7 +122,11 @@ It runs the full ordinary iOS suite, including 197 shared Pro test methods from
 22 sources, then four separately selected native phases: preparation 1, native
 commerce 25, Germany preparation 1 and Germany storefront 1. The two top-level
 `testProClock` and `testProAnchor` support functions are not XCTest methods.
-Every native invocation uses the isolated Debug host and ad hoc signing. The
+Every native invocation uses the isolated Debug host and ad hoc signing. Before each native
+discovery and execution, the runner stops the booted simulator's `storekitd`
+(`launchctl stop com.apple.storekitd`). Each `xcodebuild` reinstalls the app,
+and `storekitd` could otherwise keep the previous install's dead container, reject
+the receipt and fall back to sandbox requests (#500). The
 five complete result bundles are required for aggregate iOS measurement.
 Preparation and its consumer must use the same build and owned simulator.
 
