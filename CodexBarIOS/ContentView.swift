@@ -1650,8 +1650,8 @@ private final class ContentPreviewEffects: UsageAlertNotifying, GitHubStatusNoti
     func activate(onSnapshotNeeded: @escaping @MainActor (Bool) -> Void) {}
     func publish(_ snapshot: WatchDashboardSnapshot, force: Bool) -> Bool { false }
 }
-#endif
 
 #Preview {
     ContentPreview.makeView()
 }
+#endif

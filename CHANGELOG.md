@@ -196,6 +196,9 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   preparation applied.
   ([#500](https://github.com/hemsoft-dev/codexbar-ios/issues/500)) ([#502](https://github.com/hemsoft-dev/codexbar-ios/issues/502))
 
+- Keep the dashboard preview in debug builds only, so the release build compiles.
+  ([#504](https://github.com/hemsoft-dev/codexbar-ios/issues/504))
+
 - Add explicit manual release phases with exact test identities, separate
   StoreKit preparation and reset, and retained failure evidence. Combine ordinary
   and native StoreKit iOS coverage with Apple's raw report/archive merge and
