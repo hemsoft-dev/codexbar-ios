@@ -115,7 +115,9 @@ final class ProCommerceJourneyTests: XCTestCase {
         let warning = journey.element("pro-lifetime-restart-warning")
         journey.reveal(warning)
         XCTAssertTrue(warning.label.contains("Apple will charge for it even though you have lifetime Pro."))
-        XCTAssertTrue(journey.app.buttons["pro-confirm-lifetime"].label.contains("$29.99"))
+        let confirm = journey.app.buttons["pro-confirm-lifetime"]
+        journey.reveal(confirm)
+        XCTAssertTrue(confirm.label.contains("$29.99"))
         journey.tap("pro-confirm-lifetime")
         journey.feedback(containing: "Lifetime Pro is ready")
         journey.plan("Lifetime Pro")
