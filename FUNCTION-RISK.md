@@ -127,8 +127,20 @@ five complete result bundles are required for aggregate iOS measurement.
 Preparation and its consumer must use the same build and owned simulator.
 
 The collector exports each xcresult's actual `.xccovreport`/`.xccovarchive`
-pair and passes all five pairs to `xccov merge`. It reads function counts from
-the merged report; it never sums or takes the maximum of covered-line counts.
+pair and passes all five pairs to `xccov merge`. It scores function counts from
+the merged report only when every merged identity and denominator matches the
+inputs and no covered count shrinks; it never sums covered-line counts.
+
+On Xcode 26.6, `xccov merge` rewrites function ranges for the real ordinary and
+native release builds (#494). For candidate `80198d5`, all five inputs agreed on
+59,120 `CodexBarIOS.app` executable lines, but the merge reported 59,475 and
+resized 22 functions, for example `ProviderConfigurationStore.statusText(for:)`
+from 4 to 135 lines. The collector then writes `merge-rejected.json`, never
+scores the merge, and takes each target, file and function counter from its best
+single input. That maximum is a lower bound of the true union: a line covered by
+two inputs is counted once, and lines covered only in different inputs may be
+undercounted. Scores can therefore only overstate risk. `coverage-basis.json`
+records which basis was scored.
 It rejects duplicate targets/files/functions, incompatible denominators, stale
 source paths, missing phases, changed receipts, filtered ordinary test runs,
 failed or skipped tests and empty app counters. Source hashes, tool versions,

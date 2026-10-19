@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 @testable import CodexBarIOS
 
@@ -141,6 +142,198 @@ final class FreeTierPresentationTests: XCTestCase {
         XCTAssertFalse(result.hasSuccessfulRefreshHistory)
     }
 
+    func testDashboardInvitesFirstAccountWhenNoAccountsExist() throws {
+        try withDashboard { probe in
+            let addAccount = try XCTUnwrap(probe.element(identifier: "dashboard-add-account"), "\(probe.labels)")
+
+            XCTAssertNotNil(probe.element(label: "Connect your first account"), "\(probe.labels)")
+            XCTAssertTrue(
+                probe.labels.contains("Add an AI provider to see usage, reset times, and balances in one place."), "\(probe.labels)"
+            )
+            XCTAssertEqual(addAccount.accessibilityLabel, "Add Account")
+            XCTAssertEqual(addAccount.accessibilityHint, "Opens the list of supported AI providers.")
+            Self.assertOnlyEmptyState("Connect your first account", in: probe)
+        }
+    }
+
+    func testDashboardShowsLoadingUntilInitialRefreshCompletes() throws {
+        try withDashboard(performsLifecycleWork: true, settles: false) { probe in
+            XCTAssertEqual(
+                probe.element(identifier: "dashboard-account-loading")?.accessibilityLabel, "Loading accounts…", "\(probe.labels)"
+            )
+            XCTAssertNil(probe.element(label: "Connect your first account"))
+
+            XCTAssertTrue(probe.waitUntil { probe.element(label: "Connect your first account") != nil }, "\(probe.labels)")
+            XCTAssertNil(probe.element(identifier: "dashboard-account-loading"))
+        }
+    }
+
+    func testDashboardRoutesDamagedAccountDataToSettingsRecovery() throws {
+        try withDashboard(prepareDefaults: { defaults in
+            defaults.set(Data("not an account list".utf8), forKey: "providerConfigurations")
+        }, inspect: { probe in
+            XCTAssertTrue(probe.labels.contains("Open Settings to recover your saved account or group data."), "\(probe.labels)")
+            XCTAssertEqual(probe.element(label: "Open Settings")?.accessibilityHint, "Opens account data recovery options.")
+            Self.assertOnlyEmptyState("Account Data Needs Attention", in: probe)
+        })
+    }
+
+    func testDashboardRoutesIncompleteAccountResetToSettingsRecovery() throws {
+        try withDashboard(prepareDefaults: { defaults in
+            defaults.set(true, forKey: "incompleteAccountReset")
+        }, inspect: { probe in
+            XCTAssertTrue(
+                probe.labels.contains("Open Settings to retry credential cleanup before adding another account."), "\(probe.labels)"
+            )
+            XCTAssertEqual(probe.element(label: "Open Settings")?.accessibilityHint, "Opens account reset recovery options.")
+            Self.assertOnlyEmptyState("Account Reset Needs Attention", in: probe)
+        })
+    }
+
+    func testDashboardAsksToEnableAccountsWhenEverySavedAccountIsDisabled() throws {
+        try withDashboard(prepareStore: { store in
+            var account = try XCTUnwrap(store.addAccount(for: .openRouter))
+            account.isEnabled = false
+            XCTAssertTrue(store.update(account))
+        }, inspect: { probe in
+            XCTAssertTrue(probe.labels.contains("Enable an account in Settings to resume usage tracking."), "\(probe.labels)")
+            XCTAssertEqual(probe.element(label: "Open Settings")?.accessibilityHint, "Opens Settings where accounts can be enabled.")
+            Self.assertOnlyEmptyState("Accounts Are Disabled", in: probe)
+        })
+    }
+
+    func testDashboardOffersSetupForEnabledAccountWithoutCredentials() throws {
+        try withDashboard(prepareStore: { store in
+            let account = try XCTUnwrap(store.addAccount(for: .openRouter))
+            XCTAssertFalse(store.isConfigured(account))
+        }, inspect: { probe in
+            XCTAssertTrue(probe.labels.contains("Finish connecting your account to start seeing live usage."), "\(probe.labels)")
+            XCTAssertEqual(
+                probe.element(label: "Continue Setup")?.accessibilityHint, "Opens setup for the account that needs attention."
+            )
+            Self.assertOnlyEmptyState("Account Needs Setup", in: probe)
+        })
+    }
+
+    func testProPurchaseOutcomesUpdateFeedbackAndEntitlement() throws {
+        let saved = "Your purchase is saved and Pro access is available."
+        let cases: [(scenario: String, product: ProProductID, feedback: String, reason: ProEntitlementReason)] = [
+            ("commerce-free-trial", .monthly, "CodexBar Pro is ready, \(saved)", .monthly),
+            ("commerce-free-trial", .lifetime, "Lifetime Pro is ready, \(saved)", .lifetime),
+            ("commerce-pending", .monthly, "Waiting for approval, Pro will update automatically if this purchase is approved.", .none),
+            ("commerce-cancelled", .monthly, "Purchase canceled, No purchase was completed.", .none),
+            (
+                "commerce-purchase-error", .monthly,
+                "Purchase could not be completed, The purchase could not be completed. Please try again.", .none
+            ),
+        ]
+        for testCase in cases {
+            try withProPresentation(scenario: testCase.scenario) { probe, entitlement in
+                XCTAssertFalse(entitlement.hasAccess, testCase.scenario)
+                XCTAssertTrue(probe.activate(identifier: "pro-purchase-\(testCase.product.proIdentifier)"), "\(probe.labels)")
+                XCTAssertTrue(
+                    probe.waitUntil { probe.element(label: testCase.feedback) != nil },
+                    "\(testCase.scenario) \(testCase.product): \(probe.labels)"
+                )
+
+                XCTAssertNil(entitlement.command)
+                XCTAssertEqual(entitlement.value.reason, testCase.reason, testCase.scenario)
+                XCTAssertEqual(entitlement.hasAccess, testCase.reason != .none, testCase.scenario)
+            }
+        }
+    }
+
+    func testSettingsLifetimeSwitchConfirmsBeforePurchasingLifetime() throws {
+        try withProPresentation(scenario: "commerce-monthly-off", origin: .settings) { probe, entitlement in
+            XCTAssertEqual(entitlement.value.reason, .monthly)
+            XCTAssertEqual(
+                probe.element(identifier: "pro-lifetime-gate")?.accessibilityLabel,
+                "Auto-renew is off. Buying lifetime does not refund the remaining paid subscription period.",
+                "\(probe.labels)"
+            )
+            XCTAssertTrue(probe.activate(identifier: "pro-switch-lifetime"), "\(probe.labels)")
+            XCTAssertTrue(probe.waitUntil { probe.element(identifier: "pro-confirm-lifetime") != nil }, "\(probe.labels)")
+            XCTAssertEqual(entitlement.value.reason, .monthly)
+
+            XCTAssertTrue(probe.activate(identifier: "pro-confirm-lifetime"), "\(probe.labels)")
+            XCTAssertTrue(probe.waitUntil {
+                probe.element(label: "Lifetime Pro is ready, Your purchase is saved and Pro access is available.") != nil
+            }, "\(probe.labels)")
+            XCTAssertEqual(entitlement.value.reason, .lifetime)
+            XCTAssertTrue(entitlement.hasAccess)
+        }
+    }
+
+    private func withDashboard(
+        performsLifecycleWork: Bool = false,
+        settles: Bool = true,
+        prepareDefaults: (UserDefaults) throws -> Void = { _ in },
+        prepareStore: (ProviderConfigurationStore) throws -> Void = { _ in },
+        inspect: (HostedViewProbe) throws -> Void
+    ) throws {
+        let suiteName = "FreeTierPresentationTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        try prepareDefaults(defaults)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults,
+                                               secretStore: EmptySecretStore(), widgetSnapshotDefaults: nil)
+        try prepareStore(store)
+        let service = UsageRefreshService(providers: [])
+        let statusPreferences = GitHubStatusPreferences(defaults: defaults)
+        let probe = try HostedViewProbe(ContentView(
+            refreshService: service,
+            configurationStore: store,
+            historyStore: UsageHistoryStore(defaults: defaults, accessPolicy: .pro),
+            appUpdateController: AppUpdateController(defaults: defaults, releaseFetcher: PresentationOfflineNetwork()),
+            githubStatusPreferences: statusPreferences,
+            githubStatusMonitor: GitHubStatusMonitor(
+                preferences: statusPreferences, fetcher: PresentationOfflineNetwork(), notifier: PresentationNoopGitHubNotifier()
+            ),
+            usageAlertNotifier: StubUsageAlertNotifier(),
+            appReviewPromptPolicy: AppReviewPromptPolicy(defaults: defaults),
+            performsLifecycleWork: performsLifecycleWork,
+            widgetSnapshotCoordinator: WidgetSnapshotCoordinator(
+                refreshService: service, configurationStore: store, publishSnapshot: { _, _ in }, publishSettings: { _ in }
+            ),
+            watchSnapshotCoordinator: WatchSnapshotCoordinator(
+                refreshService: service, configurationStore: store,
+                sender: PresentationNoopWatchSender(), publishSnapshot: { _, _, _ in }
+            )
+        ), settles: settles)
+        defer { probe.close() }
+        try inspect(probe)
+    }
+
+    private func withProPresentation(
+        scenario: String,
+        origin: ProPresentationOrigin = .limit,
+        inspect: (HostedViewProbe, ProEntitlement) throws -> Void
+    ) throws {
+        let suiteName = "FreeTierPresentationTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let fixture = try XCTUnwrap(ProCommerceFixture(scenario: scenario, runID: UUID(), environment: [:]))
+        let store = ProviderConfigurationStore(initialPlanAccess: .free, defaults: defaults,
+                                               secretStore: EmptySecretStore(), widgetSnapshotDefaults: nil)
+        let probe = try HostedViewProbe(
+            ProPresentationView(configurationStore: store, origin: origin).environmentObject(fixture.entitlement)
+        )
+        defer { probe.close() }
+        XCTAssertTrue(probe.waitUntil { probe.element(identifier: "pro-content-ready") != nil }, "\(scenario): \(probe.labels)")
+        try inspect(probe, fixture.entitlement)
+    }
+
+    private static let emptyStateTitles = [
+        "Account Data Needs Attention", "Account Reset Needs Attention", "Connect your first account",
+        "Account Needs Setup", "Accounts Are Disabled", "No Usage Data",
+    ]
+
+    private static func assertOnlyEmptyState(_ title: String, in probe: HostedViewProbe, line: UInt = #line) {
+        let labels = probe.labels
+        XCTAssertEqual(emptyStateTitles.filter(labels.contains), [title], "\(labels)", line: line)
+        XCTAssertNil(probe.element(identifier: "dashboard-account-loading"), line: line)
+    }
+
     private func assertPausedRenameUsesCurrentLabel(useHistoryFallback: Bool) throws {
         let suiteName = "FreeTierPresentationTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -228,4 +421,13 @@ final class FreeTierPresentationTests: XCTestCase {
 private final class PresentationNoopWatchSender: WatchSnapshotSending {
     func activate(onSnapshotNeeded: @escaping @MainActor (Bool) -> Void) {}
     func publish(_ snapshot: WatchDashboardSnapshot, force: Bool) -> Bool { true }
+}
+
+private struct PresentationOfflineNetwork: AppStoreReleaseFetching, GitHubStatusFetching {
+    func fetchRelease() async throws -> AppStoreRelease { throw URLError(.notConnectedToInternet) }
+    func fetchStatus(checkedAt: Date) async throws -> GitHubServiceStatusSnapshot { throw URLError(.notConnectedToInternet) }
+}
+
+private final class PresentationNoopGitHubNotifier: GitHubStatusNotifying {
+    func deliverGitHubStatus(_ notification: GitHubStatusNotification) async throws {}
 }

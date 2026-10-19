@@ -286,6 +286,7 @@ class CoverageCollectionTests(unittest.TestCase):
                             for name in ['App.app', 'Widget.appex']])
         self.receipts, self.entries, self.summaries, self.trees, self.commands = {}, [], {}, {}, []
         self.mutate_result_reads = False
+        self.merged_coverage, self.phase_coverage = None, {}
         self.native_build = self.make_build('native', True)
         ordinary_build = self.make_build('ordinary', False)
         for index, phase in enumerate(self.phases['coverage_phases']):
@@ -362,7 +363,11 @@ class CoverageCollectionTests(unittest.TestCase):
             Path(command[command.index('--outArchive') + 1]).write_text('merged-archive')
             return ''
         if 'view' in command:
-            return json.dumps(self.coverage)
+            report = command[-1]
+            if self.merged_coverage is not None and report.endswith('merged.xccovreport'):
+                return json.dumps(self.merged_coverage)
+            phase = next((name for name in self.phase_coverage if f'/inputs/{name}/' in report), None)
+            return json.dumps(self.phase_coverage[phase] if phase else self.coverage)
         raise AssertionError(command)
 
     def collect(self, single=False, platform='ios'):
@@ -380,6 +385,42 @@ class CoverageCollectionTests(unittest.TestCase):
         self.assertEqual([item['phase'] for item in evidence], self.phases['coverage_phases'])
         self.assertTrue(all(item['producer_attested'] for item in evidence))
         self.assertEqual(len(list((self.output / 'inputs').glob('*/test-summary.json'))), 5)
+
+    def with_function_coverage(self, covered, executable=4):
+        coverage = copy.deepcopy(self.coverage)
+        for target in coverage['targets']:
+            target['files'][0]['functions'][0].update(coveredLines=covered, executableLines=executable)
+            target['files'][0].update(coveredLines=covered, executableLines=executable)
+            target.update(coveredLines=covered, executableLines=executable)
+        return coverage
+
+    def test_consistent_merge_is_scored_as_the_exact_union(self):
+        coverage, _ = self.collect()
+        self.assertEqual(EVIDENCE.read(self.output / 'coverage-basis.json')['basis'], 'xccov merge')
+        self.assertFalse((self.output / 'merge-rejected.json').exists())
+        self.assertEqual(coverage, self.coverage)
+
+    def test_corrupted_merge_is_rejected_and_scored_from_the_best_input(self):
+        self.phase_coverage = {'ios': self.with_function_coverage(1), 'native-commerce': self.with_function_coverage(3)}
+        # Xcode 26.6 grew a 4-line function to 135 lines when merging real inputs (#494).
+        self.merged_coverage = self.with_function_coverage(4, executable=135)
+        coverage, _ = self.collect()
+        self.assertIn('lost identity or denominator', EVIDENCE.read(self.output / 'merge-rejected.json')['reason'])
+        self.assertIn('lower bound', EVIDENCE.read(self.output / 'coverage-basis.json')['basis'])
+        for target in coverage['targets']:
+            function = target['files'][0]['functions'][0]
+            self.assertEqual((function['coveredLines'], function['executableLines']), (3, 4))
+        self.assertEqual(EVIDENCE.read(self.output / 'coverage.json'), coverage)
+
+    def test_lower_bound_keeps_identities_and_never_exceeds_an_input_maximum(self):
+        first, second = self.with_function_coverage(1), self.with_function_coverage(3)
+        extra = copy.deepcopy(self.coverage['targets'][0])
+        extra['name'] = 'UITests.xctest'
+        second['targets'].append(extra)
+        merged = INPUTS.lower_bound_union([first, second])
+        self.assertEqual([target['name'] for target in merged['targets']], ['App.app', 'Widget.appex', 'UITests.xctest'])
+        self.assertEqual(merged['targets'][0]['files'][0]['functions'][0]['coveredLines'], 3)
+        self.assertEqual(first['targets'][0]['files'][0]['functions'][0]['coveredLines'], 1, 'Inputs stay unchanged')
 
     def test_lazy_tool_indexes_never_mutate_attested_input_bundles(self):
         self.mutate_result_reads = True

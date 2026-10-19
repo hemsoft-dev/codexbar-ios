@@ -172,6 +172,10 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   clock: resolve billing retry from the reported renewal and give natural expiry
   a 30-second window.
   ([#492](https://github.com/hemsoft-dev/codexbar-ios/issues/492))
+
+- Never score an `xccov merge` that changes coverage identities or denominators;
+  fall back to each counter's best single input, a conservative lower bound.
+  ([#494](https://github.com/hemsoft-dev/codexbar-ios/issues/494))
   ([#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490))
 
 - Add explicit manual release phases with exact test identities, separate

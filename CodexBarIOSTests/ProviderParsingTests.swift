@@ -4928,5 +4928,46 @@ final class ProviderParsingTests: XCTestCase {
         XCTAssertEqual(bar.usageText, "112%")
         XCTAssertEqual(bar.fractionUsed, 1)
     }
+}
 
+extension ProviderParsingTests {
+    func testGreptileDashboardBillingStateParsesFreeAllowanceAndRejectsMalformedPayloads() throws {
+        let parse = { (state: String) in
+            try GreptileDashboardClient.parseBillingState(Data(#"[{"result":{"data":{"json":\#(state)}}}]"#.utf8))
+        }
+        let start = try XCTUnwrap(ISO8601DateFormatter().date(from: "2033-05-01T00:00:00Z"))
+        let end = try XCTUnwrap(ISO8601DateFormatter().date(from: "2033-06-01T00:00:00Z"))
+        let period = #""currentPeriod":{"start":"2033-05-01T00:00:00.000Z","end":"2033-06-01T00:00:00Z"}"#
+        XCTAssertEqual(try parse(#"{"kind":"paid",\#(period),"used":1,"includedCreditsPerPeriod":5}"#),
+                       GreptileDashboardState(renewalDate: nil, isFreeAllowance: false), "Paid plans never show a free renewal")
+        XCTAssertEqual(
+            try parse(#"{"kind":"free",\#(period),"used":40,"includedCreditsPerPeriod":100}"#),
+            GreptileDashboardState(renewalDate: end, creditAllowance: GreptileCreditAllowance(used: 40, included: 100, periodStart: start, periodEnd: end))
+        )
+        XCTAssertEqual(
+            try parse(#"{"kind":"free","currentPeriod":{"end":"2033-06-01T00:00:00Z"},"used":0,"includedCreditsPerPeriod":50}"#),
+            GreptileDashboardState(renewalDate: end, creditAllowance: GreptileCreditAllowance(used: 0, included: 50, periodStart: nil, periodEnd: end))
+        )
+        for counts in [#""used":3"#, #""used":true,"includedCreditsPerPeriod":100"#, #""used":3,"includedCreditsPerPeriod":0"#,
+                       #""used":-1,"includedCreditsPerPeriod":100"#, #""used":1e300,"includedCreditsPerPeriod":1"#,
+        ] {
+            XCTAssertEqual(try parse(#"{"kind":"free",\#(period),\#(counts)}"#), GreptileDashboardState(renewalDate: end),
+                           "Unusable counts keep the renewal date without inventing an allowance: \(counts)")
+        }
+        for state in [#"{"kind":"free"}"#, #"{"kind":"free","currentPeriod":{"end":"soon"}}"#,
+                      #"{"kind":"free","currentPeriod":{"start":"2033-06-01T00:00:00Z","end":"2033-06-01T00:00:00Z"}}"#,
+                      #"{"kind":"free","currentPeriod":{"start":5,"end":"2033-06-01T00:00:00Z"},"used":1,"includedCreditsPerPeriod":2}"#,
+        ] {
+            XCTAssertEqual(try parse(state), GreptileDashboardState(renewalDate: nil), "No trustworthy period: \(state)")
+        }
+        let malformed = ["not json", "{}", "[]", #"[{"result":{}}, {"result":{}}]"#, #"[{"error":{"json":{"kind":"free"}}}]"#,
+                         #"[{"result":{"data":{"json":{}}}}]"#, #"[{"result":{"data":{"json":{"kind":1}}}}]"#,
+                         #"[{"result":{"data":{"json":{"kind":"enterprise"}}}}]"#,
+        ]
+        for body in malformed {
+            XCTAssertThrowsError(try GreptileDashboardClient.parseBillingState(Data(body.utf8)), body) { error in
+                XCTAssertEqual(error as? GreptileSignInError, .invalidBillingResponse, body)
+            }
+        }
+    }
 }
