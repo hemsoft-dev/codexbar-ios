@@ -593,3 +593,12 @@ with the same 157 production files. The change is view layout only. It adds no
 credential, persistence, network or export path, and touches none of the four
 accepted finding files or their consumers, so the accepted diagnostics are unchanged.
 The release candidate still needs its own hosted analysis.
+
+## October 19 Release preview guard review
+
+Issue [#504](https://github.com/hemsoft-dev/codexbar-ios/issues/504) moves the
+`ContentView` `#Preview` inside its existing `#if DEBUG` region. Release builds no
+longer contain the preview, and Debug builds are unchanged. Reviewed commit
+`ffa05c0b901970dc261463f1a44e798cb9b3f1ae` binds source snapshot
+`b26f29f5189641a72e179f39fc48ca2aac32283bba5c283e49992fd7bfb25398`
+with the same 157 production files and the same four accepted diagnostics.
