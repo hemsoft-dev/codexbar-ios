@@ -118,6 +118,9 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Fixed
 
+- Scrolling the two-column iPad dashboard no longer freezes the app.
+  ([#496](https://github.com/hemsoft-dev/codexbar-ios/issues/496))
+
 - When the App Store can't load CodexBar Pro's products, the Pro screen now
   offers to try again instead of showing an empty list.
   ([#490](https://github.com/hemsoft-dev/codexbar-ios/issues/490))
@@ -172,6 +175,11 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   clock: resolve billing retry from the reported renewal and give natural expiry
   a 30-second window.
   ([#492](https://github.com/hemsoft-dev/codexbar-ios/issues/492))
+
+- Update the OpenCode sign-in UI journey for the dashboard's product-based card
+  title, and check after relaunch that the saved account label and credential
+  are both still there.
+  ([#496](https://github.com/hemsoft-dev/codexbar-ios/issues/496))
 
 - Never score an `xccov merge` that changes coverage identities or denominators;
   fall back to each counter's best single input, a conservative lower bound.

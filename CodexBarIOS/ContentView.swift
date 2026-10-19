@@ -78,6 +78,10 @@ struct ContentView: View {
         )
     }
 
+    private var usesLazyDashboard: Bool {
+        DashboardCardGridLayout.usesLazyLayout(idiom: UIDevice.current.userInterfaceIdiom)
+    }
+
     var body: some View {
         let cardItems = orchestrator.dashboardCardItems
         let sections = orchestrator.dashboardSections
@@ -100,7 +104,7 @@ struct ContentView: View {
             GeometryReader { geometry in
                 ScrollViewReader { scrollProxy in
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 14) {
+                        DashboardStack(isLazy: usesLazyDashboard) {
                             if emptyState == .hidden, let originalPurchaserNotice {
                                 OriginalPurchaserNoticeView(notice: originalPurchaserNotice)
                             }
@@ -156,7 +160,7 @@ struct ContentView: View {
                                         accountID: accountID
                                     )
                                 }
-                                let gridColumns = DashboardCardGridLayout.columns(
+                                let columnCount = DashboardCardGridLayout.columnCount(
                                     containerWidth: geometry.size.width,
                                     idiom: UIDevice.current.userInterfaceIdiom,
                                     dynamicTypeSize: dynamicTypeSize,
@@ -172,11 +176,7 @@ struct ContentView: View {
                                             .padding(.horizontal, 4)
                                     }
 
-                                    LazyVGrid(
-                                        columns: gridColumns,
-                                        alignment: .leading,
-                                        spacing: DashboardCardGridLayout.cardSpacing
-                                    ) {
+                                    DashboardCardGrid(isLazy: usesLazyDashboard, columnCount: columnCount) {
                                         ForEach(section.items) { item in
                                             let card = dashboardCard(
                                                 for: item,
@@ -1347,7 +1347,7 @@ struct DashboardCardGridLayout {
         dynamicTypeSize: DynamicTypeSize,
         hasCollapsedCard: Bool = false
     ) -> Int {
-        // A two-column LazyVGrid sizes each row to its tallest card, so a short
+        // A two-column dashboard sizes each row to its tallest card, so a short
         // collapsed card beside an expanded card would not reclaim any height.
         // Keep that section in source-order single-column flow while collapsed
         // instead of introducing masonry placement and a changed reading order.
@@ -1364,21 +1364,118 @@ struct DashboardCardGridLayout {
         return usableWidth >= requiredWidth ? 2 : 1
     }
 
-    static func columns(
+    /// iPhone keeps lazy loading, which defers offscreen cards and stays stable
+    /// in its single column. Lazy grid placement kept re-anchoring the
+    /// scrolling two-column iPad dashboard on iOS 26 and stopped the app from
+    /// responding, so iPad measures its cards eagerly in every column count.
+    static func usesLazyLayout(idiom: UIUserInterfaceIdiom) -> Bool {
+        idiom != .pad
+    }
+
+    /// Equal-width columns with each row as tall as its tallest card, matching
+    /// flexible, top-aligned grid columns.
+    static func cardFrames(
+        heights: [CGFloat],
         containerWidth: CGFloat,
-        idiom: UIUserInterfaceIdiom,
-        dynamicTypeSize: DynamicTypeSize,
-        hasCollapsedCard: Bool = false
-    ) -> [GridItem] {
-        Array(
-            repeating: GridItem(.flexible(), spacing: cardSpacing, alignment: .top),
-            count: columnCount(
-                containerWidth: containerWidth,
-                idiom: idiom,
-                dynamicTypeSize: dynamicTypeSize,
-                hasCollapsedCard: hasCollapsedCard
+        columnCount: Int,
+        spacing: CGFloat
+    ) -> [CGRect] {
+        let columns = max(1, columnCount)
+        let width = columnWidth(containerWidth: containerWidth, columnCount: columns, spacing: spacing)
+        var frames: [CGRect] = []
+        var rowMinY: CGFloat = 0
+        for rowStart in stride(from: 0, to: heights.count, by: columns) {
+            let row = heights[rowStart..<min(rowStart + columns, heights.count)]
+            for (column, height) in row.enumerated() {
+                let minX = CGFloat(column) * (width + spacing)
+                frames.append(CGRect(x: minX, y: rowMinY, width: width, height: height))
+            }
+            rowMinY += (row.max() ?? 0) + spacing
+        }
+        return frames
+    }
+
+    static func columnWidth(containerWidth: CGFloat, columnCount: Int, spacing: CGFloat) -> CGFloat {
+        let columns = CGFloat(max(1, columnCount))
+        return max(0, (containerWidth - spacing * (columns - 1)) / columns)
+    }
+}
+
+/// The dashboard's vertical stack, lazy only where that is stable.
+private struct DashboardStack<Content: View>: View {
+    let isLazy: Bool
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        if isLazy {
+            LazyVStack(alignment: .leading, spacing: 14) { content }
+        } else {
+            VStack(alignment: .leading, spacing: 14) { content }
+        }
+    }
+}
+
+/// A section's cards in flexible, top-aligned columns.
+private struct DashboardCardGrid<Content: View>: View {
+    let isLazy: Bool
+    let columnCount: Int
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        let spacing = DashboardCardGridLayout.cardSpacing
+        if isLazy {
+            LazyVGrid(
+                columns: Array(
+                    repeating: GridItem(.flexible(), spacing: spacing, alignment: .top),
+                    count: max(1, columnCount)
+                ),
+                alignment: .leading,
+                spacing: spacing
+            ) { content }
+        } else {
+            DashboardCardColumnsLayout(columnCount: columnCount, spacing: spacing) { content }
+        }
+    }
+}
+
+/// Places dashboard cards like a flexible grid, but measures every card once
+/// instead of placing them lazily.
+struct DashboardCardColumnsLayout: Layout {
+    let columnCount: Int
+    let spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? idealWidth(of: subviews)
+        let height = frames(containerWidth: width, subviews: subviews).map(\.maxY).max() ?? 0
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (subview, frame) in zip(subviews, frames(containerWidth: bounds.width, subviews: subviews)) {
+            subview.place(
+                at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                anchor: .topLeading,
+                proposal: ProposedViewSize(width: frame.width, height: nil)
             )
+        }
+    }
+
+    private func frames(containerWidth: CGFloat, subviews: Subviews) -> [CGRect] {
+        let width = DashboardCardGridLayout.columnWidth(
+            containerWidth: containerWidth, columnCount: columnCount, spacing: spacing
         )
+        return DashboardCardGridLayout.cardFrames(
+            heights: subviews.map { $0.sizeThatFits(ProposedViewSize(width: width, height: nil)).height },
+            containerWidth: containerWidth,
+            columnCount: columnCount,
+            spacing: spacing
+        )
+    }
+
+    private func idealWidth(of subviews: Subviews) -> CGFloat {
+        let columns = CGFloat(max(1, min(columnCount, subviews.count)))
+        let cellWidth = subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
+        return cellWidth * columns + spacing * (columns - 1)
     }
 }
 

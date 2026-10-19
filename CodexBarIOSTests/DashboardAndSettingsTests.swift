@@ -4484,6 +4484,29 @@ final class DashboardAndSettingsTests: XCTestCase {
         XCTAssertEqual(service.refreshErrorsByAccountID[configuration.id], "Refresh failed")
     }
 
+    func testDashboardCardColumnsUseEqualWidthsAndTallestCardPerRow() {
+        XCTAssertEqual(
+            DashboardCardGridLayout.cardFrames(heights: [100, 240, 80], containerWidth: 714, columnCount: 2, spacing: 14),
+            [
+                CGRect(x: 0, y: 0, width: 350, height: 100),
+                CGRect(x: 364, y: 0, width: 350, height: 240),
+                CGRect(x: 0, y: 254, width: 350, height: 80),
+            ]
+        )
+        XCTAssertEqual(
+            DashboardCardGridLayout.cardFrames(heights: [100, 50], containerWidth: 370, columnCount: 1, spacing: 14),
+            [CGRect(x: 0, y: 0, width: 370, height: 100), CGRect(x: 0, y: 114, width: 370, height: 50)]
+        )
+        XCTAssertEqual(
+            DashboardCardGridLayout.cardFrames(heights: [60], containerWidth: 300, columnCount: 0, spacing: 14),
+            [CGRect(x: 0, y: 0, width: 300, height: 60)]
+        )
+        XCTAssertEqual(DashboardCardGridLayout.columnWidth(containerWidth: 10, columnCount: 2, spacing: 14), 0)
+        XCTAssertTrue(DashboardCardGridLayout.cardFrames(heights: [], containerWidth: 714, columnCount: 2, spacing: 14).isEmpty)
+        XCTAssertTrue(DashboardCardGridLayout.usesLazyLayout(idiom: .phone))
+        XCTAssertFalse(DashboardCardGridLayout.usesLazyLayout(idiom: .pad), "Two-column iPad scrolling must not use lazy placement")
+    }
+
 }
 
 private enum StaleRefreshConfigurationMutation: String, CaseIterable {
