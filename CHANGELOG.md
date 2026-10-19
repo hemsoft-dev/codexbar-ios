@@ -173,6 +173,11 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   a 30-second window.
   ([#492](https://github.com/hemsoft-dev/codexbar-ios/issues/492))
 
+- Update the OpenCode sign-in UI journey for the dashboard's product-based card
+  title, and check after relaunch that the saved account label and credential
+  are both still there.
+  ([#496](https://github.com/hemsoft-dev/codexbar-ios/issues/496))
+
 - Never score an `xccov merge` that changes coverage identities or denominators;
   fall back to each counter's best single input, a conservative lower bound.
   ([#494](https://github.com/hemsoft-dev/codexbar-ios/issues/494))

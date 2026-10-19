@@ -56,7 +56,25 @@ final class OpenCodeSignInUITests: XCTestCase {
         app.terminate()
         app.launchEnvironment["CODEXBAR_UI_TEST_RESET"] = "0"
         app.launch()
-        XCTAssertTrue(app.buttons["More options for OpenCode Go + Zen 1"].waitForExistence(timeout: 10))
+        assertConnectedAfterRelaunch(in: app)
+    }
+
+    /// The dashboard titles a generated OpenCode label by the products the account reports.
+    /// The synthetic account reports only a Zen balance, so "OpenCode Go + Zen 1" shows as OpenCode Zen.
+    private func assertConnectedAfterRelaunch(in app: XCUIApplication) {
+        let menu = app.buttons["More options for OpenCode Zen"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["$25.00"].exists)
+        capture("OpenCode connected after relaunch", app: app)
+        menu.tap()
+        let configure = app.buttons["Configure account OpenCode Zen"]
+        XCTAssertTrue(configure.waitForExistence(timeout: 5), app.debugDescription)
+        configure.tap()
+        XCTAssertTrue(app.buttons["Reconnect OpenCode"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.navigationBars["OpenCode Go + Zen 1"].exists, app.debugDescription)
+        XCTAssertTrue(app.buttons["Remove Saved Credential"].exists)
+        XCTAssertFalse(app.buttons["Sign in with OpenCode"].exists)
+        capture("OpenCode saved credential after relaunch", app: app)
     }
 
     func testVerificationFailureKeepsAccountDisconnectedAndAllowsRetry() {
