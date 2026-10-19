@@ -232,11 +232,13 @@ final class CodexCreditsPoolUITests: XCTestCase {
             tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
             XCTAssertTrue(header.label.contains("Renews in"), header.label)
             keep("renewals-\(dark ? "dark-large" : "light-default")-on-restored", app: app)
-            for title in ["Work Codex", "Personal Claude", "Personal Google", "Personal Grok", "OpenCode Go + Zen"] {
+            // The dashboard names OpenCode cards by product state. The renewal fixture
+            // reports Go usage without a Zen balance, so its card is "OpenCode Go".
+            for title in ["Work Codex", "Personal Claude", "Personal Google", "Personal Grok", "OpenCode Go"] {
                 let other = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", title + ", ")).firstMatch
                 reveal(other, in: app)
                 XCTAssertTrue(other.label.contains("Renews in"), other.label)
-                if title == "OpenCode Go + Zen" { XCTAssertFalse(other.label.contains("Plan unavailable")) }
+                if title == "OpenCode Go" { XCTAssertFalse(other.label.contains("Plan unavailable")) }
                 keep("renewals-\(title)-\(dark ? "dark-large" : "light-default")", app: app)
                 if title == "Personal Claude" {
                     tap(app.buttons["More options for \(title)"], in: app)
@@ -419,7 +421,8 @@ final class CodexCreditsPoolUITests: XCTestCase {
                 keep("google-\(variant)-\(dark ? "dark-large" : "light-default")-expanded", app: app)
                 header.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).tap()
                 XCTAssertEqual(header.value as? String, "Collapsed", app.debugDescription)
-                let openCode = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "OpenCode Go + Zen, Synthetic")).firstMatch
+                // Go usage without a Zen balance titles this fixture card "OpenCode Go".
+                let openCode = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "OpenCode Go, Synthetic")).firstMatch
                 reveal(openCode, in: app)
                 XCTAssertTrue(openCode.exists, app.debugDescription)
                 XCTAssertFalse(openCode.label.contains("Plan unavailable"))
@@ -656,11 +659,18 @@ final class CodexCreditsPoolUITests: XCTestCase {
                                   height: max(0, container.frame.maxY - top)).insetBy(dx: 4, dy: 0)
             if element.exists && element.isHittable && viewport.contains(element.frame) { return }
             let upward = element.exists ? element.frame.midY > viewport.midY : !towardTop
-            let start = container.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: upward ? 0.65 : 0.35))
-            let end = container.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: upward ? 0.4 : 0.6))
+            // Drag about as far as the known element is from the viewport centre. Fixed quarter-screen
+            // drags could not cover the ~2,100 pt between large-text cards on iPhone in 12 attempts;
+            // short drags near the target still avoid overshooting it.
+            let distance = element.exists ? abs(element.frame.midY - viewport.midY) : container.frame.height * 0.25
+            let span = min(0.45, max(0.1, distance / max(container.frame.height, 1)))
+            let startY: CGFloat = upward ? 0.65 : 0.35
+            let start = container.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: startY))
+            let end = container.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: upward ? startY - span : startY + span))
             start.press(forDuration: 0.05, thenDragTo: end)
         }
-        XCTFail("Control outside the visible viewport: \(element).\n\(app.debugDescription)")
+        let problem = element.exists ? "Control outside the visible viewport" : "Control never appeared while scrolling"
+        XCTFail("\(problem): \(element).\n\(app.debugDescription)")
     }
 
     private func keep(_ name: String, app: XCUIApplication) {
