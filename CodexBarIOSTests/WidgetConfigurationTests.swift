@@ -825,6 +825,118 @@ final class WidgetConfigurationTests: XCTestCase {
         XCTAssertEqual(fallbackPlan.nextRefreshDate, now.addingTimeInterval(3 * 60 * 60))
     }
 
+    func testWatchSnapshotOrderingPrefersPublicationSequenceOverPhoneClock() {
+        let earlier = Date(timeIntervalSince1970: 2_000_000_000)
+        let later = earlier.addingTimeInterval(60)
+        let higher = watchSnapshot(generatedAt: earlier, sequence: 8)
+        let lower = watchSnapshot(generatedAt: later, sequence: 7)
+        XCTAssertTrue(higher.isNewer(than: lower), "A higher sequence wins even when the phone clock moved backward")
+        XCTAssertFalse(lower.isNewer(than: higher))
+
+        let sequenced = watchSnapshot(generatedAt: earlier, sequence: 1)
+        let legacy = watchSnapshot(generatedAt: later, sequence: nil)
+        XCTAssertTrue(sequenced.isNewer(than: legacy), "Any sequenced publication supersedes a legacy one")
+        XCTAssertFalse(legacy.isNewer(than: sequenced))
+
+        let legacyLater = watchSnapshot(generatedAt: later, sequence: nil)
+        let legacyEarlierLocked = watchSnapshot(generatedAt: earlier, sequence: nil, isProLocked: true)
+        XCTAssertTrue(legacyLater.isNewer(than: legacyEarlierLocked), "Unsequenced snapshots order by generation time first")
+        XCTAssertFalse(legacyEarlierLocked.isNewer(than: legacyLater))
+
+        let sameRevision = watchSnapshot(generatedAt: later, sequence: 8)
+        XCTAssertFalse(higher.isNewer(than: sameRevision), "An older generation of the same revision never supersedes")
+        XCTAssertFalse(higher.isNewer(than: higher))
+    }
+
+    func testWatchSnapshotOrderingAtEqualRevisionOnlyAcceptsStricterAccess() {
+        let generatedAt = Date(timeIntervalSince1970: 2_000_000_000)
+        let soon = generatedAt.addingTimeInterval(3_600)
+        let later = generatedAt.addingTimeInterval(7_200)
+        let unlocked = watchSnapshot(generatedAt: generatedAt, sequence: 4)
+        let locked = watchSnapshot(generatedAt: generatedAt, sequence: 4, isProLocked: true)
+        XCTAssertTrue(locked.isNewer(than: unlocked))
+        XCTAssertFalse(unlocked.isNewer(than: locked))
+
+        let unbounded = watchSnapshot(generatedAt: generatedAt, sequence: 4)
+        let endsSoon = watchSnapshot(generatedAt: generatedAt, sequence: 4, endsAt: soon)
+        let endsLater = watchSnapshot(generatedAt: generatedAt, sequence: 4, endsAt: later)
+        XCTAssertTrue(endsSoon.isNewer(than: unbounded), "A new access deadline is stricter than none")
+        XCTAssertFalse(unbounded.isNewer(than: endsSoon), "Dropping a deadline at the same revision is ignored")
+        XCTAssertTrue(endsSoon.isNewer(than: endsLater))
+        XCTAssertFalse(endsLater.isNewer(than: endsSoon))
+
+        let earlyFloor = watchSnapshot(generatedAt: generatedAt, sequence: 4, endsAt: soon, effectiveAt: generatedAt)
+        let lateFloor = watchSnapshot(generatedAt: generatedAt, sequence: 4, endsAt: soon, effectiveAt: generatedAt.addingTimeInterval(60))
+        let infiniteFloor = watchSnapshot(
+            generatedAt: generatedAt, sequence: 4, endsAt: soon, effectiveAt: Date(timeIntervalSinceReferenceDate: .infinity)
+        )
+        XCTAssertTrue(lateFloor.isNewer(than: earlyFloor), "A later effective time leaves less remaining access")
+        XCTAssertFalse(earlyFloor.isNewer(than: lateFloor))
+        XCTAssertTrue(earlyFloor.isNewer(than: endsSoon), "An effective time is stricter than an unknown one")
+        XCTAssertFalse(endsSoon.isNewer(than: earlyFloor))
+        XCTAssertFalse(infiniteFloor.isNewer(than: earlyFloor), "A non-finite effective time is never trusted")
+
+        let floorWithoutDeadline = watchSnapshot(generatedAt: generatedAt, sequence: 4, effectiveAt: generatedAt)
+        XCTAssertFalse(floorWithoutDeadline.isNewer(than: unbounded), "An effective time without a deadline grants nothing")
+    }
+
+    func testWatchSnapshotOrderingAtEqualAccessRequiresIdenticalContentAndLaterGeneration() {
+        let generatedAt = Date(timeIntervalSince1970: 2_000_000_000)
+        let regenerated = generatedAt.addingTimeInterval(30)
+        let account = WatchAccountSnapshot(
+            id: "codex.personal", providerName: "Codex", accountLabel: "Personal", fetchedAt: generatedAt,
+            metrics: [WatchMetricSnapshot(id: "weekly", label: "Weekly", exactValue: "12%")]
+        )
+        let current = watchSnapshot(generatedAt: generatedAt, sequence: nil, accounts: [account])
+        XCTAssertTrue(watchSnapshot(generatedAt: regenerated, sequence: nil, accounts: [account]).isNewer(than: current))
+
+        let deadline = generatedAt.addingTimeInterval(3_600)
+        let floored = watchSnapshot(generatedAt: generatedAt, sequence: 9, endsAt: deadline, effectiveAt: generatedAt, accounts: [account])
+        let sameAccess = watchSnapshot(generatedAt: regenerated, sequence: 9, endsAt: deadline, effectiveAt: generatedAt, accounts: [account])
+        XCTAssertTrue(sameAccess.isNewer(than: floored), "Equal access with identical content accepts the newer generation")
+        XCTAssertFalse(floored.isNewer(than: sameAccess))
+        XCTAssertFalse(
+            watchSnapshot(generatedAt: regenerated, sequence: 9, endsAt: deadline, effectiveAt: generatedAt).isNewer(than: floored),
+            "Changed accounts at the same revision are not accepted"
+        )
+        XCTAssertFalse(
+            watchSnapshot(
+                generatedAt: regenerated, sequence: 9, refreshIntervalSeconds: 600, endsAt: deadline,
+                effectiveAt: generatedAt, accounts: [account]
+            ).isNewer(than: floored),
+            "A changed refresh interval at the same revision is not accepted"
+        )
+        XCTAssertFalse(
+            watchSnapshot(
+                schemaVersion: WatchDashboardSnapshot.currentSchemaVersion + 1, generatedAt: regenerated, sequence: 9,
+                endsAt: deadline, effectiveAt: generatedAt, accounts: [account]
+            ).isNewer(than: floored),
+            "A different schema at the same revision is not accepted"
+        )
+    }
+
+    private func watchSnapshot(
+        schemaVersion: Int = WatchDashboardSnapshot.currentSchemaVersion,
+        generatedAt: Date,
+        sequence: UInt64?,
+        refreshIntervalSeconds: TimeInterval? = 900,
+        isProLocked: Bool = false,
+        endsAt: Date? = nil,
+        effectiveAt: Date? = nil,
+        accounts: [WatchAccountSnapshot] = []
+    ) -> WatchDashboardSnapshot {
+        WatchDashboardSnapshot(
+            schemaVersion: schemaVersion,
+            generatedAt: generatedAt,
+            refreshIntervalSeconds: refreshIntervalSeconds,
+            accounts: accounts,
+            isProLocked: isProLocked,
+            proAccessEndsAt: endsAt,
+            proAccessEffectiveAt: effectiveAt,
+            publicationSequence: sequence
+        )
+    }
+
     private static let fixtureSnapshot = CodexBarWidgetSnapshot(
         generatedAt: Date(timeIntervalSince1970: 1_000_000),
         results: [
