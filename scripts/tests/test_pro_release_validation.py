@@ -192,6 +192,18 @@ class RunnerCommandFailureTests(unittest.TestCase):
         for name in ('storekitd-before-discovery', 'storekitd-before-test'):
             self.assertEqual(EVIDENCE.read(self.root / f'native-preparation/{name}.command.json')['exit'], 0)
 
+    def test_native_journeys_keep_their_preparation_storekit_state(self):
+        # A restart before ui-native discarded ui-preparation's disableDialogs override (#502).
+        try:
+            self.runner.phase('ui-native', self.build)
+        except RUNNER.PhaseFailure:
+            pass  # The fixture models unit-test bundles; only the pre-execution restart matters here.
+        self.assertEqual([step for step in self.storekit_restarts() if step], ['discovery', 'test'])
+        self.assertFalse((self.root / 'ui-native/storekitd-before-test.command.json').exists())
+        self.calls.clear()
+        self.runner.phase('ui-preparation', self.build)
+        self.assertEqual([step for step in self.storekit_restarts() if step], ['restart', 'discovery', 'restart', 'test'])
+
     def test_shut_down_device_skips_the_storekitd_restart(self):
         self.device_state = 'Shutdown'
         self.runner.phase('native-preparation', self.build)

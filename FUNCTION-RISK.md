@@ -126,7 +126,9 @@ Every native invocation uses the isolated Debug host and ad hoc signing. Before 
 discovery and execution, the runner stops the booted simulator's `storekitd`
 (`launchctl stop com.apple.storekitd`). Each `xcodebuild` reinstalls the app,
 and `storekitd` could otherwise keep the previous install's dead container, reject
-the receipt and fall back to sandbox requests (#500). The
+the receipt and fall back to sandbox requests (#500). Native UI journeys are the exception:
+they consume the `SKTestSession` overrides (dialogs, storefront, simulated
+errors) that their preparation left in `storekitd`, so they never restart it (#502). The
 five complete result bundles are required for aggregate iOS measurement.
 Preparation and its consumer must use the same build and owned simulator.
 

@@ -245,7 +245,8 @@ class Runner:
     def restart_storekit(self, folder, name):
         """Each xcodebuild reinstalls the app. storekitd can keep the previous install's dead
         container, reject the receipt and fall back to sandbox requests (#500). Stopping it
-        lets launchd start a fresh instance on demand; a shut-down device has none running."""
+        lets launchd start a fresh instance on demand; a shut-down device has none running.
+        Only preparation and adapter phases restart it: they configure SKTestSession in-process."""
         current = device_record(self.device['deviceId'], self.device['family'], self.tools,
                                 self.device.get('runtimeBundlePath'))
         if current['state'] == 'Booted':
@@ -277,7 +278,10 @@ class Runner:
         discovery_argv = argv + ['test-without-building', '-enumerate-tests',
                 '-test-enumeration-style', 'flat', '-test-enumeration-format', 'json',
                 '-test-enumeration-output-path', str(discovery)]
-        if build['native']:
+        # Journeys consume the SKTestSession overrides (dialogs, storefront, simulated errors) that
+        # their preparation left in storekitd; a restart would discard them (#502).
+        restart_storekit = build['native'] and (phase or {}).get('kind') != 'journey'
+        if restart_storekit:
             self.restart_storekit(folder, 'storekitd-before-discovery')
         command(folder, 'discovery', discovery_argv)
         discovered = discovery_tests(read(discovery))
@@ -293,7 +297,7 @@ class Runner:
             argv += ['-test-timeouts-enabled', 'YES', '-default-test-execution-time-allowance', '90',
                      '-maximum-test-execution-time-allowance', '120']
         argv += ['-resultBundlePath', str(result), 'test-without-building']
-        if build['native']:
+        if restart_storekit:
             self.restart_storekit(folder, 'storekitd-before-test')
         receipt = dict(schema=1, phase=name, source=self.source, tools=self.tools, device=self.device,
                        platform='ios', configuration='Debug', expectedTests=expected, result=str(result),
