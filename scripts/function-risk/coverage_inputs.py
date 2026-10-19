@@ -1,4 +1,10 @@
-"""Validate native inputs, then let xccov merge raw line counters before scoring."""
+"""Validate native inputs, then let xccov merge raw line counters before scoring.
+
+A merge that changes any identity or denominator is rejected and never scored.
+Scoring then uses the best single input for each counter, a lower bound of the
+true union that can only overstate risk (#494).
+"""
+import copy
 from pathlib import Path
 from datetime import datetime
 import shutil
@@ -53,6 +59,40 @@ def validate_union(inputs, merged):
                     raise ValueError(f'Merged coverage lost covered lines: {key}')
     if merged is not None and set(expected) != set(merged):
         raise ValueError('Merged coverage introduced unexpected identities')
+
+
+def lower_bound_union(coverages):
+    """Keep every identity, taking each counter's best single-input coverage.
+
+    validate_union has already required equal denominators for shared identities.
+    The maximum never exceeds the true union, so scores can only overstate risk.
+    """
+    targets = {}
+    for report in coverages:
+        for target in report['targets']:
+            merged = targets.setdefault(target['name'], dict(copy.deepcopy(target), files=[]))
+            merged['coveredLines'] = max(merged['coveredLines'], target['coveredLines'])
+            files = {item['path']: item for item in merged['files']}
+            for file in target['files']:
+                current = files.get(file['path'])
+                if current is None:
+                    current = dict(copy.deepcopy(file), functions=[])
+                    merged['files'].append(current)
+                    files[file['path']] = current
+                current['coveredLines'] = max(current['coveredLines'], file['coveredLines'])
+                functions = {(item['lineNumber'], item['name']): item for item in current['functions']}
+                for function in file['functions']:
+                    key = (function['lineNumber'], function['name'])
+                    if key in functions:
+                        functions[key]['coveredLines'] = max(functions[key]['coveredLines'], function['coveredLines'])
+                    else:
+                        functions[key] = copy.deepcopy(function)
+                        current['functions'].append(functions[key])
+    for target in targets.values():
+        for item in [target, *target['files'], *(f for file in target['files'] for f in file['functions'])]:
+            if 'lineCoverage' in item:
+                item['lineCoverage'] = item['coveredLines'] / item['executableLines'] if item['executableLines'] else 0
+    return dict(targets=list(targets.values()))
 
 
 def require_counters(index, names, covered=False):
@@ -111,7 +151,7 @@ def collect_coverage(args, output, policy, source_paths, root, run):
     else:
         entries = [dict(phase='single', result=str(args.result.resolve()))]
     seen_paths, seen_digests = set(), set()
-    indexes, pairs, evidence = [], [], []
+    indexes, coverages, pairs, evidence = [], [], [], []
     runtime = None
     native_identity, previous_end = None, None
     for entry in entries:
@@ -175,6 +215,7 @@ def collect_coverage(args, output, policy, source_paths, root, run):
         index = coverage_index(coverage, root, source_paths)
         require_counters(index, [policy['platforms'][args.platform]['coverage_targets'][0]], covered=True)
         indexes.append(index)
+        coverages.append(coverage)
         pairs.extend([str(report_path), str(archive_path)])
         evidence.append(dict(phase=phase, result=str(result), result_sha256=result_digest,
                              report=str(report_path), report_sha256=digest(report_path),
@@ -195,8 +236,17 @@ def collect_coverage(args, output, policy, source_paths, root, run):
                    '--outArchive', str(merged_archive), *pairs]
         write(output / 'merge-command.json', command)
         run(command)
-        coverage = json.loads(run(['xcrun', 'xccov', 'view', '--json', str(merged_report)]))
+        merged = json.loads(run(['xcrun', 'xccov', 'view', '--json', str(merged_report)]))
         write(output / 'merge-artifacts.json', dict(report_sha256=digest(merged_report), archive_sha256=digest(merged_archive)))
+        try:
+            validate_union(indexes, coverage_index(merged, root, source_paths))
+            coverage, basis = merged, 'xccov merge'
+        except ValueError as error:
+            # Xcode 26.6 xccov merge rewrites function ranges for real multi-build inputs.
+            # Retain the rejected merge as evidence and score a conservative lower bound.
+            write(output / 'merge-rejected.json', dict(reason=str(error), report=str(merged_report)))
+            coverage, basis = lower_bound_union(coverages), 'per-counter maximum across inputs (lower bound)'
+        write(output / 'coverage-basis.json', dict(basis=basis, inputs=len(coverages)))
     merged_index = coverage_index(coverage, root, source_paths)
     validate_union(indexes, merged_index)
     require_counters(merged_index, policy['platforms'][args.platform]['coverage_targets'])
