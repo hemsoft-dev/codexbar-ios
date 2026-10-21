@@ -16,8 +16,21 @@ runner = wrapper.with_name('test.sh')
 lock = Path('/private/tmp') / f'com.hemsoft.mac476.storekit-{os.getuid()}.lock'
 environment = dict(os.environ)
 environment.pop('MAC476_STOREKIT_LOCK_FD', None)
+# The actual entry guard only needs an existing path. Never require or invoke
+# a qualified native toolchain for this lock-only test, even with an invalid
+# inherited DEVELOPER_DIR or no qualified Xcode installed.
+toolchain_fixture = tempfile.TemporaryDirectory(prefix='mac476-no-xcode-')
+dummy_developer = Path(toolchain_fixture.name)
+environment['DEVELOPER_DIR'] = str(dummy_developer)
+# Fail visibly if entry-guard regressions ever proceed into native commands.
+for command in ['xcodebuild', 'xcrun']:
+    trap = dummy_developer / command
+    trap.write_text('#!/bin/sh\necho UNEXPECTED_NATIVE_INVOCATION >&2\nexit 99\n')
+    trap.chmod(0o700)
+environment['PATH'] = str(dummy_developer) + os.pathsep + environment['PATH']
 missing = subprocess.run(['/bin/bash', str(runner), '--exclusive-child'], env=environment, capture_output=True, text=True)
 assert missing.returncode != 0 and 'MAC476_STOREKIT_LOCK_FD' in missing.stderr
+assert 'UNEXPECTED_NATIVE_INVOCATION' not in missing.stderr
 # Even a real but unlocked lock-file descriptor is not authority to enter.
 forged = os.open(lock, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
 try:
@@ -26,8 +39,10 @@ try:
                               pass_fds=(forged,), capture_output=True, text=True)
     assert rejected.returncode != 0 and ('Inherited lock did not exclude' in rejected.stderr
                                          or 'BlockingIOError' in rejected.stderr)
+    assert 'UNEXPECTED_NATIVE_INVOCATION' not in rejected.stderr
 finally:
     os.close(forged)
+    toolchain_fixture.cleanup()
 print('PASS direct exclusive-child flag rejects missing and forged inherited FD before native actions')
 with tempfile.TemporaryDirectory(prefix='mac476-lock-regression-') as directory:
     root = Path(directory)

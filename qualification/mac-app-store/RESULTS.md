@@ -258,3 +258,60 @@ No production target, automatic CI, other machine, paid API, production
 credential, App Store record, PR body or media changed. Live providers, publisher
 signing, Store delivery and purchase portability remain unqualified. Parent owns
 current-head review, thread resolution, UI evidence and merge.
+
+
+## Readiness ownership and toolchain-independent lock tests, October 21, 2026 at 3:48 PM EDT
+
+Repairs for connected Codex findings `4341194342` and `4341194363` are scoped to
+issue #476 and PR #508 in the existing air worktree. The model now gives each
+connect invocation an identity. Readiness polling, browser opening, status,
+result delivery, terminal timeout and catch cleanup require that identity.
+Cancel, replacement, successful completion and failure invalidate it. An older
+invocation's timeout or task cancellation cannot cancel its replacement.
+
+A manual continuation rendezvous supplies delayed readiness without starting a
+listener or sleeping in the new regressions. It exercises cancellation before
+URL readiness, immediate retry, stale result callbacks, stale startup errors,
+old task cancellation, replacement at the final polling boundary, success and
+failure before readiness, and cleanup for current task cancellation. Existing
+real-loopback checks remain intact. The default readiness bound remains 750
+polls at 20 milliseconds and the independent attempt deadline remains 120 seconds.
+The exact connection-error classifier, failed-opener cleanup, account isolation,
+42 earlier PASS lines and atomic replacement implementation remain intact.
+
+`evidence/review508-r3-build.log` records Swift 6 warnings-as-errors build,
+ad hoc signing and strict signature verification. The sandboxed standalone
+self-test reports **51 PASS lines and RESULT 0 failures**, including the
+informational window-size line, in `evidence/review508-r3-self-test.log`.
+`evidence/review508-r3-pinned-lint.log` records zero violations from canonical
+pinned SwiftLint. Shell syntax, Python AST parsing and diff whitespace pass in
+`evidence/review508-r3-syntax-diff.log`.
+
+The lock regression supplies a temporary existing dummy developer directory to
+the actual `test.sh --exclusive-child` entry point. Missing and forged inherited
+FDs must fail at that guard; temporary xcodebuild/xcrun traps prove no native
+command is reached. Both an unset DEVELOPER_DIR and a missing qualified path
+pass all four prior grouped lock regressions, preserving contention, stale inode,
+forged descriptor and surviving-child protection. Logs are
+`evidence/review508-r3-lock-{unset,missing}-xcode.log`. No qualified Xcode path
+is inspected or used by these tests.
+
+An adapted old-behavior control removes the final-timeout and catch identity
+guards while retaining the polling guard and test seams. It exits 1 with three
+regression failures in `evidence/review508-r3-old-polling-verified.log`.
+Sources and binary remain in `build/.review508-r3-old-polling/`. Earlier control
+attempts also removed the polling guard, leaving the manual canceled-readiness
+rendezvous waiting; they were terminated and are not passing control evidence.
+Their logs remain as `evidence/review508-r3-old-polling{,-interrupted}.log`.
+
+Native StoreKit evidence is unchanged historical provenance at
+`082965b0b2f306fc6fa4219baa1caf819e1faba1`: three complete procedures, four tests
+per procedure, 12 tests total with zero failures, in the three final directories
+listed above. No new native run is claimed. `test.sh`, lock helper, native
+sources, catalog, generated project and scheme are unchanged by this repair.
+The existing atomic replacement rehearsal remains historical evidence too.
+
+No main-worktree changes, other machines, paid APIs, production credentials,
+CI dispatches, review requests, thread resolutions, App Store work, PR body or
+media changes were performed. Parent owns current-head review, UI evidence,
+checks and merge. Live provider and Store delivery limitations remain unchanged.

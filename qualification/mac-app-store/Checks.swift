@@ -110,6 +110,7 @@ struct QualificationChecks {
             check(try modelCredentials.read("fixture-work") == priorWork && modelCredentials.read("fixture-personal") == priorPersonal,
                   "Browser cancel preserves preexisting Work and Personal credentials")
             try await checkExpiry(check)
+            await checkPendingConnections(check)
             model.cancel()
             model.screen = "Settings"
             try await Task.sleep(for: .milliseconds(300))
@@ -216,9 +217,111 @@ struct QualificationChecks {
         check(scheduledTimeouts.allSatisfy { $0 == 120 }, "Production authorization deadline remains 120 seconds")
     }
 
+    private static func checkPendingConnections(_ check: @escaping (Bool, String) -> Void) async {
+        let gate = ReadinessGate()
+        var url: URL?
+        var immediatePolls = 0
+        var opened: [URL] = []
+        let authorization = FixtureAuthorization()
+        let credentials = FixtureCredentials(service: "com.hemsoft.qualification.mac476.pending.\(UUID().uuidString)")
+        let model = QualificationModel(authorization: authorization, credentials: credentials,
+                                       browserOpener: { opened.append($0); return true },
+                                       startAuthorization: {}, readyURL: { url },
+                                       waitForReadiness: {
+                                           if immediatePolls > 0 { immediatePolls -= 1; return }
+                                           try await gate.wait()
+                                       })
+        defer { model.cancel(); try? credentials.remove("fixture-personal") }
+        let fixtureURL = URL(string: "http://127.0.0.1:12345/authorize")!
+        let canceled = Task { await model.connect() }
+        await gate.paused()
+        check(model.busy && opened.isEmpty, "Delayed readiness does not open browser early")
+        model.cancel()
+        let canceledStatus = model.status
+        gate.resume()
+        await canceled.value
+        check(!model.busy && model.status == canceledStatus && opened.isEmpty,
+              "Cancel before URL readiness retires polling without status changes")
+
+        for error in [nil, CocoaError(.fileReadUnknown) as Error?, CancellationError()] {
+            url = nil
+            let old = Task { await model.connect() }
+            await gate.paused()
+            let oldResult = authorization.onResult
+            model.cancel()
+            url = fixtureURL
+            await model.connect()
+            let replacementStatus = model.status
+            let count = opened.count
+            if error is CancellationError { old.cancel() }
+            gate.resume(error)
+            await old.value
+            oldResult?(.failure(CocoaError(.userCancelled)))
+            check(model.busy && model.status == replacementStatus && opened.count == count,
+                  "Obsolete polling/result cannot mutate retry or duplicate browser: \(String(describing: error))")
+        }
+        url = nil
+        immediatePolls = 749
+        let timedOut = Task { await model.connect() }
+        await gate.paused()
+        url = fixtureURL
+        await model.connect()
+        let retryStatus = model.status
+        gate.resume()
+        await timedOut.value
+        check(model.busy && model.status == retryStatus && opened.count == 4,
+              "Old final-poll timeout cannot cancel replacement authorization")
+        for result in [Result<String, Error>.success("fixture-personal"), .failure(CocoaError(.userCancelled))] {
+            url = nil
+            let completed = Task { await model.connect() }
+            await gate.paused()
+            authorization.onResult?(result)
+            let completedStatus = model.status
+            url = fixtureURL
+            gate.resume()
+            await completed.value
+            check(!model.busy && model.status == completedStatus && opened.count == 4,
+                  "Terminal authorization invalidates delayed readiness polling: \(result)")
+        }
+        url = nil
+        let canceledTask = Task { await model.connect() }
+        await gate.paused()
+        canceledTask.cancel()
+        gate.resume()
+        await canceledTask.value
+        check(!model.busy && !authorization.hasListener && opened.count == 4,
+              "Current task cancellation cleans up without opening browser")
+    }
+
     private static func isConnectionRefused(_ error: Error) -> Bool {
         let error = error as NSError
         return (error.domain == NSURLErrorDomain && error.code == URLError.cannotConnectToHost.rawValue)
             || (error.domain == NSPOSIXErrorDomain && error.code == Int(ECONNREFUSED))
+    }
+}
+
+/// Manual rendezvous keeps startup/cancel/retry tests independent of wall-clock scheduling.
+@MainActor
+private final class ReadinessGate {
+    private var pending: CheckedContinuation<Void, Error>?
+    private var observer: CheckedContinuation<Void, Never>?
+
+    func wait() async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            pending = continuation
+            observer?.resume()
+            observer = nil
+        }
+    }
+
+    func paused() async {
+        if pending != nil { return }
+        await withCheckedContinuation { observer = $0 }
+    }
+
+    func resume(_ error: Error? = nil) {
+        let continuation = pending
+        pending = nil
+        if let error { continuation?.resume(throwing: error) } else { continuation?.resume() }
     }
 }

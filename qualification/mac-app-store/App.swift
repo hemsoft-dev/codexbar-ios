@@ -13,56 +13,79 @@ final class QualificationModel: ObservableObject {
     let restore = SyntheticRestore()
     private let browserOpener: (URL) -> Bool
 
+    private var activeAttempt: UUID?
+    private let startAuthorization: () throws -> Void
+    private let readyURL: () -> URL?
+    private let waitForReadiness: () async throws -> Void
+
     init(authorization: FixtureAuthorization = FixtureAuthorization(), credentials: FixtureCredentials = FixtureCredentials(),
-         browserOpener: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }) {
+         browserOpener: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
+         startAuthorization: (() throws -> Void)? = nil, readyURL: (() -> URL?)? = nil,
+         waitForReadiness: @escaping () async throws -> Void = { try await Task.sleep(for: .milliseconds(20)) }) {
+        self.startAuthorization = startAuthorization ?? { try authorization.start() }
+        self.readyURL = readyURL ?? { authorization.authorizationURL }
+        self.waitForReadiness = waitForReadiness
         self.browserOpener = browserOpener
         self.authorization = authorization
         self.credentials = credentials
         for account in ["fixture-personal", "fixture-work"] where (try? credentials.read(account)) != nil {
             connected.insert(account)
         }
-        authorization.onResult = { [weak self] result in
-            guard let self else { return }
-            switch result {
-            case .success(let account):
-                do {
-                    try self.credentials.save(account, token: Data("synthetic-only-\(UUID().uuidString)".utf8))
-                    self.connected.insert(account)
-                    self.status = "Connected \(account). Synthetic credential saved in Keychain."
-                    self.screen = "Dashboard"
-                } catch {
-                    self.status = "Credential save failed. Account remains disconnected: \(error.localizedDescription)"
-                }
-            case .failure(let error):
-                self.status = "Authorization ended: \(error.localizedDescription)"
+    }
+
+    private func receive(_ result: Result<String, Error>, attempt: UUID) {
+        guard activeAttempt == attempt else { return }
+        activeAttempt = nil
+        switch result {
+        case .success(let account):
+            do {
+                try self.credentials.save(account, token: Data("synthetic-only-\(UUID().uuidString)".utf8))
+                self.connected.insert(account)
+                self.status = "Connected \(account). Synthetic credential saved in Keychain."
+                self.screen = "Dashboard"
+            } catch {
+                self.status = "Credential save failed. Account remains disconnected: \(error.localizedDescription)"
             }
-            self.busy = false
-            NSApplication.shared.activate(ignoringOtherApps: true)
+        case .failure(let error):
+            self.status = "Authorization ended: \(error.localizedDescription)"
         }
+        self.busy = false
+        NSApplication.shared.activate(ignoringOtherApps: true)
     }
 
     func connect(openBrowser: Bool = true) async {
+        let attempt = UUID()
+        activeAttempt = attempt
+        authorization.cancel()
+        authorization.onResult = { [weak self] result in self?.receive(result, attempt: attempt) }
         busy = true
         do {
-            try authorization.start()
+            try Task.checkCancellation()
+            try startAuthorization()
             for _ in 0..<750 {
-                if let url = authorization.authorizationURL {
+                guard activeAttempt == attempt else { return }
+                try Task.checkCancellation()
+                if let url = readyURL() {
                     status = "Waiting for approval in your browser. This attempt expires in two minutes."
                     if openBrowser && !browserOpener(url) {
                         throw CocoaError(.executableNotLoadable, userInfo: [NSLocalizedDescriptionKey: "Could not open the browser. Connect again to retry."])
                     }
                     return
                 }
-                try await Task.sleep(for: .milliseconds(20))
+                try await waitForReadiness()
             }
+            guard activeAttempt == attempt else { return }
             throw CocoaError(.fileReadUnknown)
         } catch {
+            guard activeAttempt == attempt else { return }
             cancel()
             status = "Could not start local authorization: \(error.localizedDescription)"
         }
     }
 
     func cancel() {
+        activeAttempt = nil
+        authorization.onResult = nil
         authorization.cancel()
         busy = false
         status = "Authorization canceled. No credential was saved."
