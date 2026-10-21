@@ -4,6 +4,13 @@ cd "$(dirname "$0")"
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 frameworks="$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/Library/Frameworks"
 app="$PWD/build/CodexBar Qualification.app"
+# Only this exact generated bundle is disposable. Keep sibling evidence intact.
+# Refuse a redirected build directory before deleting anything beneath it.
+if [[ -L "$PWD/build" ]]; then
+  echo "Refusing symlinked build directory" >&2
+  exit 1
+fi
+rm -rf -- "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 xcrun swiftc -swift-version 6 -warnings-as-errors -parse-as-library \
   -target "$(uname -m)-apple-macos14.0" -F "$frameworks" \

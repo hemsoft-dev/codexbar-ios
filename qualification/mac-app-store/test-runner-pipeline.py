@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Run the actual shell with isolated fake tools. No real StoreKit is used."""
 import os
+import sys
+
+if not __debug__:
+    sys.exit("ERROR: optimized Python disables regression assertions; run without -O/PYTHONOPTIMIZE")
 from pathlib import Path
 import subprocess
 import tempfile
@@ -66,8 +70,11 @@ if __name__ == '__main__':
     for case in [(0, 74, 0, 74, 1), (65, 74, 0, 65, 1), (0, 0, 0, 0, 3),
                  (65, 0, 73, 65, 1), (0, 0, 73, 73, 3)]:
         exercise(source, *case)
-    old = subprocess.check_output(['git', 'show',
-        'e2c99d266fd55b721173856aabbef4878361a6c8:qualification/mac-app-store/test.sh'], text=True)
+    # Construct the reviewed failure mode without Git history: ignore tee's
+    # status while keeping Xcode's status and the rest of the current runner.
+    begin = source.index('  # Snapshot both statuses')
+    end = source.index('  set -e', begin)
+    old = source[:begin] + '  status=${PIPESTATUS[0]}\n' + source[end:]
     try:
         exercise(old, 0, 74, 0, 74, 1)
     except AssertionError as error:

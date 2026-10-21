@@ -4,10 +4,13 @@
 Only the wrapper is exercised here. No StoreKit reset or transaction is issued.
 """
 import os
+import sys
+
+if not __debug__:
+    sys.exit("ERROR: optimized Python disables regression assertions; run without -O/PYTHONOPTIMIZE")
 import signal
 from pathlib import Path
 import subprocess
-import sys
 import tempfile
 import time
 
@@ -48,6 +51,8 @@ with tempfile.TemporaryDirectory(prefix='mac476-lock-regression-') as directory:
     root = Path(directory)
     worker = root / 'worker.py'
     worker.write_text('''import pathlib, sys, time
+if not __debug__:
+    sys.exit('ERROR: optimized worker disables regression assertions')
 root, identity = pathlib.Path(sys.argv[1]), sys.argv[2]
 marker = root / 'marker'
 state = root / 'storekit-state'

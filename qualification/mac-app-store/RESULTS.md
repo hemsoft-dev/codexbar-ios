@@ -352,3 +352,78 @@ checks are unchanged, so the prior 51-assertion result remains historical and
 was not rerun. Prior controls and failure receipts remain intact in this
 worktree. No automatic CI, production Store, other machine or paid API was used.
 Parent retains review, thread-resolution, CI, UI-media and merge ownership.
+
+## Self-contained regression and clean packaging repair, October 21, 2026 at 4:11 PM EDT
+
+Connected Codex findings `4341431288`, `4341431295` and `4341431305` on
+`102d4bcd55b80c4d91f2de4a00cee1447b6b9c25` are addressed in the existing
+issue #476 / PR #508 qualification worktree on air.
+
+The pipeline regression constructs the old failure mode from the current runner
+by replacing only its phase-status capture/tee handling with Xcode-only status
+capture. It no longer runs Git or requires an intermediate commit. Five current
+cases pass, preserving Xcode-versus-tee and final-metadata failure precedence.
+The constructed old-behavior control exits 0 instead of required exit 74 and is
+rejected. This is a targeted behavioral control, not an unmodified old checkout.
+
+`build.sh` removes only `build/CodexBar Qualification.app` before creating its
+contents and refuses a symlinked build directory. Sibling ignored build and
+evidence directories remain intact. `test-packaging.py` uses fake compilation
+and signing to test removal of seeded nested obsolete resources, retention of
+sibling evidence and refusal of a redirected build directory. Its constructed
+mkdir-only control fails because the obsolete file survives. The actual native
+standalone build was also seeded with an obsolete nested resource and an
+obsolete top-level Contents file; both disappeared from the freshly signed
+bundle. The retained 3:55 PM native receipt remained present.
+
+Both assertion-based Python regressions reject optimized execution before any
+PASS output or subprocess work. The generated lock worker independently rejects
+optimization too. `python3 -O <script>` and `PYTHONOPTIMIZE=1` runs exit nonzero
+with an explicit error. Executable temporary copies were also invoked directly
+with `PYTHONOPTIMIZE=1`, and the extracted generated worker was tested under
+both optimization forms. A bounded unguarded-assertion control demonstrates the
+old risk: a deliberately failed invariant fails normally but prints misleading
+success under `-O`. Optimized execution is deliberately unsupported, not a
+passing qualification run. The new packaging test uses explicit exceptions.
+
+Commands run from the worktree root, all exit 0 unless explicitly described as
+expected rejection above:
+
+- `python3 qualification/mac-app-store/test-runner-pipeline.py`
+- `python3 qualification/mac-app-store/test-exclusivity.py`
+- `python3 qualification/mac-app-store/test-packaging.py`
+- Copied those scripts and their shell/lock dependencies with `shutil.copy2`
+  into a fresh temporary directory without `.git`, then ran each Python script
+  with that directory as cwd. All controls pass without history or repository
+  metadata; this also removes dependence on shallow-clone history.
+- `qualification/mac-app-store/build.sh`: Swift 6 warnings-as-errors, ad hoc
+  signing and strict signature verification pass after actual contamination.
+- `'qualification/mac-app-store/build/CodexBar Qualification.app/Contents/MacOS/CodexBarQualification' --self-test`:
+  **51 PASS lines and RESULT 0 failures**.
+- `qualification/mac-app-store/qualify-update.sh`: seeded version 1, signature
+  tamper rejection, atomic replacement and rollback pass on the rebuilt bundle;
+  retained directory `build/update.rItP0f/`.
+- `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift package plugin --allow-writing-to-package-directory swiftlint lint --reporter xcode .`:
+  pinned lint passes with zero violations in 301 files.
+- `/bin/bash -n` for all qualification shell scripts, `ast.parse` for all
+  qualification Python scripts, SHA-256 verification of all ten historical
+  native manifest inputs, and `git diff --check`: pass.
+
+Ignored logs under `evidence/` are `review508-r5-build.log`,
+`review508-r5-self-test.log`, `review508-r5-update.log`,
+`review508-r5-pinned-lint.log`, `review508-r5-pipeline.log`,
+`review508-r5-lock.log`, `review508-r5-packaging.log`,
+`review508-r5-optimized-no-git.log`, `review508-r5-optimization-controls.log`
+and `review508-r5-syntax-manifest-diff.log`.
+
+The October 21 3:55:13–3:55:23 PM EDT four-test native run at `102d4bcd`
+remains historical evidence in `build/storekit-20261021-155513-C57ZUn/`.
+All ten manifest inputs still match; the native runner, lock implementation,
+compiled native sources, catalog, project and scheme are unchanged. No native
+rerun is claimed. Standalone Swift sources and their 51 checks are unchanged.
+Only isolated qualification packaging, Python regressions and these results
+changed. Root main, shipping source, automatic CI, other machines, paid APIs,
+App Store Connect, PR media and body remain untouched. No review request,
+check polling, thread resolution or merge was performed. Parent owns fresh
+current-head review, checks and UI evidence. Live-provider, publisher-signing,
+Store-delivery and purchase-portability limitations remain unchanged.
