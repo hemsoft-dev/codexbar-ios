@@ -2,7 +2,7 @@
 
 This document tracks the work required to ship CodexBar for iOS and iPadOS through TestFlight and App Store review.
 
-Status last reviewed: October 18, 2026
+Status last reviewed: October 21, 2026
 
 ## CodexBar 2.0 policy and preparation
 
@@ -63,12 +63,14 @@ the US$3.99 download price and 175 sale territories. Preserve these settings
 through the approved launch sequence.
 
 App version `2.0.0`, ID `2c7b9bd4-b877-454d-a5a2-036b25a151f5`, is
-`PREPARE_FOR_SUBMISSION` with `MANUAL` release, no selected build and no phased
-release. Review draft `af75f0db-4b2c-403d-81e2-c3b14ab05986` is
+`PREPARE_FOR_SUBMISSION` with `MANUAL` release and no phased release. Read-only verification on October 21
+confirmed build 5 (`e224b2b9-c59a-44ff-bd92-d1ed7a0f6b02`) is selected and
+`VALID`. It belongs to source `62f6d8e392360b91cb704c2503e9796f8ddc285c`
+and retains the earlier cutoff; do not submit it under the replacement plan. Review draft `af75f0db-4b2c-403d-81e2-c3b14ab05986` is
 `READY_FOR_REVIEW`, with zero items and no submitted date. The first Pro
 products must accompany app version 2.0 in one website submission. Selecting
-the exact processed build and associating the products with the app version
-remain pending; nothing in this draft has been submitted. The three local StoreKit
+the replacement processed build and associating the products with the app version
+remain pending for the replacement candidate; nothing in this draft has been submitted. The three local StoreKit
 review screenshots demonstrate app UI and test-configuration prices. They do
 not establish live App Store prices or production original-purchaser access.
 
@@ -91,14 +93,17 @@ and [subscription guidance](https://developer.apple.com/documentation/appstoreco
 rechecked in the [saved Apple readback](/tmp/codexbar-470-first-product-submission/readback.json)
 on October 18 at 8:00:53 AM EDT, `2026-10-18T12:00:53Z`.
 
+The [October 21 scope record](docs/2026-10-21-pro-scope-decisions.md) keeps
+Pro Apple-local and native Mac qualification provisional.
+
 The [description](fastlane/metadata/en-US/description.txt),
 [promotional text](fastlane/metadata/en-US/promotional_text.txt),
 [release notes](fastlane/metadata/en-US/release_notes.txt) and
 [review notes](fastlane/metadata/review_information/notes.txt) are prepared for
-2.0. Release copy was finalized on October 18, including the widget-readability
-fix in the 1,984-character What's New text. The earlier saved What's New value
-is stale after that local update; saving and rereading the new text on the 2.0
-draft remains pending. Other metadata values are unchanged. Do not copy the
+2.0. Local release copy includes the widget-readability fix and the replacement
+cutoff in the 1,984-character What's New text. The draft retains build 5 copy;
+saving and rereading replacement metadata remains pending approval. Other
+metadata values are unchanged. Do not copy the
 2.0 metadata onto the live 1.4.0 listing. The description includes Apple's
 [standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/)
 and the public [privacy policy](https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md).
@@ -106,18 +111,20 @@ The existing GitHub privacy and support URLs remain the release destinations.
 
 ### Cutover and original-purchaser rules
 
-The planned release is `2.0.0 (5)`; all 14 project configurations already use
-that version and build. Qualification of the final immutable candidate is pending.
-The [2.0 changelog](CHANGELOG.md#200---2026-10-18) is dated October 18, and the
-[privacy policy](PRIVACY.md) is effective that day. These dates record finalized
-source copy, not App Store submission or distribution. Start the next version's
-Unreleased section after the release cut.
-The compiled cutoff `T` remains **PROVISIONAL: October 31, 2026 at 8:00 PM EDT**,
-which is `2026-11-01T00:00:00Z`. It is fourteen calendar days after the planned
-submission date `2026-10-18 UTC`, not evidence of a completed submission.
+The replacement release is `2.0.0 (6)`; all 14 project configurations use
+that version and build. Qualification of this replacement immutable candidate is pending.
+The preparation targets October 23, 2026 submission as approved by Franz on October 21; he must
+approve submission separately. If that date moves, recompute the cutoff before
+qualifying another candidate.
+The [2.0 changelog](CHANGELOG.md#200---unreleased) remains Unreleased until
+the replacement candidate is final. The [privacy policy](PRIVACY.md) is effective
+October 18; that date does not record App Store submission or distribution.
+The compiled cutoff `T` remains **PROVISIONAL: November 5, 2026 at 7:00 PM EST**,
+which is `2026-11-06T00:00:00Z`. It is fourteen calendar days after the planned
+submission date `2026-10-23 UTC`, not evidence of a completed submission.
 The value in
 [ProOriginalPurchaserPolicy](CodexBarIOS/Services/ProOriginalPurchaserPolicy.swift)
-is unchanged by this preparation. Before submission,
+is updated by this preparation. Before submission,
 [issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) must
 recompute and finalize `T` from the actual planned submission date, then verify
 that the compiled value, original-purchaser notice, support page, promotional
@@ -135,8 +142,8 @@ Sandbox, TestFlight and Xcode AppTransactions never qualify as original
 purchases. Fresh verified evidence must also pass the resolver's saved
 revocation ordering; stale evidence cannot undo a recorded revocation.
 
-Family members of original purchasers must install before October 31, 2026 at
-8:00 PM EDT, `2026-11-01T00:00:00Z`, under the current provisional candidate.
+Family members of original purchasers must install before November 5, 2026 at
+7:00 PM EST, `2026-11-06T00:00:00Z`, under the current provisional candidate.
 The [support page](SUPPORT.md#codexbar-pro-and-restoring-purchases) explains the
 one-time free lifetime offer-code route for missed cases. No codes are created
 or distributed by this disclosure work. Franz's original-purchase and family
@@ -151,7 +158,7 @@ agent-owned implementation or automated delivery.
    version 2.0.0 and build 5 or higher across the app and embedded products,
    then verify the built archive rather than relying only on project text.
    Recheck the cutoff disclosures, the privacy policy's effective date and
-   the [2.0 changelog](CHANGELOG.md#200---2026-10-18) against the final candidate.
+   the [2.0 changelog](CHANGELOG.md#200---unreleased) against the final candidate.
 2. Submit 2.0 and all first Pro products together through the
    [App Store Connect website](https://appstoreconnect.apple.com).
    Verify the subscription group and all three products are in the same draft
@@ -187,7 +194,7 @@ sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.
 
 | Checkpoint | Requested action and time | Actual App Store Connect time | Storefront observations | Source SHA / build / T | Pending Franz checks |
 | --- | --- | --- | --- | --- | --- |
-| Final candidate and cutoff | Recheck actual submission date against planned October 18 UTC | Not submitted by this preparation | Not applicable | Candidate SHA pending; planned 2.0.0 build 5; provisional T above | None for repository preparation |
+| Final candidate and cutoff | Recheck actual submission date against planned October 23 UTC | Not submitted by this preparation | Not applicable | Candidate SHA pending; planned 2.0.0 build 6; provisional T above | None for repository preparation |
 | Exact-candidate qualification | Before upload/release | Pending #470 | Not applicable | Record qualified SHA and built versions | Live provider comparisons remain separate |
 | Manual submission | Website submission of app 2.0 plus all first products; paid price; no phased release | Pending #470 | Existing price retained until launch sequence | Record selected build and finalized T | Small Business enrollment before shipping |
 | Manual release | At least six days before T | Pending approval and #470 | Record release visibility | Same qualified candidate | None for draft setup |
@@ -199,7 +206,7 @@ The release ledger stays open through the price transition and post-cutoff
 checks. The following release actions have not been completed:
 
 - [ ] Freeze the merged candidate SHA and recheck the submission date, cutoff,
-  finalized release copy and built `2.0.0 (5)` versions.
+  finalized release copy and built `2.0.0 (6)` versions.
 - [ ] Pass the exact candidate's complete manual release gate on Xcode
   26.6 / 17F113, including native commerce, both UI families and function risk.
 - [ ] Archive, export, upload and verify processing, then select that exact build.
@@ -212,17 +219,42 @@ checks. The following release actions have not been completed:
 - [ ] Record post-cutoff production checks and Franz's original-purchase and
   Family Sharing results without treating pending checks as passes.
 
-The four known monthly transaction-finish failures from
-[issue #468](https://github.com/hemsoft-dev/codexbar-ios/issues/468) remain
-unresolved release-qualification work in
-[issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
-The [commerce validation record](docs/2026-10-18-pro-commerce-validation.md)
-preserves them. The retained
-[local Xcode 27.1 matrix](/tmp/codexbar-468-validation/committed-native-matrix-7385afa)
-has 25 tests: 21 passed, four monthly transaction-finish failures and zero
-skips. It is supplementary evidence, not Xcode 26.6 qualification. Marketing
-captures and passing lifetime tests do not waive these failures or the
-pinned-toolchain release gate.
+### Build 5 qualification and replacement boundary
+
+Build 5 was qualified on air at source
+`62f6d8e392360b91cb704c2503e9796f8ddc285c` on October 19. The local native
+StoreKit matrix, iOS function risk, paired performance experiment and both full
+UI families passed. Native/UI qualification used Xcode 26.6 with iOS 26.2;
+the performance receipt records Xcode 27.1. These are separate observations.
+The retained local evidence is `/tmp/codexbar-470-qual-62f6d8e`.
+The earlier monthly-finish failures are historical diagnostics superseded by
+that pinned native run, not open failures of build 5.
+
+[Hosted CI](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39315798936)
+passed SwiftLint, strict concurrency, watchOS tests/risk and smoke. Its iOS
+ordinary tests passed, but native commerce passed 24 of 25 and the complete
+hosted UI gate failed without running its journeys. The local exact-source
+native/UI passes are recorded separately; the hosted gate is not green.
+[Hosted security](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39315802645)
+passed. Hosted performance was inconclusive; the local paired experiment passed.
+None of these receipts qualifies changed source or replacement build 6.
+
+The build 5 archive and export passed signature, provisioning, bundle-version,
+privacy-manifest and export-compliance verification. The IPA SHA-256 is
+`819b38cc6bb45f1ea6bd90bc1f34af3a70b39eedb4fe3cd248692f69ea0293ec`.
+It was uploaded October 19 at 7:12 PM EDT, processed as `VALID`, and selected
+on the draft. The read-only October 21 check confirms the app remains
+`PREPARE_FOR_SUBMISSION`, manual release, phased release absent, and the review
+submission has no submitted date. Upload and TestFlight availability are not
+App Review submission or customer release.
+
+The original October 18 planned submission date has passed. Build 6 moves the
+provisional cutoff to November 5 at 7 PM EST, November 6 at midnight UTC,
+for a planned October 23 submission. All replacement qualification, archive,
+upload and selection remain pending. Current task authority is **Prepare**:
+Franz must approve App Store submission, release, pricing, availability,
+customer publication or spending at the final concrete step. Do not inherit
+submission authority from the earlier mission ledger.
 
 ### Native marketing and review assets
 

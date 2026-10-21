@@ -4,9 +4,9 @@ Notable changes to CodexBar are documented here. Entries describe shipped app
 behavior; development-only changes are listed separately when they affect
 building, testing, or releasing the app.
 
-## 2.0.0 - 2026-10-18
+## 2.0.0 - Unreleased
 
-Release copy is finalized. App Store submission and distribution remain pending
+App Store submission and distribution remain pending
 in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Added
@@ -71,6 +71,9 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   ([#420](https://github.com/HemSoft/codexbar-ios/issues/420))
 
 ### Changed
+
+- Extend the provisional family installation deadline to November 5, 2026 at
+  7 PM EST for the October 23 planned submission. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Clarify which features come with the free plan and CodexBar Pro, how to
   restore purchases, and how original purchasers and their family members keep
@@ -154,6 +157,10 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   ([#421](https://github.com/hemsoft-dev/codexbar-ios/issues/421))
 
 ### Developer Experience
+
+- Prepare replacement build 6 and reconcile build 5's local qualification and
+  unsubmitted App Store draft. Submission and launch need Franz's approval.
+  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Give widget views explicit initializers for the pinned Swift compiler while
   keeping their environment-driven appearance state private. Keep plan fixtures
