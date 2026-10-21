@@ -71,6 +71,13 @@ final class FixtureAuthorization {
 
     /// Tiny fixture-only HTTP parser; production providers must use their registered OAuth contract.
     func respond(_ request: String, now: Date = Date()) -> (String, String) {
+        if let pending, now >= pending.expires {
+            cancel()
+            onResult?(.failure(CocoaError(.coderValueNotFound, userInfo: [
+                NSLocalizedDescriptionKey: "Fixture authorization expired. Connect again to retry.",
+            ])))
+            return ("410 Gone", "Attempt expired or canceled")
+        }
         let parts = request.components(separatedBy: "\r\n")[0].split(separator: " ")
         guard parts.count == 3, parts[0] == "GET",
               let url = URLComponents(string: String(parts[1])), url.scheme == nil, url.host == nil,

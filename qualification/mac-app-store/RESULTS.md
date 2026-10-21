@@ -28,7 +28,7 @@ Environment: Apple silicon air, macOS 26.6.2 `25G83`, Xcode 27.1 `27A9275`, Swif
 | App Store install, update, receipt preservation, review | NOT RUN | No record/platform mutation, upload, store account or publication |
 | Complete iOS/watchOS gates and full UI release workflow | NOT RUN | Unchanged production targets; no CI dispatch or expansion |
 
-`--self-test` originally finished with **22 PASS assertions and `RESULT 0 failures`**. The parent review fix adds all-split header framing, premature EOF and oversized-header checks; the updated run passes **25 assertions**, with zero failures. Those synthetic results are independent of the native XCTest result. The original native failure remains retained by the parent at `build/storekit-20261021-135517.xcresult`. The earlier fixture-app hosted runner did not start tests and was interrupted; the follow-up below uses a separate minimal AppKit host.
+`--self-test` originally finished with **22 PASS assertions and `RESULT 0 failures`**. The parent review fix adds all-split header framing, premature EOF and oversized-header checks; the updated run passes **27 assertions**, with zero failures. Those synthetic results are independent of the native XCTest result. The original native failure remains retained by the parent at `build/storekit-20261021-135517.xcresult`. The earlier fixture-app hosted runner did not start tests and was interrupted; the follow-up below uses a separate minimal AppKit host.
 
 ## Native StoreKit repair, October 21, 2026 EDT
 
@@ -93,3 +93,10 @@ actual StoreKitQualificationTests target. The source-hash record includes
 Restore.swift. The sandbox run observed NSCocoaErrorDomain 513; unrelated write
 errors fail the assertion. Pinned SwiftLint passed with zero violations in 281
 files. Standalone build and all 25 assertions passed.
+
+
+The next current-head review found that a late browser request left the model
+waiting after expiry. The receiver now clears the attempt and URL, cancels the
+listener and reports failure. Two assertions verify that busy clears, the expiry
+message appears and Connect immediately starts a fresh state. Cancellation is
+then exercised on that new state rather than the already expired attempt.

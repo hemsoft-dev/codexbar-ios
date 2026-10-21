@@ -85,7 +85,15 @@ struct QualificationChecks {
             }
             check(model.authorization.respond("GET /authorize?state=\(secondState) HTTP/1.1\r\n", now: Date().addingTimeInterval(121)).0 == "410 Gone",
                   "Expired authorization denied")
-            _ = model.authorization.respond("GET /callback?state=\(secondState)&cancel=1 HTTP/1.1\r\n")
+            check(!model.busy && model.authorization.authorizationURL == nil
+                  && model.status.contains("expired"), "Expired attempt ends authorization and enables retry")
+            await model.connect(openBrowser: false)
+            guard let retryURL = model.authorization.authorizationURL,
+                  let retryState = URLComponents(url: retryURL, resolvingAgainstBaseURL: false)?.queryItems?.first?.value else {
+                throw CocoaError(.fileReadUnknown)
+            }
+            check(model.busy && retryState != secondState, "Retry starts a fresh authorization after expiry")
+            _ = model.authorization.respond("GET /callback?state=\(retryState)&cancel=1 HTTP/1.1\r\n")
             check(!model.busy && !model.connected.contains("fixture-work"), "Browser cancel saves no second credential")
             model.cancel()
             model.screen = "Settings"
