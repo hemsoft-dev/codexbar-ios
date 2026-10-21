@@ -100,3 +100,8 @@ waiting after expiry. The receiver now clears the attempt and URL, cancels the
 listener and reports failure. Two assertions verify that busy clears, the expiry
 message appears and Connect immediately starts a fresh state. Cancellation is
 then exercised on that new state rather than the already expired attempt.
+
+
+The evidence manifest also hashes `test.sh` itself, so retained native receipts
+identify the selectors, phase order, toolchain default and failure handling that
+produced them. This changes evidence provenance only, not app or test behavior.

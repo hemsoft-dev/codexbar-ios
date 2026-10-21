@@ -17,7 +17,7 @@ run="$(mktemp -d "$PWD/build/storekit-$(TZ=America/New_York date +%Y%m%d-%H%M%S)
   xcodebuild -version
   sw_vers
   uname -m
-  shasum -a 256 Restore.swift StoreKitTests.swift StoreKitTestHost.swift StoreKitTestHost.entitlements \
+  shasum -a 256 test.sh Restore.swift StoreKitTests.swift StoreKitTestHost.swift StoreKitTestHost.entitlements \
     Qualification.storekit MacQualification.xcodeproj/project.pbxproj \
     MacQualification.xcodeproj/xcshareddata/xcschemes/MacQualification.xcscheme
 } | tee "$run/environment.txt"
