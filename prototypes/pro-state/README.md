@@ -1,6 +1,6 @@
 # Apple-local synthetic Pro states
 
-Local fixture work for [#477](https://github.com/hemsoft-dev/codexbar-ios/issues/477). Franz's October 21, 2026 clarification selects Apple-local per-store Pro and provisional native Mac qualification. The parent owns the decision record in [#475](https://github.com/hemsoft-dev/codexbar-ios/issues/475). This prototype changes no product, project, package, production code, store configuration or CI workflow.
+Local fixture work for [#477](https://github.com/hemsoft-dev/codexbar-ios/issues/477). Franz's October 21, 2026 clarification selects Apple-local per-store Pro and provisional native Mac qualification. The [October 21 decision record](../../docs/2026-10-21-pro-scope-decisions.md) records the approved boundary for [#475](https://github.com/hemsoft-dev/codexbar-ios/issues/475). This prototype changes no product, project, package, production code, store configuration or CI workflow.
 
 The Apple-local contract comes from [#464](https://github.com/hemsoft-dev/codexbar-ios/issues/464), the [Apple plan](../../docs/2026-10-16-codexbar-pro-plan.md) and the existing [resolver](../../CodexBarIOS/Services/ProEntitlementResolver.swift). The [platform plan](../../docs/2026-10-17-codexbar-pro-platform-plan.md) supplies the scenario inventory, not approval for sharing. No account, shared entitlement service, shared lifetime lease or website checkout is part of the selected product boundary. Native Mac is not qualified by these fixtures, and no iOS-to-Mac universal-purchase promise is made.
 

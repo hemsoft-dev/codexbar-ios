@@ -158,6 +158,11 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Developer Experience
 
+- Add local synthetic purchase fixtures for Apple-local Pro states, store identity
+  isolation, receipt replay, offline boundaries and the Settings lifetime switch.
+  Shared-commerce experiments remain excluded from product promises.
+  ([#477](https://github.com/hemsoft-dev/codexbar-ios/issues/477))
+
 - Prepare replacement build 6 and reconcile build 5's local qualification and
   unsubmitted App Store draft. Submission and launch need Franz's approval.
   ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
