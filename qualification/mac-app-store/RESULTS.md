@@ -10,14 +10,14 @@ Environment: Apple silicon air, macOS 26.6.2 `25G83`, Xcode 27.1 `27A9275`, Swif
 | Swift 6 compile with warnings as errors | PASS | Standalone `build.sh` log |
 | Pinned SwiftLint 0.65.1 | PASS | Seven qualification Swift files, zero violations; used the existing main checkout's resolved binary and this repository's root config |
 | Signed sandbox configuration | PASS | `codesign --verify --strict`; inspected standalone signed entitlements contain exactly sandbox, network client and network server |
-| Runtime sandbox boundary | PASS | Outside-container `/private/tmp` fixture write denied |
+| Runtime sandbox boundary | PASS | Outside-container `/private/tmp` fixture write denied with NSCocoaErrorDomain 513; only permission-denial errors pass |
 | Guided loopback authorization | PASS | Sandboxed HTTP self-test plus actual browser approval of Personal fixture and app return |
 | Callback defenses | PASS | Forged/duplicate state, unknown account, expired attempt, replay and browser cancellation assertions |
 | Secure account credential isolation | PASS | Keychain read/write/update/delete assertions for separate Personal/Work account keys; not production ACL qualification |
 | Dashboard and Settings | PASS | Actual native window inspected through accessibility tree; Dashboard shows labeled sample usage after browser approval; Settings controls exercised |
 | Same-build relaunch | PASS | Closed and reopened the unchanged ad hoc binary; Personal fixture remained connected through Keychain. Disconnected it afterward and verified removal |
 | Synthetic restore rehearsal | PASS | Empty, verified lifetime, revoked, unverified and wrong-product fixtures; actual Settings empty and restored states captured |
-| Native StoreKitTest runtime | PASS, Xcode 26.6 only | Hosted native purchase, verified Xcode current entitlement, refund, entitlement removal and verified revocation all executed; one test, zero failures. Earlier failed receipts retained below; Xcode 27.1 remains unsupported in this measured combination |
+| Native StoreKitTest runtime | PASS, Xcode 26.6 only | Hosted native purchase, verified Xcode current entitlement, refund, entitlement removal and verified revocation all executed; four tests in three separate invocations, zero failures. Earlier failed receipts retained below; Xcode 27.1 remains unsupported in this measured combination |
 | Local signature tampering | PASS | Changed version metadata invalidated signature |
 | Local replacement and rollback rehearsal | PASS | Ad hoc version-2 copy verified, staged replacement verified, restored version-1 copy verified; no Store update |
 | Shell syntax and Python generator syntax | PASS | `bash -n` and `python3 -m py_compile` |
@@ -28,7 +28,7 @@ Environment: Apple silicon air, macOS 26.6.2 `25G83`, Xcode 27.1 `27A9275`, Swif
 | App Store install, update, receipt preservation, review | NOT RUN | No record/platform mutation, upload, store account or publication |
 | Complete iOS/watchOS gates and full UI release workflow | NOT RUN | Unchanged production targets; no CI dispatch or expansion |
 
-`--self-test` finished with **22 PASS assertions and `RESULT 0 failures`**. Those synthetic results are independent of the native XCTest result. The original native failure remains retained by the parent at `build/storekit-20261021-135517.xcresult`. The earlier fixture-app hosted runner did not start tests and was interrupted; the follow-up below uses a separate minimal AppKit host.
+`--self-test` originally finished with **22 PASS assertions and `RESULT 0 failures`**. The parent review fix adds all-split header framing, premature EOF and oversized-header checks; the updated run passes **25 assertions**, with zero failures. Those synthetic results are independent of the native XCTest result. The original native failure remains retained by the parent at `build/storekit-20261021-135517.xcresult`. The earlier fixture-app hosted runner did not start tests and was interrupted; the follow-up below uses a separate minimal AppKit host.
 
 ## Native StoreKit repair, October 21, 2026 EDT
 
@@ -61,4 +61,35 @@ Media is test data only. Upload with GitHub CLI `--attach` into the partial PR's
 
 ## Remaining acceptance criteria
 
-Franz has authorized provisional Mac qualification, not a shipping choice. The selected-channel criterion remains open. The local window, fixture authorization, sandbox and credential-isolation criteria have bounded evidence above. Local native lifetime entitlement restoration and refund are now qualified on Xcode 26.6. Universal-purchase configuration, original-purchaser scope and real signing/Store updates remain unqualified. The synthetic rehearsal is useful for inspecting behavior but is insufficient to pass those gates. Keep [#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476) open, use **Refs** in the PR and leave parent review/merge pending.
+Franz has authorized provisional Mac qualification, not a shipping choice. The selected-channel criterion remains open. The local window, fixture authorization, sandbox and credential-isolation criteria have bounded evidence above. Local native lifetime entitlement restoration, including a fresh host process reading the same transaction ID, and refund are now qualified on Xcode 26.6. Universal-purchase configuration, original-purchaser scope and real signing/Store updates remain unqualified. The synthetic rehearsal is useful for inspecting behavior but is insufficient to pass those gates. Keep [#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476) open, use **Refs** in the PR and leave parent review/merge pending.
+
+## Parent review fixes
+
+The loopback receiver now accumulates bounded HTTP headers before parsing. The
+shared framing component is tested at every split point and rejects premature
+EOF and oversized input; normal browser authorization is still exercised through
+the actual receiver. The browser-page assertion checks both its generated heading
+and its existing account-selection paragraph.
+
+The native adapter resolves its default catalog from its defining bundle, which
+is the test bundle in the hosted XCTest context. A second native test calls the
+default `prepare()` path and exercises adapter purchase, restore and refund. The
+parent's updated run on air completed October 21 at 2:24 PM EDT with **two native
+tests, zero failures**; receipt:
+`build/storekit-20261021-142450-99Ghn8/TestResults.xcresult` in the parent
+qualification worktree. The earlier raw SDK checks remain in the other test.
+
+
+The next review required a fresh-process restore and a specific sandbox denial.
+At 2:32 PM EDT on October 21, the final runner passed two ordinary native tests,
+one separate purchase-preparation test and one restore test in another host PID.
+The fresh host reads the same verified transaction before creating a new session
+or buying anything, then refunds it and observes access removal. Receipts are
+`build/storekit-20261021-143243-lLSzxL/{ordinary,prepare,relaunch}.xcresult`.
+The first split-run attempt used incorrect target selectors, so all four methods
+ran together and the different-PID assertion failed. That failure remains in
+`build/storekit-20261021-143206-sVmwxu/ordinary.xcresult`; selectors now name the
+actual StoreKitQualificationTests target. The source-hash record includes
+Restore.swift. The sandbox run observed NSCocoaErrorDomain 513; unrelated write
+errors fail the assertion. Pinned SwiftLint passed with zero violations in 281
+files. Standalone build and all 25 assertions passed.

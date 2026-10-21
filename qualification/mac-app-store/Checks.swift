@@ -17,7 +17,16 @@ struct QualificationChecks {
                 try Data("fixture".utf8).write(to: outside)
                 check(false, "Sandbox denies ungranted outside-container write")
                 try? FileManager.default.removeItem(at: outside)
-            } catch { check(true, "Sandbox denies ungranted outside-container write") }
+            } catch {
+                let failure = error as NSError
+                let underlying = failure.userInfo[NSUnderlyingErrorKey] as? NSError
+                let denied = (failure.domain == NSCocoaErrorDomain && failure.code == NSFileWriteNoPermissionError)
+                    || (failure.domain == NSPOSIXErrorDomain && [EACCES, EPERM].contains(Int32(failure.code)))
+                    || (underlying?.domain == NSPOSIXErrorDomain
+                        && [Int(EACCES), Int(EPERM)].contains(underlying?.code ?? 0))
+                print("Sandbox write error: \(failure.domain) \(failure.code)")
+                check(denied, "Sandbox denies ungranted outside-container write")
+            }
             let credentials = FixtureCredentials(service: "com.hemsoft.qualification.mac476.tests.\(UUID().uuidString)")
             defer {
                 try? credentials.remove("personal")
@@ -32,10 +41,26 @@ struct QualificationChecks {
             try credentials.remove("personal")
             check(try credentials.read("personal") == nil, "Keychain disconnect removes only target")
             check(try credentials.read("work") != nil, "Keychain second account survives disconnect")
+            let request = Data("GET /authorize?state=fixture HTTP/1.1\r\nHost: localhost\r\n\r\n".utf8)
+            var fragmented = true
+            for split in 1..<request.count {
+                var buffer = FixtureHTTPRequestBuffer()
+                fragmented = fragmented && buffer.append(Data(request.prefix(split)), complete: false) == .incomplete
+                fragmented = fragmented && buffer.append(Data(request.dropFirst(split)), complete: false)
+                    == .request(String(bytes: request, encoding: .utf8)!)
+            }
+            check(fragmented, "Every partial-header split waits for complete HTTP framing")
+            var incomplete = FixtureHTTPRequestBuffer()
+            check(incomplete.append(Data("GET /".utf8), complete: true) == .rejected, "Incomplete HTTP request rejected at EOF")
+            var oversized = FixtureHTTPRequestBuffer()
+            check(oversized.append(Data(repeating: 65, count: 8193), complete: false) == .rejected,
+                  "Oversized HTTP request rejected")
             await model.connect(openBrowser: false)
             guard let url = model.authorization.authorizationURL else { throw CocoaError(.fileReadUnknown) }
             let (page, response) = try await URLSession.shared.data(from: url)
-            check((response as? HTTPURLResponse)?.statusCode == 200 && String(data: page, encoding: .utf8)?.contains("Select an account") == true,
+            let pageText = String(data: page, encoding: .utf8) ?? ""
+            check((response as? HTTPURLResponse)?.statusCode == 200
+                  && pageText.contains("<h1>Connect a fixture account</h1>") && pageText.contains("Select an account"),
                   "Sandbox loopback serves browser account selection")
             let state = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first?.value ?? ""
             check(model.authorization.respond("GET /callback?state=forged&account=fixture-work HTTP/1.1\r\n").0 == "403 Forbidden",

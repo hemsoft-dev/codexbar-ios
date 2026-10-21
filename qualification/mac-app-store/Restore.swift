@@ -15,7 +15,7 @@ final class NativeStoreKitRestore {
                 NSLocalizedDescriptionKey: "StoreKitTest requires the isolated Xcode test host. Run test.sh; no store request was made.",
             ])
         }
-        guard let url = configurationURL ?? Bundle.main.url(forResource: "Qualification", withExtension: "storekit") else {
+        guard let url = configurationURL ?? Bundle(for: Self.self).url(forResource: "Qualification", withExtension: "storekit") else {
             throw CocoaError(.fileNoSuchFile)
         }
         let testSession = try SKTestSession(contentsOf: url)

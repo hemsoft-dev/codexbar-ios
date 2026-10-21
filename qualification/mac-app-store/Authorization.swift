@@ -32,21 +32,34 @@ final class FixtureAuthorization {
         }
         server.newConnectionHandler = { [weak self] connection in
             connection.start(queue: .main)
-            connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { data, _, _, _ in
-                Task { @MainActor in
-                    let request = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-                    let response = self?.respond(request) ?? ("410 Gone", "Attempt ended")
-                    let body = Data(response.1.utf8)
-                    let header = "HTTP/1.1 \(response.0)\r\nContent-Type: text/html; charset=utf-8\r\n"
-                        + "Cache-Control: no-store\r\nContent-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'self'\r\n"
-                        + "Content-Length: \(body.count)\r\nConnection: close\r\n\r\n"
-                    connection.send(content: Data(header.utf8) + body, completion: .contentProcessed { _ in
-                        connection.cancel()
-                    })
+            Task { @MainActor in self?.receiveRequest(connection) }
+        }
+        server.start(queue: .main)
+    }
+
+    private func receiveRequest(_ connection: NWConnection, buffer: FixtureHTTPRequestBuffer = FixtureHTTPRequestBuffer()) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] data, _, complete, error in
+            Task { @MainActor in
+                guard let self, error == nil else { connection.cancel(); return }
+                var next = buffer
+                switch next.append(data ?? Data(), complete: complete) {
+                case .incomplete:
+                    self.receiveRequest(connection, buffer: next)
+                case .rejected:
+                    self.send(("400 Bad Request", "Incomplete or oversized fixture request"), to: connection)
+                case .request(let request):
+                    self.send(self.respond(request), to: connection)
                 }
             }
         }
-        server.start(queue: .main)
+    }
+
+    private func send(_ response: (String, String), to connection: NWConnection) {
+        let body = Data(response.1.utf8)
+        let header = "HTTP/1.1 \(response.0)\r\nContent-Type: text/html; charset=utf-8\r\n"
+            + "Cache-Control: no-store\r\nContent-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'self'\r\n"
+            + "Content-Length: \(body.count)\r\nConnection: close\r\n\r\n"
+        connection.send(content: Data(header.utf8) + body, completion: .contentProcessed { _ in connection.cancel() })
     }
 
     func cancel() {
@@ -99,5 +112,21 @@ final class FixtureAuthorization {
         <form action="/callback"><input type="hidden" name="state" value="\(state)">
         <input type="hidden" name="cancel" value="1"><button>Cancel</button></form></html>
         """
+    }
+}
+
+/// Bounded transport framing, shared by the real loopback receiver and fragmentation regressions.
+struct FixtureHTTPRequestBuffer: Sendable {
+    enum Result: Equatable { case incomplete, rejected, request(String) }
+    private var data = Data()
+
+    mutating func append(_ chunk: Data, complete: Bool) -> Result {
+        guard data.count + chunk.count <= 8192 else { return .rejected }
+        data.append(chunk)
+        if let end = data.range(of: Data("\r\n\r\n".utf8)) {
+            guard let request = String(data: data[..<end.upperBound], encoding: .utf8) else { return .rejected }
+            return .request(request)
+        }
+        return complete ? .rejected : .incomplete
     }
 }
