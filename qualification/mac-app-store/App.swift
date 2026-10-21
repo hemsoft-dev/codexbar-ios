@@ -8,11 +8,13 @@ final class QualificationModel: ObservableObject {
     @Published var connected: Set<String> = []
     @Published var restored = false
     @Published var busy = false
-    let authorization = FixtureAuthorization()
-    let credentials = FixtureCredentials()
+    let authorization: FixtureAuthorization
+    let credentials: FixtureCredentials
     let restore = SyntheticRestore()
 
-    init() {
+    init(authorization: FixtureAuthorization = FixtureAuthorization(), credentials: FixtureCredentials = FixtureCredentials()) {
+        self.authorization = authorization
+        self.credentials = credentials
         for account in ["fixture-personal", "fixture-work"] where (try? credentials.read(account)) != nil {
             connected.insert(account)
         }
@@ -219,7 +221,7 @@ final class QualificationApp: NSObject, NSApplicationDelegate {
         if CommandLine.arguments.contains("--settings") { model.screen = "Settings" }
         if CommandLine.arguments.contains("--self-test") {
             Task {
-                let passed = await QualificationChecks.run(model: model, window: window)
+                let passed = await QualificationChecks.run(window: window)
                 exit(passed ? 0 : 1)
             }
         }

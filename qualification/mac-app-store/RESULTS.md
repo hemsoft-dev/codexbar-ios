@@ -105,3 +105,54 @@ then exercised on that new state rather than the already expired attempt.
 The evidence manifest also hashes `test.sh` itself, so retained native receipts
 identify the selectors, phase order, toolchain default and failure handling that
 produced them. This changes evidence provenance only, not app or test behavior.
+
+## Bounded authorization review repair, October 21, 2026 at 3:18 PM EDT
+
+Both connected Codex findings at `18df7ea7a26fc4bf10199cd9579a1e84301b8e9c`
+are addressed in the standalone qualification app. A cancellable task starts with
+each attempt and expires it without any browser request. The default remains
+120 seconds. Expiry, listener errors, completion and cancellation clear the
+pending attempt, URL and listener; expiry reports failure so the model clears
+busy. Timer, listener-state and connection-receive callbacks verify attempt
+identity before touching current state.
+
+Self-tests use a fresh, test-only Keychain service and seed Work before model
+initialization, proving restored credentials survive cancellation unchanged.
+They never remove the interactive app's persisted fixture accounts. Only items
+created under the test services are removed afterward.
+
+Current standalone build passes Swift 6 warnings-as-errors compilation, ad hoc
+signing and strict signature verification. The sandboxed self-test passes
+**36 assertions, zero failures**, including no-request timeout and listener
+closure, explicit and browser cancellation, completion, replacement-attempt
+protection and preexisting Work/Personal credential preservation. Timeout tests
+inject 0.15 seconds through the constructor; ordinary app construction retains
+120 seconds.
+
+The old-source control used Authorization.swift from the reviewed head with only
+a constructor/timeout seam added so current tests could compile. It also restored
+the reviewed cancellation assertion with Work already present. It built and
+finished with **five failures**: the old Work-absence assumption, no-request
+cleanup, listener closure, completion URL cleanup and replacement expiry.
+The passing cancellation-preservation assertions in that control confirm actual
+stored accounts were preserved. This is an adapted old-source control, not an
+unmodified checkout execution. Its temporary source and binary remain under
+`build/.review508-old-source/`.
+
+Retained ignored logs under `evidence/`:
+`review508-build.log`, `review508-self-test.log`,
+`review508-old-source-build.log`, `review508-old-source-self-test.log`,
+`review508-pinned-lint.log` and `review508-syntax-diff.log`.
+The canonical pinned SwiftLint package-plugin command passes with zero
+violations. Shell/Python syntax and diff-whitespace checks pass.
+The initial direct lint invocation failed to load SourceKit with the default
+developer directory, and forcing only the root config reported 56 unchanged
+test-file violations by bypassing nested configs. Both failed logs are retained
+as `review508-swiftlint.log` and `review508-swiftlint-xcode.log`; the corrected
+canonical command explicitly selects Xcode and honors repository configs.
+
+No native StoreKit source changed and no native StoreKit tests were rerun.
+All exact prior procedure, toolchain, result-bundle and source-hash provenance
+above remains historical evidence. This repair does not renew that evidence,
+qualify live providers, prove production Store behavior or supply current-head
+UI media. Parent owns current-head review, thread resolution and UI evidence.

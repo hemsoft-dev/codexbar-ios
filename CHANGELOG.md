@@ -262,7 +262,9 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 - Add an isolated, provisional Mac qualification app with synthetic browser
   authorization, per-account secure storage, sandbox checks, native StoreKit
   purchase/refund tests on Xcode 26.6, and local replacement/rollback rehearsal.
-  Store distribution and purchase portability remain unqualified.
+  Unattended fixture authorization now expires and enables retry; cancellation
+  checks preserve existing fixture accounts. Store distribution and purchase
+  portability remain unqualified.
   ([#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476))
 
 ## 1.4.0 - 2026-10-07

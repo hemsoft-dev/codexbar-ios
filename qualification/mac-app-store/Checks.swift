@@ -3,14 +3,23 @@ import Foundation
 
 @MainActor
 struct QualificationChecks {
-    static func run(model: QualificationModel, window: NSWindow) async -> Bool {
+    static func run(window: NSWindow) async -> Bool {
         var failures = 0
         func check(_ condition: Bool, _ name: String) {
             print("\(condition ? "PASS" : "FAIL") \(name)")
             if !condition { failures += 1 }
         }
+        let modelCredentials = FixtureCredentials(service: "com.hemsoft.qualification.mac476.selftest.\(UUID().uuidString)")
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("mac476-evidence", isDirectory: true)
         do {
+            try modelCredentials.save("fixture-work", token: Data("preexisting-work".utf8))
+            let model = QualificationModel(credentials: modelCredentials)
+            defer {
+                model.cancel()
+                try? modelCredentials.remove("fixture-personal")
+                try? modelCredentials.remove("fixture-work")
+            }
+            check(model.connected.contains("fixture-work"), "Model restores preexisting Work credential before cancellation")
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let outside = URL(fileURLWithPath: "/private/tmp/mac476-outside-\(UUID().uuidString)")
             do {
@@ -93,8 +102,14 @@ struct QualificationChecks {
                 throw CocoaError(.fileReadUnknown)
             }
             check(model.busy && retryState != secondState, "Retry starts a fresh authorization after expiry")
+            let priorAccounts = model.connected
+            let priorWork = try modelCredentials.read("fixture-work")
+            let priorPersonal = try modelCredentials.read("fixture-personal")
             _ = model.authorization.respond("GET /callback?state=\(retryState)&cancel=1 HTTP/1.1\r\n")
-            check(!model.busy && !model.connected.contains("fixture-work"), "Browser cancel saves no second credential")
+            check(!model.busy && model.connected == priorAccounts, "Browser cancel preserves preexisting connected accounts")
+            check(try modelCredentials.read("fixture-work") == priorWork && modelCredentials.read("fixture-personal") == priorPersonal,
+                  "Browser cancel preserves preexisting Work and Personal credentials")
+            try await checkExpiry(check)
             model.cancel()
             model.screen = "Settings"
             try await Task.sleep(for: .milliseconds(300))
@@ -125,6 +140,55 @@ struct QualificationChecks {
         print("RESULT \(failures) failures")
         fflush(nil)
         return failures == 0
+    }
+
+    private static func checkExpiry(_ check: (Bool, String) -> Void) async throws {
+        let authorization = FixtureAuthorization(timeout: 0.15)
+        let credentials = FixtureCredentials(service: "com.hemsoft.qualification.mac476.timeout.\(UUID().uuidString)")
+        let model = QualificationModel(authorization: authorization, credentials: credentials)
+        defer { model.cancel(); try? credentials.remove("fixture-personal") }
+        await model.connect(openBrowser: false)
+        let expiredURL = authorization.authorizationURL
+        try await Task.sleep(for: .milliseconds(250))
+        check(expiredURL != nil && !model.busy && authorization.authorizationURL == nil && model.status.contains("expired"),
+              "No-request timeout clears busy and authorization URL")
+        if let expiredURL {
+            do {
+                _ = try await URLSession.shared.data(from: expiredURL)
+                check(false, "No-request timeout closes loopback listener")
+            } catch { check(true, "No-request timeout closes loopback listener") }
+        }
+        await model.connect(openBrowser: false)
+        model.cancel()
+        let canceledStatus = model.status
+        try await Task.sleep(for: .milliseconds(200))
+        check(model.status == canceledStatus && !model.busy, "Canceled timer never reports expiry")
+        await model.connect(openBrowser: false)
+        let canceledURL = authorization.authorizationURL!
+        let canceledState = URLComponents(url: canceledURL, resolvingAgainstBaseURL: false)!.queryItems!.first!.value!
+        _ = authorization.respond("GET /callback?state=\(canceledState)&cancel=1 HTTP/1.1\r\n")
+        let browserCanceledStatus = model.status
+        try await Task.sleep(for: .milliseconds(200))
+        check(model.status == browserCanceledStatus && !model.busy && authorization.authorizationURL == nil,
+              "Browser cancellation clears URL and cancels expiry timer")
+        await model.connect(openBrowser: false)
+        let url = authorization.authorizationURL!
+        let state = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems!.first!.value!
+        _ = authorization.respond("GET /callback?state=\(state)&account=fixture-personal HTTP/1.1\r\n")
+        let completedStatus = model.status
+        try await Task.sleep(for: .milliseconds(200))
+        check(model.status == completedStatus && authorization.authorizationURL == nil && !model.busy,
+              "Completed timer never reports expiry and clears URL")
+        await model.connect(openBrowser: false)
+        try await Task.sleep(for: .milliseconds(90))
+        await model.connect(openBrowser: false)
+        let newURL = authorization.authorizationURL
+        try await Task.sleep(for: .milliseconds(90))
+        check(model.busy && authorization.authorizationURL == newURL && newURL != nil,
+              "Old attempt timer cannot expire replacement attempt")
+        try await Task.sleep(for: .milliseconds(150))
+        check(!model.busy && authorization.authorizationURL == nil && model.status.contains("expired"),
+              "Replacement attempt expires at its own deadline")
     }
 
 }

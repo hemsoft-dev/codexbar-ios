@@ -8,43 +8,60 @@ final class FixtureAuthorization {
         let expires: Date
     }
 
+    private var expiryTask: Task<Void, Never>?
+    private let timeout: TimeInterval
     private var listener: NWListener?
     private var pending: Attempt?
     var onResult: ((Result<String, Error>) -> Void)?
     private(set) var authorizationURL: URL?
     private(set) var lastAccount: String?
 
+    init(timeout: TimeInterval = 120) {
+        self.timeout = timeout
+    }
+
     func start() throws {
         cancel()
-        pending = Attempt(state: UUID().uuidString, expires: Date().addingTimeInterval(120))
+        let attempt = Attempt(state: UUID().uuidString, expires: Date().addingTimeInterval(timeout))
         let parameters = NWParameters.tcp
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
         let server = try NWListener(using: parameters)
         listener = server
+        pending = attempt
+        expiryTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(self?.timeout ?? 120)) } catch { return }
+            self?.expire(attempt.state)
+        }
         server.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in
-                guard let self else { return }
+                guard let self, self.pending?.state == attempt.state else { return }
                 if case .ready = state, let port = server.port, let pending = self.pending {
                     self.authorizationURL = URL(string: "http://127.0.0.1:\(port)/authorize?state=\(pending.state)")
                 }
-                if case .failed(let error) = state { self.onResult?(.failure(error)) }
+                if case .failed(let error) = state {
+                    self.cancel()
+                    self.onResult?(.failure(error))
+                }
             }
         }
         server.newConnectionHandler = { [weak self] connection in
             connection.start(queue: .main)
-            Task { @MainActor in self?.receiveRequest(connection) }
+            Task { @MainActor in
+                guard let self, self.pending?.state == attempt.state else { connection.cancel(); return }
+                self.receiveRequest(connection, attemptID: attempt.state)
+            }
         }
         server.start(queue: .main)
     }
 
-    private func receiveRequest(_ connection: NWConnection, buffer: FixtureHTTPRequestBuffer = FixtureHTTPRequestBuffer()) {
+    private func receiveRequest(_ connection: NWConnection, attemptID: String, buffer: FixtureHTTPRequestBuffer = FixtureHTTPRequestBuffer()) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] data, _, complete, error in
             Task { @MainActor in
-                guard let self, error == nil else { connection.cancel(); return }
+                guard let self, self.pending?.state == attemptID, error == nil else { connection.cancel(); return }
                 var next = buffer
                 switch next.append(data ?? Data(), complete: complete) {
                 case .incomplete:
-                    self.receiveRequest(connection, buffer: next)
+                    self.receiveRequest(connection, attemptID: attemptID, buffer: next)
                 case .rejected:
                     self.send(("400 Bad Request", "Incomplete or oversized fixture request"), to: connection)
                 case .request(let request):
@@ -63,19 +80,26 @@ final class FixtureAuthorization {
     }
 
     func cancel() {
+        expiryTask?.cancel()
+        expiryTask = nil
         pending = nil
         authorizationURL = nil
         listener?.cancel()
         listener = nil
     }
 
+    private func expire(_ attemptID: String) {
+        guard pending?.state == attemptID else { return }
+        cancel()
+        onResult?(.failure(CocoaError(.coderValueNotFound, userInfo: [
+            NSLocalizedDescriptionKey: "Fixture authorization expired. Connect again to retry.",
+        ])))
+    }
+
     /// Tiny fixture-only HTTP parser; production providers must use their registered OAuth contract.
     func respond(_ request: String, now: Date = Date()) -> (String, String) {
         if let pending, now >= pending.expires {
-            cancel()
-            onResult?(.failure(CocoaError(.coderValueNotFound, userInfo: [
-                NSLocalizedDescriptionKey: "Fixture authorization expired. Connect again to retry.",
-            ])))
+            expire(pending.state)
             return ("410 Gone", "Attempt expired or canceled")
         }
         let parts = request.components(separatedBy: "\r\n")[0].split(separator: " ")
@@ -92,7 +116,7 @@ final class FixtureAuthorization {
         }
         guard url.path == "/callback" else { return ("404 Not Found", "Unknown fixture route") }
         if items.contains(where: { $0.name == "cancel" && $0.value == "1" }) {
-            self.pending = nil
+            cancel()
             onResult?(.failure(CocoaError(.userCancelled)))
             return ("200 OK", "<h1>Authorization canceled</h1><p>Return to CodexBar Qualification.</p>")
         }
@@ -101,7 +125,7 @@ final class FixtureAuthorization {
               ["fixture-personal", "fixture-work"].contains(account) else {
             return ("400 Bad Request", "Choose a fixture account")
         }
-        self.pending = nil
+        cancel()
         lastAccount = account
         onResult?(.success(account))
         return ("200 OK", "<h1>Fixture authorization returned</h1><p>The app is now active. No provider was contacted.</p>")
