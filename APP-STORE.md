@@ -101,13 +101,17 @@ The [description](fastlane/metadata/en-US/description.txt),
 [release notes](fastlane/metadata/en-US/release_notes.txt) and
 [review notes](fastlane/metadata/review_information/notes.txt) are prepared for
 2.0. Local release copy includes the widget-readability fix and the replacement
-cutoff in the 1,984-character What's New text. The draft retains build 5 copy;
+cutoff in the 2,107-character What's New text. The draft retains build 5 copy;
 saving and rereading replacement metadata remains pending approval. Other
 metadata values are unchanged. Do not copy the
 2.0 metadata onto the live 1.4.0 listing. The description includes Apple's
 [standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/)
 and the public [privacy policy](https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md).
 The existing GitHub privacy and support URLs remain the release destinations.
+
+The [build 6 preparation record](docs/2026-10-23-build6-release-preparation.md)
+maps the final local copy to the 2.0 changelog and records the immutable-candidate
+handoff. Qualification, archive/export and final approval are still pending.
 
 ### Cutover and original-purchaser rules
 
@@ -117,7 +121,9 @@ The preparation targets October 23, 2026 submission as approved by Franz on Octo
 approve submission separately. If that date moves, recompute the cutoff before
 qualifying another candidate.
 The [2.0 changelog](CHANGELOG.md#200---unreleased) remains Unreleased until
-the replacement candidate is final. The [privacy policy](PRIVACY.md) is effective
+the release date is established. October 23 is the planned submission date,
+not an observed release date. Update the heading and all inbound anchors
+together when the release date is known. The [privacy policy](PRIVACY.md) is effective
 October 18; that date does not record App Store submission or distribution.
 The compiled cutoff `T` remains **PROVISIONAL: November 5, 2026 at 7:00 PM EST**,
 which is `2026-11-06T00:00:00Z`. It is fourteen calendar days after the planned
