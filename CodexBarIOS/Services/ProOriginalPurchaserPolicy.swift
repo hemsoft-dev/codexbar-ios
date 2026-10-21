@@ -2,10 +2,10 @@ import Foundation
 
 /// Applied only to verified AppTransaction evidence by ProEntitlementResolver.
 struct ProOriginalPurchaserPolicy: Sendable {
-    // PROVISIONAL: 2026-11-01T00:00:00Z, fourteen days after the planned 2026-10-18 UTC submission.
+    // PROVISIONAL: 2026-11-06T00:00:00Z, fourteen days after the planned 2026-10-23 UTC submission.
     // Release issue #470 MUST recompute/reverify this from the actual planned submission before release.
     // This does not record a submission. Version 2.0 must still ship as build 5 or higher.
-    static let cutover = Date(timeIntervalSince1970: 1_793_491_200)
+    static let cutover = Date(timeIntervalSince1970: 1_793_923_200)
 
     var qualifies: @Sendable (ProAppPurchase) -> Bool = { Self.recognizes($0) }
 

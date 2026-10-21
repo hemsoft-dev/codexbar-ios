@@ -9,7 +9,7 @@ com.hemsoft.CodexBarIOS.pro.lifetime
 
 Yearly has a seven-day free introductory trial for eligible accounts; monthly and lifetime do not. StoreKit supplies localized prices. Lifetime is non-consumable. Family Sharing is off for all three. Subscriptions use Apple's management sheet. Switching from a subscription to lifetime requires auto-renew off; lifetime does not cancel or refund a subscription. Manage Payment Method opens Apple's billing page.
 
-Original-purchaser lifetime Pro requires verified, non-revoked production AppTransaction evidence under the documented build/version/date policy. Sandbox and TestFlight AppTransactions do not qualify. The compiled family cutoff is October 31, 2026 at 8:00 PM EDT, 2026-11-01T00:00:00Z. Restore calls AppStore.sync after a tap, with AppTransaction.refresh for recovery when needed. Unverified purchase information blocks another charge; use Restore Purchases or Refresh Purchase Information.
+Original-purchaser lifetime Pro requires verified, non-revoked production AppTransaction evidence under the documented build/version/date policy. Sandbox and TestFlight AppTransactions do not qualify. The compiled family cutoff is November 5, 2026 at 7:00 PM EST, 2026-11-06T00:00:00Z. Restore calls AppStore.sync after a tap, with AppTransaction.refresh for recovery when needed. Unverified purchase information blocks another charge; use Restore Purchases or Refresh Purchase Information.
 
 The app opens without an account. Live cards require reviewer-owned provider accounts or API keys. No shared credentials are supplied. Add a connection from Settings > Accounts & Groups > Add Account. Connections can be removed independently. Synthetic values are development-only; there is no customer demo mode.
 

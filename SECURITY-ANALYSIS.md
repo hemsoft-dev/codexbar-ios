@@ -602,3 +602,16 @@ longer contain the preview, and Debug builds are unchanged. Reviewed commit
 `ffa05c0b901970dc261463f1a44e798cb9b3f1ae` binds source snapshot
 `b26f29f5189641a72e179f39fc48ca2aac32283bba5c283e49992fd7bfb25398`
 with the same 157 production files and the same four accepted diagnostics.
+
+## October 21 cutoff-only replacement candidate
+
+The reviewed source commit `a22810ea4dc70ed46b523659c5fefccbccff9836` changes only the
+original-purchaser cutoff constant and its explanatory comments in production
+Swift. Its source snapshot is `489a214cf04e2ff71fa508ddedb5d04e3d94e57f3bb4d51f87e09c9d4bbf91c6`.
+No finding source or consumer changed: the OpenCode credential digest remains
+an ephemeral cache discriminator, collapsed/free account preferences contain
+configured local IDs, and the simulator-only DEBUG fixture store accepts only
+synthetic credentials. The cutoff does not change these storage or authentication
+boundaries. The four exact diagnostic identities and rationales remain intact.
+This renewal is a source review, not a new successful security analysis; full
+manual analysis of the final replacement candidate remains pending.
