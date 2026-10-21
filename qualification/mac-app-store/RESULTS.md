@@ -8,7 +8,7 @@ Environment: Apple silicon air, macOS 26.6.2 `25G83`, Xcode 27.1 `27A9275`, Swif
 | --- | --- | --- |
 | Isolated local `.app` packaging and launch | PASS | `build.sh`; ad hoc bundle runs from ignored `build/`; no installation into Applications or Store install |
 | Swift 6 compile with warnings as errors | PASS | Standalone `build.sh` log |
-| Pinned SwiftLint 0.65.1 | PASS | Six qualification Swift files, zero violations; used the existing main checkout's resolved binary and this repository's root config |
+| Pinned SwiftLint 0.65.1 | PASS | Seven qualification Swift files, zero violations; used the existing main checkout's resolved binary and this repository's root config |
 | Signed sandbox configuration | PASS | `codesign --verify --strict`; inspected standalone signed entitlements contain exactly sandbox, network client and network server |
 | Runtime sandbox boundary | PASS | Outside-container `/private/tmp` fixture write denied |
 | Guided loopback authorization | PASS | Sandboxed HTTP self-test plus actual browser approval of Personal fixture and app return |

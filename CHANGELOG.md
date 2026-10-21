@@ -259,6 +259,12 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   and human approvals without waiting for optional review products.
   ([#405](https://github.com/HemSoft/codexbar-ios/issues/405))
 
+- Add an isolated, provisional Mac qualification app with synthetic browser
+  authorization, per-account secure storage, sandbox checks, native StoreKit
+  purchase/refund tests on Xcode 26.6, and local replacement/rollback rehearsal.
+  Store distribution and purchase portability remain unqualified.
+  ([#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476))
+
 ## 1.4.0 - 2026-10-07
 
 More provider metrics, guided sign-in, and up to 90 days of usage history.

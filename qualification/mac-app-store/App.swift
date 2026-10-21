@@ -76,7 +76,7 @@ final class QualificationModel: ObservableObject {
             try restore.prepare()
             if seed { try await restore.seedLifetime() }
             restored = await restore.restore()
-            status = restored ? "Restored synthetic lifetime fixture. Native StoreKit qualification remains pending."
+            status = restored ? "Restored synthetic lifetime fixture. Native test results are recorded separately."
                 : "No verified lifetime in the synthetic fixture."
         } catch { status = "Synthetic restore unavailable: \(error.localizedDescription)" }
     }
@@ -174,7 +174,7 @@ struct QualificationView: View {
                 Button("Restore synthetic purchases") { Task { await model.restoreFixture(seed: false) } }
             }.disabled(model.busy)
             Text("Uses the copied StoreKit catalog and an in-memory receipt fixture. "
-                 + "Native StoreKit, original iOS purchases and universal purchase remain unqualified.")
+                 + "This rehearsal does not verify native StoreKit or purchase portability. Run test.sh for native test evidence.")
                 .font(.callout).foregroundStyle(.secondary)
             Divider()
             Text("Distribution").font(.title2.bold())
