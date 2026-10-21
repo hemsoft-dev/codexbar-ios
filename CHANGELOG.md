@@ -259,6 +259,19 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   and human approvals without waiting for optional review products.
   ([#405](https://github.com/HemSoft/codexbar-ios/issues/405))
 
+- Add an isolated, provisional Mac qualification app with synthetic browser
+  authorization, per-account secure storage, sandbox checks, native StoreKit
+  purchase/refund tests on Xcode 26.6, and local replacement/rollback rehearsal.
+  Unattended fixture authorization now expires and enables retry; cancellation
+  checks preserve existing fixture accounts. Browser launch failures enable
+  immediate retry. Canceled or replaced connections cannot reopen the browser
+  or cancel a newer attempt while waiting for listener readiness. Lock-only
+  runner regressions work without a qualified Xcode installation.
+  Full three-phase native tests serialize across worktrees;
+  local atomic replacement and rollback check both versions and signatures.
+  Store distribution and purchase portability remain unqualified.
+  ([#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476))
+
 ## 1.4.0 - 2026-10-07
 
 More provider metrics, guided sign-in, and up to 90 days of usage history.
