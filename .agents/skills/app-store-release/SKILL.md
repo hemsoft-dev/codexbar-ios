@@ -1,6 +1,6 @@
 ---
 name: app-store-release
-description: "V1.1 - Commands: Prepare, Upload, Submit, Resume. Prepare, validate, upload, and submit CodexBar production releases through App Store review."
+description: "V1.2 - Commands: Prepare, Upload, Submit, Resume. Prepare, validate, upload, and submit CodexBar production releases through App Store review."
 disable-model-invocation: true
 compatibility: Requires macOS, Xcode, PowerShell 7, git, GitHub and App Store Connect access, CodexBar signing authority for upload stages, plus the perfection, issue-to-pr, process-pr, playwright-cli, and unslop skills.
 hooks:
@@ -288,10 +288,13 @@ issue #469 open until their actual acceptance criteria are met. Follow the
 [approved launch sequence](../../../APP-STORE.md#approved-launch-sequence) and
 record requested/actual times and storefront observations separately.
 
-For the planned 2.0.0 build 5, the planned October 18, 2026 UTC submission
-corresponds to cutoff `2026-11-01T00:00:00Z`, October 31 at 8:00 PM EDT.
-Recheck the actual plan before final qualification and submission. A changed
-cutoff, build, source or release copy requires a newly qualified candidate.
+Read the current version, build, planned submission date and compiled cutoff
+from the reviewed `APP-STORE.md` ledger and source. Do not reuse a previous
+upload's build or deadline. Compute cutoff at midnight UTC fourteen calendar
+days after the planned submission date, then verify its localized notice and
+all disclosure copy. Recheck the actual plan before final qualification and
+submission. A changed cutoff, build, source or release copy requires a newly
+qualified candidate.
 Submit all first-time Pro products with the app, manual release, phased release
 off and the existing US$3.99 app price. Do not infer release or price-change
 authority from Submit mode alone; use the already recorded launch authority.
