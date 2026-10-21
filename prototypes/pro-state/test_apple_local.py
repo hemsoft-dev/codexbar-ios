@@ -204,6 +204,64 @@ class AppleLocalTests(unittest.TestCase):
             self.assertIn(result, ('already_pro', 'manage_or_wait'))
             self.assertEqual(ledger.charges, 0)
 
+    def test_non_grace_states_ignore_unrelated_grace_dates(self):
+        for state in ('active', 'trial', 'renewal', 'canceled'):
+            ledger, client = fixture(event(state, grace_end=NOW + 10 * DAY))
+            self.assertEqual(client.cache[0]['deadline'], NOW + 4 * DAY)
+            self.assertTrue(client.access(None, NOW + 4 * DAY - 1))
+            self.assertFalse(client.access(None, NOW + 4 * DAY))
+            fresh = Client('apple', local_keys=client.local_keys)
+            self.assertTrue(fresh.sync(ledger, None, NOW + DAY))
+            self.assertFalse(fresh.access(None, NOW + DAY))
+
+    def test_permanent_cache_survives_absence_until_matching_observed_revocation(self):
+        for state in ('lifetime', 'original'):
+            _, client = fixture(event(state, expires=None))
+            client = Client.load(client.save())
+            ledger = Ledger()
+            self.assertTrue(client.sync(ledger, None, NOW + DAY))
+            self.assertTrue(client.access(None, NOW + DAY))
+            self.assertEqual(len(client.cache), 1)
+            self.assertTrue(ledger.ingest(event('revoked', 2, chain='fixture-2'), adapter='synthetic-verified'))
+            client.sync(ledger, None, NOW + DAY)
+            self.assertTrue(client.access(None, NOW + DAY))
+            self.assertTrue(ledger.ingest(event('revoked', 2, verified_at=NOW + 2 * DAY),
+                                          adapter='synthetic-verified'))
+            client.sync(ledger, None, NOW + DAY)
+            self.assertTrue(client.access(None, NOW + DAY))
+            client.sync(ledger, None, NOW + 2 * DAY)
+            self.assertFalse(client.access(None, NOW + 2 * DAY))
+            client.sync(Ledger(), None, NOW + 3 * DAY)
+            self.assertFalse(client.access(None, NOW + 3 * DAY))
+        ledger, client = fixture(event('lifetime', revision=4, expires=None))
+        client = Client.load(client.save())
+        empty = Ledger()
+        empty.ingest(event('revoked', revision=3), adapter='synthetic-verified')
+        client.sync(empty, None, NOW)
+        self.assertTrue(client.access(None, NOW), 'Stale denial cannot erase newer permanent proof after relaunch')
+        empty.ingest(event('revoked', revision=5), adapter='synthetic-verified')
+        client.sync(empty, None, NOW)
+        self.assertFalse(client.access(None, NOW))
+        _, client = fixture(event('lifetime', expires=None))
+        client.switch_apple_store('fixture-store-2', set())
+        client.sync(Ledger(), None, NOW)
+        self.assertFalse(client.access(None, NOW))
+
+    def test_checkout_ignores_not_yet_observed_evidence(self):
+        for state in ('pending', 'hold', 'grace', 'expired'):
+            ledger, client = fixture(event(state, renewing=True, grace_end=NOW + DAY, verified_at=NOW + 1))
+            self.assertEqual(ledger.checkout_apple_local(client, NOW), 'fixture-attempt-1')
+            self.assertEqual(ledger.charges, 1)
+        ledger, client = fixture(event('canceled'))
+        self.assertTrue(ledger.ingest(event('lifetime', chain='fixture-2', verified_at=NOW + 1),
+                                     adapter='synthetic-verified'))
+        client.local_keys.add(('apple', 'fixture-2'))
+        self.assertEqual(ledger.checkout_apple_local(client, NOW, product='lifetime', entry='settings'),
+                         'fixture-attempt-1')
+        self.assertEqual(ledger.checkout_apple_local(client, NOW + 1, product='lifetime', entry='settings'),
+                         'already_pro')
+        self.assertEqual(ledger.charges, 1)
+
     def test_billing_payload_and_errors_reject_provider_data(self):
         ledger, _ = fixture(event())
         for name in ('provider_credentials', 'account_labels', 'balances', 'usage', 'history'):

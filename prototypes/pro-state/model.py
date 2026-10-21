@@ -143,7 +143,8 @@ class Ledger:
             return 'verification_required'
         if client.access(policy, now):
             return 'already_pro'
-        linked = [e for k, e in self.events.items() if self.owners.get(k) == client.account]
+        linked = [e for k, e in self.events.items()
+                  if self.owners.get(k) == client.account and e.verified_at <= now]
         if any(e.state == 'pending' or (e.renewing and e.state not in {'refunded', 'revoked'})
                or e.state in {'hold', 'grace'} for e in linked):
             return 'manage_or_wait'
@@ -164,7 +165,8 @@ class Ledger:
         if (not client.has_store_identity or not reconciled
                 or not client.sync(self, None, now)):
             return 'verification_required'
-        local = [e for k, e in self.events.items() if k in client.local_keys and e.source == 'apple']
+        local = [e for k, e in self.events.items()
+                 if k in client.local_keys and e.source == 'apple' and e.verified_at <= now]
         has_access = client.access(None, now)
         # Only Settings permits a paid-through subscriber's intentional lifetime transition.
         switch_to_lifetime = (product == 'lifetime' and entry == 'settings'
@@ -235,7 +237,21 @@ class Client:
         if type(now) is not int or now < self.high_water:
             return False
         self.high_water = now
-        self.cache = []
+        # Missing evidence is not a revocation of an independently cached local lifetime grant.
+        permanent = []
+        for cached in self.cache:
+            key = (cached['source'], cached['chain'])
+            observed = ledger.events.get(key)
+            current = (observed is not None and observed.verified_at <= now
+                       and observed.revision >= cached.get('revision', 0))
+            revoked = current and observed.state in {'refunded', 'revoked'}
+            if (self.platform == 'apple' and cached['source'] == 'apple'
+                    and cached['deadline'] is None and key in self.local_keys and not revoked):
+                cached = dict(cached)
+                if current:
+                    cached['revision'] = observed.revision
+                permanent.append(cached)
+        self.cache = permanent
         session = (self.account is not None and self.account not in ledger.deleted
                    and self.generation == ledger.generations.get(self.account, 0))
         for key, e in sorted(ledger.events.items()):
@@ -247,7 +263,7 @@ class Client:
                 continue
             if e.state == 'grace' and not local and not policy.grace_access:
                 continue
-            end = max(e.expires or 0, e.grace_end or 0)
+            end = (max(e.expires or 0, e.grace_end or 0) if e.state == 'grace' else e.expires or 0)
             # Online expiry is authoritative. Offline allowance applies only to cached proof.
             if e.state not in PERMANENT and now >= end:
                 continue
@@ -255,8 +271,14 @@ class Client:
                 deadline = None if local else now + policy.lifetime_lease
             else:
                 deadline = end + (3 * DAY if local else policy.subscription_allowance)
-            self.cache.append({'source': e.source, 'chain': e.chain,
-                               'state': e.state, 'deadline': deadline})
+            cached = next((c for c in self.cache
+                           if (c['source'], c['chain']) == key and c['deadline'] is None), None)
+            if cached is not None:
+                if e.state in PERMANENT and e.revision >= cached.get('revision', 0):
+                    cached.update(state=e.state, revision=e.revision)
+            else:
+                self.cache.append({'source': e.source, 'chain': e.chain,
+                                   'state': e.state, 'deadline': deadline, 'revision': e.revision})
         return True
 
     def access(self, policy, now):

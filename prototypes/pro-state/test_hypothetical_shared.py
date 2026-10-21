@@ -179,7 +179,8 @@ class StateTests(unittest.TestCase):
             for state in ('trial', 'active', 'canceled', 'grace', 'lifetime', 'original'):
                 with self.subTest(allowance=allowance, lease=lease, state=state):
                     _, apple, desktop = setup(evidence(state, grace_end=NOW + 2 * DAY), policy)
-                    deadline = NOW + lease if state in {'lifetime', 'original'} else NOW + 2 * DAY + allowance
+                    deadline = (NOW + lease if state in {'lifetime', 'original'}
+                                else NOW + (2 * DAY if state == 'grace' else DAY) + allowance)
                     desktop = Client.load(desktop.save())
                     self.assertTrue(desktop.access(policy, deadline - 1))
                     saved_deadline = desktop.cache[0]['deadline']
@@ -225,6 +226,12 @@ class StateTests(unittest.TestCase):
             self.assertFalse(client.access(POLICY, NOW))
             self.assertEqual(ledger.checkout(client, POLICY, NOW, 'TEST'), first)
         self.assertEqual(ledger.charges, 1)
+
+    def test_future_linked_state_does_not_change_checkout_before_observation(self):
+        for state in ('pending', 'hold', 'grace', 'expired'):
+            ledger, _, desktop = setup(evidence(state, renewing=True, grace_end=NOW + DAY, verified_at=NOW + 1))
+            self.assertEqual(ledger.checkout(desktop, POLICY, NOW, 'TEST'), 'fixture-attempt-1')
+            self.assertEqual(ledger.charges, 1)
 
     def test_privacy_rejects_sensitive_fields_values_and_logs(self):
         ledger, _, _ = setup()
