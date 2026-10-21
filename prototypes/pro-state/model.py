@@ -70,6 +70,7 @@ class Event:
 @dataclass
 class Ledger:
     events: dict = field(default_factory=dict)
+    observations: dict = field(default_factory=dict)
     owners: dict = field(default_factory=dict)
     generations: dict = field(default_factory=dict)
     deleted: set = field(default_factory=set)
@@ -87,6 +88,11 @@ class Ledger:
         except (ValueError, TypeError):
             self.errors.append({'code': 'invalid_billing_event'})
             return False
+        # Retain even late lower revisions and equal-revision observations.
+        # Arrival order must not erase evidence visible at an earlier time.
+        records = self.observations.setdefault(event.key, [])
+        if event not in records:
+            records.append(event)
         old = self.events.get(event.key)
         if old and event.revision == old.revision:
             # Verification time is an observation, not signed entitlement state.
@@ -103,6 +109,21 @@ class Ledger:
             return False
         self.events[event.key] = event
         return True
+
+    def visible_events(self, now):
+        """Highest observed revision per present chain, independent of arrival order."""
+        visible = {}
+        for key, latest in self.events.items():
+            records = [e for e in self.observations.get(key, [latest]) if e.verified_at <= now]
+            if not records:
+                continue
+            revision = max(e.revision for e in records)
+            current = [e for e in records if e.revision == revision]
+            observed = max(current, key=lambda e: e.verified_at)
+            if any(replace(e, verified_at=observed.verified_at) != observed for e in current):
+                observed = replace(observed, state='revoked', expires=None, grace_end=None, renewing=False)
+            visible[key] = observed
+        return visible
 
     def bind(self, key, account):
         if (type(account) is not str or re.fullmatch(r'fixture-account-[0-9]{1,12}', account) is None
@@ -143,7 +164,7 @@ class Ledger:
             return 'verification_required'
         if client.access(policy, now):
             return 'already_pro'
-        linked = [e for k, e in self.events.items()
+        linked = [e for k, e in self.visible_events(now).items()
                   if self.owners.get(k) == client.account and e.verified_at <= now]
         if any(e.state == 'pending' or (e.renewing and e.state not in {'refunded', 'revoked'})
                or e.state in {'hold', 'grace'} for e in linked):
@@ -165,14 +186,14 @@ class Ledger:
         if (not client.has_store_identity or not reconciled
                 or not client.sync(self, None, now)):
             return 'verification_required'
-        local = [e for k, e in self.events.items()
+        local = [e for k, e in self.visible_events(now).items()
                  if k in client.local_keys and e.source == 'apple' and e.verified_at <= now]
         has_access = client.access(None, now)
         # Only Settings permits a paid-through subscriber's intentional lifetime transition.
         switch_to_lifetime = (product == 'lifetime' and entry == 'settings'
                               and any(e.state in {'active', 'trial', 'renewal', 'canceled'}
                                       and e.expires is not None and now < e.expires for e in local)
-                              and not any(e.state in PERMANENT for e in local))
+                              and not any(e['deadline'] is None for e in client.cache))
         if has_access and not switch_to_lifetime:
             return 'already_pro'
         if any(e.state in {'pending', 'hold', 'grace'}
@@ -238,10 +259,11 @@ class Client:
             return False
         self.high_water = now
         # Missing evidence is not a revocation of an independently cached local lifetime grant.
+        visible = ledger.visible_events(now)
         permanent = []
         for cached in self.cache:
             key = (cached['source'], cached['chain'])
-            observed = ledger.events.get(key)
+            observed = visible.get(key)
             current = (observed is not None and observed.verified_at <= now
                        and observed.revision >= cached.get('revision', 0))
             revoked = current and observed.state in {'refunded', 'revoked'}
@@ -254,7 +276,7 @@ class Client:
         self.cache = permanent
         session = (self.account is not None and self.account not in ledger.deleted
                    and self.generation == ledger.generations.get(self.account, 0))
-        for key, e in sorted(ledger.events.items()):
+        for key, e in sorted(visible.items()):
             local = self.platform == 'apple' and e.source == 'apple' and key in self.local_keys
             shared = (policy is not None and session and policy.shared and ledger.owners.get(key) == self.account
                       and (e.state != 'original' or policy.share_original)

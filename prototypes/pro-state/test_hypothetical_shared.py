@@ -233,6 +233,16 @@ class StateTests(unittest.TestCase):
             self.assertEqual(ledger.checkout(desktop, POLICY, NOW, 'TEST'), 'fixture-attempt-1')
             self.assertEqual(ledger.charges, 1)
 
+    def test_future_revision_retains_visible_shared_access_and_checkout_blockers(self):
+        for source in ('apple', 'web', 'play', 'microsoft'):
+            for state, expected in (('active', 'already_pro'), ('hold', 'manage_or_wait')):
+                ledger, _, desktop = setup(evidence(state, source=source))
+                ledger.ingest(evidence('expired', 2, source=source, verified_at=NOW + 10),
+                              adapter='synthetic-verified')
+                self.assertEqual(ledger.checkout(desktop, POLICY, NOW, 'TEST'), expected)
+                self.assertEqual(ledger.charges, 0)
+                self.assertEqual(ledger.checkout(desktop, POLICY, NOW + 10, 'TEST'), 'fixture-attempt-1')
+
     def test_privacy_rejects_sensitive_fields_values_and_logs(self):
         ledger, _, _ = setup()
         sensitive = ('provider_credentials', 'account_labels', 'balances', 'usage', 'history')

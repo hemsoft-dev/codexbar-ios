@@ -262,6 +262,50 @@ class AppleLocalTests(unittest.TestCase):
                          'already_pro')
         self.assertEqual(ledger.charges, 1)
 
+    def test_future_revisions_preserve_visible_evidence_in_any_arrival_order(self):
+        for order in itertools.permutations((
+                event('active'), event('revoked', 2, verified_at=NOW + 10),
+                event('canceled', 3, verified_at=NOW + 20))):
+            ledger, client = fixture()
+            for payload in order:
+                ledger.ingest(payload, adapter='synthetic-verified')
+            self.assertEqual(ledger.checkout_apple_local(client, NOW), 'already_pro')
+            self.assertTrue(client.access(None, NOW))
+            self.assertEqual(ledger.charges, 0)
+            client.sync(ledger, None, NOW + 10)
+            self.assertFalse(client.access(None, NOW + 10))
+            self.assertEqual(ledger.checkout_apple_local(client, NOW + 20), 'already_pro')
+            self.assertEqual(ledger.charges, 0)
+
+    def test_future_equal_revision_refresh_and_conflict_preserve_current_proof(self):
+        for state in ('active', 'revoked'):
+            for reverse in (False, True):
+                ledger, client = fixture()
+                records = [event('active'), event(state, verified_at=NOW + 10)]
+                for payload in reversed(records) if reverse else records:
+                    ledger.ingest(payload, adapter='synthetic-verified')
+                self.assertEqual(ledger.checkout_apple_local(client, NOW), 'already_pro')
+                client.sync(ledger, None, NOW + 10)
+                self.assertEqual(client.access(None, NOW + 10), state == 'active')
+                self.assertEqual(ledger.charges, 0)
+
+    def test_cached_permanent_blocks_settings_lifetime_with_missing_chain(self):
+        for state in ('lifetime', 'original'):
+            _, client = fixture(event(state, expires=None))
+            client = Client.load(client.save())
+            ledger = Ledger()
+            ledger.ingest(event('canceled', chain='fixture-2'), adapter='synthetic-verified')
+            client.local_keys.add(('apple', 'fixture-2'))
+            self.assertEqual(ledger.checkout_apple_local(client, NOW, product='lifetime', entry='settings'),
+                             'already_pro')
+            self.assertEqual(ledger.charges, 0)
+            ledger.ingest(event('revoked', 2, verified_at=NOW + 10), adapter='synthetic-verified')
+            self.assertEqual(ledger.checkout_apple_local(client, NOW, product='lifetime', entry='settings'),
+                             'already_pro')
+            self.assertEqual(ledger.checkout_apple_local(client, NOW + 10, product='lifetime', entry='settings'),
+                             'fixture-attempt-1')
+            self.assertEqual(ledger.charges, 1)
+
     def test_billing_payload_and_errors_reject_provider_data(self):
         ledger, _ = fixture(event())
         for name in ('provider_credentials', 'account_labels', 'balances', 'usage', 'history'):
