@@ -8,6 +8,8 @@ CodexBar 2.0 introduces the free plan and CodexBar Pro.
 
 This release also adds X Subscription's shared weekly pool and Extra Usage Credits with one xAI sign-in. See verified provider subscription renewal dates where supported, including Claude, Grok, Cursor and OpenCode. Greptile dashboard accounts show actual free-credit usage and renewal dates. Claude accounts can view and confirm available saved usage resets.
 
+The two-column iPad dashboard scrolls without freezing. If App Store products cannot load, the Pro screen offers a retry.
+
 Widget labels, usage values and progress stay readable when the system removes backgrounds or applies tint, including on the Lock Screen.
 
 Provider data depends on your account and the service. Missing values stay unavailable. Fresh Google-backed Greptile billing sign-in or reconnection may still be unavailable.
