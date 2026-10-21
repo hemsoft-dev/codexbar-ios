@@ -23,13 +23,14 @@ def quoted(value):
 
 app_sources = ['App.swift', 'Authorization.swift', 'Credentials.swift', 'Restore.swift', 'Checks.swift']
 file_ids = []
-for name in app_sources + ['StoreKitTests.swift', 'Qualification.storekit']:
+for name in app_sources + ['StoreKitTests.swift', 'StoreKitTestHost.swift', 'Qualification.storekit']:
     file_ids.append(add(name, '{isa = PBXFileReference; path = ' + quoted(name)
                         + '; sourceTree = "<group>"; lastKnownFileType = '
                         + ('sourcecode.swift' if name.endswith('.swift') else 'text') + ';}'))
 app = add('appProduct', '{isa = PBXFileReference; path = "CodexBar Qualification.app"; sourceTree = BUILT_PRODUCTS_DIR; explicitFileType = wrapper.application;}')
 tests = add('testProduct', '{isa = PBXFileReference; path = StoreKitQualificationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; explicitFileType = wrapper.cfbundle;}')
-products = add('products', '{isa = PBXGroup; name = Products; sourceTree = "<group>"; children = (' + app + ',' + tests + ',);}')
+host = add('hostProduct', '{isa = PBXFileReference; path = StoreKitTestHost.app; sourceTree = BUILT_PRODUCTS_DIR; explicitFileType = wrapper.application;}')
+products = add('products', '{isa = PBXGroup; name = Products; sourceTree = "<group>"; children = (' + app + ',' + tests + ',' + host + ',);}')
 group = add('group', '{isa = PBXGroup; sourceTree = "<group>"; children = (' + ','.join(file_ids + [products]) + ',);}')
 
 
@@ -63,23 +64,34 @@ app_config = configs('app', {
     'PRODUCT_BUNDLE_IDENTIFIER': 'com.hemsoft.qualification.mac476', 'INFOPLIST_FILE': 'Info.plist',
     'CODE_SIGN_ENTITLEMENTS': 'Qualification.entitlements', 'ENABLE_TESTABILITY': 'YES',
 })
+host_config = configs('host', {
+    'PRODUCT_NAME': 'StoreKitTestHost', 'PRODUCT_BUNDLE_IDENTIFIER': 'com.hemsoft.qualification.mac476.storekithost',
+    'GENERATE_INFOPLIST_FILE': 'YES', 'ENABLE_TESTABILITY': 'YES',
+    'MARKETING_VERSION': '0.0.1', 'CURRENT_PROJECT_VERSION': '1',
+    'CODE_SIGN_ENTITLEMENTS': 'StoreKitTestHost.entitlements', 'ENABLE_APP_SANDBOX': 'YES',
+})
 test_config = configs('tests', {
     'PRODUCT_NAME': 'StoreKitQualificationTests', 'PRODUCT_BUNDLE_IDENTIFIER': 'com.hemsoft.qualification.mac476.tests',
     'GENERATE_INFOPLIST_FILE': 'YES',
+    'TEST_HOST': '$(BUILT_PRODUCTS_DIR)/StoreKitTestHost.app/Contents/MacOS/StoreKitTestHost',
+    'BUNDLE_LOADER': '$(TEST_HOST)',
 })
 app_target = add('appTarget', '{isa = PBXNativeTarget; name = MacQualification; productName = "CodexBar Qualification"; productReference = ' + app
                  + '; productType = "com.apple.product-type.application"; buildConfigurationList = ' + app_config
                  + '; buildPhases = (' + ','.join([phase('appSources', 'PBXSourcesBuildPhase', app_sources), phase('appResources', 'PBXResourcesBuildPhase', ['Qualification.storekit'])])
                  + ',); buildRules = (); dependencies = ();}')
-proxy = add('proxy', '{isa = PBXContainerItemProxy; containerPortal = ' + key('project') + '; proxyType = 1; remoteGlobalIDString = ' + app_target + '; remoteInfo = MacQualification;}')
-dependency = add('dependency', '{isa = PBXTargetDependency; target = ' + app_target + '; targetProxy = ' + proxy + ';}')
+host_target = add('hostTarget', '{isa = PBXNativeTarget; name = StoreKitTestHost; productName = StoreKitTestHost; productReference = ' + host
+                  + '; productType = "com.apple.product-type.application"; buildConfigurationList = ' + host_config
+                  + '; buildPhases = (' + phase('hostSources', 'PBXSourcesBuildPhase', ['StoreKitTestHost.swift']) + ',); buildRules = (); dependencies = ();}')
+proxy = add('proxy', '{isa = PBXContainerItemProxy; containerPortal = ' + key('project') + '; proxyType = 1; remoteGlobalIDString = ' + host_target + '; remoteInfo = StoreKitTestHost;}')
+dependency = add('dependency', '{isa = PBXTargetDependency; target = ' + host_target + '; targetProxy = ' + proxy + ';}')
 test_target = add('testTarget', '{isa = PBXNativeTarget; name = StoreKitQualificationTests; productName = StoreKitQualificationTests; productReference = ' + tests
                   + '; productType = "com.apple.product-type.bundle.unit-test"; buildConfigurationList = ' + test_config
                   + '; buildPhases = (' + phase('testSources', 'PBXSourcesBuildPhase', ['StoreKitTests.swift', 'Restore.swift']) + ',' + phase('testResources', 'PBXResourcesBuildPhase', ['Qualification.storekit'])
-                  + ',); buildRules = (); dependencies = ();}')
+                  + ',); buildRules = (); dependencies = (' + dependency + ',);}')
 add('project', '{isa = PBXProject; attributes = {LastUpgradeCheck = 2700;}; buildConfigurationList = ' + configs('project', {})
     + '; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; knownRegions = (en,Base,); mainGroup = ' + group
-    + '; productRefGroup = ' + products + '; projectDirPath = ""; projectRoot = ""; targets = (' + app_target + ',' + test_target + ',);}')
+    + '; productRefGroup = ' + products + '; projectDirPath = ""; projectRoot = ""; targets = (' + app_target + ',' + test_target + ',' + host_target + ',);}')
 project = root / 'MacQualification.xcodeproj'
 project.mkdir(exist_ok=True)
 (project / 'project.pbxproj').write_text('// !$*UTF8*$!\n{archiveVersion = 1; classes = {}; objectVersion = 56; objects = {\n'
@@ -90,10 +102,10 @@ schemes.mkdir(parents=True, exist_ok=True)
 (schemes / 'MacQualification.xcscheme').write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion="2700" version="1.3">
 <BuildAction parallelizeBuildables="YES" buildArchitectures="Automatic" buildImplicitDependencies="YES"><BuildActionEntries>
-<BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="YES">
-<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{app_target}" BuildableName="CodexBar Qualification.app" BlueprintName="MacQualification" ReferencedContainer="container:MacQualification.xcodeproj"/>
+<BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="YES">
+<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{host_target}" BuildableName="StoreKitTestHost.app" BlueprintName="StoreKitTestHost" ReferencedContainer="container:MacQualification.xcodeproj"/>
 </BuildActionEntry></BuildActionEntries></BuildAction>
 <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES"><Testables>
 <TestableReference skipped="NO"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{test_target}" BuildableName="StoreKitQualificationTests.xctest" BlueprintName="StoreKitQualificationTests" ReferencedContainer="container:MacQualification.xcodeproj"/></TestableReference>
-</Testables></TestAction></Scheme>
+</Testables><StoreKitConfigurationFileReference identifier="../Qualification.storekit"/></TestAction></Scheme>
 ''')

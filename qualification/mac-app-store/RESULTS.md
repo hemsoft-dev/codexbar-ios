@@ -17,7 +17,7 @@ Environment: Apple silicon air, macOS 26.6.2 `25G83`, Xcode 27.1 `27A9275`, Swif
 | Dashboard and Settings | PASS | Actual native window inspected through accessibility tree; Dashboard shows labeled sample usage after browser approval; Settings controls exercised |
 | Same-build relaunch | PASS | Closed and reopened the unchanged ad hoc binary; Personal fixture remained connected through Keychain. Disconnected it afterward and verified removal |
 | Synthetic restore rehearsal | PASS | Empty, verified lifetime, revoked, unverified and wrong-product fixtures; actual Settings empty and restored states captured |
-| Native StoreKitTest runtime | FAIL | One XCTest executed, one failure; `SKInternalErrorDomain Code=3`, then `notEntitled`; no native restore/refund success claimed |
+| Native StoreKitTest runtime | PASS, Xcode 26.6 only | Hosted native purchase, verified Xcode current entitlement, refund, entitlement removal and verified revocation all executed; one test, zero failures. Earlier failed receipts retained below; Xcode 27.1 remains unsupported in this measured combination |
 | Local signature tampering | PASS | Changed version metadata invalidated signature |
 | Local replacement and rollback rehearsal | PASS | Ad hoc version-2 copy verified, staged replacement verified, restored version-1 copy verified; no Store update |
 | Shell syntax and Python generator syntax | PASS | `bash -n` and `python3 -m py_compile` |
@@ -28,7 +28,30 @@ Environment: Apple silicon air, macOS 26.6.2 `25G83`, Xcode 27.1 `27A9275`, Swif
 | App Store install, update, receipt preservation, review | NOT RUN | No record/platform mutation, upload, store account or publication |
 | Complete iOS/watchOS gates and full UI release workflow | NOT RUN | Unchanged production targets; no CI dispatch or expansion |
 
-`--self-test` finished with **22 PASS assertions and `RESULT 0 failures`**. Its synthetic results do not cover the failed native StoreKit gate. The native XCTest result bundle is `build/storekit-20261021-135517.xcresult`; `test.sh` intentionally remains a failing diagnostic on this environment rather than skipping or hiding the failure. The earlier hosted runner did not start tests and was interrupted; the unhosted runner provides the explicit final failure above.
+`--self-test` finished with **22 PASS assertions and `RESULT 0 failures`**. Those synthetic results are independent of the native XCTest result. The original native failure remains retained by the parent at `build/storekit-20261021-135517.xcresult`. The earlier fixture-app hosted runner did not start tests and was interrupted; the follow-up below uses a separate minimal AppKit host.
+
+## Native StoreKit repair, October 21, 2026 EDT
+
+All attempts ran on air, macOS 26.6.2 `25G83`, arm64. The follow-up branch began by cherry-picking the original qualification commit. No iOS/watchOS files, fixture UI, authorization, credentials, catalog, distribution identity, provisioning profile or Keychain configuration changed.
+
+| Local attempt | Time EDT | Result and receipt under this directory |
+| --- | --- | --- |
+| Original unhosted target, Xcode 27.1 `27A9275` | 2:01 PM | FAIL, `notEntitled`; `build/storekit-20261021-140101.xcresult` |
+| Minimal AppKit-hosted XCTest, Xcode 27.1 | 2:01 PM | FAIL, native purchase `unknown`, Octane transaction error 3; `build/storekit-20261021-140136.xcresult` |
+| Explicit test-action catalog association | 2:01 PM | FAIL, same purchase error; `build/storekit-20261021-140155.xcresult` |
+| Host bundle versions declared | 2:02 PM | FAIL, same purchase error; `build/storekit-20261021-140225.xcresult` |
+| Test-only sandbox/network-client entitlements | 2:02 PM | FAIL, same purchase error; `build/storekit-20261021-140240.xcresult` |
+| Same hosted target with installed Xcode 26.6 `17F113` | 2:03 PM | Native purchase succeeds; immediate entitlement assertion fails before database propagation; `build/storekit-20261021-140248.xcresult` |
+| Direct native assertions with bounded entitlement polling, Xcode 26.6 | 2:03 PM | PASS, one test, zero failures; `build/storekit-20261021-140326.xcresult` |
+| Final runner and host-only scheme, fresh Xcode 26.6 build cache | 2:04 PM | PASS, one test, zero failures, 1.235 seconds; `build/storekit-20261021-140408-mAoTGI/TestResults.xcresult` |
+| Final source control run, Xcode 27.1, separate build cache | 2:04 PM to 2:05 PM | FAIL, same Octane purchase error, exit 65; `build/storekit-20261021-140441-MeUusq/TestResults.xcresult` |
+| Switch back to Xcode 26.6, final source | 2:05 PM | PASS, one test, zero failures, 1.172 seconds, exit 0; `build/storekit-20261021-140539-YyEoT4/TestResults.xcresult` |
+
+The final test requires an empty starting entitlement set, an actual `SKTestSession.buyProduct` result with the lifetime product ID and `.xcode` environment, one native session transaction, a verified lifetime entry in `Transaction.currentEntitlements`, successful `refundTransaction`, absence from current entitlements, and a verified latest transaction with the original purchase ID and a non-nil revocation date. It never substitutes the synthetic reducer or skips a failing native call.
+
+The evidence supports three repairs: run inside an application test host, use the locally compatible Xcode 26.6 StoreKitTest runtime, and wait for asynchronous transaction-database propagation. Xcode 27.1's hosted failures include local Octane logs saying `Failed to decode purchase configuration`, Cocoa errors 4864/3840. The exact private wire-format incompatibility is not proven; changing only the toolchain allowed purchase to execute. Explicit association and test entitlements remain declared in the reproducible generator, with no changes to the fixture app's signed sandbox boundary. This is a local Xcode test qualification, not a production Store restore or an original-iOS-purchaser proof.
+
+The follow-up receipts above live in the isolated air worktree `/Users/home/.t3-server/worktrees/codexbar-ios/t3-d52b8cfa/qualification/mac-app-store/`. They are ignored artifacts and are not transported by cherry-picking the source commit. Keep that worktree until the parent has copied the receipts. Earlier console logs are copied to `evidence/native-storekit/`; final runner directories contain their own logs and environment records. The final test source passed three times on Xcode 26.6, including before and after the Xcode 27.1 control. Strict pinned SwiftLint reported zero violations in both changed Swift files, and shell/Python syntax and deterministic project regeneration checks passed.
 
 ## Retained evidence
 
@@ -38,4 +61,4 @@ Media is test data only. Upload with GitHub CLI `--attach` into the partial PR's
 
 ## Remaining acceptance criteria
 
-Franz has authorized provisional Mac qualification, not a shipping choice. The selected-channel criterion remains open. The local window, fixture authorization, sandbox and credential-isolation criteria have bounded evidence above. Native restore, universal-purchase configuration, original-purchaser scope and real signing/Store updates remain unqualified. The synthetic rehearsal is useful for inspecting behavior but is insufficient to pass those gates. Keep [#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476) open, use **Refs** in the PR and leave parent review/merge pending.
+Franz has authorized provisional Mac qualification, not a shipping choice. The selected-channel criterion remains open. The local window, fixture authorization, sandbox and credential-isolation criteria have bounded evidence above. Local native lifetime entitlement restoration and refund are now qualified on Xcode 26.6. Universal-purchase configuration, original-purchaser scope and real signing/Store updates remain unqualified. The synthetic rehearsal is useful for inspecting behavior but is insufficient to pass those gates. Keep [#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476) open, use **Refs** in the PR and leave parent review/merge pending.

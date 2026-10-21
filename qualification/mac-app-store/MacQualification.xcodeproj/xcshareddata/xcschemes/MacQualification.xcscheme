@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion="2700" version="1.3">
 <BuildAction parallelizeBuildables="YES" buildArchitectures="Automatic" buildImplicitDependencies="YES"><BuildActionEntries>
-<BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="YES">
-<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="AC44A5EE06496B21A17CA082" BuildableName="CodexBar Qualification.app" BlueprintName="MacQualification" ReferencedContainer="container:MacQualification.xcodeproj"/>
+<BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="YES">
+<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="B195D4B580DC65436F319A46" BuildableName="StoreKitTestHost.app" BlueprintName="StoreKitTestHost" ReferencedContainer="container:MacQualification.xcodeproj"/>
 </BuildActionEntry></BuildActionEntries></BuildAction>
 <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES"><Testables>
 <TestableReference skipped="NO"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="3A0C9CEF9D8F3BC090274361" BuildableName="StoreKitQualificationTests.xctest" BlueprintName="StoreKitQualificationTests" ReferencedContainer="container:MacQualification.xcodeproj"/></TestableReference>
-</Testables></TestAction></Scheme>
+</Testables><StoreKitConfigurationFileReference identifier="../Qualification.storekit"/></TestAction></Scheme>
