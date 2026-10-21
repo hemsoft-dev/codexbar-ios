@@ -11,6 +11,9 @@ ditto "$app" "$stage/version2.app"
 printf 'version1-only\n' > "$stage/version1.app/Contents/Resources/Version1Only.txt"
 printf 'version2-only\n' > "$stage/version2.app/Contents/Resources/Version2Only.txt"
 codesign --force --sign - --entitlements Qualification.entitlements "$stage/version1.app"
+codesign --force --sign - --entitlements Qualification.entitlements "$stage/version2.app"
+codesign --verify --strict "$stage/version2.app"
+echo 'PASS complete version 2 candidate signature valid before metadata mutation'
 /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 2' "$stage/version2.app/Contents/Info.plist"
 if codesign --verify --strict "$stage/version2.app" 2> "$stage/tamper.txt"; then
   echo 'FAIL modified bundle unexpectedly validated' >&2

@@ -427,3 +427,9 @@ App Store Connect, PR media and body remain untouched. No review request,
 check polling, thread resolution or merge was performed. Parent owns fresh
 current-head review, checks and UI evidence. Live-provider, publisher-signing,
 Store-delivery and purchase-portability limitations remain unchanged.
+
+## Signature baseline repair after complete thread audit
+
+The parent found previously unhandled finding 4341431276 in the full thread inventory. Earlier metadata-tamper evidence was confounded by the version-specific resource added before signing. `qualify-update.sh` now signs the complete version 2 candidate and requires strict signature verification before changing only CFBundleVersion. The actual run passes that baseline, rejects the plist mutation, then re-signs and passes seeded replacement and rollback. Receipt: `build/update.KvU9Cw/`; log `evidence/review508-r6-update.log`. A temporary copy of the old runner with the same pre-mutation verification fails with exit 61 before changing the plist (`evidence/review508-r6-old-control.log`). Historical old tamper results do not isolate metadata integrity.
+
+Only this local rehearsal procedure and results changed. Shipping source, standalone Swift checks, native StoreKit inputs and automatic CI are unchanged. The 51 standalone checks at 0f1aba3 and four native tests at 102d4bc remain historical evidence; no rerun of those suites is claimed. Store delivery, publisher trust and receipt preservation remain unqualified.
