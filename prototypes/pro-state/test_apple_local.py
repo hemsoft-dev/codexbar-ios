@@ -16,7 +16,7 @@ def event(state='active', revision=1, chain='fixture-1', **values):
 
 def fixture(evidence=None):
     ledger = Ledger()
-    client = Client('apple', local_keys={('apple', 'fixture-1')})
+    client = Client('apple', store_fixture='fixture-store-1', local_keys={('apple', 'fixture-1')})
     if evidence:
         ledger.ingest(evidence, adapter='synthetic-verified')
     client.sync(ledger, None, NOW)
@@ -47,7 +47,7 @@ class AppleLocalTests(unittest.TestCase):
                     self.assertEqual(saved.access(None, deadline + offset), offset < 0)
                     self.assertEqual(saved.cache[0]['deadline'], deadline)
                     # A successful authoritative refresh denies an expired subscription immediately.
-                    online = Client('apple', local_keys=client.local_keys)
+                    online = Client('apple', store_fixture='fixture-store-1', local_keys=client.local_keys)
                     online.sync(ledger, None, end)
                     self.assertFalse(online.access(None, end))
 
@@ -73,7 +73,7 @@ class AppleLocalTests(unittest.TestCase):
         self.assertTrue(ledger.complete_apple_attempt(apple, attempt, adapter='synthetic-verified'))
         apple.sync(ledger, None, NOW)
         self.assertTrue(apple.access(None, NOW))
-        restored = Client('apple', local_keys={('apple', 'fixture-1')})
+        restored = Client('apple', store_fixture='fixture-store-1', local_keys={('apple', 'fixture-1')})
         self.assertFalse(restored.access(None, NOW))
         restored.sync(ledger, None, NOW)
         self.assertTrue(restored.access(None, NOW))
@@ -91,7 +91,7 @@ class AppleLocalTests(unittest.TestCase):
         desktop = Client('desktop')
         desktop.sync(ledger, None, NOW)
         self.assertFalse(desktop.access(None, NOW))
-        family = Client('apple', local_keys={('apple', 'fixture-2')})
+        family = Client('apple', store_fixture='fixture-store-1', local_keys={('apple', 'fixture-2')})
         family.sync(ledger, None, NOW)
         self.assertFalse(family.access(None, NOW))
         self.assertEqual(ledger.charges, 0)
@@ -113,8 +113,9 @@ class AppleLocalTests(unittest.TestCase):
             permanent.sync(permanent_ledger, None, NOW)
             self.assertFalse(permanent.access(None, NOW))
         ledger, apple = fixture(event())
-        ledger.ingest(event('refunded', 2), adapter='synthetic-verified')
-        self.assertFalse(apple.access(None, NOW + 4 * DAY))
+        self.assertTrue(ledger.ingest(event('refunded', 2), adapter='synthetic-verified'))
+        self.assertTrue(apple.sync(ledger, None, NOW))
+        self.assertFalse(apple.access(None, NOW))
 
     def test_duplicate_unordered_and_stale_revocation(self):
         stream = [event('active', 1), event('revoked', 2), event('renewal', 3)]
@@ -151,13 +152,57 @@ class AppleLocalTests(unittest.TestCase):
     def test_apple_store_identity_switch_and_restore(self):
         ledger, apple = fixture(event('lifetime'))
         # Store identity changes invalidate this client's snapshot and verified local chain set.
-        apple.local_keys = set()
-        apple.sync(ledger, None, NOW)
+        apple.switch_apple_store('fixture-store-2', set())
         self.assertFalse(apple.access(None, NOW))
-        apple.local_keys = {('apple', 'fixture-1')}
+        second_attempt = ledger.checkout_apple_local(apple, NOW)
+        self.assertEqual(second_attempt, 'fixture-attempt-1')
+        apple.switch_apple_store('fixture-store-1', {('apple', 'fixture-1')})
+        self.assertFalse(ledger.complete_apple_attempt(apple, second_attempt, adapter='synthetic-verified'))
         apple.sync(ledger, None, NOW)
         self.assertTrue(apple.access(None, NOW))
         self.assertEqual(ledger.owners, {})
+
+    def test_store_identities_have_independent_pending_attempts(self):
+        ledger, first = fixture()
+        second = Client('apple', store_fixture='fixture-store-2')
+        self.assertEqual(ledger.checkout_apple_local(Client('apple'), NOW), 'verification_required')
+        one = ledger.checkout_apple_local(first, NOW)
+        two = ledger.checkout_apple_local(second, NOW)
+        self.assertNotEqual(one, two)
+        self.assertFalse(ledger.complete_apple_attempt(second, one, adapter='synthetic-verified'))
+        first.switch_apple_store('fixture-store-2', set())
+        self.assertEqual(ledger.checkout_apple_local(first, NOW), two)
+        self.assertFalse(ledger.complete_apple_attempt(first, one, adapter='synthetic-verified'))
+        first.switch_apple_store('fixture-store-1', set())
+        self.assertEqual(ledger.checkout_apple_local(first, NOW), one)
+        self.assertTrue(ledger.complete_apple_attempt(first, one, adapter='synthetic-verified'))
+        self.assertEqual(ledger.checkout_apple_local(second, NOW), two)
+        self.assertEqual(ledger.charges, 2)
+
+    def test_reverification_time_is_not_conflicting_merchant_evidence(self):
+        for state in ('active', 'lifetime', 'revoked'):
+            ledger, client = fixture(event(state))
+            self.assertFalse(ledger.ingest(event(state, verified_at=NOW + 1), adapter='synthetic-verified'))
+            self.assertFalse(ledger.ingest(event(state, verified_at=NOW), adapter='synthetic-verified'))
+            self.assertEqual(ledger.events[('apple', 'fixture-1')].verified_at, NOW + 1)
+            client.sync(ledger, None, NOW + 1)
+            self.assertEqual(client.access(None, NOW + 1), state != 'revoked')
+            self.assertEqual(ledger.errors, [])
+
+    def test_settings_lifetime_transition_requires_verified_renewal_off(self):
+        for state in ('active', 'trial', 'renewal', 'canceled'):
+            for renewing in (False, True):
+                ledger, client = fixture(event(state, renewing=renewing))
+                self.assertEqual(ledger.checkout_apple_local(client, NOW, product='lifetime'), 'already_pro')
+                self.assertEqual(ledger.checkout_apple_local(client, NOW, entry='settings'), 'already_pro')
+                result = ledger.checkout_apple_local(client, NOW, product='lifetime', entry='settings')
+                self.assertEqual(result, 'manage_or_wait' if renewing else 'fixture-attempt-1')
+                self.assertEqual(ledger.charges, int(not renewing))
+        for state in ('original', 'lifetime', 'grace', 'hold', 'pending'):
+            ledger, client = fixture(event(state, grace_end=NOW + DAY))
+            result = ledger.checkout_apple_local(client, NOW, product='lifetime', entry='settings')
+            self.assertIn(result, ('already_pro', 'manage_or_wait'))
+            self.assertEqual(ledger.charges, 0)
 
     def test_billing_payload_and_errors_reject_provider_data(self):
         ledger, _ = fixture(event())

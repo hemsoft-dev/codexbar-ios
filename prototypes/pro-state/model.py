@@ -2,7 +2,7 @@
 
 No network, store SDK, secrets or production adapter.
 """
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 import json
 import re
 
@@ -88,7 +88,11 @@ class Ledger:
             self.errors.append({'code': 'invalid_billing_event'})
             return False
         old = self.events.get(event.key)
-        if old and event.revision == old.revision and event != old:
+        if old and event.revision == old.revision:
+            # Verification time is an observation, not signed entitlement state.
+            if replace(event, verified_at=old.verified_at) == old:
+                self.events[event.key] = replace(old, verified_at=max(old.verified_at, event.verified_at))
+                return False
             # Equal-revision contradictory evidence is denied deterministically.
             self.events[event.key] = Event(event.source, event.chain, event.revision,
                                            'revoked', None, None, False,
@@ -151,15 +155,24 @@ class Ledger:
         self.attempts[key] = attempt
         return attempt
 
-    def checkout_apple_local(self, client, now, *, reconciled=True):
+    def checkout_apple_local(self, client, now, *, reconciled=True, product="subscription", entry="paywall"):
         """Apple-local simulated purchase, account-free. Never invokes StoreKit."""
         if client.platform != 'apple':
             return 'unsupported_platform'
-        if not reconciled or not client.sync(self, None, now):
+        if product not in {'subscription', 'lifetime'} or entry not in {'paywall', 'settings'}:
+            return 'unsupported_purchase_intent'
+        if (not client.has_store_identity or not reconciled
+                or not client.sync(self, None, now)):
             return 'verification_required'
-        if client.access(None, now):
-            return 'already_pro'
         local = [e for k, e in self.events.items() if k in client.local_keys and e.source == 'apple']
+        has_access = client.access(None, now)
+        # Only Settings permits a paid-through subscriber's intentional lifetime transition.
+        switch_to_lifetime = (product == 'lifetime' and entry == 'settings'
+                              and any(e.state in {'active', 'trial', 'renewal', 'canceled'}
+                                      and e.expires is not None and now < e.expires for e in local)
+                              and not any(e.state in PERMANENT for e in local))
+        if has_access and not switch_to_lifetime:
+            return 'already_pro'
         if any(e.state in {'pending', 'hold', 'grace'}
                or (e.renewing and e.state not in {'refunded', 'revoked'}) for e in local):
             return 'manage_or_wait'
@@ -172,7 +185,8 @@ class Ledger:
     def complete_apple_attempt(self, client, attempt, *, adapter='unverified'):
         # Only a fixture adapter can reconcile an attempt, never a browser return.
         key = ('apple-local', client.store_fixture)
-        if adapter != 'synthetic-verified' or self.attempts.get(key) != attempt:
+        if (not client.has_store_identity or adapter != 'synthetic-verified'
+                or self.attempts.get(key) != attempt):
             return False
         del self.attempts[key]
         return True
@@ -189,11 +203,24 @@ class Ledger:
 class Client:
     platform: str
     account: str | None = None
-    store_fixture: str = 'fixture-apple-1'
+    store_fixture: str | None = None
     generation: int = 0
     local_keys: set = field(default_factory=set)
     cache: list = field(default_factory=list)
     high_water: int = 0
+
+    @property
+    def has_store_identity(self):
+        return (self.platform == 'apple' and type(self.store_fixture) is str
+                and re.fullmatch(r'fixture-store-[0-9]{1,12}', self.store_fixture) is not None)
+
+    def switch_apple_store(self, identity, local_keys):
+        if (self.platform != 'apple' or type(identity) is not str
+                or re.fullmatch(r'fixture-store-[0-9]{1,12}', identity) is None):
+            raise ValueError('invalid_store_fixture')
+        self.store_fixture = identity
+        self.local_keys = set(local_keys)
+        self.cache = []
 
     def sign_in(self, ledger, account):
         self.account = account
