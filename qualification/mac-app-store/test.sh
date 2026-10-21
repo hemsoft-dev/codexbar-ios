@@ -8,6 +8,12 @@ if [[ ! -d "$DEVELOPER_DIR" ]]; then
   echo "Missing qualified Xcode 26.6. Set DEVELOPER_DIR explicitly to test another toolchain." >&2
   exit 1
 fi
+# Re-exec the entire three-phase shell under one kernel-held machine-wide lock.
+# The internal flag is only used by this wrapper; ordinary callers omit it.
+if [[ "${1:-}" != --exclusive-child ]]; then
+  exec python3 exclusive-storekit.py /bin/bash "$PWD/test.sh" --exclusive-child
+fi
+python3 exclusive-storekit.py --check-held
 mkdir -p build
 # A unique directory preserves failures, console output and xcresult on every run.
 run="$(mktemp -d "$PWD/build/storekit-$(TZ=America/New_York date +%Y%m%d-%H%M%S)-XXXXXX")"
@@ -17,7 +23,7 @@ run="$(mktemp -d "$PWD/build/storekit-$(TZ=America/New_York date +%Y%m%d-%H%M%S)
   xcodebuild -version
   sw_vers
   uname -m
-  shasum -a 256 test.sh Restore.swift StoreKitTests.swift StoreKitTestHost.swift StoreKitTestHost.entitlements \
+  shasum -a 256 test.sh exclusive-storekit.py generate-project.py Restore.swift StoreKitTests.swift StoreKitTestHost.swift StoreKitTestHost.entitlements \
     Qualification.storekit MacQualification.xcodeproj/project.pbxproj \
     MacQualification.xcodeproj/xcshareddata/xcschemes/MacQualification.xcscheme
 } | tee "$run/environment.txt"

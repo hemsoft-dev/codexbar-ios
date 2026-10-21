@@ -11,8 +11,11 @@ final class QualificationModel: ObservableObject {
     let authorization: FixtureAuthorization
     let credentials: FixtureCredentials
     let restore = SyntheticRestore()
+    private let browserOpener: (URL) -> Bool
 
-    init(authorization: FixtureAuthorization = FixtureAuthorization(), credentials: FixtureCredentials = FixtureCredentials()) {
+    init(authorization: FixtureAuthorization = FixtureAuthorization(), credentials: FixtureCredentials = FixtureCredentials(),
+         browserOpener: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }) {
+        self.browserOpener = browserOpener
         self.authorization = authorization
         self.credentials = credentials
         for account in ["fixture-personal", "fixture-work"] where (try? credentials.read(account)) != nil {
@@ -42,10 +45,12 @@ final class QualificationModel: ObservableObject {
         busy = true
         do {
             try authorization.start()
-            for _ in 0..<100 {
+            for _ in 0..<750 {
                 if let url = authorization.authorizationURL {
                     status = "Waiting for approval in your browser. This attempt expires in two minutes."
-                    if openBrowser { NSWorkspace.shared.open(url) }
+                    if openBrowser && !browserOpener(url) {
+                        throw CocoaError(.executableNotLoadable, userInfo: [NSLocalizedDescriptionKey: "Could not open the browser. Connect again to retry."])
+                    }
                     return
                 }
                 try await Task.sleep(for: .milliseconds(20))

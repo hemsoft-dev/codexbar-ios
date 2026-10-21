@@ -142,53 +142,83 @@ struct QualificationChecks {
         return failures == 0
     }
 
-    private static func checkExpiry(_ check: (Bool, String) -> Void) async throws {
-        let authorization = FixtureAuthorization(timeout: 0.15)
+    private static func checkExpiry(_ check: @escaping (Bool, String) -> Void) async throws {
+        var deadlines: [@MainActor () -> Void] = []
+        var scheduledTimeouts: [TimeInterval] = []
+        let authorization = FixtureAuthorization(scheduleExpiry: { timeout, expire in
+            scheduledTimeouts.append(timeout)
+            deadlines.append(expire)
+            return Task {}
+        })
         let credentials = FixtureCredentials(service: "com.hemsoft.qualification.mac476.timeout.\(UUID().uuidString)")
-        let model = QualificationModel(authorization: authorization, credentials: credentials)
+        var opens = false
+        let model = QualificationModel(authorization: authorization, credentials: credentials, browserOpener: { _ in opens })
         defer { model.cancel(); try? credentials.remove("fixture-personal") }
-        await model.connect(openBrowser: false)
-        let expiredURL = authorization.authorizationURL
-        try await Task.sleep(for: .milliseconds(250))
-        check(expiredURL != nil && !model.busy && authorization.authorizationURL == nil && model.status.contains("expired"),
-              "No-request timeout clears busy and authorization URL")
-        if let expiredURL {
-            do {
-                _ = try await URLSession.shared.data(from: expiredURL)
-                check(false, "No-request timeout closes loopback listener")
-            } catch { check(true, "No-request timeout closes loopback listener") }
+        func ready() async throws -> (URL, String) {
+            await model.connect(openBrowser: false)
+            guard let url = authorization.authorizationURL,
+                  let state = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first?.value else {
+                throw CocoaError(.fileReadUnknown, userInfo: [NSLocalizedDescriptionKey: "Listener did not become ready"])
+            }
+            return (url, state)
         }
-        await model.connect(openBrowser: false)
+        let (expiredURL, _) = try await ready()
+        deadlines[deadlines.count - 1]()
+        check(!model.busy && authorization.authorizationURL == nil && model.status.contains("expired"),
+              "No-request timeout clears busy and authorization URL")
+        check(!authorization.hasListener, "No-request timeout releases listener ownership")
+        var request = URLRequest(url: expiredURL)
+        request.timeoutInterval = 5
+        do {
+            _ = try await URLSession.shared.data(for: request)
+            check(false, "No-request timeout closes loopback listener")
+        } catch {
+            check(isConnectionRefused(error), "No-request timeout closes loopback listener")
+        }
+        check(!isConnectionRefused(URLError(.timedOut)) && !isConnectionRefused(URLError(.appTransportSecurityRequiresSecureConnection)),
+              "Timeout and transport policy errors cannot qualify listener closure")
+        check(isConnectionRefused(URLError(.cannotConnectToHost)), "Cannot-connect error qualifies listener closure")
+        _ = try await ready()
+        let canceledDeadline = deadlines[deadlines.count - 1]
         model.cancel()
         let canceledStatus = model.status
-        try await Task.sleep(for: .milliseconds(200))
+        canceledDeadline()
         check(model.status == canceledStatus && !model.busy, "Canceled timer never reports expiry")
-        await model.connect(openBrowser: false)
-        let canceledURL = authorization.authorizationURL!
-        let canceledState = URLComponents(url: canceledURL, resolvingAgainstBaseURL: false)!.queryItems!.first!.value!
+        let (_, canceledState) = try await ready()
+        let browserDeadline = deadlines[deadlines.count - 1]
         _ = authorization.respond("GET /callback?state=\(canceledState)&cancel=1 HTTP/1.1\r\n")
         let browserCanceledStatus = model.status
-        try await Task.sleep(for: .milliseconds(200))
+        browserDeadline()
         check(model.status == browserCanceledStatus && !model.busy && authorization.authorizationURL == nil,
               "Browser cancellation clears URL and cancels expiry timer")
-        await model.connect(openBrowser: false)
-        let url = authorization.authorizationURL!
-        let state = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems!.first!.value!
+        let (_, state) = try await ready()
+        let completedDeadline = deadlines[deadlines.count - 1]
         _ = authorization.respond("GET /callback?state=\(state)&account=fixture-personal HTTP/1.1\r\n")
         let completedStatus = model.status
-        try await Task.sleep(for: .milliseconds(200))
+        completedDeadline()
         check(model.status == completedStatus && authorization.authorizationURL == nil && !model.busy,
               "Completed timer never reports expiry and clears URL")
-        await model.connect(openBrowser: false)
-        try await Task.sleep(for: .milliseconds(90))
-        await model.connect(openBrowser: false)
-        let newURL = authorization.authorizationURL
-        try await Task.sleep(for: .milliseconds(90))
-        check(model.busy && authorization.authorizationURL == newURL && newURL != nil,
+        _ = try await ready()
+        let oldDeadline = deadlines[deadlines.count - 1]
+        let (newURL, _) = try await ready()
+        oldDeadline()
+        check(model.busy && authorization.authorizationURL == newURL,
               "Old attempt timer cannot expire replacement attempt")
-        try await Task.sleep(for: .milliseconds(150))
+        deadlines[deadlines.count - 1]()
         check(!model.busy && authorization.authorizationURL == nil && model.status.contains("expired"),
               "Replacement attempt expires at its own deadline")
+        await model.connect()
+        check(!model.busy && !authorization.hasListener && authorization.authorizationURL == nil
+              && model.status.contains("Could not open the browser"), "Failed browser opener cleans up immediately")
+        opens = true
+        await model.connect()
+        check(model.busy && authorization.authorizationURL != nil, "Failed browser opener allows immediate retry")
+        check(scheduledTimeouts.allSatisfy { $0 == 120 }, "Production authorization deadline remains 120 seconds")
     }
 
+    private static func isConnectionRefused(_ error: Error) -> Bool {
+        let error = error as NSError
+        return (error.domain == NSURLErrorDomain && error.code == URLError.cannotConnectToHost.rawValue)
+            || (error.domain == NSPOSIXErrorDomain && error.code == Int(ECONNREFUSED))
+    }
 }

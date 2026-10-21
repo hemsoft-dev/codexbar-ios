@@ -19,7 +19,7 @@ Environment: Apple silicon air, macOS 26.6.2 `25G83`, Xcode 27.1 `27A9275`, Swif
 | Synthetic restore rehearsal | PASS | Empty, verified lifetime, revoked, unverified and wrong-product fixtures; actual Settings empty and restored states captured |
 | Native StoreKitTest runtime | PASS, Xcode 26.6 only | Hosted native purchase, verified Xcode current entitlement, refund, entitlement removal and verified revocation all executed; four tests in three separate invocations, zero failures. Earlier failed receipts retained below; Xcode 27.1 remains unsupported in this measured combination |
 | Local signature tampering | PASS | Changed version metadata invalidated signature |
-| Local replacement and rollback rehearsal | PASS | Ad hoc version-2 copy verified, staged replacement verified, restored version-1 copy verified; no Store update |
+| Local replacement and rollback rehearsal | PASS | Private installed version 1 atomically exchanged with signed version 2, then exchanged back; version-specific resource absence/presence and both signatures verified at each step; filesystem rehearsal only |
 | Shell syntax and Python generator syntax | PASS | `bash -n` and `python3 -m py_compile` |
 | Intel runtime, macOS 14 runtime | NOT RUN | Compile target is a candidate minimum, not a supported-runtime claim |
 | Live providers, real quota, registered OAuth | NOT RUN | Synthetic-only transport; Franz owns live account checks |
@@ -156,3 +156,105 @@ All exact prior procedure, toolchain, result-bundle and source-hash provenance
 above remains historical evidence. This repair does not renew that evidence,
 qualify live providers, prove production Store behavior or supply current-head
 UI media. Parent owns current-head review, thread resolution and UI evidence.
+
+
+## Five connected-review findings, October 21, 2026 at 3:34 PM EDT
+
+The five findings on `49e9b2e836d0240d7010fcff4a34e369e37b0868` are repaired
+in this existing worktree. All evidence below is local to air at
+`/Users/home/.t3-server/worktrees/codexbar-ios/t3-a0ba4401/qualification/mac-app-store/`.
+Earlier failure logs and receipts remain intact.
+
+`test.sh` now acquires one persistent per-user machine-wide kernel lock before
+any native phase or marker action, retaining it through all three invocations.
+The protected resources are this user's shared StoreKit host state and relaunch
+marker. The lock inode is checked for ownership, file type, hard links and
+replacement, and is never removed or stolen based on a timestamp. Both shell
+and descendants inherit its descriptor. The internal child flag verifies an
+already-held inherited lock and independent-opener exclusion before proceeding.
+
+`test-exclusivity.py` passes four grouped regressions. Direct child invocation
+with a missing FD or a forged unlocked FD to the actual lock inode is rejected.
+Two independent working directories contend across all three phases, asserting
+that shared marker and transaction-state stand-ins retain their own identity.
+An old timestamp on the held lock does not admit the contender, and the same
+leftover inode is reused without deletion. Killing the wrapper with SIGKILL
+leaves the descendant shell's lock held, demonstrated by an independent
+nonblocking acquisition failure and a subsequent successful inherited-lock
+check. No StoreKit reset is performed by this regression.
+Log: `evidence/review508-r2-lock-final.log`.
+
+Fresh native evidence for the final runner and lock helper is
+`build/storekit-20261021-153144-itbXQr/`. Xcode 26.6 `17F113` ran all four
+native tests in three invocations with zero failures, October 21 at 3:31 PM EDT.
+Two more complete native procedures were then launched simultaneously. They
+serialized from 3:33:14 to 3:33:24 PM EDT and from 3:33:24 to 3:33:32 PM EDT,
+each passing all four tests, including matching the prepared transaction ID in
+a fresh host before refund. Their directories are
+`build/storekit-20261021-153314-zlezks/` and
+`build/storekit-20261021-153324-m1GpcX/`.
+Each contains `{ordinary,prepare,relaunch}.xcresult`, per-phase logs and an
+`environment.txt` with hashes for the runner, lock helper, project generator,
+Restore.swift, native tests, host, host entitlements, catalog, project and
+scheme. All manifests match the final native inputs. Combined native console
+logs are `evidence/review508-r2-native-final.log` and
+`evidence/review508-r2-native-contend-{1,2}.log`.
+The earlier successful interim run, before strengthening inherited-lock
+validation, remains in `build/storekit-20261021-153035-1pNmHW/`; it is not the
+final-procedure evidence.
+
+Authorization retains its attempt-bound timer, identity guards, cancellation
+cleanup, unique credential services and seeded Work-account preservation.
+Deadline tests inject a scheduler and trigger the actual attempt expiry callback
+after listener readiness. They deliberately invoke obsolete callbacks after
+cancel, browser cancel, completion and replacement, without 150-millisecond
+startup races or forced URL/state unwraps. The app's default scheduler still
+sleeps for the requested 120 seconds, and the regression asserts that default
+value. Listener startup has a bounded 15-second wait rather than two seconds.
+The canceled URL is requested with a five-second client timeout, but only an
+exact cannot-connect or connection-refused error passes. Timeout and transport
+policy errors are explicitly rejected. A failed injected browser opener must
+clear busy, release the listener/URL, report the launch failure and permit retry.
+
+The final sandboxed self-test produces **42 PASS lines and RESULT 0 failures**,
+including the informational window-size line. The original expired-attempt,
+preexisting account, HTTP framing, secure storage and synthetic restore checks
+remain. `evidence/review508-r2-build-final.log` proves Swift 6 warnings-as-errors
+compilation, ad hoc signing and strict verification;
+`evidence/review508-r2-self-test-final.log` records the result.
+
+Two adapted old-behavior controls each fail exactly one regression and exit 1.
+Restoring the reviewed opener-result disregard while retaining the injected
+opener seam fails immediate cleanup. Replacing exact transport-error
+classification with blanket acceptance fails rejection of unrelated errors.
+These are targeted behavioral controls, not unmodified old checkouts. Their
+sources and binaries remain in `build/.review508-r2-{old-opener,blanket-error}/`;
+logs are `evidence/review508-r2-{old-opener,blanket-error}-verified.log`.
+The earlier 36-pass run and adapted five-failure control above remain historical.
+
+The updated local replacement rehearsal starts with signed version 1 actually
+present at `installed.app`. Both versions have distinct signed resources.
+Darwin `renamex_np(RENAME_SWAP)` atomically exchanges the existing installed
+bundle and version-2 candidate, then reverses that operation for rollback.
+Version, resource contents, absence of stale resources and strict signatures
+are checked on both paths before and after each exchange. It passes in
+`build/update.ME0f9g/` against the final standalone build, with log
+`evidence/review508-r2-update-final.log`. The earlier passing rehearsal remains
+in `build/update.g3D7uj/` and `evidence/review508-r2-update.log`.
+This is only a private local filesystem rehearsal, not a Mac App Store update,
+receipt-preservation proof, publisher trust proof or updater implementation.
+
+Canonical pinned SwiftLint, shell/Python syntax, deterministic project generation,
+manifest verification and diff-whitespace checks pass. Final logs are
+`evidence/review508-r2-pinned-lint-final.log` and
+`evidence/review508-r2-syntax-diff.log`.
+The first compile failed because the test callback needed `@escaping`; its log
+remains `evidence/review508-r2-build.log`. Initial control runs recorded their
+expected failures, but a shell harness then tried to assign zsh's reserved
+`status` variable. The verified Python harness above records their actual exit
+codes without that error; original control logs remain preserved.
+
+No production target, automatic CI, other machine, paid API, production
+credential, App Store record, PR body or media changed. Live providers, publisher
+signing, Store delivery and purchase portability remain unqualified. Parent owns
+current-head review, thread resolution, UI evidence and merge.

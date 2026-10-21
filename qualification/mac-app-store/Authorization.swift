@@ -10,14 +10,23 @@ final class FixtureAuthorization {
 
     private var expiryTask: Task<Void, Never>?
     private let timeout: TimeInterval
+    private let scheduleExpiry: (TimeInterval, @escaping @MainActor () -> Void) -> Task<Void, Never>
     private var listener: NWListener?
     private var pending: Attempt?
     var onResult: ((Result<String, Error>) -> Void)?
     private(set) var authorizationURL: URL?
     private(set) var lastAccount: String?
+    var hasListener: Bool { listener != nil }
 
-    init(timeout: TimeInterval = 120) {
+    init(timeout: TimeInterval = 120,
+         scheduleExpiry: @escaping (TimeInterval, @escaping @MainActor () -> Void) -> Task<Void, Never> = { timeout, expire in
+             Task { @MainActor in
+                 do { try await Task.sleep(for: .seconds(timeout)) } catch { return }
+                 expire()
+             }
+         }) {
         self.timeout = timeout
+        self.scheduleExpiry = scheduleExpiry
     }
 
     func start() throws {
@@ -28,10 +37,7 @@ final class FixtureAuthorization {
         let server = try NWListener(using: parameters)
         listener = server
         pending = attempt
-        expiryTask = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(self?.timeout ?? 120)) } catch { return }
-            self?.expire(attempt.state)
-        }
+        expiryTask = scheduleExpiry(timeout) { [weak self] in self?.expire(attempt.state) }
         server.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in
                 guard let self, self.pending?.state == attempt.state else { return }
