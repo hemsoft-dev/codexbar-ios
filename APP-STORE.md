@@ -120,9 +120,10 @@ that version and build. Qualification of this replacement immutable candidate is
 The preparation targets October 23, 2026 submission as approved by Franz on October 21; he must
 approve submission separately. If that date moves, recompute the cutoff before
 qualifying another candidate.
-The [2.0 changelog](CHANGELOG.md#200---2026-10-23) is dated for the planned
-October 23 submission. Its pending-distribution notice remains explicit; this
-preparation date does not claim submission, approval or customer release. The [privacy policy](PRIVACY.md) is effective
+The [2.0 changelog](CHANGELOG.md#200---unreleased) remains Unreleased until
+the release date is established. October 23 is the planned submission date,
+not an observed release date. Update the heading and all inbound anchors
+together when the release date is known. The [privacy policy](PRIVACY.md) is effective
 October 18; that date does not record App Store submission or distribution.
 The compiled cutoff `T` remains **PROVISIONAL: November 5, 2026 at 7:00 PM EST**,
 which is `2026-11-06T00:00:00Z`. It is fourteen calendar days after the planned

@@ -4,10 +4,10 @@ Notable changes to CodexBar are documented here. Entries describe shipped app
 behavior; development-only changes are listed separately when they affect
 building, testing, or releasing the app.
 
-## 2.0.0 - 2026-10-23
+## 2.0.0 - Unreleased
 
-Prepared for the planned October 23 submission. App Store submission and
-distribution remain pending in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
+App Store submission and distribution remain pending
+in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Added
 
