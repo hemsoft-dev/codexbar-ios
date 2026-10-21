@@ -80,12 +80,12 @@ final class OriginalPurchaserNoticeTests: XCTestCase {
         let notice = OriginalPurchaserNotice(defaults: defaults, now: { self.cutover.addingTimeInterval(-1) })
         let newYork = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let english = try XCTUnwrap(notice.familyMessage(locale: Locale(identifier: "en_US"), timeZone: newYork))
-        for text in ["Saturday", "October 31", "2026", "8:00", "PM", "EDT"] {
+        for text in ["Thursday", "November 5", "2026", "7:00", "PM", "EST"] {
             XCTAssertTrue(english.contains(text), english)
         }
         let berlin = try XCTUnwrap(TimeZone(identifier: "Europe/Berlin"))
         let german = try XCTUnwrap(notice.familyMessage(locale: Locale(identifier: "de_DE"), timeZone: berlin))
-        for text in ["Sonntag", "November", "2026", "01:00", "MEZ"] {
+        for text in ["Freitag", "November", "2026", "01:00", "MEZ"] {
             XCTAssertTrue(german.contains(text), german)
         }
         XCTAssertNotEqual(english, german)
