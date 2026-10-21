@@ -39,13 +39,28 @@ for phase in ordinary prepare relaunch; do
     -destination 'platform=macOS,arch=arm64' -parallel-testing-enabled NO -jobs 1 \
     -derivedDataPath "$PWD/build/StoreKitDerivedData-$(xcodebuild -version | awk '/Build version/ {print $3}')" \
     -resultBundlePath "$run/$phase.xcresult" "${selectors[@]}" test 2>&1 | tee "$run/$phase.log"
-  status=${PIPESTATUS[0]}
+  # Snapshot both statuses in one assignment before any command overwrites them.
+  phase_statuses=("${PIPESTATUS[@]}")
+  status=${phase_statuses[0]}
+  if [[ "${phase_statuses[1]}" != 0 ]]; then
+    echo "$phase logging failed: tee exit status ${phase_statuses[1]} (xcodebuild ${phase_statuses[0]})" >&2
+    [[ "$status" != 0 ]] || status=${phase_statuses[1]}
+  fi
   set -e
   [[ "$status" == 0 ]] || break
 done
+set +e
 {
   TZ=America/New_York date '+Finished %Y-%m-%d %H:%M:%S %Z'
-  echo "xcodebuild exit status: $status"
+  echo "qualification exit status: $status"
   echo "Evidence: $run"
 } | tee -a "$run/environment.txt"
+metadata_statuses=("${PIPESTATUS[@]}")
+set -e
+for metadata_status in "${metadata_statuses[@]}"; do
+  if [[ "$metadata_status" != 0 ]]; then
+    echo "Final metadata write failed: exit status $metadata_status; qualification status $status" >&2
+    [[ "$status" != 0 ]] || status=$metadata_status
+  fi
+done
 exit "$status"

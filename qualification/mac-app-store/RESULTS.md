@@ -315,3 +315,40 @@ No main-worktree changes, other machines, paid APIs, production credentials,
 CI dispatches, review requests, thread resolutions, App Store work, PR body or
 media changes were performed. Parent owns current-head review, UI evidence,
 checks and merge. Live provider and Store delivery limitations remain unchanged.
+
+## Runner logging failure repair, October 21, 2026 at 3:55 PM EDT
+
+Connected Codex finding `4341288280` is addressed. Each native phase captures
+both pipeline statuses atomically before another command can overwrite them.
+A failed Xcode command remains the primary exit status even when logging also
+fails. A logging-only failure fails the procedure and stops later phases, with
+the tee status reported on stderr. Final metadata errors are reported and fail
+an otherwise successful run while preserving an existing phase failure.
+
+`python3 qualification/mac-app-store/test-runner-pipeline.py` passes five
+controlled cases through the actual runner pipeline in temporary directories:
+Xcode/tee exits 0/74 stop after one phase with exit 74; 65/74 stop after one
+phase with exit 65; 0/0 complete three phases; a final metadata exit 73 preserves
+a prior Xcode exit 65; a metadata-only failure exits 73 after three phases.
+Fake commands consume all input and use explicit exit codes. Only the lock
+checker is replaced in the isolated copy. No real StoreKit is used by these
+controls. The unmodified reviewed `test.sh` at `e2c99d2` fails the logging-only
+regression, returning 0 and continuing instead. Log:
+`evidence/review508-r4-pipeline.log`.
+
+Fresh native validation on Xcode 26.6 build `17F113` passed all four native tests
+in three invocations from 3:55:13 to 3:55:23 PM EDT. Retained evidence is
+`build/storekit-20261021-155513-C57ZUn/{ordinary,prepare,relaunch}.xcresult`,
+phase logs and environment manifest. All ten manifest hashes match the final
+runner and native inputs. Combined log: `evidence/review508-r4-native.log`.
+The initial manifest verifier incorrectly expected eleven entries; after
+correcting that count, all ten existing manifest entries passed verification.
+
+Canonical pinned SwiftLint passes with zero violations in 301 files in
+`evidence/review508-r4-pinned-lint.log`. Shell syntax, Python AST parsing,
+manifest verification and diff whitespace pass in
+`evidence/review508-r4-syntax-manifest-diff.log`. App, Swift and standalone
+checks are unchanged, so the prior 51-assertion result remains historical and
+was not rerun. Prior controls and failure receipts remain intact in this
+worktree. No automatic CI, production Store, other machine or paid API was used.
+Parent retains review, thread-resolution, CI, UI-media and merge ownership.
