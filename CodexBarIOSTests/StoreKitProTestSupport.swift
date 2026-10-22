@@ -352,7 +352,9 @@ extension XCTestCase {
         let unfinished = await storeKitUnfinishedProducts()
         let current = await storeKitCurrentProducts()
         let sessions = context.session.allTransactions().map {
-            "\($0.productIdentifier):renewing=\($0.autoRenewingEnabled),issue=\($0.hasPurchaseIssue),pending=\($0.pendingAskToBuyConfirmation)"
+            let identity = "id=\($0.identifier),original=\($0.originalTransactionIdentifier)"
+            return "\($0.productIdentifier):\(identity),renewing=\($0.autoRenewingEnabled),issue=\($0.hasPurchaseIssue)"
+                + ",pending=\($0.pendingAskToBuyConfirmation),expiry=\(String(describing: $0.expirationDate))"
         }.sorted()
         let statuses = snapshot.subscriptions.map {
             "\($0.purchase.product.rawValue):state=\($0.state),verified=\($0.renewalVerified),renewing=\(String(describing: $0.willAutoRenew)),retry=\($0.isInBillingRetry)"

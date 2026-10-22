@@ -96,10 +96,12 @@ class HostAdmissionTests(unittest.TestCase):
                                          sleep=sleep, monotonic=lambda: clock[0])
 
     def test_process_probe_rejects_compiler_and_simulator_work(self):
-        result = subprocess.CompletedProcess([], 0, " 12.0 /usr/bin/swift-frontend\n 14.0 /x/Simulator.app/Contents/MacOS/Simulator\n 1.0 /usr/bin/clang\n", "")
+        result = subprocess.CompletedProcess([], 0, " 12.0 /usr/bin/swift-frontend\n 14.0 /x/Simulator.app/Contents/MacOS/Simulator\n"
+                                             " 20.0 /Library/Developer/CoreSimulator/Devices/fixture/CodexBarIOS.app/CodexBarIOS\n"
+                                             " 15.0 /usr/libexec/testmanagerd\n 1.0 /usr/bin/clang\n", "")
         with mock.patch.object(GATE.subprocess, "run", return_value=result):
             observation = GATE.admission_snapshot()
-        self.assertEqual([item["cpu"] for item in observation["busyProcesses"]], [12, 14])
+        self.assertEqual([item["cpu"] for item in observation["busyProcesses"]], [12, 14, 20, 15])
 
     def test_empty_process_probe_cannot_qualify_as_quiet(self):
         result = subprocess.CompletedProcess([], 0, "", "")

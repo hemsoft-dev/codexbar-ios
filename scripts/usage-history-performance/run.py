@@ -95,7 +95,8 @@ def admission_snapshot():
             raise ValueError("invalid process CPU observation")
         name = Path(executable).name
         if utilization >= 10 and (name.startswith(("swift", "clang", "xcodebuild", "simctl", "Simulator", "CoreSimulator"))
-                                  or "/Simulator.app/" in executable):
+                                  or "/Simulator.app/" in executable or "/CoreSimulator/" in executable
+                                  or name in ("launchd_sim", "testmanagerd")):
             busy.append(dict(executable=executable, cpu=utilization))
     return dict(capturedAt=datetime.now(timezone.utc).isoformat(), logicalCPUs=os.cpu_count(),
                 loadAverage=list(os.getloadavg()), busyProcesses=busy)
