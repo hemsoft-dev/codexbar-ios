@@ -18,6 +18,16 @@ The runner selects `/Applications/Xcode.app/Contents/Developer`, builds with
 `swift build -c release`, and sets `TZ=UTC`. It archives the baseline commit in a
 unique temporary directory, copies the current benchmark source into that
 archive, and adds only its executable target to the baseline package manifest.
+Both binaries explicitly request Darwin user-initiated QoS on the main thread
+before fixture creation and verify it around each timed operation. Reports record
+the observed kernel class (25); live measurement rejects missing or different
+scheduling evidence. The `pthread_set_qos_class_self_np` call changes a running
+thread; setting `Thread.qualityOfService` after startup does not. This follows
+Apple's [task and thread QoS guidance](https://developer.apple.com/library/archive/documentation/Performance/Conceptual/power_efficiency_guidelines_osx/PrioritizeWorkAtTheTaskLevel.html).
+QoS does not guarantee a particular physical core or waive the variance ceiling.
+Historical fixture replays remain historical and do not prove this live scheduling
+contract.
+
 Both sides exercise the same fixture and public API. No production source,
 branch, worktree, or baseline file is rewritten. The temporary archive is
 removed on exit; each Swift process removes its unique `UserDefaults` suite.

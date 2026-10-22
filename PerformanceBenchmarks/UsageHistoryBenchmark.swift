@@ -1,5 +1,6 @@
 import CodexBarIOS
 import Foundation
+import Darwin
 
 private struct RetainedState: Encodable {
     let snapshots: Int
@@ -17,6 +18,7 @@ private struct Scenario: Encodable {
 
 private struct Report: Encodable {
     let fixtureVersion = 1
+    let qosClass: UInt32
     let configuration: String
     let timeZone: String
     let warmupBatches = 2
@@ -38,6 +40,11 @@ private struct UsageHistoryBenchmark {
 
     @MainActor
     static func main() throws {
+        let schedulingStatus = pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED, 0)
+        guard schedulingStatus == 0 else {
+            throw BenchmarkError.invalidFixture("Cannot request user-initiated QoS: \(schedulingStatus)")
+        }
+        try requireBenchmarkQoS()
         #if DEBUG
         let configuration = "debug"
         #else
@@ -47,6 +54,7 @@ private struct UsageHistoryBenchmark {
             throw BenchmarkError.invalidFixture("Run with TZ=UTC")
         }
         let report = Report(
+            qosClass: qos_class_self().rawValue,
             configuration: configuration,
             timeZone: "UTC",
             scenarios: try [1, 10, 25].map(run)
@@ -104,6 +112,7 @@ private struct UsageHistoryBenchmark {
 
     @MainActor
     static func run(accounts: Int) throws -> Scenario {
+        try requireBenchmarkQoS()
         let suiteName = "UsageHistoryBenchmark.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             throw BenchmarkError.invalidFixture("Cannot create isolated defaults")
@@ -118,11 +127,13 @@ private struct UsageHistoryBenchmark {
         var seriesSamples: [Double] = []
         var pointCount = 0
         for batch in 0..<7 {
+            try requireBenchmarkQoS()
             let date = anchor.addingTimeInterval(Double(batch) * 600)
             let results = (0..<accounts).map { result(account: $0, at: date) }
             recordSamples.append(milliseconds {
                 store.record(results: results, now: date)
             })
+            try requireBenchmarkQoS()
             for result in results {
                 let options = store.historySeriesOptions(for: result)
                 guard options.map(\.id) == ["usage"], options[0].series.points.count == 329,
@@ -141,6 +152,7 @@ private struct UsageHistoryBenchmark {
                     }
                 }
             } / 5)
+            try requireBenchmarkQoS()
             retained.append(try state(store: store, defaults: defaults, accounts: accounts))
         }
         guard pointCount == accounts * 329 * 5 * 7 else {
@@ -211,6 +223,12 @@ private struct UsageHistoryBenchmark {
             } else if !accountSnapshots.allSatisfy({ Set($0.bars.compactMap(\.stableKey)) == Set(metricKeys) }) {
                 throw BenchmarkError.invalidFixture("Frequent sample lost a metric")
             }
+        }
+    }
+
+    static func requireBenchmarkQoS() throws {
+        guard Thread.isMainThread, qos_class_self() == QOS_CLASS_USER_INITIATED else {
+            throw BenchmarkError.invalidFixture("Benchmark must run on the user-initiated main thread")
         }
     }
 

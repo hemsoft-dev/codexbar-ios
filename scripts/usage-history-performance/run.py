@@ -158,16 +158,32 @@ def admit_quiet_host(output, *, snapshot=admission_snapshot, sleep=time.sleep, m
 
 def measure(binary, output, name):
     machine_snapshot(output, f"{name}-before")
+    primary = None
     try:
         # Keep stdout/stderr even when the process, JSON parser, or fixture assertion fails.
         with (output / f"{name}.json").open("w") as stdout, (output / f"{name}.stderr.log").open("w") as stderr:
             subprocess.run([str(binary)], cwd=ROOT, env=ENV, text=True,
                            stdout=stdout, stderr=stderr, check=True)
+    except BaseException as error:
+        primary = error
+        raise
     finally:
-        machine_snapshot(output, f"{name}-after")
+        try:
+            machine_snapshot(output, f"{name}-after")
+        except OSError:
+            if primary is None:
+                raise
+            print("Unable to preserve machine diagnostics; retaining the primary measurement failure.", file=sys.stderr)
     report = json.loads((output / f"{name}.json").read_text())
     validate(report)
+    validate_scheduling(report)
     return report
+
+
+def validate_scheduling(report):
+    # Darwin QOS_CLASS_USER_INITIATED; a live run must observe the requested class.
+    if type(report.get("qosClass")) is not int or report["qosClass"] != 25:
+        raise ValueError("live benchmark requires observed user-initiated QoS class 25")
 
 
 def validate(report):
@@ -248,7 +264,7 @@ def main():
                     operatingSystem=command(["sw_vers"]), swift=command(["xcrun", "swift", "--version"]),
                     xcode=command(["xcodebuild", "-version"]), configuration="release", timezone="UTC",
                     benchmarkSHA256=hashlib.sha256((ROOT / "PerformanceBenchmarks/UsageHistoryBenchmark.swift").read_bytes()).hexdigest(),
-                    slowdownProof=args.prove_slowdown, policy=policy)
+                    slowdownProof=args.prove_slowdown, requiredQoSClass=25, policy=policy)
     (args.output / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
     with tempfile.TemporaryDirectory(prefix="usage-history-reference-") as temporary:
         reference = Path(temporary)

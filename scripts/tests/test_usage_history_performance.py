@@ -22,13 +22,60 @@ with mock.patch.dict(sys.modules, {"run": GATE}):
 
 
 def report():
-    return dict(configuration="release", fixtureVersion=1, timeZone="UTC", warmupBatches=2,
+    return dict(configuration="release", fixtureVersion=1, timeZone="UTC", warmupBatches=2, qosClass=25,
                 measuredBatches=5, seriesIterationsPerBatch=5,
                 scenarios=[dict(accounts=accounts, recordMilliseconds=[100, 100, 10, 10, 10, 10, 10],
                                 seriesMilliseconds=[100, 100, 2, 2, 2, 2, 2], seriesPointCount=accounts * 329 * 35,
                                 retainedStates=[dict(snapshots=accounts * 240, dailySnapshots=accounts * 180,
                                                      serializedBytes=accounts * 220000) for _ in range(47)])
                            for accounts in (1, 10, 25)])
+
+
+class BenchmarkSchedulingTests(unittest.TestCase):
+    def test_accepts_observed_user_initiated_class(self):
+        GATE.validate_scheduling(report())
+
+    def test_rejects_missing_scheduling_evidence(self):
+        value = report()
+        del value["qosClass"]
+        with self.assertRaises(ValueError):
+            GATE.validate_scheduling(value)
+
+    def test_rejects_other_classes_and_malformed_values(self):
+        for value in (17, 9, 33, None, True, "25", 25.0):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                GATE.validate_scheduling(dict(report(), qosClass=value))
+
+    def test_diagnostic_write_error_preserves_original_process_failure(self):
+        native_run = subprocess.run
+        failures = []
+        def observe(*args, **kwargs):
+            try:
+                return native_run(*args, **kwargs)
+            except subprocess.CalledProcessError as error:
+                failures.append(error)
+                raise
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            (output / "failed-after-machine.json").mkdir()
+            with mock.patch.object(GATE.subprocess, "run", side_effect=observe):
+                with self.assertRaises(subprocess.CalledProcessError) as caught:
+                    GATE.measure(Path("/usr/bin/false"), output, "failed")
+            self.assertIs(caught.exception, failures[0])
+            self.assertTrue((output / "failed-before-machine.json").is_file())
+            self.assertTrue((output / "failed.json").is_file())
+
+    def test_live_measurement_keeps_and_rejects_wrong_scheduling_report(self):
+        value = dict(report(), qosClass=17)
+        def process(*args, **kwargs):
+            kwargs["stdout"].write(json.dumps(value))
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            with mock.patch.object(GATE, "machine_snapshot"), mock.patch.object(GATE.subprocess, "run", side_effect=process):
+                with self.assertRaisesRegex(ValueError, "user-initiated"):
+                    GATE.measure(Path("unused-binary"), output, "legacy")
+            self.assertEqual(json.loads((output / "legacy.json").read_text()), value)
+            self.assertTrue((output / "legacy.stderr.log").exists())
 
 
 class HostAdmissionTests(unittest.TestCase):
