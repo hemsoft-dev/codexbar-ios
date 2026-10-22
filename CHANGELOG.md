@@ -47,10 +47,10 @@ building, testing, or releasing the app.
   Store distribution and purchase portability remain unqualified.
   ([#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476))
 
-## 2.0.0 - Unreleased
+## 2.0.0 - 2026-10-22
 
-Build 5 was submitted for App Review on October 22, 2026. Distribution remains
-pending in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
+Build 5 was submitted for App Review on October 22, 2026. Distribution is
+tracked in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Added
 

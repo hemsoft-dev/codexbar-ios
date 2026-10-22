@@ -46,13 +46,13 @@ readbacks; the release owner must recheck current state before submission.
 | CodexBar Pro Lifetime | `com.hemsoft.CodexBarIOS.pro.lifetime` | Non-consumable, USA $29.99, no trial | Resource `6824195355`, `READY_TO_SUBMIT`; USA $29.99 and 175 priced/available territories |
 
 The saved subscription group is `22490183`, named CodexBar Pro. Its version
-`153c92f1-497a-43d5-8902-92030fd8ef1f` is `PREPARE_FOR_SUBMISSION`.
+`153c92f1-497a-43d5-8902-92030fd8ef1f`.
 The monthly, yearly and lifetime version records are respectively
 `c8c9fb7c-663f-48c7-b3af-79bb63ba5cb3`,
 `8acbb0ea-aaaf-46f4-9147-f5122af71820` and
-`a29cfae6-d318-419f-9865-9a34a257f0e1`; each is also
-`PREPARE_FOR_SUBMISSION`. Product readiness does not mean those versions have
-been submitted or approved.
+`a29cfae6-d318-419f-9865-9a34a257f0e1`. The group version and all three
+product versions were submitted with app version 2.0 on October 22, 2026 and
+read back as `WAITING_FOR_REVIEW`. Submission does not mean approval.
 
 Family Sharing is off for all three products. Both subscriptions retain
 Apple's default multiseat `ENABLED` setting and use ordinary full-period
@@ -62,36 +62,27 @@ app-download pricing and availability collections are unchanged, including
 the US$3.99 download price and 175 sale territories. Preserve these settings
 through the approved launch sequence.
 
-App version `2.0.0`, ID `2c7b9bd4-b877-454d-a5a2-036b25a151f5`, is
-`PREPARE_FOR_SUBMISSION` with `MANUAL` release and no phased release. Read-only verification on October 21
-confirmed build 5 (`e224b2b9-c59a-44ff-bd92-d1ed7a0f6b02`) is selected and
-`VALID`. It belongs to source `62f6d8e392360b91cb704c2503e9796f8ddc285c`
-and retains the earlier cutoff; do not submit it under the replacement plan. Review draft `af75f0db-4b2c-403d-81e2-c3b14ab05986` is
-`READY_FOR_REVIEW`, with zero items and no submitted date. The first Pro
-products must accompany app version 2.0 in one website submission. Selecting
-the replacement processed build and associating the products with the app version
-remain pending for the replacement candidate; nothing in this draft has been submitted. The three local StoreKit
-review screenshots demonstrate app UI and test-configuration prices. They do
-not establish live App Store prices or production original-purchaser access.
+App version `2.0.0`, ID `2c7b9bd4-b877-454d-a5a2-036b25a151f5`, uses build 5
+(`e224b2b9-c59a-44ff-bd92-d1ed7a0f6b02`, `VALID`) from source
+`62f6d8e392360b91cb704c2503e9796f8ddc285c`, with `MANUAL` release and no phased
+release. Review submission `af75f0db-4b2c-403d-81e2-c3b14ab05986` was submitted
+on October 22, 2026 at 8:20 AM EDT, `2026-10-22T12:20:11Z`. It holds five
+items: the app version, the CodexBar Pro group version, and the monthly, yearly
+and lifetime versions. The version and all products read back as
+`WAITING_FOR_REVIEW`. Do not prepare or submit another draft; continue from
+review in the [launch sequence](#approved-launch-sequence). The three local
+StoreKit review screenshots demonstrate app UI and test-configuration prices.
+They do not establish live App Store prices or production original-purchaser
+access.
 
-Apple requires the first in-app purchase and first subscriptions to accompany
-an app binary through the [App Store Connect website](https://appstoreconnect.apple.com).
-Use **Add for Review** on the website and select the existing draft. Before
-**Submit for Review**, verify that the same draft contains app version 2.0,
-subscription group `22490183`, and all three monthly, yearly and lifetime
-products. Add the group if it is absent; do not add a duplicate when the website
-has already included it. Verify the displayed group membership rather than
-inferring it from API localization behavior. Apple's
-[first-submission website instructions](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-in-app-purchase/)
-require these items together. The review-submission API's item-add
-and submit operations do not apply to these first products; the empty API
-review draft does not change that requirement. Selecting an eligible processed
-build through the API remains available to the release owner after candidate
-qualification. This distinction follows Apple's
-[in-app purchase guidance](https://developer.apple.com/documentation/appstoreconnectapi/managing-in-app-purchases.md)
-and [subscription guidance](https://developer.apple.com/documentation/appstoreconnectapi/submitting-subscriptions-and-subscription-groups-for-app-review.md),
-rechecked in the [saved Apple readback](/tmp/codexbar-470-first-product-submission/readback.json)
-on October 18 at 8:00:53 AM EDT, `2026-10-18T12:00:53Z`.
+Apple's [first-submission website instructions](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-in-app-purchase/)
+and [subscription guidance](https://developer.apple.com/documentation/appstoreconnectapi/submitting-subscriptions-and-subscription-groups-for-app-review.md)
+require the first products to accompany an app version in one submission. On
+October 22 the website omitted the ready subscriptions and its submit failed.
+The review-submission API succeeded once the draft also held the group's
+`subscriptionGroupVersion`. The [release skill](.agents/skills/app-store-release/SKILL.md)
+documents that fallback. Never remove items from a draft that holds first-time
+products.
 
 The [October 21 scope record](docs/2026-10-21-pro-scope-decisions.md) keeps
 Pro Apple-local and native Mac qualification provisional.
@@ -117,8 +108,8 @@ is superseded: Franz kept build 5 and build 6 was never uploaded
 The submitted release is `2.0.0 (5)`, built from
 `62f6d8e392360b91cb704c2503e9796f8ddc285c`. The project now carries build
 number 6 so that any later upload is numbered above build 5.
-The [2.0 changelog](CHANGELOG.md#200---unreleased) remains Unreleased until
-the manual release date is observed. The [privacy policy](PRIVACY.md) is effective
+The [2.0 changelog](CHANGELOG.md#200---2026-10-22) is dated with the
+submission date, as 1.4.0 was; record the observed release date in this ledger. The [privacy policy](PRIVACY.md) is effective
 October 18; that date does not record App Store submission or distribution.
 The cutoff `T` compiled into build 5 is **final: October 31, 2026 at 8:00 PM
 EDT**, which is `2026-11-01T00:00:00Z`. It cannot change without a new binary.
@@ -155,7 +146,7 @@ agent-owned implementation or automated delivery.
    version 2.0.0 and build 5 or higher across the app and embedded products,
    then verify the built archive rather than relying only on project text.
    Recheck the cutoff disclosures, the privacy policy's effective date and
-   the [2.0 changelog](CHANGELOG.md#200---unreleased) against the final candidate.
+   the [2.0 changelog](CHANGELOG.md#200---2026-10-22) against the final candidate.
 2. Submit 2.0 and all first Pro products together through the
    [App Store Connect website](https://appstoreconnect.apple.com).
    Verify the subscription group and all three products are in the same draft

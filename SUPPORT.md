@@ -75,9 +75,8 @@ GitHub issue.
 
 ## CodexBar Pro and restoring purchases
 
-This section is prepared for CodexBar 2.0. Its current compiled family deadline
-is provisional until [release qualification](https://github.com/hemsoft-dev/codexbar-ios/issues/470)
-finalizes it. Check this page for the confirmed deadline when 2.0 ships.
+This section applies to CodexBar 2.0. The family installation deadline below is
+final.
 
 Open **Settings > CodexBar Pro > Restore Purchases** while using the Apple
 Account that made the purchase. Stay online while Apple checks your purchases.
