@@ -6,7 +6,7 @@ final class ProOriginalPurchaserPolicyTests: XCTestCase {
     private let cutover = ProOriginalPurchaserPolicy.cutover
 
     func testCompiledCutoverMatchesProvisionalReleaseDecision() throws {
-        let expected = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-11-06T00:00:00Z"))
+        let expected = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-11-01T00:00:00Z"))
         XCTAssertEqual(cutover, expected, "#470 must reverify both the compiled cutoff and its release regression")
     }
 

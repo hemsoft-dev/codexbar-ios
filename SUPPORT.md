@@ -75,9 +75,8 @@ GitHub issue.
 
 ## CodexBar Pro and restoring purchases
 
-This section is prepared for CodexBar 2.0. Its current compiled family deadline
-is provisional until [release qualification](https://github.com/hemsoft-dev/codexbar-ios/issues/470)
-finalizes it. Check this page for the confirmed deadline when 2.0 ships.
+This section applies to CodexBar 2.0. The family installation deadline below is
+final.
 
 Open **Settings > CodexBar Pro > Restore Purchases** while using the Apple
 Account that made the purchase. Stay online while Apple checks your purchases.
@@ -94,7 +93,7 @@ If access is missing, restore first, then contact support with your app version
 and a description of the problem. Never send passwords, tokens or full purchase identifiers.
 
 Family members of an original purchaser qualify when they install CodexBar
-before **November 5, 2026 at 7:00 PM EST**, which is **2026-11-06T00:00:00Z**. Family
+before **October 31, 2026 at 8:00 PM EDT**, which is **2026-11-01T00:00:00Z**. Family
 Sharing is off for the new Pro subscriptions and lifetime product. A family
 member who missed the cutoff can contact support. After reviewing the case,
 support can provide a one-time free

@@ -1,5 +1,10 @@
 # Build 6 release preparation
 
+> **Superseded October 22, 2026.** Franz kept build 5, which was submitted for
+> App Review with the `2026-11-01T00:00:00Z` cutoff. Build 6 was never uploaded.
+> See [APP-STORE.md](../APP-STORE.md#build-5-qualification-and-submission) and
+> [#515](https://github.com/hemsoft-dev/codexbar-ios/issues/515).
+
 Prepared October 21, 2026 EDT for the planned October 23 submission under
 [issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
 This records preparation, not submission or distribution. Franz approved the
@@ -11,7 +16,7 @@ still require his separate approval.
 The last live source is
 [`v1.4.0`, 54b2a48](https://github.com/hemsoft-dev/codexbar-ios/tree/v1.4.0).
 The candidate is version 2.0.0, build 6 in all fourteen project configurations.
-The [2.0 changelog](../CHANGELOG.md#200---unreleased) remains Unreleased
+The [2.0 changelog](../CHANGELOG.md#200---2026-10-22) remains Unreleased
 until the release date is established. October 23 records the planned submission
 target only. Update its heading and all inbound anchors together when that date
 is known. Published 1.x history is unchanged.
