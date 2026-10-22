@@ -1926,6 +1926,8 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOSTests;
+				// StoreKitTest imports a deprecated Apple SDK enum; Swift source diagnostics remain strict.
+				OTHER_SWIFT_FLAGS = "$(inherited) -Xcc -Wno-deprecated-declarations";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) CODEXBAR_PHONE_WATCH_TESTS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -1958,6 +1960,8 @@
 				);
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hemsoft.CodexBarIOSTests;
+				// StoreKitTest imports a deprecated Apple SDK enum; Swift source diagnostics remain strict.
+				OTHER_SWIFT_FLAGS = "$(inherited) -Xcc -Wno-deprecated-declarations";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) CODEXBAR_PHONE_WATCH_TESTS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
