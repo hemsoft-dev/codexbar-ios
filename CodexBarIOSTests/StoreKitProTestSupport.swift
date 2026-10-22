@@ -137,7 +137,13 @@ final class StoreKitProTestContext {
             if await !hasStoreKitTransactions() { return }
             try await Task.sleep(nanoseconds: 100_000_000)
         } while ProcessInfo.processInfo.systemUptime < deadline
-        throw StoreKitProTestFailure.assertion("StoreKit retained current, latest or unfinished transactions during \(phase).")
+        var retained: [String] = []
+        for await _ in StoreKit.Transaction.currentEntitlements { retained.append("current"); break }
+        for await _ in StoreKit.Transaction.unfinished { retained.append("unfinished"); break }
+        for product in ProProductID.allCases where await StoreKit.Transaction.latest(for: product.rawValue) != nil {
+            retained.append("latest:" + product.rawValue)
+        }
+        throw StoreKitProTestFailure.assertion("StoreKit retained transactions during \(phase): \(retained.joined(separator: ";")).")
     }
 
     private static func hasStoreKitTransactions() async -> Bool {
@@ -389,11 +395,16 @@ extension XCTestCase {
         }.sorted()
         let statuses = snapshot.subscriptions.map {
             "\($0.purchase.product.rawValue):state=\($0.state),verified=\($0.renewalVerified),renewing=\(String(describing: $0.willAutoRenew)),retry=\($0.isInBillingRetry)"
+                + ",transaction=\($0.purchase.transactionID),signed=\($0.signedAt),graceEnd=\(String(describing: $0.graceEndsAt))"
         }.sorted()
         var details = [
             "serviceReason": service.value.reason.rawValue,
             "serviceAccess": String(service.hasAccess),
             "serviceStatusAvailable": String(service.subscriptionStatusAvailable),
+            "serviceExpiresAt": String(describing: service.value.expiresAt),
+            "serviceClockAnchor": String(describing: service.value.clockAnchor),
+            "observedWallDate": String(describing: Date()),
+            "observedContinuousSeconds": String(ProcessInfo.processInfo.systemUptime),
             "sourceStatusAvailable": String(snapshot.subscriptionStatusAvailable),
             "sourceStatuses": statuses.joined(separator: ";"),
             "sessionStates": sessions.joined(separator: ";"),

@@ -31,6 +31,24 @@ public final class ProEntitlement: ObservableObject {
     private var transactionTask: Task<Void, Never>?
     private var statusTask: Task<Void, Never>?
     private var boundaryTask: Task<Void, Never>?
+    private var boundaryRefreshTask: Task<Void, Never>?
+    private var boundaryRefreshID: UUID?
+    private var boundaryRecheck: BoundaryRecheck?
+
+    private struct BoundaryRecheck {
+        let id = UUID()
+        let product: ProProductID
+        let environment: ProStoreEnvironment
+        let transactionID: UInt64
+        let expiresAt: Date
+        var attempts = 0
+        var nextAt: Date
+
+        func matches(_ status: ProSubscriptionEvidence, expiry: Date, environment: ProStoreEnvironment) -> Bool {
+            product == status.purchase.product && self.environment == environment
+                && transactionID == status.purchase.transactionID && expiresAt == expiry
+        }
+    }
     private var storefrontTask: Task<Void, Never>?
     private var catalogTask: Task<Void, Never>?
     private var catalogRequest = 0
@@ -49,6 +67,9 @@ public final class ProEntitlement: ObservableObject {
     private var appVerificationEnvironment: ProStoreEnvironment?
     #if DEBUG
     private var debugOverride: ProEntitlementValue?
+    // Synchronous native-test diagnostics on the existing receiver. No second
+    // StoreKit listener, wrapper stream, or additional task is created.
+    var debugSubscriptionObservation: (@MainActor (ProSubscriptionEvidence) -> Void)?
     #endif
 
     init(
@@ -78,6 +99,7 @@ public final class ProEntitlement: ObservableObject {
         transactionTask?.cancel()
         statusTask?.cancel()
         boundaryTask?.cancel()
+        boundaryRefreshTask?.cancel()
         storefrontTask?.cancel()
         catalogTask?.cancel()
     }
@@ -300,6 +322,9 @@ public final class ProEntitlement: ObservableObject {
 
     func receive(_ status: ProSubscriptionEvidence) async {
         guard !Task.isCancelled else { return }
+        #if DEBUG
+        debugSubscriptionObservation?(status)
+        #endif
         let includeInInventory = includesStatusObservation(status)
         refreshGeneration += 1
         let saved = publish(ProStoreSnapshot(
@@ -338,11 +363,14 @@ public final class ProEntitlement: ObservableObject {
         transactionTask?.cancel()
         statusTask?.cancel()
         boundaryTask?.cancel()
+        boundaryRefreshTask?.cancel()
         storefrontTask?.cancel()
         catalogTask?.cancel()
         transactionTask = nil
         statusTask = nil
         boundaryTask = nil
+        boundaryRefreshTask = nil
+        boundaryRefreshID = nil
         storefrontTask = nil
         catalogTask = nil
         catalogRequest += 1
@@ -351,7 +379,7 @@ public final class ProEntitlement: ObservableObject {
     }
 
     func stopAndWait() async {
-        let tasks = [transactionTask, statusTask, boundaryTask, storefrontTask, catalogTask].compactMap { $0 }
+        let tasks = [transactionTask, statusTask, boundaryTask, boundaryRefreshTask, storefrontTask, catalogTask].compactMap { $0 }
         stop()
         for task in tasks { await task.value }
     }
@@ -593,18 +621,73 @@ public final class ProEntitlement: ObservableObject {
         statuses[status.purchase.product] = current
     }
 
-    private func scheduleBoundary() {
-        boundaryTask?.cancel()
-        guard let instant = value.clockAnchor?.effectiveDate(at: clock(now())) else { return }
-        let boundary = [value.expiresAt, value.proAccessEndsAt].compactMap { $0 }.filter { $0 > instant }.min()
-        guard started, let boundary else { return }
-        let delay = boundary.timeIntervalSince(instant)
-        boundaryTask = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(delay)) } catch { return }
+    // StoreKit can briefly return the preceding verified status at its boundary.
+    // Preserve one budget and due date across duplicate status publications.
+    private func staleBoundaryRecheckDate(at instant: Date) -> Date? {
+        guard boundaryRefreshTask == nil, subscriptionStatusAvailable,
+              value.hasAccess(at: clock(now())), let product = value.subscriptionProduct,
+              let expiry = value.expiresAt, expiry <= instant,
+              let status = statuses[product], status.renewalVerified,
+              status.state == .subscribed || status.state == .grace,
+              currentStatusProducts?.contains(product) != false else { return nil }
+        if boundaryRecheck?.matches(status, expiry: expiry, environment: value.environment) != true {
+            boundaryRecheck = BoundaryRecheck(
+                product: product, environment: value.environment, transactionID: status.purchase.transactionID,
+                expiresAt: expiry, nextAt: instant.addingTimeInterval(1)
+            )
+        }
+        guard let recheck = boundaryRecheck, recheck.attempts < 3 else { return nil }
+        return recheck.nextAt
+    }
+
+    // Count only a fired recheck, never a canceled or rescheduled timer.
+    private func consumeBoundaryRecheck(_ identifier: UUID) {
+        guard var recheck = boundaryRecheck, recheck.id == identifier else { return }
+        recheck.attempts += 1
+        recheck.nextAt = (value.clockAnchor?.effectiveDate(at: clock(now())) ?? now())
+            .addingTimeInterval(pow(2, Double(recheck.attempts)))
+        boundaryRecheck = recheck
+    }
+
+    private func startBoundaryRefresh() {
+        guard started, boundaryRefreshTask == nil else { return }
+        let identifier = UUID()
+        boundaryRefreshID = identifier
+        boundaryRefreshTask = Task { [weak self] in
             guard let self else { return }
-            self.boundaryTask = nil
+            defer {
+                // A stopped operation must not clear a replacement after restart.
+                if self.boundaryRefreshID == identifier {
+                    self.boundaryRefreshTask = nil
+                    self.boundaryRefreshID = nil
+                    self.scheduleBoundary()
+                }
+            }
+            guard self.started, !Task.isCancelled else { return }
             self.reevaluateLocalAccess()
             await self.refresh()
+        }
+        scheduleBoundary()
+    }
+
+    private func scheduleBoundary() {
+        boundaryTask?.cancel()
+        boundaryTask = nil
+        #if DEBUG
+        guard debugOverride == nil else { return }
+        #endif
+        guard started, let instant = value.clockAnchor?.effectiveDate(at: clock(now())) else { return }
+        let future = [value.expiresAt, value.proAccessEndsAt].compactMap { $0 }.filter { $0 > instant }.min()
+        let recheck = staleBoundaryRecheckDate(at: instant)
+        guard let boundary = [future, recheck].compactMap({ $0 }).min() else { return }
+        let recheckID = recheck == boundary ? boundaryRecheck?.id : nil
+        let delay = max(0, boundary.timeIntervalSince(instant))
+        boundaryTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(delay)) } catch { return }
+            guard let self, !Task.isCancelled else { return }
+            self.boundaryTask = nil
+            if let recheckID { self.consumeBoundaryRecheck(recheckID) }
+            self.startBoundaryRefresh()
         }
     }
 
@@ -628,6 +711,8 @@ public final class ProEntitlement: ObservableObject {
         debugOverride = override
         value = override ?? cache.load() ?? .free
         boundaryTask?.cancel()
+        boundaryRefreshTask?.cancel()
+        scheduleBoundary()
     }
     #endif
 }
