@@ -123,6 +123,34 @@ final class ProEntitlementBoundaryTests: XCTestCase {
         withExtendedLifetime(observation) {}
     }
 
+    func testColdLaunchRechecksStaleSnapshotAfterCommittingStatusAvailability() async throws {
+        let source = TestProSource()
+        let cache = TestProCache()
+        let expiry = Date().addingTimeInterval(-1)
+        try cache.save(ProEntitlementValue(
+            reason: .monthly, expiresAt: expiry,
+            proAccessEndsAt: expiry.addingTimeInterval(ProEntitlementValue.offlineAllowance),
+            verifiedAt: expiry.addingTimeInterval(-3_600), clockAnchor: testProAnchor(expiry.addingTimeInterval(-3_600))
+        ))
+        source.next = boundarySnapshot(expiry: expiry)
+        source.beforeSnapshot = {
+            if source.calls.filter({ $0 == "snapshot" }).count > 1 {
+                source.next = self.boundarySnapshot(expiry: expiry, state: .expired)
+            }
+        }
+        let service = ProEntitlement(source: source, cache: cache, clock: testProClock)
+        await service.start()
+        XCTAssertTrue(service.subscriptionStatusAvailable)
+        let denied = expectation(description: "Cold launch rechecks a stale verified status without a status event")
+        let observation = service.accessChanges.filter { !$0.hasAccess && $0.isResolved }.prefix(1).sink { _ in denied.fulfill() }
+        await fulfillment(of: [denied], timeout: 3)
+        XCTAssertFalse(service.hasAccess)
+        XCTAssertGreaterThanOrEqual(source.calls.filter { $0 == "snapshot" }.count, 2)
+        await service.stopAndWait()
+        source.finishStreams()
+        withExtendedLifetime(observation) {}
+    }
+
     func testStopWaitsForTheAlreadyStartedBoundarySnapshot() async throws {
         let source = TestProSource()
         let expiry = Date().addingTimeInterval(0.25)

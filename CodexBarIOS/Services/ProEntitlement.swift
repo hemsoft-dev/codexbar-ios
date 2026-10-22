@@ -186,6 +186,9 @@ public final class ProEntitlement: ObservableObject {
                 }.map(\.purchase.product))
             }
             isResolved = true
+            // publish schedules before the committed snapshot's availability and
+            // product set are known. Reconsider a past expiry with that metadata.
+            scheduleBoundary()
             return saved ? snapshot : nil
         }
         return nil
