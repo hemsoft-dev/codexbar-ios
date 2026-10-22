@@ -1,5 +1,10 @@
 # Build 6 release preparation
 
+> **Superseded October 22, 2026.** Franz kept build 5, which was submitted for
+> App Review with the `2026-11-01T00:00:00Z` cutoff. Build 6 was never uploaded.
+> See [APP-STORE.md](../APP-STORE.md#build-5-qualification-and-submission) and
+> [#515](https://github.com/hemsoft-dev/codexbar-ios/issues/515).
+
 Prepared October 21, 2026 EDT for the planned October 23 submission under
 [issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
 This records preparation, not submission or distribution. Franz approved the

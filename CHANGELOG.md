@@ -4,10 +4,53 @@ Notable changes to CodexBar are documented here. Entries describe shipped app
 behavior; development-only changes are listed separately when they affect
 building, testing, or releasing the app.
 
+## 2.0.1 - Unreleased
+
+### Developer Experience
+
+- Record the App Review submission of 2.0.0 build 5 and keep the shipped
+  October 31, 8 PM EDT family installation deadline in source, tests, support
+  and store copy. ([#515](https://github.com/hemsoft-dev/codexbar-ios/issues/515))
+
+- Compare history performance with an explicit, verified scheduling class for
+  both Release binaries and deterministic hashing. Record CPU time alongside elapsed
+  time, and retain the original failure when diagnostics cannot be saved. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+
+- Keep rendered accessibility tests from leaving menu animations attached to discarded test windows. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+
+- Keep strict local unit-test builds working with Apple’s StoreKitTest SDK while retaining warnings as errors for repository source. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+
+- Stop accelerated test renewals before clearing owned StoreKit transactions,
+  complete later cleanup after individual failures, and preserve the original
+  failure and billing-retry readbacks.
+  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+
+- Require a bounded quiet-host admission before the fixed Release history
+  comparison, preserving every timing sample and existing budget.
+  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+
+- Add local synthetic purchase fixtures for Apple-local Pro states, store identity
+  isolation, receipt replay, offline boundaries and the Settings lifetime switch.
+  Shared-commerce experiments remain excluded from product promises.
+  ([#477](https://github.com/hemsoft-dev/codexbar-ios/issues/477))
+
+- Add an isolated, provisional Mac qualification app with synthetic browser
+  authorization, per-account secure storage, sandbox checks, native StoreKit
+  purchase/refund tests on Xcode 26.6, and local replacement/rollback rehearsal.
+  Unattended fixture authorization now expires and enables retry; cancellation
+  checks preserve existing fixture accounts. Browser launch failures enable
+  immediate retry. Canceled or replaced connections cannot reopen the browser
+  or cancel a newer attempt while waiting for listener readiness. Lock-only
+  runner regressions work without a qualified Xcode installation.
+  Full three-phase native tests serialize across worktrees;
+  local atomic replacement and rollback check both versions and signatures.
+  Store distribution and purchase portability remain unqualified.
+  ([#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476))
+
 ## 2.0.0 - Unreleased
 
-App Store submission and distribution remain pending
-in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
+Build 5 was submitted for App Review on October 22, 2026. Distribution remains
+pending in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Added
 
@@ -71,9 +114,6 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   ([#420](https://github.com/HemSoft/codexbar-ios/issues/420))
 
 ### Changed
-
-- Extend the provisional family installation deadline to November 5, 2026 at
-  7 PM EST for the October 23 planned submission. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Clarify which features come with the free plan and CodexBar Pro, how to
   restore purchases, and how original purchasers and their family members keep
@@ -157,32 +197,6 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   ([#421](https://github.com/hemsoft-dev/codexbar-ios/issues/421))
 
 ### Developer Experience
-
-- Compare history performance with an explicit, verified scheduling class for
-  both Release binaries and deterministic hashing. Record CPU time alongside elapsed
-  time, and retain the original failure when diagnostics cannot be saved. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
-
-- Keep rendered accessibility tests from leaving menu animations attached to discarded test windows. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
-
-- Keep strict local unit-test builds working with Apple’s StoreKitTest SDK while retaining warnings as errors for repository source. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
-
-- Stop accelerated test renewals before clearing owned StoreKit transactions,
-  complete later cleanup after individual failures, and preserve the original
-  failure and billing-retry readbacks.
-  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
-
-- Require a bounded quiet-host admission before the fixed Release history
-  comparison, preserving every timing sample and existing budget.
-  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
-
-- Add local synthetic purchase fixtures for Apple-local Pro states, store identity
-  isolation, receipt replay, offline boundaries and the Settings lifetime switch.
-  Shared-commerce experiments remain excluded from product promises.
-  ([#477](https://github.com/hemsoft-dev/codexbar-ios/issues/477))
-
-- Prepare replacement build 6 and reconcile build 5's local qualification and
-  unsubmitted App Store draft. Submission and launch need Franz's approval.
-  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Give widget views explicit initializers for the pinned Swift compiler while
   keeping their environment-driven appearance state private. Keep plan fixtures
@@ -275,19 +289,6 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
   preserves current-head review, addressed-thread resolution, and required CI
   and human approvals without waiting for optional review products.
   ([#405](https://github.com/HemSoft/codexbar-ios/issues/405))
-
-- Add an isolated, provisional Mac qualification app with synthetic browser
-  authorization, per-account secure storage, sandbox checks, native StoreKit
-  purchase/refund tests on Xcode 26.6, and local replacement/rollback rehearsal.
-  Unattended fixture authorization now expires and enables retry; cancellation
-  checks preserve existing fixture accounts. Browser launch failures enable
-  immediate retry. Canceled or replaced connections cannot reopen the browser
-  or cancel a newer attempt while waiting for listener readiness. Lock-only
-  runner regressions work without a qualified Xcode installation.
-  Full three-phase native tests serialize across worktrees;
-  local atomic replacement and rollback check both versions and signatures.
-  Store distribution and purchase portability remain unqualified.
-  ([#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476))
 
 ## 1.4.0 - 2026-10-07
 

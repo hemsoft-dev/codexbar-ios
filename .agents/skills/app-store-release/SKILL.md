@@ -1,6 +1,6 @@
 ---
 name: app-store-release
-description: "V1.2 - Commands: Prepare, Upload, Submit, Resume. Prepare, validate, upload, and submit CodexBar production releases through App Store review."
+description: "V1.3 - Commands: Prepare, Upload, Submit, Resume. Prepare, validate, upload, and submit CodexBar production releases through App Store review."
 disable-model-invocation: true
 compatibility: Requires macOS, Xcode, PowerShell 7, git, GitHub and App Store Connect access, CodexBar signing authority for upload stages, plus the perfection, issue-to-pr, process-pr, playwright-cli, and unslop skills.
 hooks:
@@ -255,18 +255,25 @@ materially from the ledger.
 
 ### 7. Submit and record the outcome
 
-For these first CodexBar Pro products, submit the app, subscriptions and lifetime
-purchase through the App Store Connect website. Apple's
-[first in-app purchase submission rule](https://developer.apple.com/documentation/appstoreconnectapi/managing-in-app-purchases)
-and [first subscription submission rule](https://developer.apple.com/documentation/appstoreconnectapi/submitting-subscriptions-and-subscription-groups-for-app-review)
-require the website with an app version; review-submission API operations do not
-apply. API checks and eligible build selection may prepare the version, but do
-not add or submit these first product items through the API. Use website **Add
-for Review** and select the existing draft. Verify that the app version,
-subscription group and all three products appear in that same draft; add the
-group only if absent. Follow Apple's [website submission instructions](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-in-app-purchase/)
-and verify actual group membership before submitting. Re-read the website
-submission result and record all app/group/product relationships in the ledger.
+Submit the app version and every first-time Pro product in one review
+submission. Start with the website: **Add for Review** on the version page, then
+check that the draft holds the app version, the subscription group and all
+three products. Apple's [first subscription submission rule](https://developer.apple.com/documentation/appstoreconnectapi/submitting-subscriptions-and-subscription-groups-for-app-review)
+and [website instructions](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-in-app-purchase/)
+describe the intended flow.
+
+On October 22, 2026, the version page picker listed only the lifetime purchase
+and the website submit failed for the auto-renewable subscriptions, although
+every product was `READY_TO_SUBMIT`. Fall back to the API review-submission
+items when this happens. Add one `reviewSubmissionItems` record per object to
+the existing draft: `appStoreVersion`, the group's `subscriptionGroupVersion`,
+each `subscriptionVersion`, and each `inAppPurchaseVersion` last. A first-time
+group rejects its subscriptions without the group version
+(`STATE_ERROR.SUBSCRIPTION_SUBMISSION_REQUIRES_GROUP_VERSION`). Never delete
+items from a draft with first-time products; removed products can stay locked.
+Submit by setting `submitted` on the review submission only with exact
+current-task Submit authority. Read back the submission, version and every
+product state, and record all relationships in the ledger.
 
 1. Confirm `submission-ready`, exact version/build, unchanged candidate SHA,
    and exact current-task authority for **Submit for Review**. Otherwise stop

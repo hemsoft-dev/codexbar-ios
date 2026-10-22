@@ -100,42 +100,33 @@ The [description](fastlane/metadata/en-US/description.txt),
 [promotional text](fastlane/metadata/en-US/promotional_text.txt),
 [release notes](fastlane/metadata/en-US/release_notes.txt) and
 [review notes](fastlane/metadata/review_information/notes.txt) are prepared for
-2.0. Local release copy includes the widget-readability fix and the replacement
-cutoff in the 2,107-character What's New text. The draft retains build 5 copy;
-saving and rereading replacement metadata remains pending approval. Other
-metadata values are unchanged. Do not copy the
+2.0. They match the copy submitted with build 5 in App Store Connect,
+including the 1,845-character What's New text, as read back on October 22.
+Do not copy the
 2.0 metadata onto the live 1.4.0 listing. The description includes Apple's
 [standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/)
 and the public [privacy policy](https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md).
 The existing GitHub privacy and support URLs remain the release destinations.
 
 The [build 6 preparation record](docs/2026-10-23-build6-release-preparation.md)
-maps the final local copy to the 2.0 changelog and records the immutable-candidate
-handoff. Qualification, archive/export and final approval are still pending.
+is superseded: Franz kept build 5 and build 6 was never uploaded
+([#515](https://github.com/hemsoft-dev/codexbar-ios/issues/515)).
 
 ### Cutover and original-purchaser rules
 
-The replacement release is `2.0.0 (6)`; all 14 project configurations use
-that version and build. Qualification of this replacement immutable candidate is pending.
-The preparation targets October 23, 2026 submission as approved by Franz on October 21; he must
-approve submission separately. If that date moves, recompute the cutoff before
-qualifying another candidate.
+The submitted release is `2.0.0 (5)`, built from
+`62f6d8e392360b91cb704c2503e9796f8ddc285c`. The project now carries build
+number 6 so that any later upload is numbered above build 5.
 The [2.0 changelog](CHANGELOG.md#200---unreleased) remains Unreleased until
-the release date is established. October 23 is the planned submission date,
-not an observed release date. Update the heading and all inbound anchors
-together when the release date is known. The [privacy policy](PRIVACY.md) is effective
+the manual release date is observed. The [privacy policy](PRIVACY.md) is effective
 October 18; that date does not record App Store submission or distribution.
-The compiled cutoff `T` remains **PROVISIONAL: November 5, 2026 at 7:00 PM EST**,
-which is `2026-11-06T00:00:00Z`. It is fourteen calendar days after the planned
-submission date `2026-10-23 UTC`, not evidence of a completed submission.
+The cutoff `T` compiled into build 5 is **final: October 31, 2026 at 8:00 PM
+EDT**, which is `2026-11-01T00:00:00Z`. It cannot change without a new binary.
 The value in
-[ProOriginalPurchaserPolicy](CodexBarIOS/Services/ProOriginalPurchaserPolicy.swift)
-is updated by this preparation. Before submission,
-[issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) must
-recompute and finalize `T` from the actual planned submission date, then verify
-that the compiled value, original-purchaser notice, support page, promotional
-text, release notes and review notes name the same instant. A later deadline
-requires updated copy and a newly qualified candidate.
+[ProOriginalPurchaserPolicy](CodexBarIOS/Services/ProOriginalPurchaserPolicy.swift),
+the original-purchaser notice, the support page, the promotional text, the
+release notes and the review notes all name this instant. Do not move `T` in a
+later 2.0.x update; that would change who qualifies after 2.0 is distributed.
 
 Original-purchaser access requires verified, non-revoked production
 `AppTransaction` evidence. The evaluator accepts a finite original purchase
@@ -148,8 +139,8 @@ Sandbox, TestFlight and Xcode AppTransactions never qualify as original
 purchases. Fresh verified evidence must also pass the resolver's saved
 revocation ordering; stale evidence cannot undo a recorded revocation.
 
-Family members of original purchasers must install before November 5, 2026 at
-7:00 PM EST, `2026-11-06T00:00:00Z`, under the current provisional candidate.
+Family members of original purchasers must install before October 31, 2026 at
+8:00 PM EDT, `2026-11-01T00:00:00Z`.
 The [support page](SUPPORT.md#codexbar-pro-and-restoring-purchases) explains the
 one-time free lifetime offer-code route for missed cases. No codes are created
 or distributed by this disclosure work. Franz's original-purchase and family
@@ -168,7 +159,8 @@ agent-owned implementation or automated delivery.
 2. Submit 2.0 and all first Pro products together through the
    [App Store Connect website](https://appstoreconnect.apple.com).
    Verify the subscription group and all three products are in the same draft
-   as the app version before submitting.
+   as the app version before submitting. If the website hides ready products,
+   use the API fallback in the [release skill](.agents/skills/app-store-release/SKILL.md).
    Use manual release with phased release off. Keep the existing US$3.99 app
    price and sale territories.
    Require the exact candidate's five quality jobs and complete iPhone/iPad
@@ -200,10 +192,10 @@ sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.
 
 | Checkpoint | Requested action and time | Actual App Store Connect time | Storefront observations | Source SHA / build / T | Pending Franz checks |
 | --- | --- | --- | --- | --- | --- |
-| Final candidate and cutoff | Recheck actual submission date against planned October 23 UTC | Not submitted by this preparation | Not applicable | Candidate SHA pending; planned 2.0.0 build 6; provisional T above | None for repository preparation |
-| Exact-candidate qualification | Before upload/release | Pending #470 | Not applicable | Record qualified SHA and built versions | Live provider comparisons remain separate |
-| Manual submission | Website submission of app 2.0 plus all first products; paid price; no phased release | Pending #470 | Existing price retained until launch sequence | Record selected build and finalized T | Small Business enrollment before shipping |
-| Manual release | At least six days before T | Pending approval and #470 | Record release visibility | Same qualified candidate | None for draft setup |
+| Final candidate and cutoff | Freeze build 5 | Uploaded October 19, 7:12 PM EDT; `VALID` | Not applicable | `62f6d8e` / 2.0.0 (5) / `2026-11-01T00:00:00Z` | None |
+| Exact-candidate qualification | Before upload | Local gates passed October 19; hosted UI gate not green (see below) | Not applicable | `62f6d8e` / 2.0.0 (5) | Live provider comparisons remain separate |
+| Manual submission | App 2.0 plus all first products; paid price; no phased release | Submitted October 22, 2026 at 8:20 AM EDT (`2026-10-22T12:20:11Z`); review submission `af75f0db`, Waiting for Review | US$3.99 retained | `62f6d8e` / 2.0.0 (5) / `2026-11-01T00:00:00Z` | Small Business enrollment (optional) |
+| Manual release | No later than `2026-10-26T00:00:00Z` (October 25, 8:00 PM EDT), six full days before T | Pending approval | Record release visibility | Same build | None |
 | Propagation | Wait full 48 hours after release | Pending release | Record checked storefronts and observed 2.0 versions | Record source/build/T | None |
 | Free schedule | About 72 hours before T; include latest region start | Pending #470 | Verify every storefront Free before T | Record source/build/T and schedule | None |
 | Post-cutoff | After T | Pending launch | Production download, Pro, trial and Restore | Record source/build/T | Original 1.x purchase and family device |
@@ -211,21 +203,22 @@ sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.
 The release ledger stays open through the price transition and post-cutoff
 checks. The following release actions have not been completed:
 
-- [ ] Freeze the merged candidate SHA and recheck the submission date, cutoff,
-  finalized release copy and built `2.0.0 (6)` versions.
-- [ ] Pass the exact candidate's complete manual release gate on Xcode
-  26.6 / 17F113, including native commerce, both UI families and function risk.
-- [ ] Archive, export, upload and verify processing, then select that exact build.
-- [ ] Associate all first Pro products with app version 2.0 and submit once
-  through the [App Store Connect website](https://appstoreconnect.apple.com).
-- [ ] Record approval and manually release with at least six full days before T.
+- [x] Freeze build 5 at `62f6d8e` and verify the cutoff, release copy and built
+  `2.0.0 (5)` versions.
+- [x] Pass the local release gates on Xcode 26.6 / 17F113 with iOS 26.2,
+  including native commerce, both UI families and function risk. The hosted
+  UI gate did not pass; see below.
+- [x] Archive, export, upload and verify processing, then select that exact build.
+- [x] Submit app version 2.0, the CodexBar Pro subscription group and all three
+  products once (review submission `af75f0db`, October 22).
+- [ ] Record approval and manually release no later than `2026-10-26T00:00:00Z`.
 - [ ] Wait 48 hours and record storefront observations serving 2.0.
 - [ ] Schedule Free, record requested and actual regional times, and verify
   every storefront is Free before T.
 - [ ] Record post-cutoff production checks and Franz's original-purchase and
   Family Sharing results without treating pending checks as passes.
 
-### Build 5 qualification and replacement boundary
+### Build 5 qualification and submission
 
 Build 5 was qualified on air at source
 `62f6d8e392360b91cb704c2503e9796f8ddc285c` on October 19. The local native
@@ -243,24 +236,27 @@ hosted UI gate failed without running its journeys. The local exact-source
 native/UI passes are recorded separately; the hosted gate is not green.
 [Hosted security](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39315802645)
 passed. Hosted performance was inconclusive; the local paired experiment passed.
-None of these receipts qualifies changed source or replacement build 6.
+Franz accepted the local exact-source passes for build 5.
 
 The build 5 archive and export passed signature, provisioning, bundle-version,
 privacy-manifest and export-compliance verification. The IPA SHA-256 is
 `819b38cc6bb45f1ea6bd90bc1f34af3a70b39eedb4fe3cd248692f69ea0293ec`.
 It was uploaded October 19 at 7:12 PM EDT, processed as `VALID`, and selected
-on the draft. The read-only October 21 check confirms the app remains
-`PREPARE_FOR_SUBMISSION`, manual release, phased release absent, and the review
-submission has no submitted date. Upload and TestFlight availability are not
-App Review submission or customer release.
+on the draft. TestFlight serves build 5 to the internal group. Build 5 was
+also submitted for TestFlight beta review on October 22 at 12:09 UTC so an
+external Family group can test it; that review is separate from App Review.
 
-The original October 18 planned submission date has passed. Build 6 moves the
-provisional cutoff to November 5 at 7 PM EST, November 6 at midnight UTC,
-for a planned October 23 submission. All replacement qualification, archive,
-upload and selection remain pending. Current task authority is **Prepare**:
-Franz must approve App Store submission, release, pricing, availability,
-customer publication or spending at the final concrete step. Do not inherit
-submission authority from the earlier mission ledger.
+Franz directed submission of build 5 on October 22, 2026. The App Store
+Connect version page omitted the first auto-renewable subscriptions, and its
+submit action failed. The API submission succeeded after the review submission
+held five items: app version 2.0, the CodexBar Pro `subscriptionGroupVersion`,
+Monthly, Yearly and Lifetime. A first-time group rejects its subscriptions
+without the group version
+(`STATE_ERROR.SUBSCRIPTION_SUBMISSION_REQUIRES_GROUP_VERSION`). Never remove
+items from a first-product draft; removed products can stay locked.
+Build 6 preparation, including a November 6 cutoff, was dropped and never
+uploaded. Release, pricing, availability and spending still require Franz's
+approval at the concrete step.
 
 ### Native marketing and review assets
 

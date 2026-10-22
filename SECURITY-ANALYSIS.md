@@ -615,3 +615,15 @@ synthetic credentials. The cutoff does not change these storage or authenticatio
 boundaries. The four exact diagnostic identities and rationales remain intact.
 This renewal is a source review, not a new successful security analysis; full
 manual analysis of the final replacement candidate remains pending.
+
+## October 22 return to the submitted build 5 source
+
+Build 6 was dropped and build 5 was submitted for App Review. The
+original-purchaser cutoff constant and its comments are restored byte-for-byte
+to `62f6d8e392360b91cb704c2503e9796f8ddc285c`, the build 5 source. The reviewed
+baseline returns to the build 5 binding: reviewed commit
+`ffa05c0b901970dc261463f1a44e798cb9b3f1ae` and source snapshot
+`b26f29f5189641a72e179f39fc48ca2aac32283bba5c283e49992fd7bfb25398`. The same 157
+production files and four accepted diagnostics apply. The October 21 replacement
+review above no longer describes `main`.
+([#515](https://github.com/hemsoft-dev/codexbar-ios/issues/515))

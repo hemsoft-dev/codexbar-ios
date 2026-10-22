@@ -8,7 +8,7 @@ Franz recorded these decisions in the current merge-mission conversation for
 | --- | --- | --- |
 | Purchase scope | Keep Apple-local Pro | Preserve the existing account-free iOS/watchOS contract. No shared billing account or cross-merchant entitlement service is approved. |
 | Desktop | Qualify native Mac provisionally | Local sandboxed prototype and test purchases may proceed. A paid desktop launch, platform addition to the production app record and original-buyer portability are not approved. |
-| iOS submission target | October 23, 2026 | Prepare build 6 with cutoff November 5 at 7 PM EST (November 6 at midnight UTC). Submission requires a separate final approval. |
+| iOS submission target | October 23, 2026 (superseded) | Superseded October 22: Franz kept build 5, submitted October 22 with cutoff October 31 at 8 PM EDT (November 1 at midnight UTC). Build 6 was never uploaded ([#515](https://github.com/hemsoft-dev/codexbar-ios/issues/515)). |
 | External actions | Ask Franz before final action | App Store submission/release, pricing/availability changes, customer publication and spending remain approval-gated. |
 
 These directions narrow the [synthetic prototype](https://github.com/hemsoft-dev/codexbar-ios/issues/477)
