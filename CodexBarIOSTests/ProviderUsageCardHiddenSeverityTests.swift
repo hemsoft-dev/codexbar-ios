@@ -470,6 +470,36 @@ final class ProviderUsageCardHiddenSeverityTests: XCTestCase {
         XCTAssertEqual(probe.elements(identifier: "claude-use-reset").map(\.accessibilityLabel), ["Use one reset"])
     }
 
+    @MainActor
+    func testProbeRestoresAnimationsOnlyAfterEveryOverlappingWindowCloses() throws {
+        let original = UIView.areAnimationsEnabled
+        defer { UIView.setAnimationsEnabled(original) }
+        UIView.setAnimationsEnabled(true)
+        let first = try HostedViewProbe(Text("First probe"))
+        defer { first.close() }
+        let second = try HostedViewProbe(Text("Second probe"))
+        defer { second.close() }
+
+        XCTAssertFalse(UIView.areAnimationsEnabled)
+        first.close()
+        XCTAssertFalse(UIView.areAnimationsEnabled, "A remaining probe still owns a live window.")
+        first.close()
+        XCTAssertFalse(UIView.areAnimationsEnabled, "Repeated close must not release another window's lease.")
+        second.close()
+        XCTAssertTrue(UIView.areAnimationsEnabled)
+    }
+
+    @MainActor
+    func testProbePreservesPreviouslyDisabledAnimations() throws {
+        let original = UIView.areAnimationsEnabled
+        defer { UIView.setAnimationsEnabled(original) }
+        UIView.setAnimationsEnabled(false)
+        let probe = try HostedViewProbe(Text("Existing animation policy"))
+        defer { probe.close() }
+        probe.close()
+        XCTAssertFalse(UIView.areAnimationsEnabled)
+    }
+
     private static func cursorResultWithFullOtherModels() -> ProviderUsageResult {
         ProviderUsageResult(
             accountID: "cursor.personal",
@@ -536,7 +566,10 @@ final class HostedViewProbe {
 
     private let window: UIWindow
     private let setAutomation: AutomationSetter
-    private let restoresAutomation: Bool
+    private static var activeWindows = 0
+    private static var originalAutomationEnabled = false
+    private static var originalAnimationsEnabled = true
+    private var isClosed = false
 
     init<Content: View>(_ content: Content, size: CGSize = CGSize(width: 390, height: 2_000), settles: Bool = true) throws {
         guard let library = dlopen("/usr/lib/libAccessibility.dylib", RTLD_NOW),
@@ -545,12 +578,17 @@ final class HostedViewProbe {
             throw ProbeError.accessibilityAutomationUnavailable
         }
         setAutomation = unsafeBitCast(setter, to: AutomationSetter.self)
-        restoresAutomation = !unsafeBitCast(getter, to: AutomationGetter.self)()
-        setAutomation(true)
+        Self.acquireWindowPolicy(
+            automationEnabled: unsafeBitCast(getter, to: AutomationGetter.self)(),
+            setter: unsafeBitCast(setter, to: AutomationSetter.self)
+        )
         let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
         window = scene.map { UIWindow(windowScene: $0) } ?? UIWindow()
         window.frame = CGRect(origin: .zero, size: size)
-        window.rootViewController = UIHostingController(rootView: content)
+        window.rootViewController = UIHostingController(rootView: content.transaction {
+            $0.animation = nil
+            $0.disablesAnimations = true
+        })
         window.makeKeyAndVisible()
         window.layoutIfNeeded()
         if settles { settle() }
@@ -625,10 +663,28 @@ final class HostedViewProbe {
     }
 
     func close() {
+        guard !isClosed else { return }
+        isClosed = true
         window.rootViewController?.presentedViewController?.dismiss(animated: false)
         window.isHidden = true
         window.rootViewController = nil
-        if restoresAutomation { setAutomation(false) }
+        Self.activeWindows -= 1
+        if Self.activeWindows == 0 {
+            setAutomation(Self.originalAutomationEnabled)
+            UIView.setAnimationsEnabled(Self.originalAnimationsEnabled)
+        }
+    }
+
+    /// These probes assert rendered accessibility and actions, not animation timing.
+    /// UIKit menu morphs must finish synchronously before their temporary window disappears.
+    private static func acquireWindowPolicy(automationEnabled: Bool, setter: AutomationSetter) {
+        if activeWindows == 0 {
+            originalAutomationEnabled = automationEnabled
+            originalAnimationsEnabled = UIView.areAnimationsEnabled
+            setter(true)
+            UIView.setAnimationsEnabled(false)
+        }
+        activeWindows += 1
     }
 
     /// UIKit can publish a label on both a control and its text; the first element that accepts activation wins.
