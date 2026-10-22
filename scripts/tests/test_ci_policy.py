@@ -58,7 +58,9 @@ class CITriggerPolicyTests(unittest.TestCase):
 
     def test_native_jobs_are_dispatch_only_and_keep_their_workloads(self) -> None:
         for job_id in ("strict-concurrency", "ios-tests", "watch-tests", "smoke-tests"):
-            self.assertIn("    if: ${{ github.event_name == 'workflow_dispatch' }}\n", job_block(self.workflow, job_id))
+            # Gate-only branch (#517): quality jobs are skipped in the ui-only manual mode.
+            self.assertIn("    if: ${{ github.event_name == 'workflow_dispatch' && "
+                          "inputs.ui_validation_mode != 'ui-only' }}\n", job_block(self.workflow, job_id))
         lint_job = job_block(self.workflow, "swiftlint")
         smoke_job = job_block(self.workflow, "smoke-tests")
         self.assertIn("swiftlint lint", lint_job)
@@ -80,7 +82,8 @@ class CITriggerPolicyTests(unittest.TestCase):
         ui_job = job_block(self.workflow, "ios-ui-families")
         self.assertIn(
             "    if: ${{ github.event_name == 'workflow_dispatch' && "
-            "inputs.ui_validation_mode != 'account-menu-comparison' && success() }}\n",
+            "inputs.ui_validation_mode != 'account-menu-comparison' && !cancelled() && "
+            "!contains(needs.*.result, 'failure') }}\n",
             ui_job,
         )
         for required_job in (
