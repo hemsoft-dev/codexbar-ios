@@ -25,6 +25,7 @@ scheduling evidence. The `pthread_set_qos_class_self_np` call changes a running
 thread; setting `Thread.qualityOfService` after startup does not. This follows
 Apple's [task and thread QoS guidance](https://developer.apple.com/library/archive/documentation/Performance/Conceptual/power_efficiency_guidelines_osx/PrioritizeWorkAtTheTaskLevel.html).
 QoS does not guarantee a particular physical core or waive the variance ceiling.
+Each operation also records main-thread CPU milliseconds from the kernel thread CPU clock, alongside its original wall time. These observations diagnose scheduling loss versus variability in executed work. They never replace wall-clock latency or its variance gate. Live measurements require all seven finite positive CPU observations per operation; historical replay keeps its original contract.
 Historical fixture replays remain historical and do not prove this live scheduling
 contract.
 

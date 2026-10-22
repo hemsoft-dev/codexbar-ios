@@ -26,6 +26,7 @@ def report():
                 measuredBatches=5, seriesIterationsPerBatch=5,
                 scenarios=[dict(accounts=accounts, recordMilliseconds=[100, 100, 10, 10, 10, 10, 10],
                                 seriesMilliseconds=[100, 100, 2, 2, 2, 2, 2], seriesPointCount=accounts * 329 * 35,
+                                recordThreadCPUMilliseconds=[1] * 7, seriesThreadCPUMilliseconds=[1] * 7,
                                 retainedStates=[dict(snapshots=accounts * 240, dailySnapshots=accounts * 180,
                                                      serializedBytes=accounts * 220000) for _ in range(47)])
                            for accounts in (1, 10, 25)])
@@ -76,6 +77,23 @@ class BenchmarkSchedulingTests(unittest.TestCase):
                     GATE.measure(Path("unused-binary"), output, "legacy")
             self.assertEqual(json.loads((output / "legacy.json").read_text()), value)
             self.assertTrue((output / "legacy.stderr.log").exists())
+
+
+class BenchmarkCPUDiagnosticTests(unittest.TestCase):
+    def test_accepts_real_shape_without_changing_wall_clock_verdict(self):
+        GATE.validate_cpu_diagnostics(report())
+        pairs = [{"reference": report(), "candidate": report()} for _ in range(3)]
+        before = GATE.evaluate(pairs, POLICY)
+        for pair in pairs:
+            pair["candidate"]["scenarios"][0]["recordThreadCPUMilliseconds"] = [999] * 7
+        self.assertEqual(GATE.evaluate(pairs, POLICY), before)
+
+    def test_rejects_missing_or_malformed_cpu_observations(self):
+        for value in (None, [], [1] * 6, [1] * 8, [0] * 7, [-1] * 7, [True] * 7, [float("nan")] * 7):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                sample = report()
+                sample["scenarios"][0]["recordThreadCPUMilliseconds"] = value
+                GATE.validate_cpu_diagnostics(sample)
 
 
 class HostAdmissionTests(unittest.TestCase):

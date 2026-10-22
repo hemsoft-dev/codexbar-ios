@@ -12,6 +12,8 @@ private struct Scenario: Encodable {
     let accounts: Int
     let recordMilliseconds: [Double]
     let seriesMilliseconds: [Double]
+    let recordThreadCPUMilliseconds: [Double]
+    let seriesThreadCPUMilliseconds: [Double]
     let seriesPointCount: Int
     let retainedStates: [RetainedState]
 }
@@ -125,14 +127,18 @@ private struct UsageHistoryBenchmark {
         var retained = [try state(store: store, defaults: defaults, accounts: accounts)]
         var recordSamples: [Double] = []
         var seriesSamples: [Double] = []
+        var recordCPUSamples: [Double] = []
+        var seriesCPUSamples: [Double] = []
         var pointCount = 0
         for batch in 0..<7 {
             try requireBenchmarkQoS()
             let date = anchor.addingTimeInterval(Double(batch) * 600)
             let results = (0..<accounts).map { result(account: $0, at: date) }
-            recordSamples.append(milliseconds {
+            let recordTiming = measurements {
                 store.record(results: results, now: date)
-            })
+            }
+            recordSamples.append(recordTiming.wall)
+            recordCPUSamples.append(recordTiming.cpu)
             try requireBenchmarkQoS()
             for result in results {
                 let options = store.historySeriesOptions(for: result)
@@ -141,7 +147,7 @@ private struct UsageHistoryBenchmark {
                     throw BenchmarkError.invalidFixture("Expected 329 merged timestamps in the two-metric usage series")
                 }
             }
-            seriesSamples.append(milliseconds {
+            let seriesTiming = measurements {
                 for _ in 0..<5 {
                     for result in results {
                         let options = store.historySeriesOptions(
@@ -151,7 +157,9 @@ private struct UsageHistoryBenchmark {
                         pointCount += options.reduce(0) { $0 + $1.series.points.count }
                     }
                 }
-            } / 5)
+            }
+            seriesSamples.append(seriesTiming.wall / 5)
+            seriesCPUSamples.append(seriesTiming.cpu / 5)
             try requireBenchmarkQoS()
             retained.append(try state(store: store, defaults: defaults, accounts: accounts))
         }
@@ -174,6 +182,8 @@ private struct UsageHistoryBenchmark {
             accounts: accounts,
             recordMilliseconds: recordSamples,
             seriesMilliseconds: seriesSamples,
+            recordThreadCPUMilliseconds: recordCPUSamples,
+            seriesThreadCPUMilliseconds: seriesCPUSamples,
             seriesPointCount: pointCount,
             retainedStates: retained
         )
@@ -233,8 +243,11 @@ private struct UsageHistoryBenchmark {
     }
 
     @MainActor
-    static func milliseconds(_ operation: () -> Void) -> Double {
+    static func measurements(_ operation: () -> Void) -> (wall: Double, cpu: Double) {
+        let cpuStart = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
         let duration = ContinuousClock().measure(operation)
-        return Double(duration.components.seconds) * 1_000 + Double(duration.components.attoseconds) / 1e15
+        let cpuEnd = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
+        let wall = Double(duration.components.seconds) * 1_000 + Double(duration.components.attoseconds) / 1e15
+        return (wall, Double(cpuEnd - cpuStart) / 1e6)
     }
 }

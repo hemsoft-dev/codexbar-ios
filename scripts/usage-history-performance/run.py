@@ -177,6 +177,7 @@ def measure(binary, output, name):
     report = json.loads((output / f"{name}.json").read_text())
     validate(report)
     validate_scheduling(report)
+    validate_cpu_diagnostics(report)
     return report
 
 
@@ -184,6 +185,17 @@ def validate_scheduling(report):
     # Darwin QOS_CLASS_USER_INITIATED; a live run must observe the requested class.
     if type(report.get("qosClass")) is not int or report["qosClass"] != 25:
         raise ValueError("live benchmark requires observed user-initiated QoS class 25")
+
+
+
+def validate_cpu_diagnostics(report):
+    # Diagnostics only. Wall-clock latency and variance remain the release gate.
+    for scenario in report["scenarios"]:
+        for key in ("recordThreadCPUMilliseconds", "seriesThreadCPUMilliseconds"):
+            values = scenario.get(key)
+            if (not isinstance(values, list) or len(values) != 7
+                    or any(type(value) not in (int, float) or not math.isfinite(value) or value <= 0 for value in values)):
+                raise ValueError("live benchmark requires seven finite positive thread CPU observations per operation")
 
 
 def validate(report):
