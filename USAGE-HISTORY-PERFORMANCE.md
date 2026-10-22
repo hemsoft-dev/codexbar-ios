@@ -424,3 +424,31 @@ making the manual workflow an automatic gate.
 Run the existing replay command to verify all 16 experiments, including every
 historical failure. No failed sample was removed and no unchanged condition was
 retried to obtain these three passes.
+
+## Hosted startup admission, October 21, 2026
+
+Build 6's first hosted comparison and its single unchanged retry were
+inconclusive for one-account timings. The retry recorded one-minute load
+declining from 9.64 to 1.98 on a three-CPU runner while its six measured
+processes ran. This supports testing startup disturbance; it does not prove
+the cause of every timing fluctuation. Both failed artifacts remain retained.
+
+The runner now admits one fixed experiment after both binaries compile. It
+requires nine consecutive observations spanning at least two minutes with
+one-minute load divided by logical CPU count at most 1.0 and no compiler or
+simulator process using at least 10% CPU. Admission has a 420-second deadline;
+each process probe is bounded by the smaller of five seconds and the remaining
+admission budget. No new probe starts after the deadline. Missing or malformed
+observations fail. `host-admission.json` retains every observation and the
+outcome, including the exact serializable invalid observation or an explicit
+representation when a value cannot be encoded as JSON. Simulator runtime
+children are included even when their executable is outside CoreSimulator.
+A busy host resets only the admission streak, never a timing result.
+
+Admission runs once. If it fails, no timing process starts. If admitted, the
+existing three alternating pairs run with every sample and all latency,
+variability, serialization and retention thresholds unchanged. Admission is
+not a guarantee of stability for the rest of the experiment. Later noise
+still fails the gate; no measurements are discarded or selected for a pass.
+The manual workflow timeout and all automatic CI work remain unchanged.
+Hosted verification of this adjustment is pending.

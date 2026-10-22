@@ -31,6 +31,162 @@ def report():
                            for accounts in (1, 10, 25)])
 
 
+class HostAdmissionTests(unittest.TestCase):
+    def exercise(self, samples):
+        clock = [0.0]
+        seen = []
+        def sample(**kwargs):
+            value = samples[min(len(seen), len(samples) - 1)]
+            seen.append(value)
+            return value
+        def sleep(seconds):
+            clock[0] += seconds
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            try:
+                GATE.admit_quiet_host(output, snapshot=sample, sleep=sleep, monotonic=lambda: clock[0])
+                failure = None
+            except ValueError as error:
+                failure = str(error)
+            receipt = json.loads((output / "host-admission.json").read_text())
+            return failure, receipt, clock[0]
+
+    def test_requires_nine_consecutive_quiet_snapshots_over_two_minutes(self):
+        failure, receipt, elapsed = self.exercise([dict(logicalCPUs=3, loadAverage=[2, 4, 5], busyProcesses=[])])
+        self.assertIsNone(failure)
+        self.assertTrue(receipt["passed"])
+        self.assertEqual(len(receipt["samples"]), 9)
+        self.assertEqual(elapsed, 120)
+
+    def test_startup_load_and_compiler_activity_reset_admission_without_discarding_samples(self):
+        quiet = dict(logicalCPUs=3, loadAverage=[2, 4, 5], busyProcesses=[])
+        busy = dict(logicalCPUs=3, loadAverage=[4, 4, 5], busyProcesses=[])
+        compiler = dict(logicalCPUs=3, loadAverage=[2, 4, 5], busyProcesses=["swift-frontend"])
+        failure, receipt, elapsed = self.exercise([quiet, busy, quiet, compiler] + [quiet] * 9)
+        self.assertIsNone(failure)
+        self.assertEqual(len(receipt["samples"]), 13)
+        self.assertEqual(elapsed, 180)
+        self.assertEqual(receipt["samples"][1]["quiet"], False)
+        self.assertEqual(receipt["samples"][3]["quiet"], False)
+
+    def test_busy_host_fails_within_fixed_budget_and_keeps_every_probe(self):
+        failure, receipt, elapsed = self.exercise([dict(logicalCPUs=3, loadAverage=[4, 4, 5], busyProcesses=[])])
+        self.assertIn("quiet host", failure)
+        self.assertFalse(receipt["passed"])
+        self.assertLessEqual(elapsed, 420)
+        self.assertGreater(len(receipt["samples"]), 9)
+
+    def test_admission_receipt_failure_preserves_primary_probe_error(self):
+        primary = RuntimeError("probe unavailable")
+        with tempfile.TemporaryDirectory() as temporary:
+            with mock.patch.object(Path, "write_text", side_effect=OSError("write unavailable")):
+                with self.assertRaises(RuntimeError) as caught:
+                    GATE.admit_quiet_host(Path(temporary), snapshot=mock.Mock(side_effect=primary))
+        self.assertIs(caught.exception, primary)
+
+    def test_admission_receipt_write_failure_cannot_pass(self):
+        clock = [0.0]
+        def sleep(seconds):
+            clock[0] += seconds
+        with tempfile.TemporaryDirectory() as temporary:
+            with mock.patch.object(Path, "write_text", side_effect=OSError("write unavailable")):
+                with self.assertRaises(OSError):
+                    GATE.admit_quiet_host(Path(temporary),
+                                         snapshot=lambda **kwargs: dict(logicalCPUs=3, loadAverage=[1, 2, 3], busyProcesses=[]),
+                                         sleep=sleep, monotonic=lambda: clock[0])
+
+    def test_process_probe_rejects_compiler_and_simulator_work(self):
+        result = subprocess.CompletedProcess([], 0, " 12.0 /usr/bin/swift-frontend\n 14.0 /x/Simulator.app/Contents/MacOS/Simulator\n"
+                                             " 20.0 /Library/Developer/CoreSimulator/Devices/fixture/CodexBarIOS.app/CodexBarIOS\n"
+                                             " 15.0 /usr/libexec/testmanagerd\n 1.0 /usr/bin/clang\n"
+                                             " 18.0 /Library/Developer/PrivateFrameworks/CoreSimulator.framework/Versions/A/"
+                                             "XPCServices/com.apple.CoreSimulator.CoreSimulatorService.xpc/Contents/MacOS/"
+                                             "com.apple.CoreSimulator.CoreSimulatorService\n", "")
+        with mock.patch.object(GATE.subprocess, "run", return_value=result):
+            observation = GATE.admission_snapshot()
+        self.assertEqual([item["cpu"] for item in observation["busyProcesses"]], [12, 14, 20, 15, 18])
+
+    def test_empty_process_probe_cannot_qualify_as_quiet(self):
+        result = subprocess.CompletedProcess([], 0, "", "")
+        with mock.patch.object(GATE.subprocess, "run", return_value=result):
+            with self.assertRaisesRegex(ValueError, "missing process"):
+                GATE.admission_snapshot()
+
+    def test_failed_admission_stops_actual_runner_before_any_measurement(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "run"
+            with mock.patch.object(sys, "argv", [str(SCRIPT), "--output", str(output)]), \
+                    mock.patch.object(GATE, "command", return_value=""), \
+                    mock.patch.object(GATE, "reference_tree"), \
+                    mock.patch.object(GATE, "build", return_value=Path("unused")) as build, \
+                    mock.patch.object(GATE, "admit_quiet_host", side_effect=ValueError("host busy")), \
+                    mock.patch.object(GATE, "measure") as measure:
+                with self.assertRaisesRegex(ValueError, "host busy"):
+                    GATE.main()
+            self.assertEqual(build.call_count, 2)
+            measure.assert_not_called()
+            self.assertFalse((output / "result.json").exists())
+
+    def test_probe_budget_is_capped_by_remaining_deadline_and_no_probe_starts_after_it(self):
+        clock, timeouts = [0.0], []
+        def sample(*, timeout=5):
+            timeouts.append(timeout)
+            clock[0] += min(1, timeout)
+            return dict(logicalCPUs=3, loadAverage=[4, 4, 5], busyProcesses=[])
+        def sleep(seconds):
+            clock[0] += seconds
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            with self.assertRaisesRegex(ValueError, "quiet host"):
+                GATE.admit_quiet_host(output, snapshot=sample, sleep=sleep, monotonic=lambda: clock[0])
+            receipt = json.loads((output / "host-admission.json").read_text())
+        self.assertLess(timeouts[-1], 5)
+        self.assertTrue(all(0 < timeout <= 5 for timeout in timeouts))
+        self.assertEqual(clock[0], 420)
+        self.assertLessEqual(receipt["elapsedSeconds"], 420)
+        self.assertFalse(receipt["passed"])
+
+    def test_actual_process_probe_receives_the_remaining_timeout(self):
+        result = subprocess.CompletedProcess([], 0, " 0.1 /usr/bin/ps\n", "")
+        with mock.patch.object(GATE.subprocess, "run", return_value=result) as run:
+            GATE.admission_snapshot(timeout=0.125)
+        self.assertEqual(run.call_args.kwargs["timeout"], 0.125)
+
+    def test_runtime_child_processes_prevent_admission_even_below_the_load_limit(self):
+        result = subprocess.CompletedProcess([], 0,
+            " 25.0 /Library/Runtimes/iOS.simruntime/Contents/Resources/RuntimeRoot/System/SpringBoard\n"
+            " 11.0 /Library/Runtimes/iOS.simruntime/Contents/Resources/RuntimeRoot/usr/libexec/mobileassetd\n", "")
+        with mock.patch.object(GATE.subprocess, "run", return_value=result), \
+                mock.patch.object(GATE.os, "cpu_count", return_value=3), \
+                mock.patch.object(GATE.os, "getloadavg", return_value=(1, 1, 1)):
+            observation = GATE.admission_snapshot()
+        self.assertEqual(len(observation["busyProcesses"]), 2)
+        failure, receipt, _ = self.exercise([observation])
+        self.assertIsNotNone(failure)
+        self.assertFalse(receipt["passed"])
+
+    def test_serializable_invalid_observations_are_retained_exactly(self):
+        observations = [None, False, 0, "", [],
+                        dict(logicalCPUs=None, loadAverage=[1, 2, 3], busyProcesses=[]),
+                        dict(logicalCPUs=3, loadAverage=[-1, 2, 3], busyProcesses=[])]
+        for observation in observations:
+            with self.subTest(observation=observation):
+                failure, receipt, _ = self.exercise([observation])
+                self.assertIsNotNone(failure)
+                self.assertFalse(receipt["passed"])
+                self.assertEqual(len(receipt["samples"]), 1)
+                self.assertEqual(receipt["samples"][0]["observation"], observation)
+                self.assertFalse(receipt["samples"][0]["valid"])
+
+    def test_invalid_cpu_or_load_fails_closed(self):
+        for cpus, load in [(False, 1), (0, 1), (None, 1), (3, float("nan")), (3, -1)]:
+            with self.subTest(cpus=cpus, load=load):
+                failure, receipt, _ = self.exercise([dict(logicalCPUs=cpus, loadAverage=[load, 1, 1], busyProcesses=[])])
+                self.assertIsNotNone(failure)
+                self.assertFalse(receipt["passed"])
+                self.assertEqual(len(receipt["samples"]), 1)
+
+
 class PerformanceGateTests(unittest.TestCase):
     def setUp(self):
         self.runs = [dict(reference=report(), candidate=report()) for _ in range(3)]

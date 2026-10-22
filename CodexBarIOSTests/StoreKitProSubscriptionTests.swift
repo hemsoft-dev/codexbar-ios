@@ -130,8 +130,17 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         let issue = try XCTUnwrap(context.session.allTransactions().last { $0.productIdentifier == ProProductID.monthly.rawValue })
         context.session.shouldEnterBillingRetryOnRenewal = false
         try context.session.resolveIssueForTransaction(identifier: issue.identifier)
-        try await storeKitEventually("Verified billing recovery did not restore monthly access through the listeners.", timeout: 30) {
-            service.hasAccess && service.value.reason == .monthly && !service.commerce.hasBillingIssue
+        do {
+            try await storeKitEventually("Verified billing recovery did not restore monthly access through the listeners.", timeout: 30) {
+                service.hasAccess && service.value.reason == .monthly && !service.commerce.hasBillingIssue
+            }
+        } catch let primaryError {
+            do {
+                try storeKitEvent("billing-retry-recovery-timeout", await storeKitState(context, service: service))
+            } catch {
+                print("Unable to preserve billing-retry diagnostics; retaining the primary failure.")
+            }
+            throw primaryError
         }
         try storeKitEvent("billing-retry-recovered", ["retryAccess": "false", "recoveredAccess": "monthly", "newPurchaseRequested": "false"])
     }

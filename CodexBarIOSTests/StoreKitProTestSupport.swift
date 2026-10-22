@@ -4,6 +4,26 @@ import StoreKitTest
 import XCTest
 @testable import CodexBarIOS
 
+typealias NativeCleanupStep = (name: String, operation: @MainActor () async throws -> Void)
+
+@MainActor
+func runNativeCleanup(_ steps: [NativeCleanupStep]) async throws {
+    var primaryError: (any Error)?
+    for step in steps {
+        do {
+            try await step.operation()
+        } catch {
+            if primaryError == nil {
+                primaryError = error
+            } else {
+                let detail = error as NSError
+                print("Additional native cleanup failure: \(step.name), domain=\(detail.domain), code=\(detail.code)")
+            }
+        }
+    }
+    if let primaryError { throw primaryError }
+}
+
 /// Owns the only StoreKit listeners and cache used by one serial native test.
 @MainActor
 final class StoreKitProTestContext {
@@ -73,24 +93,42 @@ final class StoreKitProTestContext {
     }
 
     func close() async throws {
-        for service in services { await service.stopAndWait() }
-        services.removeAll()
-        listeners.forEach { $0.cancel() }
-        for listener in listeners { await listener.value }
-        listeners.removeAll()
-        session.clearTransactions()
-        session.resetToDefaultState()
-        // An accelerated renewal can land between the clear and the reset that stops it.
-        session.clearTransactions()
-        try await session.setSimulatedError(nil, forAPI: .loadProducts)
-        try await session.setSimulatedError(nil, forAPI: .purchase)
-        try await session.setSimulatedError(nil, forAPI: .verification)
-        try await session.setSimulatedError(nil, forAPI: .subscriptionStatus)
-        try await session.setSimulatedError(nil, forAPI: .appStoreSync)
-        try await session.setSimulatedError(nil, forAPI: .appTransaction)
-        try Self.require(session.allTransactions().isEmpty, "Owned StoreKit transactions survived teardown.")
-        try await Self.requireEmptyTransactions("teardown")
-        try FileManager.default.removeItem(at: directory)
+        // Stop new accelerated renewals before draining consumers. Each throwing
+        // operation is independent so a failure cannot abandon later cleanup.
+        session.timeRate = .realTime
+        session.shouldEnterBillingRetryOnRenewal = false
+        var steps: [NativeCleanupStep] = []
+        for transaction in session.allTransactions() where transaction.autoRenewingEnabled {
+            steps.append(("disable-auto-renew", {
+                try self.session.disableAutoRenewForTransaction(identifier: transaction.identifier)
+            }))
+        }
+        steps.append(("stop-services", {
+            for service in self.services { await service.stopAndWait() }
+            self.services.removeAll()
+        }))
+        steps.append(("stop-listeners", {
+            self.listeners.forEach { $0.cancel() }
+            for listener in self.listeners { await listener.value }
+            self.listeners.removeAll()
+        }))
+        steps.append(("clear-transactions", {
+            self.session.clearTransactions()
+            self.session.resetToDefaultState()
+            self.session.clearTransactions()
+        }))
+        steps.append(("reset-products", { try await self.session.setSimulatedError(nil, forAPI: .loadProducts) }))
+        steps.append(("reset-purchase", { try await self.session.setSimulatedError(nil, forAPI: .purchase) }))
+        steps.append(("reset-verification", { try await self.session.setSimulatedError(nil, forAPI: .verification) }))
+        steps.append(("reset-status", { try await self.session.setSimulatedError(nil, forAPI: .subscriptionStatus) }))
+        steps.append(("reset-sync", { try await self.session.setSimulatedError(nil, forAPI: .appStoreSync) }))
+        steps.append(("reset-app-transaction", { try await self.session.setSimulatedError(nil, forAPI: .appTransaction) }))
+        steps.append(("verify-owned-transactions", {
+            try Self.require(self.session.allTransactions().isEmpty, "Owned StoreKit transactions survived teardown.")
+        }))
+        steps.append(("verify-storekit-transactions", { try await Self.requireEmptyTransactions("teardown") }))
+        steps.append(("remove-cache", { try FileManager.default.removeItem(at: self.directory) }))
+        try await runNativeCleanup(steps)
     }
 
     static func requireEmptyTransactions(_ phase: String) async throws {
@@ -345,7 +383,9 @@ extension XCTestCase {
         let unfinished = await storeKitUnfinishedProducts()
         let current = await storeKitCurrentProducts()
         let sessions = context.session.allTransactions().map {
-            "\($0.productIdentifier):renewing=\($0.autoRenewingEnabled),issue=\($0.hasPurchaseIssue),pending=\($0.pendingAskToBuyConfirmation)"
+            let identity = "id=\($0.identifier),original=\($0.originalTransactionIdentifier)"
+            return "\($0.productIdentifier):\(identity),renewing=\($0.autoRenewingEnabled),issue=\($0.hasPurchaseIssue)"
+                + ",pending=\($0.pendingAskToBuyConfirmation),expiry=\(String(describing: $0.expirationDate))"
         }.sorted()
         let statuses = snapshot.subscriptions.map {
             "\($0.purchase.product.rawValue):state=\($0.state),verified=\($0.renewalVerified),renewing=\(String(describing: $0.willAutoRenew)),retry=\($0.isInBillingRetry)"
@@ -379,5 +419,50 @@ extension XCTestCase {
         XCTAssertTrue(evidence.signedAt.timeIntervalSinceReferenceDate.isFinite)
         XCTAssertTrue(evidence.purchasedAt.timeIntervalSinceReferenceDate.isFinite)
         return delivery
+    }
+}
+
+@MainActor
+final class ProNativeCleanupTests: XCTestCase {
+    func testCleanupContinuesAfterRenewalAndResetFailuresAndPreservesPrimaryIdentity() async {
+        let primary = NSError(domain: "NativeCleanupControl", code: 1)
+        let secondary = NSError(domain: "NativeCleanupControl", code: 2)
+        var visited: [String] = []
+        do {
+            try await runNativeCleanup([
+                ("disable", { visited.append("disable"); throw primary }),
+                ("stop", { visited.append("stop") }),
+                ("reset", { visited.append("reset"); throw secondary }),
+                ("verify", { visited.append("verify") }),
+                ("remove", { visited.append("remove") }),
+            ])
+            XCTFail("Cleanup failures must remain failures.")
+        } catch {
+            XCTAssertTrue((error as NSError) === primary)
+        }
+        XCTAssertEqual(visited, ["disable", "stop", "reset", "verify", "remove"])
+    }
+
+    func testCleanupCancellationStillAttemptsLaterSteps() async {
+        var removed = false
+        do {
+            try await runNativeCleanup([
+                ("cancel", { throw CancellationError() }),
+                ("remove", { removed = true }),
+            ])
+            XCTFail("Cancellation must remain visible.")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertTrue(removed)
+    }
+
+    func testSuccessfulCleanupExecutesEachStepOnceInOrder() async throws {
+        var visited: [Int] = []
+        try await runNativeCleanup([
+            ("first", { visited.append(1) }),
+            ("second", { visited.append(2) }),
+        ])
+        XCTAssertEqual(visited, [1, 2])
     }
 }
