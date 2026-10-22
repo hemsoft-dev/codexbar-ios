@@ -158,6 +158,8 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Developer Experience
 
+- Keep rendered accessibility tests from leaving menu animations attached to discarded test windows. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+
 - Keep strict local unit-test builds working with Apple’s StoreKitTest SDK while retaining warnings as errors for repository source. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Stop accelerated test renewals before clearing owned StoreKit transactions,
