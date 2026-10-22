@@ -18,6 +18,25 @@ The runner selects `/Applications/Xcode.app/Contents/Developer`, builds with
 `swift build -c release`, and sets `TZ=UTC`. It archives the baseline commit in a
 unique temporary directory, copies the current benchmark source into that
 archive, and adds only its executable target to the baseline package manifest.
+Both binaries explicitly request Darwin user-initiated QoS on the main thread
+before fixture creation and verify it around each timed operation. Reports record
+the observed kernel class (25); live measurement rejects missing or different
+scheduling evidence. The `pthread_set_qos_class_self_np` call changes a running
+thread; setting `Thread.qualityOfService` after startup does not. This follows
+Apple's [task and thread QoS guidance](https://developer.apple.com/library/archive/documentation/Performance/Conceptual/power_efficiency_guidelines_osx/PrioritizeWorkAtTheTaskLevel.html).
+QoS does not guarantee a particular physical core or waive the variance ceiling.
+Each operation also records main-thread CPU milliseconds from the kernel thread CPU clock, alongside its original wall time. These observations diagnose scheduling loss versus variability in executed work. They never replace wall-clock latency or its variance gate. Live measurements require all seven finite positive CPU observations per operation; historical replay keeps its original contract.
+Historical fixture replays remain historical and do not prove this live scheduling
+contract.
+
+The runner sets `SWIFT_DETERMINISTIC_HASHING=1` only when launching the two
+benchmark binaries. Swift's [benchmark instructions](https://github.com/swiftlang/swift/blob/main/benchmark/README.md)
+require this to prevent random hash-collision changes from affecting measurements.
+Both sides report the setting and an actual standard-library hash probe. Live
+comparison requires the probes to match across every process. The runner does not set this flag for app builds or tests. Historical randomized
+reports cannot qualify this deterministic comparison, and hash behavior remains
+compiler-specific. No samples or budgets are changed.
+
 Both sides exercise the same fixture and public API. No production source,
 branch, worktree, or baseline file is rewritten. The temporary archive is
 removed on exit; each Swift process removes its unique `UserDefaults` suite.

@@ -1,5 +1,6 @@
 import CodexBarIOS
 import Foundation
+import Darwin
 
 private struct RetainedState: Encodable {
     let snapshots: Int
@@ -11,12 +12,17 @@ private struct Scenario: Encodable {
     let accounts: Int
     let recordMilliseconds: [Double]
     let seriesMilliseconds: [Double]
+    let recordThreadCPUMilliseconds: [Double]
+    let seriesThreadCPUMilliseconds: [Double]
     let seriesPointCount: Int
     let retainedStates: [RetainedState]
 }
 
 private struct Report: Encodable {
     let fixtureVersion = 1
+    let qosClass: UInt32
+    let deterministicHashing: Bool
+    let hashProbe: Int
     let configuration: String
     let timeZone: String
     let warmupBatches = 2
@@ -38,6 +44,11 @@ private struct UsageHistoryBenchmark {
 
     @MainActor
     static func main() throws {
+        let schedulingStatus = pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED, 0)
+        guard schedulingStatus == 0 else {
+            throw BenchmarkError.invalidFixture("Cannot request user-initiated QoS: \(schedulingStatus)")
+        }
+        try requireBenchmarkQoS()
         #if DEBUG
         let configuration = "debug"
         #else
@@ -47,6 +58,9 @@ private struct UsageHistoryBenchmark {
             throw BenchmarkError.invalidFixture("Run with TZ=UTC")
         }
         let report = Report(
+            qosClass: qos_class_self().rawValue,
+            deterministicHashing: ProcessInfo.processInfo.environment["SWIFT_DETERMINISTIC_HASHING"] == "1",
+            hashProbe: "UsageHistoryBenchmark.fixture.v1".hashValue,
             configuration: configuration,
             timeZone: "UTC",
             scenarios: try [1, 10, 25].map(run)
@@ -104,6 +118,7 @@ private struct UsageHistoryBenchmark {
 
     @MainActor
     static func run(accounts: Int) throws -> Scenario {
+        try requireBenchmarkQoS()
         let suiteName = "UsageHistoryBenchmark.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             throw BenchmarkError.invalidFixture("Cannot create isolated defaults")
@@ -116,13 +131,19 @@ private struct UsageHistoryBenchmark {
         var retained = [try state(store: store, defaults: defaults, accounts: accounts)]
         var recordSamples: [Double] = []
         var seriesSamples: [Double] = []
+        var recordCPUSamples: [Double] = []
+        var seriesCPUSamples: [Double] = []
         var pointCount = 0
         for batch in 0..<7 {
+            try requireBenchmarkQoS()
             let date = anchor.addingTimeInterval(Double(batch) * 600)
             let results = (0..<accounts).map { result(account: $0, at: date) }
-            recordSamples.append(milliseconds {
+            let recordTiming = measurements {
                 store.record(results: results, now: date)
-            })
+            }
+            recordSamples.append(recordTiming.wall)
+            recordCPUSamples.append(recordTiming.cpu)
+            try requireBenchmarkQoS()
             for result in results {
                 let options = store.historySeriesOptions(for: result)
                 guard options.map(\.id) == ["usage"], options[0].series.points.count == 329,
@@ -130,7 +151,7 @@ private struct UsageHistoryBenchmark {
                     throw BenchmarkError.invalidFixture("Expected 329 merged timestamps in the two-metric usage series")
                 }
             }
-            seriesSamples.append(milliseconds {
+            let seriesTiming = measurements {
                 for _ in 0..<5 {
                     for result in results {
                         let options = store.historySeriesOptions(
@@ -140,7 +161,10 @@ private struct UsageHistoryBenchmark {
                         pointCount += options.reduce(0) { $0 + $1.series.points.count }
                     }
                 }
-            } / 5)
+            }
+            seriesSamples.append(seriesTiming.wall / 5)
+            seriesCPUSamples.append(seriesTiming.cpu / 5)
+            try requireBenchmarkQoS()
             retained.append(try state(store: store, defaults: defaults, accounts: accounts))
         }
         guard pointCount == accounts * 329 * 5 * 7 else {
@@ -162,6 +186,8 @@ private struct UsageHistoryBenchmark {
             accounts: accounts,
             recordMilliseconds: recordSamples,
             seriesMilliseconds: seriesSamples,
+            recordThreadCPUMilliseconds: recordCPUSamples,
+            seriesThreadCPUMilliseconds: seriesCPUSamples,
             seriesPointCount: pointCount,
             retainedStates: retained
         )
@@ -214,9 +240,18 @@ private struct UsageHistoryBenchmark {
         }
     }
 
+    static func requireBenchmarkQoS() throws {
+        guard Thread.isMainThread, qos_class_self() == QOS_CLASS_USER_INITIATED else {
+            throw BenchmarkError.invalidFixture("Benchmark must run on the user-initiated main thread")
+        }
+    }
+
     @MainActor
-    static func milliseconds(_ operation: () -> Void) -> Double {
+    static func measurements(_ operation: () -> Void) -> (wall: Double, cpu: Double) {
+        let cpuStart = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
         let duration = ContinuousClock().measure(operation)
-        return Double(duration.components.seconds) * 1_000 + Double(duration.components.attoseconds) / 1e15
+        let cpuEnd = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
+        let wall = Double(duration.components.seconds) * 1_000 + Double(duration.components.attoseconds) / 1e15
+        return (wall, Double(cpuEnd - cpuStart) / 1e6)
     }
 }
