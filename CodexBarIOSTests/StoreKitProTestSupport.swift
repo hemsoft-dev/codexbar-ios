@@ -123,12 +123,37 @@ final class StoreKitProTestContext {
         steps.append(("reset-status", { try await self.session.setSimulatedError(nil, forAPI: .subscriptionStatus) }))
         steps.append(("reset-sync", { try await self.session.setSimulatedError(nil, forAPI: .appStoreSync) }))
         steps.append(("reset-app-transaction", { try await self.session.setSimulatedError(nil, forAPI: .appTransaction) }))
-        steps.append(("verify-owned-transactions", {
-            try Self.require(self.session.allTransactions().isEmpty, "Owned StoreKit transactions survived teardown.")
-        }))
-        steps.append(("verify-storekit-transactions", { try await Self.requireEmptyTransactions("teardown") }))
+        steps.append(("clear-and-verify-transactions", { try await self.clearAndRequireEmptyTransactions() }))
         steps.append(("remove-cache", { try FileManager.default.removeItem(at: self.directory) }))
         try await runNativeCleanup(steps)
+    }
+
+    private func clearAndRequireEmptyTransactions() async throws {
+        let deadline = ProcessInfo.processInfo.systemUptime + 10
+        var consecutiveEmpty = 0
+        repeat {
+            let ownedEmpty = session.allTransactions().isEmpty
+            let storeKitEmpty = await !Self.hasStoreKitTransactions()
+            if ownedEmpty && storeKitEmpty {
+                consecutiveEmpty += 1
+                if consecutiveEmpty == 3 { return }
+            } else {
+                consecutiveEmpty = 0
+                // StoreKit can finish a queued renewal after its first clear.
+                // Clear only this isolated test store, then verify both APIs.
+                session.clearTransactions()
+            }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        } while ProcessInfo.processInfo.systemUptime < deadline
+        var retained: [String] = []
+        for await _ in StoreKit.Transaction.currentEntitlements { retained.append("current"); break }
+        for await _ in StoreKit.Transaction.unfinished { retained.append("unfinished"); break }
+        for product in ProProductID.allCases where await StoreKit.Transaction.latest(for: product.rawValue) != nil {
+            retained.append("latest:" + product.rawValue)
+        }
+        throw StoreKitProTestFailure.assertion(
+            "StoreKit teardown did not converge: owned=\(session.allTransactions().count), SDK=\(retained.joined(separator: ";"))."
+        )
     }
 
     static func requireEmptyTransactions(_ phase: String) async throws {
