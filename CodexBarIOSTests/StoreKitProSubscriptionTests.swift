@@ -125,13 +125,35 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         XCTAssertTrue(status.isInBillingRetry)
         XCTAssertNil(status.graceEndsAt)
         XCTAssertEqual(service.commerce.lifetimeAction, .manageSubscription)
-        // hasPurchaseIssue can lag the verified billing-retry status by more than 30 seconds;
-        // resolve the monthly renewal that the status listener already reported.
-        let issue = try XCTUnwrap(context.session.allTransactions().last { $0.productIdentifier == ProProductID.monthly.rawValue })
+        // Preserve the verified retry state while the test service publishes its
+        // affected transaction. Array order is not proof that a transaction has an issue.
+        context.session.timeRate = .realTime
         context.session.shouldEnterBillingRetryOnRenewal = false
+        try await storeKitEventually("The verified retry did not publish exactly one affected monthly transaction.", timeout: 75) {
+            context.session.allTransactions().filter {
+                $0.productIdentifier == ProProductID.monthly.rawValue && $0.hasPurchaseIssue
+            }.count == 1
+        }
+        XCTAssertFalse(service.hasAccess, "Changing the test clock must not itself restore access.")
+        let frozenRetry = await context.source.snapshot()
+        XCTAssertTrue(frozenRetry.subscriptions.contains {
+            $0.state == .billingRetry && $0.renewalVerified && $0.isInBillingRetry
+        }, "The test clock must preserve verified billing retry until resolution.")
+        let issue = try XCTUnwrap(context.session.allTransactions().first {
+            $0.productIdentifier == ProProductID.monthly.rawValue && $0.hasPurchaseIssue
+        })
         try context.session.resolveIssueForTransaction(identifier: issue.identifier)
-        try await storeKitEventually("Verified billing recovery did not restore monthly access through the listeners.", timeout: 30) {
-            service.hasAccess && service.value.reason == .monthly && !service.commerce.hasBillingIssue
+        do {
+            try await storeKitEventually("Verified billing recovery did not restore monthly access through the listeners.", timeout: 30) {
+                service.hasAccess && service.value.reason == .monthly && !service.commerce.hasBillingIssue
+            }
+        } catch let primaryError {
+            do {
+                try storeKitEvent("billing-retry-recovery-timeout", await storeKitState(context, service: service))
+            } catch {
+                print("Unable to preserve billing-retry diagnostics; retaining the primary failure.")
+            }
+            throw primaryError
         }
         try storeKitEvent("billing-retry-recovered", ["retryAccess": "false", "recoveredAccess": "monthly", "newPurchaseRequested": "false"])
     }

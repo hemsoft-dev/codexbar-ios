@@ -9,7 +9,9 @@ from pathlib import Path
 import shutil
 import statistics
 import subprocess
+import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -77,6 +79,67 @@ def machine_snapshot(output, name):
         except (OSError, subprocess.TimeoutExpired, UnicodeDecodeError) as error:
             snapshot[label] = dict(error=str(error))
     (output / f"{name}-machine.json").write_text(json.dumps(snapshot, indent=2) + "\n")
+
+
+def admission_snapshot():
+    result = subprocess.run(["ps", "-axo", "%cpu=,comm="], env=dict(ENV, LC_ALL="C"),
+                            text=True, capture_output=True, timeout=5, check=True)
+    rows = result.stdout.splitlines()
+    if not rows:
+        raise ValueError("missing process CPU observations")
+    busy = []
+    for row in rows:
+        cpu, executable = row.strip().split(maxsplit=1)
+        utilization = float(cpu)
+        if not math.isfinite(utilization) or utilization < 0:
+            raise ValueError("invalid process CPU observation")
+        name = Path(executable).name
+        if utilization >= 10 and (name.startswith(("swift", "clang", "xcodebuild", "simctl", "Simulator", "CoreSimulator"))
+                                  or "/Simulator.app/" in executable):
+            busy.append(dict(executable=executable, cpu=utilization))
+    return dict(capturedAt=datetime.now(timezone.utc).isoformat(), logicalCPUs=os.cpu_count(),
+                loadAverage=list(os.getloadavg()), busyProcesses=busy)
+
+
+def admit_quiet_host(output, *, snapshot=admission_snapshot, sleep=time.sleep, monotonic=time.monotonic):
+    """Admit one fixed experiment, never choose or discard its timing results."""
+    started = monotonic()
+    receipt = dict(passed=False, maximumSeconds=420, requiredConsecutiveSamples=9,
+                   sampleIntervalSeconds=15, maximumNormalizedLoad=1.0, samples=[])
+    consecutive = 0
+    quiet_since, failure = None, None
+    try:
+        while True:
+            observation = snapshot()
+            cpus, loads, busy = (observation.get(key) for key in ("logicalCPUs", "loadAverage", "busyProcesses"))
+            if (type(cpus) is not int or cpus <= 0 or not isinstance(loads, (list, tuple)) or len(loads) != 3
+                    or any(type(value) not in (int, float) or not math.isfinite(value) or value < 0 for value in loads)
+                    or not isinstance(busy, list)):
+                raise ValueError("invalid quiet host observation")
+            quiet = loads[0] / cpus <= 1.0 and not busy
+            consecutive = consecutive + 1 if quiet else 0
+            elapsed = monotonic() - started
+            quiet_since = (elapsed if quiet_since is None else quiet_since) if quiet else None
+            receipt["samples"].append(dict(observation, quiet=quiet, elapsedSeconds=elapsed,
+                                           consecutiveQuietSamples=consecutive))
+            if consecutive >= 9 and elapsed - quiet_since >= 120 and elapsed <= 420:
+                receipt["passed"] = True
+                return
+            if elapsed >= 420:
+                raise ValueError("quiet host admission failed within the fixed 420-second budget")
+            sleep(min(15, 420 - elapsed))
+    except BaseException as error:
+        failure = error
+        receipt["error"] = str(error)
+        raise
+    finally:
+        receipt["elapsedSeconds"] = monotonic() - started
+        try:
+            (output / "host-admission.json").write_text(json.dumps(receipt, indent=2, allow_nan=False) + "\n")
+        except OSError:
+            if failure is None:
+                raise
+            print("Unable to preserve host admission receipt; retaining the primary failure.", file=sys.stderr)
 
 
 def measure(binary, output, name):
@@ -187,6 +250,7 @@ def main():
             binaries["candidate"] = build(reference, args.output, "candidate-slowdown")
         else:
             binaries["candidate"] = build(ROOT, args.output, "candidate")
+        admit_quiet_host(args.output)
         runs = []
         for index in range(args.pairs):
             pair = {}

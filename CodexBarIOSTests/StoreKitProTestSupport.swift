@@ -73,6 +73,13 @@ final class StoreKitProTestContext {
     }
 
     func close() async throws {
+        // Stop accelerated renewal production before waiting for consumers or clearing
+        // their transactions. A queued renewal can otherwise land after the last clear.
+        session.timeRate = .realTime
+        session.shouldEnterBillingRetryOnRenewal = false
+        for transaction in session.allTransactions() where transaction.autoRenewingEnabled {
+            try session.disableAutoRenewForTransaction(identifier: transaction.identifier)
+        }
         for service in services { await service.stopAndWait() }
         services.removeAll()
         listeners.forEach { $0.cancel() }
