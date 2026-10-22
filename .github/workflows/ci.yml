@@ -10,6 +10,7 @@ on:
         options:
           - full
           - account-menu-comparison
+          - ui-only
         default: full
       comparison_base_sha:
         description: Exact ancestor SHA for account-menu comparison only
@@ -51,7 +52,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_ci_policy.py' -v
 
   strict-concurrency:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'ui-only' }}
     name: Strict concurrency
     runs-on: macos-26
     env:
@@ -70,7 +71,7 @@ jobs:
         run: ./scripts/check-strict-concurrency.sh
 
   ios-tests:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'ui-only' }}
     name: iOS tests
     runs-on: macos-26
     env:
@@ -126,7 +127,7 @@ jobs:
           retention-days: 14
 
   watch-tests:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'ui-only' }}
     name: watchOS tests
     runs-on: macos-26
     env:
@@ -199,7 +200,7 @@ jobs:
           retention-days: 14
 
   smoke-tests:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'ui-only' }}
     name: SwiftPM smoke tests
     runs-on: macos-26
     env:
@@ -225,7 +226,7 @@ jobs:
 
   ios-ui-families:
     name: iOS UI journeys (${{ matrix.family }})
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' && success() }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' && !cancelled() && !contains(needs.*.result, 'failure') }}
     needs:
       - swiftlint
       - strict-concurrency
