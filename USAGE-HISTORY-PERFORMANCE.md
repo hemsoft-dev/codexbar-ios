@@ -29,6 +29,14 @@ Each operation also records main-thread CPU milliseconds from the kernel thread 
 Historical fixture replays remain historical and do not prove this live scheduling
 contract.
 
+The runner sets `SWIFT_DETERMINISTIC_HASHING=1` only when launching the two
+benchmark binaries. Swift's [benchmark instructions](https://github.com/swiftlang/swift/blob/main/benchmark/README.md)
+require this to prevent random hash-collision changes from affecting measurements.
+Both sides report the setting and an actual standard-library hash probe. Live
+comparison requires the probes to match across every process. The runner does not set this flag for app builds or tests. Historical randomized
+reports cannot qualify this deterministic comparison, and hash behavior remains
+compiler-specific. No samples or budgets are changed.
+
 Both sides exercise the same fixture and public API. No production source,
 branch, worktree, or baseline file is rewritten. The temporary archive is
 removed on exit; each Swift process removes its unique `UserDefaults` suite.

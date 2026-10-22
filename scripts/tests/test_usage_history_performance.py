@@ -23,7 +23,7 @@ with mock.patch.dict(sys.modules, {"run": GATE}):
 
 def report():
     return dict(configuration="release", fixtureVersion=1, timeZone="UTC", warmupBatches=2, qosClass=25,
-                measuredBatches=5, seriesIterationsPerBatch=5,
+                measuredBatches=5, seriesIterationsPerBatch=5, deterministicHashing=True, hashProbe=42,
                 scenarios=[dict(accounts=accounts, recordMilliseconds=[100, 100, 10, 10, 10, 10, 10],
                                 seriesMilliseconds=[100, 100, 2, 2, 2, 2, 2], seriesPointCount=accounts * 329 * 35,
                                 recordThreadCPUMilliseconds=[1] * 7, seriesThreadCPUMilliseconds=[1] * 7,
@@ -94,6 +94,35 @@ class BenchmarkCPUDiagnosticTests(unittest.TestCase):
                 sample = report()
                 sample["scenarios"][0]["recordThreadCPUMilliseconds"] = value
                 GATE.validate_cpu_diagnostics(sample)
+
+
+class BenchmarkHashingTests(unittest.TestCase):
+    def test_accepts_matching_runtime_probes(self):
+        GATE.validate_hash_consistency([{"reference": report(), "candidate": report()} for _ in range(3)])
+
+    def test_rejects_randomized_or_missing_runtime_evidence(self):
+        missing_setting = report()
+        del missing_setting["deterministicHashing"]
+        missing_probe = report()
+        del missing_probe["hashProbe"]
+        for value in (missing_setting, missing_probe, dict(report(), deterministicHashing=False), dict(report(), hashProbe=True)):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                GATE.validate_hashing(value)
+
+    def test_rejects_runtime_probe_disagreement(self):
+        pairs = [{"reference": report(), "candidate": report()} for _ in range(3)]
+        pairs[-1]["candidate"]["hashProbe"] = 99
+        with self.assertRaisesRegex(ValueError, "probes differ"):
+            GATE.validate_hash_consistency(pairs)
+
+    def test_live_process_pins_hashing_without_changing_build_environment(self):
+        def process(*args, **kwargs):
+            self.assertEqual(kwargs["env"]["SWIFT_DETERMINISTIC_HASHING"], "1")
+            self.assertIsNot(kwargs["env"], GATE.ENV)
+            kwargs["stdout"].write(json.dumps(report()))
+        with tempfile.TemporaryDirectory() as temporary:
+            with mock.patch.object(GATE, "machine_snapshot"), mock.patch.object(GATE.subprocess, "run", side_effect=process):
+                GATE.measure(Path("unused-binary"), Path(temporary), "hashing")
 
 
 class HostAdmissionTests(unittest.TestCase):

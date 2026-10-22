@@ -162,7 +162,8 @@ def measure(binary, output, name):
     try:
         # Keep stdout/stderr even when the process, JSON parser, or fixture assertion fails.
         with (output / f"{name}.json").open("w") as stdout, (output / f"{name}.stderr.log").open("w") as stderr:
-            subprocess.run([str(binary)], cwd=ROOT, env=ENV, text=True,
+            benchmark_env = dict(ENV, SWIFT_DETERMINISTIC_HASHING="1")
+            subprocess.run([str(binary)], cwd=ROOT, env=benchmark_env, text=True,
                            stdout=stdout, stderr=stderr, check=True)
     except BaseException as error:
         primary = error
@@ -178,6 +179,7 @@ def measure(binary, output, name):
     validate(report)
     validate_scheduling(report)
     validate_cpu_diagnostics(report)
+    validate_hashing(report)
     return report
 
 
@@ -196,6 +198,22 @@ def validate_cpu_diagnostics(report):
             if (not isinstance(values, list) or len(values) != 7
                     or any(type(value) not in (int, float) or not math.isfinite(value) or value <= 0 for value in values)):
                 raise ValueError("live benchmark requires seven finite positive thread CPU observations per operation")
+
+
+
+def validate_hashing(report):
+    if report.get("deterministicHashing") is not True or type(report.get("hashProbe")) is not int:
+        raise ValueError("live benchmark requires deterministic Swift hashing and an observed runtime hash probe")
+
+
+def validate_hash_consistency(runs):
+    probes = []
+    for pair in runs:
+        for side in ("reference", "candidate"):
+            validate_hashing(pair[side])
+            probes.append(pair[side]["hashProbe"])
+    if len(set(probes)) != 1:
+        raise ValueError("paired runtime hash probes differ despite deterministic Swift hashing")
 
 
 def validate(report):
@@ -276,7 +294,7 @@ def main():
                     operatingSystem=command(["sw_vers"]), swift=command(["xcrun", "swift", "--version"]),
                     xcode=command(["xcodebuild", "-version"]), configuration="release", timezone="UTC",
                     benchmarkSHA256=hashlib.sha256((ROOT / "PerformanceBenchmarks/UsageHistoryBenchmark.swift").read_bytes()).hexdigest(),
-                    slowdownProof=args.prove_slowdown, requiredQoSClass=25, policy=policy)
+                    slowdownProof=args.prove_slowdown, requiredQoSClass=25, deterministicHashing=True, policy=policy)
     (args.output / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
     with tempfile.TemporaryDirectory(prefix="usage-history-reference-") as temporary:
         reference = Path(temporary)
@@ -301,6 +319,7 @@ def main():
                 print(f"Pair {index + 1}/{args.pairs}: {side}", flush=True)
                 pair[side] = measure(binaries[side], args.output, f"{index + 1}-{side}")
             runs.append(pair)
+        validate_hash_consistency(runs)
         result = evaluate(runs, policy)
         result["metadata"] = metadata
         (args.output / "result.json").write_text(json.dumps(result, indent=2) + "\n")

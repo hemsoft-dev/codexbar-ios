@@ -21,6 +21,8 @@ private struct Scenario: Encodable {
 private struct Report: Encodable {
     let fixtureVersion = 1
     let qosClass: UInt32
+    let deterministicHashing: Bool
+    let hashProbe: Int
     let configuration: String
     let timeZone: String
     let warmupBatches = 2
@@ -57,6 +59,8 @@ private struct UsageHistoryBenchmark {
         }
         let report = Report(
             qosClass: qos_class_self().rawValue,
+            deterministicHashing: ProcessInfo.processInfo.environment["SWIFT_DETERMINISTIC_HASHING"] == "1",
+            hashProbe: "UsageHistoryBenchmark.fixture.v1".hashValue,
             configuration: configuration,
             timeZone: "UTC",
             scenarios: try [1, 10, 25].map(run)

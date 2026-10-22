@@ -159,8 +159,8 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 ### Developer Experience
 
 - Compare history performance with an explicit, verified scheduling class for
-  both Release binaries, record CPU time alongside elapsed time, and retain the original failure when diagnostics cannot
-  be saved. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+  both Release binaries and deterministic hashing. Record CPU time alongside elapsed
+  time, and retain the original failure when diagnostics cannot be saved. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Keep rendered accessibility tests from leaving menu animations attached to discarded test windows. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
