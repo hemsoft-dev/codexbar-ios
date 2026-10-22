@@ -200,7 +200,7 @@ public final class ProEntitlement: ObservableObject {
         guard command == nil else { throw ProCommerceError.busy }
         guard isResolved else { throw ProCommerceError.checkingPurchases }
         command = .purchase(product)
-        defer { command = nil }
+        defer { command = nil; scheduleBoundary() }
         guard let displayed = expectedProduct ?? catalog.loadedCatalog?.products[product] else {
             throw ProCommerceError.productUnavailable
         }
@@ -238,7 +238,7 @@ public final class ProEntitlement: ObservableObject {
     public func restore() async throws -> ProRestoreResult {
         guard command == nil else { throw ProCommerceError.busy }
         command = .restore
-        defer { command = nil }
+        defer { command = nil; scheduleBoundary() }
         try Task.checkCancellation()
         let refreshAppTransaction: Bool
         if case let .verified(purchase) = appPurchase {
@@ -627,7 +627,7 @@ public final class ProEntitlement: ObservableObject {
     // StoreKit can briefly return the preceding verified status at its boundary.
     // Preserve one budget and due date across duplicate status publications.
     private func staleBoundaryRecheckDate(at instant: Date) -> Date? {
-        guard boundaryRefreshTask == nil, subscriptionStatusAvailable,
+        guard command == nil, boundaryRefreshTask == nil, subscriptionStatusAvailable,
               value.hasAccess(at: clock(now())), let product = value.subscriptionProduct,
               let expiry = value.expiresAt, expiry <= instant,
               let status = statuses[product], status.renewalVerified,
@@ -653,7 +653,7 @@ public final class ProEntitlement: ObservableObject {
     }
 
     private func startBoundaryRefresh() {
-        guard started, boundaryRefreshTask == nil else { return }
+        guard started, command == nil, boundaryRefreshTask == nil else { return }
         let identifier = UUID()
         boundaryRefreshID = identifier
         boundaryRefreshTask = Task { [weak self] in
@@ -666,7 +666,7 @@ public final class ProEntitlement: ObservableObject {
                     self.scheduleBoundary()
                 }
             }
-            guard self.started, !Task.isCancelled else { return }
+            guard self.started, self.command == nil, !Task.isCancelled else { return }
             self.reevaluateLocalAccess()
             await self.refresh()
         }
@@ -689,6 +689,11 @@ public final class ProEntitlement: ObservableObject {
             do { try await Task.sleep(for: .seconds(delay)) } catch { return }
             guard let self, !Task.isCancelled else { return }
             self.boundaryTask = nil
+            // User commands own their snapshot. A boundary must not supersede it.
+            guard self.command == nil else {
+                self.reevaluateLocalAccess()
+                return
+            }
             if let recheckID { self.consumeBoundaryRecheck(recheckID) }
             self.startBoundaryRefresh()
         }

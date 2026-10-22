@@ -8,7 +8,7 @@ building, testing, or releasing the app.
 
 ### Fixed
 
-- Keep subscription access current when StoreKit briefly returns an earlier status at expiration. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+- Keep subscription access current when StoreKit briefly returns an earlier status at expiration. Background checks wait for Purchase and Restore to finish so they cannot interrupt those requests. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 ### Developer Experience
 

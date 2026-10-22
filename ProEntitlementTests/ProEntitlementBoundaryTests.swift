@@ -268,6 +268,81 @@ final class ProEntitlementBoundaryTests: XCTestCase {
         source.finishStreams()
     }
 
+    func testBoundaryRecheckWaitsForRestoreSnapshotAndResumesAfterCommand() async throws {
+        let source = ProCommerceTestSource()
+        let expiry = Date().addingTimeInterval(-1)
+        source.next = boundarySnapshot(expiry: expiry)
+        let cache = TestProCache()
+        try cache.save(ProEntitlementValue(
+            reason: .monthly, expiresAt: expiry,
+            proAccessEndsAt: expiry.addingTimeInterval(ProEntitlementValue.offlineAllowance),
+            verifiedAt: expiry.addingTimeInterval(-3_600), clockAnchor: testProAnchor(expiry.addingTimeInterval(-3_600))
+        ))
+        let service = ProEntitlement(source: source, cache: cache, clock: testProClock)
+        await service.start()
+        XCTAssertTrue(service.hasAccess)
+        let reading = expectation(description: "Restore snapshot held across the recheck deadline")
+        var resumeRead: CheckedContinuation<Void, Never>?
+        var reads = 0
+        source.beforeSnapshot = {
+            reads += 1
+            if reads == 1 {
+                reading.fulfill()
+                await withCheckedContinuation { resumeRead = $0 }
+            }
+        }
+        let restoring = Task { try await service.restore() }
+        await fulfillment(of: [reading], timeout: 2)
+        try await Task.sleep(for: .seconds(1.3))
+        XCTAssertEqual(reads, 1, "The boundary must not invalidate the user's in-flight snapshot")
+        resumeRead?.resume()
+        let result = try await restoring.value
+        XCTAssertEqual(result, .noPurchases)
+        XCTAssertNil(service.command)
+        let resumed = expectation(description: "Deferred recheck resumes after Restore")
+        source.beforeSnapshot = { resumed.fulfill() }
+        await fulfillment(of: [resumed], timeout: 2)
+        await service.stopAndWait()
+    }
+
+    func testBoundaryRecheckWaitsForPurchaseSnapshot() async throws {
+        let source = ProCommerceTestSource()
+        let expiry = Date().addingTimeInterval(-1)
+        source.next = boundarySnapshot(expiry: expiry)
+        let cache = TestProCache()
+        try cache.save(ProEntitlementValue(
+            reason: .monthly, expiresAt: expiry,
+            proAccessEndsAt: expiry.addingTimeInterval(ProEntitlementValue.offlineAllowance),
+            verifiedAt: expiry.addingTimeInterval(-3_600), clockAnchor: testProAnchor(expiry.addingTimeInterval(-3_600))
+        ))
+        let service = ProEntitlement(source: source, cache: cache, clock: testProClock)
+        await service.start()
+        XCTAssertTrue(service.hasAccess)
+        let reading = expectation(description: "Purchase snapshot held across the recheck deadline")
+        var resumeRead: CheckedContinuation<Void, Never>?
+        var reads = 0
+        source.beforeSnapshot = {
+            reads += 1
+            if reads == 1 {
+                reading.fulfill()
+                await withCheckedContinuation { resumeRead = $0 }
+                source.next = self.boundarySnapshot(expiry: expiry, state: .expired)
+            }
+        }
+        let purchasing = Task {
+            try await service.purchase(.monthly, expectedProduct: commerceTestCatalog().products[.monthly])
+        }
+        await fulfillment(of: [reading], timeout: 2)
+        try await Task.sleep(for: .seconds(1.3))
+        XCTAssertEqual(reads, 1, "The boundary must not invalidate the user's in-flight snapshot")
+        resumeRead?.resume()
+        let result = try await purchasing.value
+        XCTAssertEqual(result, .cancelled)
+        XCTAssertEqual(source.purchaseCalls, [.monthly])
+        XCTAssertNil(service.command)
+        await service.stopAndWait()
+    }
+
     private func boundarySnapshot(
         expiry: Date, state: ProRenewalState = .subscribed, identifier: UInt64 = 600
     ) -> ProStoreSnapshot {
