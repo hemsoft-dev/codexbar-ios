@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "reviewed_commit": "ffa05c0b901970dc261463f1a44e798cb9b3f1ae",
-  "source_snapshot_sha256": "b26f29f5189641a72e179f39fc48ca2aac32283bba5c283e49992fd7bfb25398",
+  "reviewed_commit": "42a2be1b51fe2d0f427a182d998f5887ad946ce4",
+  "source_snapshot_sha256": "9365554bc9d514a91002a854cb96d1b3c52671e37ccbd856d7e8b0888921911e",
   "codeql_version": "2.26.4",
   "query_pack_version": "1.3.9+1d123a2caa0e4e6256a49d963bfcbd51a01617e8",
   "findings": [

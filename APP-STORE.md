@@ -184,7 +184,7 @@ sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.
 | Checkpoint | Requested action and time | Actual App Store Connect time | Storefront observations | Source SHA / build / T | Pending Franz checks |
 | --- | --- | --- | --- | --- | --- |
 | Final candidate and cutoff | Freeze build 5 | Uploaded October 19, 7:12 PM EDT; `VALID` | Not applicable | `62f6d8e` / 2.0.0 (5) / `2026-11-01T00:00:00Z` | None |
-| Exact-candidate qualification | Before upload | Local gates passed October 19; hosted UI gate not green (see below) | Not applicable | `62f6d8e` / 2.0.0 (5) | Live provider comparisons remain separate |
+| Exact-candidate qualification | Before release | Local gates passed October 19; hosted gate failed October 19, rerun pending | Not applicable | `62f6d8e` / 2.0.0 (5) | Live provider comparisons remain separate |
 | Manual submission | App 2.0 plus all first products; paid price; no phased release | Submitted October 22, 2026 at 8:20 AM EDT (`2026-10-22T12:20:11Z`); review submission `af75f0db`, Waiting for Review | US$3.99 retained | `62f6d8e` / 2.0.0 (5) / `2026-11-01T00:00:00Z` | Small Business enrollment (optional) |
 | Manual release | No later than `2026-10-26T00:00:00Z` (October 25, 8:00 PM EDT), six full days before T | Pending approval | Record release visibility | Same build | None |
 | Propagation | Wait full 48 hours after release | Pending release | Record checked storefronts and observed 2.0 versions | Record source/build/T | None |
@@ -197,8 +197,13 @@ checks. The following release actions have not been completed:
 - [x] Freeze build 5 at `62f6d8e` and verify the cutoff, release copy and built
   `2.0.0 (5)` versions.
 - [x] Pass the local release gates on Xcode 26.6 / 17F113 with iOS 26.2,
-  including native commerce, both UI families and function risk. The hosted
-  UI gate did not pass; see below.
+  including native commerce, both UI families and function risk.
+- [ ] Before manual release, pass the hosted release gate for exact SHA
+  `62f6d8e` (tag `v2.0.0-build5`): all five quality jobs and
+  `Full iOS UI validation`. The October 19 hosted run did not pass; the
+  [October 22 rerun](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39779930660)
+  is pending. If it fails, Franz decides whether to release on the local
+  exact-source evidence; record that decision here instead of checking this box.
 - [x] Archive, export, upload and verify processing, then select that exact build.
 - [x] Submit app version 2.0, the CodexBar Pro subscription group and all three
   products once (review submission `af75f0db`, October 22).
@@ -227,7 +232,8 @@ hosted UI gate failed without running its journeys. The local exact-source
 native/UI passes are recorded separately; the hosted gate is not green.
 [Hosted security](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39315802645)
 passed. Hosted performance was inconclusive; the local paired experiment passed.
-Franz accepted the local exact-source passes for build 5.
+Franz submitted build 5 on the local exact-source passes. The hosted gate
+remains a release prerequisite and is being rerun on the same SHA.
 
 The build 5 archive and export passed signature, provisioning, bundle-version,
 privacy-manifest and export-compliance verification. The IPA SHA-256 is

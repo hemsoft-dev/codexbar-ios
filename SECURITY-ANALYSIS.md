@@ -626,4 +626,10 @@ baseline returns to the build 5 binding: reviewed commit
 `b26f29f5189641a72e179f39fc48ca2aac32283bba5c283e49992fd7bfb25398`. The same 157
 production files and four accepted diagnostics apply. The October 21 replacement
 review above no longer describes `main`.
+
+The cutoff's comments were then marked final, a comment-only change; the
+constant and the shipped build 5 binary are unchanged. Reviewed commit
+`42a2be1b51fe2d0f427a182d998f5887ad946ce4` binds source snapshot
+`9365554bc9d514a91002a854cb96d1b3c52671e37ccbd856d7e8b0888921911e` with the same 157 production files and four accepted diagnostics. This is a
+source review, not a new CodeQL analysis.
 ([#515](https://github.com/hemsoft-dev/codexbar-ios/issues/515))
