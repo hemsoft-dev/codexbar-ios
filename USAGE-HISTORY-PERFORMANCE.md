@@ -437,9 +437,13 @@ The runner now admits one fixed experiment after both binaries compile. It
 requires nine consecutive observations spanning at least two minutes with
 one-minute load divided by logical CPU count at most 1.0 and no compiler or
 simulator process using at least 10% CPU. Admission has a 420-second deadline;
-its process probe is separately bounded to five seconds. Missing or malformed
+each process probe is bounded by the smaller of five seconds and the remaining
+admission budget. No new probe starts after the deadline. Missing or malformed
 observations fail. `host-admission.json` retains every observation and the
-outcome. A busy host resets only the admission streak, never a timing result.
+outcome, including the exact serializable invalid observation or an explicit
+representation when a value cannot be encoded as JSON. Simulator runtime
+children are included even when their executable is outside CoreSimulator.
+A busy host resets only the admission streak, never a timing result.
 
 Admission runs once. If it fails, no timing process starts. If admitted, the
 existing three alternating pairs run with every sample and all latency,

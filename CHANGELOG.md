@@ -158,8 +158,9 @@ in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
 
 ### Developer Experience
 
-- Stop accelerated test renewals before clearing owned StoreKit transactions
-  and preserve billing-retry failure readbacks.
+- Stop accelerated test renewals before clearing owned StoreKit transactions,
+  complete later cleanup after individual failures, and preserve the original
+  failure and billing-retry readbacks.
   ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Require a bounded quiet-host admission before the fixed Release history

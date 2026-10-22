@@ -81,9 +81,9 @@ def machine_snapshot(output, name):
     (output / f"{name}-machine.json").write_text(json.dumps(snapshot, indent=2) + "\n")
 
 
-def admission_snapshot():
+def admission_snapshot(*, timeout=5):
     result = subprocess.run(["ps", "-axo", "%cpu=,comm="], env=dict(ENV, LC_ALL="C"),
-                            text=True, capture_output=True, timeout=5, check=True)
+                            text=True, capture_output=True, timeout=timeout, check=True)
     rows = result.stdout.splitlines()
     if not rows:
         raise ValueError("missing process CPU observations")
@@ -96,6 +96,7 @@ def admission_snapshot():
         name = Path(executable).name
         if utilization >= 10 and (name.startswith(("swift", "clang", "xcodebuild", "simctl", "Simulator", "CoreSimulator"))
                                   or "/Simulator.app/" in executable or "/CoreSimulator/" in executable
+                                  or ".simruntime/" in executable
                                   or name in ("launchd_sim", "testmanagerd")):
             busy.append(dict(executable=executable, cpu=utilization))
     return dict(capturedAt=datetime.now(timezone.utc).isoformat(), logicalCPUs=os.cpu_count(),
@@ -111,7 +112,20 @@ def admit_quiet_host(output, *, snapshot=admission_snapshot, sleep=time.sleep, m
     quiet_since, failure = None, None
     try:
         while True:
-            observation = snapshot()
+            remaining = 420 - (monotonic() - started)
+            if remaining <= 0:
+                raise ValueError("quiet host admission failed within the fixed 420-second budget")
+            observation = snapshot(timeout=min(5, remaining))
+            elapsed = monotonic() - started
+            try:
+                saved_observation = json.loads(json.dumps(observation, allow_nan=False))
+            except (TypeError, ValueError):
+                saved_observation = {"unserializableObservation": repr(observation)}
+            sample = dict(observation=saved_observation, elapsedSeconds=elapsed,
+                          valid=False, quiet=False, consecutiveQuietSamples=0)
+            receipt["samples"].append(sample)
+            if not isinstance(observation, dict):
+                raise ValueError("invalid quiet host observation")
             cpus, loads, busy = (observation.get(key) for key in ("logicalCPUs", "loadAverage", "busyProcesses"))
             if (type(cpus) is not int or cpus <= 0 or not isinstance(loads, (list, tuple)) or len(loads) != 3
                     or any(type(value) not in (int, float) or not math.isfinite(value) or value < 0 for value in loads)
@@ -121,8 +135,7 @@ def admit_quiet_host(output, *, snapshot=admission_snapshot, sleep=time.sleep, m
             consecutive = consecutive + 1 if quiet else 0
             elapsed = monotonic() - started
             quiet_since = (elapsed if quiet_since is None else quiet_since) if quiet else None
-            receipt["samples"].append(dict(observation, quiet=quiet, elapsedSeconds=elapsed,
-                                           consecutiveQuietSamples=consecutive))
+            sample.update(valid=True, quiet=quiet, consecutiveQuietSamples=consecutive)
             if consecutive >= 9 and elapsed - quiet_since >= 120 and elapsed <= 420:
                 receipt["passed"] = True
                 return
