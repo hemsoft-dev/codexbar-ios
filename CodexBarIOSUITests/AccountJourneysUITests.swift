@@ -467,6 +467,7 @@ final class AccountJourneysUITests: XCTestCase {
 
     private static let codingMetricIDs = [
         "antigravity.gemini-5h", "antigravity.gemini-weekly", "antigravity.3p-5h", "antigravity.3p-weekly",
+        "antigravity.gemini-argon-wtu-weekly",
     ]
 
     private func assertGoogleMetric(_ id: String, contains value: String, in app: XCUIApplication) {

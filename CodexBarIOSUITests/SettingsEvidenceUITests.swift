@@ -216,6 +216,24 @@ final class SettingsEvidenceUITests: XCTestCase {
 
 @MainActor
 final class SubscriptionUtilizationEvidenceUITests: XCTestCase {
+    func testMissingGooglePoolShowsUnavailableSUS() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchEnvironment = [
+            "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
+            "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "google-six",
+            "CODEXBAR_UI_TEST_DEFAULT_TEXT": "1",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        let argon = app.buttons["dashboard-metric-antigravity.gemini-argon-wtu-weekly"]
+        XCTAssertTrue(argon.waitForExistence(timeout: 15))
+        for _ in 0..<6 where !argon.isHittable { app.swipeUp() }
+        XCTAssertTrue(argon.label.contains("Unavailable"))
+        XCTAssertTrue(argon.label.contains("SUS unavailable"))
+        capture("sus-missing-argon")
+    }
+
     func testWeeklyBandsAndFleetScore() {
         continueAfterFailure = false
         let app = XCUIApplication()

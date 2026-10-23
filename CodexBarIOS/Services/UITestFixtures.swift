@@ -1529,8 +1529,10 @@ final class UITestFixtures {
             "3p-5h": stage >= 3 ? 20 : 0, "3p-weekly": stage >= 3 ? 60 : 0,
         ]
         var unavailable: [String: String] = [:]
-        for definition in definitions where !sources.contains(definition.sourceProviderID) {
-            unavailable[definition.id] = "Setup required"
+        for definition in definitions {
+            if !sources.contains(definition.sourceProviderID) { unavailable[definition.id] = "Setup required" } else if used[definition.key] == nil {
+                unavailable[definition.id] = "Unavailable"
+            }
         }
         if sources.contains(.antigravity) && stage == 1 {
             unavailable["antigravity.gemini-weekly"] = "Unavailable"

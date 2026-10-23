@@ -250,7 +250,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 ## Google Gemini sign-in
 
-One Gemini account contains all six Google usage metrics. Gemini Apps uses a
+One Gemini account contains seven Google usage choices, including Argon weekly. Gemini Apps uses a
 Google website session; Gemini Models and Other models use a separate
 coding OAuth session inside the same account. Both connections are experimental.
 See the verification boundaries in [Gemini sign-in evidence](GEMINI-SIGN-IN.md)
@@ -279,7 +279,7 @@ Confirm that you will choose the same Google account, then complete browser
 authorization. This flow requires the developer to configure a Google OAuth
 iOS client before deployment; end users do not enter client settings. Existing standalone coding accounts are retained and
 can be linked here after that confirmation; CodexBar does not guess associations
-from matching labels. All six metrics stay available in Metrics and Customize
+from matching labels. All seven choices stay available in Metrics and Customize
 Card even when a source needs setup. Their saved identities, layout, and history
 survive the account consolidation. See [coding session setup](ANTIGRAVITY-SETUP.md)
 for developer configuration and renewal details.
