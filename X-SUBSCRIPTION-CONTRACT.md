@@ -65,7 +65,7 @@ The separate "Weekly Grok Bot Limit" card is hidden when `session.user.cursorMer
 
 - `ProviderID.xSubscription` (`xSubscription`) reuses `GrokDeviceAuthService`, `GrokCredential`, the credential lock, subject verification and refresh. Grok's SuperGrok billing sign-in is not offered, because its parser rejects X-derived subscriptions.
 - Metric IDs: `xSubscription.weekly-pool` for the pool and `xSubscription.monetary.balance.usd` for Extra Usage Credits. Product shares appear only in the `xSubscription.product-usage` information section, and only when the pool bar is shown.
-- `isUnifiedBillingUser` is not required for the X Subscription pool. Grok's omitted-percent zero convention applies only when the verified tier is a recognized unified plan.
+- `isUnifiedBillingUser` is not required for the X Subscription pool. Missing percentages stay unavailable, including for verified paid tiers. Only an explicitly reported zero becomes a zero-percent bar.
 
 ## Open items
 

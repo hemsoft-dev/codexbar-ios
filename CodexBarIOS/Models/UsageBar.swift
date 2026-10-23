@@ -281,7 +281,7 @@ public struct UsageBar: Identifiable, Equatable, Sendable {
 
     private static let limitNotReachedDescription = "Limit not reached"
 
-    private static func projectedUsage(current: Double, periodStart: Date, periodEnd: Date, now: Date) -> Double {
+    static func projectedUsage(current: Double, periodStart: Date, periodEnd: Date, now: Date) -> Double {
         let elapsed = now.timeIntervalSince(periodStart)
         if elapsed <= 0 || now >= periodEnd {
             return current

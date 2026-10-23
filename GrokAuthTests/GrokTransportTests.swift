@@ -123,8 +123,7 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
             credential, for: .defaultConfiguration(for: .grok)
         )
         XCTAssertEqual(result.verifiedGrokPlanName, "SuperGrok Lite")
-        XCTAssertEqual(result.bars.first?.used, 0)
-        XCTAssertEqual(result.bars.first?.resetsAt, formatter.date(from: end))
+        XCTAssertTrue(result.bars.isEmpty)
         XCTAssertEqual(result.monetaryMetrics.map(\.minorUnits), [500])
         XCTAssertEqual(GrokTestProtocol.state.requests.map { $0.url?.path }, [
             "/oauth2/userinfo", "/v1/billing", "/v1/settings",
@@ -325,7 +324,7 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
         account: ProviderAccountConfiguration, secrets: GrokTestSecrets, start: String, end: String
     ) async throws {
         let cases: [((String, String), Bool, String?, String, [Double])] = [
-            (("", "true"), true, "SuperGrok Lite", "subject-one", [0]),
+            (("", "true"), true, "SuperGrok Lite", "subject-one", []),
             ((",\"creditUsagePercent\":31", "true"), true, "SuperGrok Lite", "subject-one", [31]),
             ((",\"creditUsagePercent\":null", "true"), true, "SuperGrok Lite", "subject-one", []),
             ((",\"productUsage\":[]", "true"), true, "SuperGrok Lite", "subject-one", []),
@@ -355,7 +354,7 @@ final class GrokTransportTests: XCTestCase, @unchecked Sendable {
                 )
                 if singleAccount { _ = await service.refresh(configuration: account) } else { await service.refresh(configurations: [account]) }
                 let result = try XCTUnwrap(service.results.first)
-                XCTAssertEqual(result.bars.map(\.used), expected, "Only fresh reported or safely inferred usage is visible")
+                XCTAssertEqual(result.bars.map(\.used), expected, "Only fresh reported usage is visible")
                 XCTAssertEqual(result.monetaryMetrics.map(\.minorUnits), unified == "true" ? [700] : [],
                                "Fresh extra credits must survive tier retention only for a verified unified account")
                 XCTAssertNil(result.failureMessage)

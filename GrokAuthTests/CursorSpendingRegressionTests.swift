@@ -33,7 +33,7 @@ final class CursorSpendingRegressionTests: XCTestCase, @unchecked Sendable {
         }
     }
 
-    func testGrokInferredZeroIsLabeledAndPresentEmptyCreditsMeanProtoZero() throws {
+    func testMissingGrokUsageStaysUnavailableAndEmptyCreditsMeanProtoZero() throws {
         let data = Data(#"""
             {"config":{"isUnifiedBillingUser":true,
             "currentPeriod":{"type":"USAGE_PERIOD_TYPE_WEEKLY","start":"2026-09-21T00:00:00Z",
@@ -43,8 +43,7 @@ final class CursorSpendingRegressionTests: XCTestCase, @unchecked Sendable {
             data, configuration: .defaultConfiguration(for: .grok), subject: "fixture-consumer",
             now: ISO8601DateFormatter().date(from: "2026-09-23T12:00:00Z")!, verifiedPlanName: "SuperGrok Lite"
         )
-        XCTAssertEqual(result.bars.first?.used, 0)
-        XCTAssertTrue(result.bars.first?.label.localizedCaseInsensitiveContains("inferred") == true)
+        XCTAssertTrue(result.bars.isEmpty)
         XCTAssertEqual(result.monetaryMetrics.first?.minorUnits, 0)
         XCTAssertFalse(result.usageMessages.isEmpty)
     }

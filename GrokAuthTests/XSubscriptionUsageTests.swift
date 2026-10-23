@@ -176,14 +176,13 @@ final class XSubscriptionUsageTests: XCTestCase, @unchecked Sendable {
         }
     }
 
-    func testInferredZeroOnlyForVerifiedUnifiedPlanAndOmittedUsage() throws {
+    func testOmittedUsageRemainsUnavailableEvenForVerifiedUnifiedPlan() throws {
         let omitted = Data(#"{"config":{\#(weekly),"prepaidBalance":{"val":0}}}"#.utf8)
-        let inferred = try GrokUsageProvider.parseXSubscription(
+        let missing = try GrokUsageProvider.parseXSubscription(
             omitted, configuration: account, subject: "verified-user", now: now, verifiedPlanName: "Premium"
         )
-        XCTAssertEqual(inferred.bars.first?.used, 0)
-        XCTAssertEqual(inferred.bars.first?.label, "Weekly pool inferred")
-        XCTAssertTrue(inferred.usageMessages.contains(XSubscriptionCopy.inferredMessage))
+        XCTAssertTrue(missing.bars.isEmpty)
+        XCTAssertTrue(missing.usageMessages.contains(XSubscriptionCopy.unavailableReason))
         for plan in [nil, "SuperGrok", "X Premium+"] as [String?] {
             let result = try GrokUsageProvider.parseXSubscription(
                 omitted, configuration: account, subject: "verified-user", now: now, verifiedPlanName: plan
@@ -202,13 +201,11 @@ final class XSubscriptionUsageTests: XCTestCase, @unchecked Sendable {
             omitted, configuration: account, subject: "verified-user", now: now, planLookupFailed: true
         )
         XCTAssertTrue(incoming.bars.isEmpty)
-        XCTAssertNotNil(incoming.grokInferredZeroCandidate)
         let retained = GrokUsageProvider.retainingVerifiedPlan("Premium", for: incoming)
         XCTAssertEqual(retained.providerID, .xSubscription)
         XCTAssertEqual(retained.verifiedGrokPlanName, "Premium")
-        XCTAssertEqual(retained.bars.first?.stableKey, "weekly-pool")
-        XCTAssertEqual(retained.bars.first?.used, 0)
-        XCTAssertFalse(retained.usageMessages.contains(XSubscriptionCopy.unavailableReason))
+        XCTAssertTrue(retained.bars.isEmpty)
+        XCTAssertTrue(retained.usageMessages.contains(XSubscriptionCopy.unavailableReason))
         XCTAssertTrue(GrokUsageProvider.retainingVerifiedPlan("SuperGrok", for: incoming).bars.isEmpty)
     }
 

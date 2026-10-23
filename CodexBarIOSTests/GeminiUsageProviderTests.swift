@@ -423,10 +423,10 @@ final class UnifiedGeminiUsageProviderTests: XCTestCase {
     )
     private static let metricIDs = [
         "gemini.five-hour", "gemini.weekly", "antigravity.gemini-5h",
-        "antigravity.gemini-weekly", "antigravity.3p-5h", "antigravity.3p-weekly",
+        "antigravity.gemini-weekly", "antigravity.gemini-argon-wtu-weekly", "antigravity.3p-5h", "antigravity.3p-weekly",
     ]
 
-    func testSingleGeminiCatalogKeepsSixSourceIdentitiesBeforeConnection() {
+    func testSingleGeminiCatalogKeepsSevenSourceIdentitiesBeforeConnection() {
         let metrics = GoogleUsageMetricCatalog.metrics(for: .gemini)
         XCTAssertEqual(metrics.map(\.id), Self.metricIDs)
         XCTAssertTrue(metrics.allSatisfy { $0.kind == .unavailableUsage("Setup required") })
@@ -439,7 +439,7 @@ final class UnifiedGeminiUsageProviderTests: XCTestCase {
         )
     }
 
-    func testUnifiedFetchRenewsOnlyCodingCredentialAndKeepsAllSixMetrics() async throws {
+    func testUnifiedFetchRenewsOnlyCodingCredentialAndKeepsAllSevenMetrics() async throws {
         let secrets = try Self.secrets(coding: #"{"access_token":"old","refresh_token":"refresh","client_id":"client","client_secret":"client-secret","expiry":"2020-01-01T00:00:00Z"}"#)
         let fixture = IsolatedTestURLSession { request in
             if request.url == AntigravityUsageProvider.tokenURL {
@@ -456,7 +456,7 @@ final class UnifiedGeminiUsageProviderTests: XCTestCase {
         XCTAssertEqual(result.accountID, Self.configuration.id)
         XCTAssertEqual(result.availableMetrics.map(\.id), Self.metricIDs)
         XCTAssertEqual(result.configurableMetrics.map(\.id), Self.metricIDs)
-        XCTAssertEqual(result.bars.map(\.usageText), ["12%", "45%", "100%", "31%", "20%", "60%"])
+        XCTAssertEqual(result.bars.map(\.usageText), ["12%", "45%", "100%", "31%", "50%", "20%", "60%"])
         XCTAssertEqual(result.bars[2].resetsAt, AntigravityQuotaParser.date("2030-09-11T16:22:20Z"))
         XCTAssertTrue(result.hasCurrentBars)
         XCTAssertNil(result.failureMessage)
@@ -486,10 +486,10 @@ final class UnifiedGeminiUsageProviderTests: XCTestCase {
             .fetchUsage(for: Self.configuration)
 
         XCTAssertEqual(result.bars.map(\.stableKey), ["five-hour", "weekly"])
-        XCTAssertEqual(result.configurableMetrics.count, 6)
+        XCTAssertEqual(result.configurableMetrics.count, 7)
         XCTAssertTrue(result.hasCurrentBars)
         XCTAssertNil(result.failureMessage)
-        for metricID in Self.metricIDs.suffix(4) {
+        for metricID in Self.metricIDs.suffix(5) {
             XCTAssertTrue(result.unavailableUsageMetrics[metricID]?.contains("Coding connection required") == true)
         }
         XCTAssertFalse(result.usageMessages.joined().contains("Antigravity"))
@@ -502,7 +502,7 @@ final class UnifiedGeminiUsageProviderTests: XCTestCase {
         let result = try await GeminiUsageProvider(secretStore: secrets, session: fixture.session)
             .fetchUsage(for: Self.configuration)
 
-        XCTAssertEqual(result.availableMetrics.map(\.id), Array(Self.metricIDs.suffix(4)))
+        XCTAssertEqual(result.availableMetrics.map(\.id), Array(Self.metricIDs.suffix(5)))
         XCTAssertTrue(result.hasCurrentBars)
         XCTAssertNil(result.failureMessage)
         XCTAssertEqual(result.recoveryAction, .reauthenticate)
@@ -532,7 +532,7 @@ final class UnifiedGeminiUsageProviderTests: XCTestCase {
             XCTAssertEqual(result.recoveryAction, action)
             XCTAssertTrue(result.failureMessage?.contains(message) == true, result.failureMessage ?? "Missing failure")
             XCTAssertTrue(result.bars.isEmpty)
-            XCTAssertEqual(result.unavailableUsageMetrics.count, 6)
+            XCTAssertEqual(result.unavailableUsageMetrics.count, 7)
             XCTAssertEqual(DashboardRecoveryRoute.resolve(action: result.recoveryAction, providerID: .gemini),
                            action == .retryRefresh ? .retryRefresh : .accountSettings)
         }
@@ -564,11 +564,11 @@ final class UnifiedGeminiUsageProviderTests: XCTestCase {
         )
         _ = await service.refresh(configuration: account)
         let result = try XCTUnwrap(service.results.first)
-        let currentIDs = ["gemini.five-hour", "gemini.weekly", "antigravity.gemini-5h", "antigravity.3p-weekly"]
+        let currentIDs = ["gemini.five-hour", "gemini.weekly", "antigravity.gemini-5h", "antigravity.gemini-argon-wtu-weekly", "antigravity.3p-weekly"]
         XCTAssertEqual(result.availableMetrics.map(\.id), currentIDs)
         XCTAssertTrue(result.hasCurrentBars)
         XCTAssertEqual(result.configurableMetrics[3].kind, .unavailableUsage("Unavailable"))
-        XCTAssertEqual(result.configurableMetrics[4].kind, .unavailableUsage("Disabled"))
+        XCTAssertEqual(result.configurableMetrics[5].kind, .unavailableUsage("Disabled"))
 
         WidgetSnapshotPublisher.publish(results: [result], configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
         snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil))
@@ -616,12 +616,12 @@ final class UnifiedGeminiUsageProviderTests: XCTestCase {
         XCTAssertEqual(request.url, AntigravityUsageProvider.quotaURL)
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer \(codingToken)")
         XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
-        var buckets: [[String: Any]] = zip(GoogleUsageMetricCatalog.codingDefinitions, [0.0, 0.69, 0.8, 0.4]).map { metric, remaining in
+        var buckets: [[String: Any]] = zip(GoogleUsageMetricCatalog.codingDefinitions, [0.0, 0.69, 0.5, 0.8, 0.4]).map { metric, remaining in
             ["bucketId": metric.key, "window": metric.window, "remainingFraction": remaining, "resetTime": "2030-09-11T16:22:20Z"]
         }
         if partialCoding {
             buckets[1].removeValue(forKey: "remainingFraction")
-            buckets[2]["disabled"] = true
+            buckets[3]["disabled"] = true
         }
         return (try http(request), try JSONSerialization.data(withJSONObject: ["groups": [["buckets": buckets]]]))
     }
@@ -881,11 +881,11 @@ private final class GeminiLifetimeURLProtocol: URLProtocol, @unchecked Sendable 
 }
 
 extension GeminiUsageProviderTests {
-    func testAllSixGeminiMetricsProjectOrdinaryPaceAndExhaustion() throws {
+    func testAllSevenGeminiMetricsProjectOrdinaryPaceAndExhaustion() throws {
         let now = Date(timeIntervalSince1970: 1_788_640_000)
         for fraction in [0.2, 0.6] {
             let bars = try projectionBars(fraction: fraction, now: now)
-            XCTAssertEqual(bars.map(\.stableKey), ["five-hour", "weekly", "gemini-5h", "gemini-weekly", "3p-5h", "3p-weekly"])
+            XCTAssertEqual(bars.map(\.stableKey), ["five-hour", "weekly", "gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly", "3p-5h", "3p-weekly"])
             for bar in bars {
                 XCTAssertEqual(bar.fractionUsed, fraction, accuracy: 0.000_001)
                 XCTAssertEqual(try XCTUnwrap(bar.projectedFraction(at: now)), min(fraction * 2, 1), accuracy: 0.000_001)
@@ -906,10 +906,10 @@ extension GeminiUsageProviderTests {
         }
     }
 
-    func testAllSixGeminiResetCaptionsMatchCodexEvenWhenProjectionIsBenign() throws {
+    func testAllSevenGeminiResetCaptionsMatchCodexEvenWhenProjectionIsBenign() throws {
         let now = Date(timeIntervalSince1970: 1_788_640_000)
         let bars = try projectionBars(fraction: 0.2, now: now)
-        XCTAssertEqual(bars.count, 6)
+        XCTAssertEqual(bars.count, 7)
         for zone in ["America/New_York", "Europe/Berlin"] {
             let formatter = UserFacingDateTimeFormatter(
                 timeZone: try XCTUnwrap(TimeZone(identifier: zone)), locale: Locale(identifier: "en_US")
@@ -940,7 +940,7 @@ extension GeminiUsageProviderTests {
             }
             let result = try codingProjectionResult(buckets: buckets, now: now)
             if reset is NSNull {
-                XCTAssertEqual(result.bars.count, 4)
+                XCTAssertEqual(result.bars.count, 5)
                 for bar in result.bars {
                     XCTAssertNil(bar.resetsAt)
                     XCTAssertNil(bar.localizedResetDescription(at: now))
@@ -948,7 +948,7 @@ extension GeminiUsageProviderTests {
                 }
             } else {
                 XCTAssertTrue(result.bars.isEmpty)
-                XCTAssertEqual(result.unavailableUsageMetrics.count, 4)
+                XCTAssertEqual(result.unavailableUsageMetrics.count, 5)
             }
         }
     }
@@ -998,7 +998,7 @@ extension GeminiUsageProviderTests {
     }
 
     @MainActor
-    func testSixGeminiProjectionsSurviveWidgetSnapshotSerialization() throws {
+    func testSevenGeminiProjectionsSurviveWidgetSnapshotSerialization() throws {
         let now = Date(timeIntervalSince1970: 1_788_640_000)
         let suite = "GeminiProjection.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -1015,7 +1015,7 @@ extension GeminiUsageProviderTests {
             snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil), now: now)
             let saved = try XCTUnwrap(WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first)
             XCTAssertEqual(saved.accountID, account.id)
-            XCTAssertEqual(saved.bars.count, 6)
+            XCTAssertEqual(saved.bars.count, 7)
             for bar in saved.bars {
                 XCTAssertEqual(bar.fractionUsed, fraction, accuracy: 0.000_001)
                 XCTAssertEqual(try XCTUnwrap(bar.projectedFraction), min(fraction * 2, 1), accuracy: 0.000_001)
