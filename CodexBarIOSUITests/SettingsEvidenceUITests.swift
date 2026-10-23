@@ -228,7 +228,12 @@ final class SubscriptionUtilizationEvidenceUITests: XCTestCase {
         defer { app.terminate() }
         let argon = app.buttons["dashboard-metric-antigravity.gemini-argon-wtu-weekly"]
         XCTAssertTrue(argon.waitForExistence(timeout: 15))
-        for _ in 0..<6 where !argon.isHittable { app.swipeUp() }
+        for _ in 0..<6 {
+            if argon.isHittable && argon.frame.maxY <= app.frame.maxY - 16 { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(argon.isHittable)
+        XCTAssertLessThanOrEqual(argon.frame.maxY, app.frame.maxY - 16)
         XCTAssertTrue(argon.label.contains("Unavailable"))
         XCTAssertTrue(argon.label.contains("SUS unavailable"))
         capture("sus-missing-argon")
