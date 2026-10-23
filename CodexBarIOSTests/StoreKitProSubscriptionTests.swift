@@ -97,8 +97,29 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         let context = try await storeKitContext()
         configureBillingRenewal(context, grace: true)
         let service = try await purchaseMonthly(context)
-        try await storeKitEventually("Real StoreKit billing grace did not reach the service status listener.", timeout: 75) {
-            service.value.reason == .billingGrace && service.commerce.hasBillingIssue
+        let started = ProcessInfo.processInfo.systemUptime
+        var receivedStatuses: [String] = []
+        var receivedVerifiedGrace = false
+        service.debugSubscriptionObservation = { status in
+            let elapsed = ProcessInfo.processInfo.systemUptime - started
+            receivedStatuses.append("elapsed=\(elapsed),state=\(status.state),signed=\(status.signedAt),graceEnd=\(String(describing: status.graceEndsAt))")
+            if status.state == .grace && status.renewalVerified && status.graceEndsAt != nil {
+                receivedVerifiedGrace = true
+            }
+        }
+        do {
+            try await storeKitEventually("Real StoreKit billing grace did not reach the entitlement service.", timeout: 75) {
+                service.value.reason == .billingGrace && service.commerce.hasBillingIssue
+            }
+        } catch let primaryError {
+            do {
+                var details = await storeKitState(context, service: service)
+                details["receivedStatusTrace"] = receivedStatuses.joined(separator: ";")
+                try storeKitEvent("billing-grace-timeout", details)
+            } catch {
+                print("Unable to preserve billing-grace diagnostics; retaining the primary failure.")
+            }
+            throw primaryError
         }
         let snapshot = await context.source.snapshot()
         let status = try XCTUnwrap(snapshot.subscriptions.first { $0.state == .grace })
@@ -109,7 +130,11 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         XCTAssertEqual(service.commerce.graceEndsAt, status.graceEndsAt)
         XCTAssertNil(service.commerce.dateKind)
         XCTAssertNil(service.commerce.periodEnd, "A grace date must never be displayed as the next subscription renewal.")
-        try storeKitEvent("billing-grace", ["access": "true", "billingIssue": "true", "verifiedGraceDate": "true"])
+        try storeKitEvent("billing-grace", [
+            "access": "true", "billingIssue": "true", "verifiedGraceDate": "true",
+            "receivedStatusTrace": receivedStatuses.joined(separator: ";"),
+            "verifiedGraceReceiverObserved": String(receivedVerifiedGrace),
+        ])
     }
 
     func testBillingRetryDeniesAccessThenVerifiedRecoveryRestoresIt() async throws {

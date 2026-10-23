@@ -6,7 +6,13 @@ building, testing, or releasing the app.
 
 ## 2.0.1 - Unreleased
 
+### Fixed
+
+- Keep subscription access current when StoreKit briefly returns an earlier status at expiration. Background checks wait for Purchase and Restore to finish so they cannot interrupt those requests. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+
 ### Developer Experience
+
+- Trace native StoreKit status delivery on the existing test receiver, preserve status and clock diagnostics without transaction identifiers, and verify stable test-store cleanup. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Record the App Review submission of 2.0.0 build 5 and keep the shipped
   October 31, 8 PM EDT family installation deadline in source, tests, support

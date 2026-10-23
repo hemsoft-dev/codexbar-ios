@@ -293,5 +293,7 @@ final class TestProSource: ProStoreSource {
     func finishStreams() {
         transactions.continuation.finish()
         statuses.continuation.finish()
+        beforeSnapshot = nil
+        beforeRestore = nil
     }
 }

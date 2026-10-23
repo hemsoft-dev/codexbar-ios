@@ -123,12 +123,37 @@ final class StoreKitProTestContext {
         steps.append(("reset-status", { try await self.session.setSimulatedError(nil, forAPI: .subscriptionStatus) }))
         steps.append(("reset-sync", { try await self.session.setSimulatedError(nil, forAPI: .appStoreSync) }))
         steps.append(("reset-app-transaction", { try await self.session.setSimulatedError(nil, forAPI: .appTransaction) }))
-        steps.append(("verify-owned-transactions", {
-            try Self.require(self.session.allTransactions().isEmpty, "Owned StoreKit transactions survived teardown.")
-        }))
-        steps.append(("verify-storekit-transactions", { try await Self.requireEmptyTransactions("teardown") }))
+        steps.append(("clear-and-verify-transactions", { try await self.clearAndRequireEmptyTransactions() }))
         steps.append(("remove-cache", { try FileManager.default.removeItem(at: self.directory) }))
         try await runNativeCleanup(steps)
+    }
+
+    private func clearAndRequireEmptyTransactions() async throws {
+        let deadline = ProcessInfo.processInfo.systemUptime + 10
+        var consecutiveEmpty = 0
+        repeat {
+            let ownedEmpty = session.allTransactions().isEmpty
+            let storeKitEmpty = await !Self.hasStoreKitTransactions()
+            if ownedEmpty && storeKitEmpty {
+                consecutiveEmpty += 1
+                if consecutiveEmpty == 3 { return }
+            } else {
+                consecutiveEmpty = 0
+                // StoreKit can finish a queued renewal after its first clear.
+                // Clear only this isolated test store, then verify both APIs.
+                session.clearTransactions()
+            }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        } while ProcessInfo.processInfo.systemUptime < deadline
+        var retained: [String] = []
+        for await _ in StoreKit.Transaction.currentEntitlements { retained.append("current"); break }
+        for await _ in StoreKit.Transaction.unfinished { retained.append("unfinished"); break }
+        for product in ProProductID.allCases where await StoreKit.Transaction.latest(for: product.rawValue) != nil {
+            retained.append("latest:" + product.rawValue)
+        }
+        throw StoreKitProTestFailure.assertion(
+            "StoreKit teardown did not converge: owned=\(session.allTransactions().count), SDK=\(retained.joined(separator: ";"))."
+        )
     }
 
     static func requireEmptyTransactions(_ phase: String) async throws {
@@ -137,7 +162,13 @@ final class StoreKitProTestContext {
             if await !hasStoreKitTransactions() { return }
             try await Task.sleep(nanoseconds: 100_000_000)
         } while ProcessInfo.processInfo.systemUptime < deadline
-        throw StoreKitProTestFailure.assertion("StoreKit retained current, latest or unfinished transactions during \(phase).")
+        var retained: [String] = []
+        for await _ in StoreKit.Transaction.currentEntitlements { retained.append("current"); break }
+        for await _ in StoreKit.Transaction.unfinished { retained.append("unfinished"); break }
+        for product in ProProductID.allCases where await StoreKit.Transaction.latest(for: product.rawValue) != nil {
+            retained.append("latest:" + product.rawValue)
+        }
+        throw StoreKitProTestFailure.assertion("StoreKit retained transactions during \(phase): \(retained.joined(separator: ";")).")
     }
 
     private static func hasStoreKitTransactions() async -> Bool {
@@ -383,17 +414,21 @@ extension XCTestCase {
         let unfinished = await storeKitUnfinishedProducts()
         let current = await storeKitCurrentProducts()
         let sessions = context.session.allTransactions().map {
-            let identity = "id=\($0.identifier),original=\($0.originalTransactionIdentifier)"
-            return "\($0.productIdentifier):\(identity),renewing=\($0.autoRenewingEnabled),issue=\($0.hasPurchaseIssue)"
+            "\($0.productIdentifier):renewing=\($0.autoRenewingEnabled),issue=\($0.hasPurchaseIssue)"
                 + ",pending=\($0.pendingAskToBuyConfirmation),expiry=\(String(describing: $0.expirationDate))"
         }.sorted()
         let statuses = snapshot.subscriptions.map {
             "\($0.purchase.product.rawValue):state=\($0.state),verified=\($0.renewalVerified),renewing=\(String(describing: $0.willAutoRenew)),retry=\($0.isInBillingRetry)"
+                + ",signed=\($0.signedAt),graceEnd=\(String(describing: $0.graceEndsAt))"
         }.sorted()
         var details = [
             "serviceReason": service.value.reason.rawValue,
             "serviceAccess": String(service.hasAccess),
             "serviceStatusAvailable": String(service.subscriptionStatusAvailable),
+            "serviceExpiresAt": String(describing: service.value.expiresAt),
+            "serviceClockAnchor": String(describing: service.value.clockAnchor),
+            "observedWallDate": String(describing: Date()),
+            "observedContinuousSeconds": String(ProcessInfo.processInfo.systemUptime),
             "sourceStatusAvailable": String(snapshot.subscriptionStatusAvailable),
             "sourceStatuses": statuses.joined(separator: ";"),
             "sessionStates": sessions.joined(separator: ";"),
