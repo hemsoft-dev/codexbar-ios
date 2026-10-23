@@ -228,15 +228,34 @@ final class AntigravityUsageProviderTests: XCTestCase {
     )
     private static let now = Date(timeIntervalSince1970: 1_788_640_000)
 
-    func testFourIndependentBucketsConvertRemainingExactlyOnce() throws {
+    func testFiveIndependentBucketsConvertRemainingExactlyOnce() throws {
         let result = try Self.result(Self.payload())
         XCTAssertEqual(result.providerID, .antigravity)
-        XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-5h", "gemini-weekly", "3p-5h", "3p-weekly"])
-        XCTAssertEqual(result.bars.map(\.usageText), ["100%", "31%", "20%", "60%"])
+        XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly", "3p-5h", "3p-weekly"])
+        XCTAssertEqual(result.bars.map(\.usageText), ["100%", "31%", "50%", "20%", "60%"])
         XCTAssertEqual(result.bars[1].used, 31, accuracy: 0.000_001)
         XCTAssertEqual(result.bars[0].severity, .critical)
         XCTAssertEqual(result.bars[1].resetsAt, AntigravityQuotaParser.date("2030-09-11T16:22:20Z"))
         XCTAssertNil(result.failureMessage)
+    }
+
+    func testArgonIsIndependentAndOmittedPoolsNeverBecomeZero() throws {
+        var buckets = Self.buckets()
+        buckets.removeAll { ["gemini-weekly", "gemini-argon-wtu-weekly"].contains($0["bucketId"] as? String ?? "") }
+        let absent = try Self.result(Self.payload(buckets))
+        for key in ["gemini-weekly", "gemini-argon-wtu-weekly"] {
+            XCTAssertFalse(absent.bars.contains { $0.stableKey == key })
+            XCTAssertEqual(absent.unavailableUsageMetrics["antigravity.\(key)"], "Unavailable")
+        }
+        let now = Self.now
+        buckets.append(["bucketId": "gemini-argon-wtu-weekly", "window": "weekly", "remainingFraction": 0.6,
+                        "resetTime": ISO8601DateFormatter().string(from: now.addingTimeInterval(84 * 3_600)),
+        ])
+        let present = try Self.result(Self.payload(buckets))
+        let argon = try XCTUnwrap(present.bars.first { $0.stableKey == "gemini-argon-wtu-weekly" })
+        XCTAssertEqual(argon.used, 40, accuracy: 0.000_001)
+        XCTAssertEqual(SubscriptionUtilizationScore(bar: argon, at: now)?.value, 80)
+        XCTAssertEqual(present.unavailableUsageMetrics["antigravity.gemini-weekly"], "Unavailable")
     }
 
     func testMissingDisabledDuplicateAndInvalidBucketsStayUnavailable() throws {
@@ -245,7 +264,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
             var buckets = Self.buckets()
             buckets[0]["remainingFraction"] = fraction
             let result = try Self.result(Self.payload(buckets))
-            XCTAssertEqual(result.bars.count, 3)
+            XCTAssertEqual(result.bars.count, 4)
             XCTAssertFalse(result.bars.contains { $0.stableKey == "gemini-5h" })
             XCTAssertEqual(result.usageMessages, ["Unavailable: Gemini Models five-hour."])
         }
@@ -258,7 +277,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
             case "duplicate": buckets.append(buckets[0])
             default: buckets.removeFirst()
             }
-            XCTAssertEqual(try Self.result(Self.payload(buckets)).bars.count, 3)
+            XCTAssertEqual(try Self.result(Self.payload(buckets)).bars.count, 4)
         }
     }
 
@@ -282,7 +301,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         buckets[0].removeValue(forKey: "resetTime")
         XCTAssertNil(try Self.result(Self.payload(buckets)).bars.first?.resetsAt)
         buckets[0]["resetTime"] = "not a date"
-        XCTAssertEqual(try Self.result(Self.payload(buckets)).bars.count, 3)
+        XCTAssertEqual(try Self.result(Self.payload(buckets)).bars.count, 4)
         XCTAssertNotNil(AntigravityQuotaParser.date("2030-09-11T16:22:20.123Z"))
     }
 
@@ -359,7 +378,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         defer { fixture.invalidate() }
         let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
         let result = try await provider.fetchUsage(for: Self.configuration)
-        XCTAssertEqual(result.bars.count, 4)
+        XCTAssertEqual(result.bars.count, 5)
         XCTAssertEqual(result.accountID, Self.configuration.id)
         let other = ProviderAccountConfiguration(id: "other", providerID: .antigravity, authMethod: .cliToken)
         let missing = try await provider.fetchUsage(for: other)
@@ -437,7 +456,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
     }
 
     @MainActor
-    func testAllSixMetricChoicesExistOnOneAccountBeforeCredentials() throws {
+    func testAllSevenMetricChoicesExistOnOneAccountBeforeCredentials() throws {
         let suite = "GoogleChoices.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -459,7 +478,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
     }
 
     @MainActor
-    func testAllSixPreferencesSurviveMissingResultsRefreshAndRelaunch() async throws {
+    func testAllSevenPreferencesSurviveMissingResultsRefreshAndRelaunch() async throws {
         let suite = "GoogleLayout.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -525,13 +544,13 @@ final class AntigravityUsageProviderTests: XCTestCase {
         XCTAssertEqual(history.snapshots(for: apps.id).count, 2)
         XCTAssertEqual(Set(history.snapshots.map(\.id)), originalIDs)
         XCTAssertTrue(history.snapshots.allSatisfy { $0.providerID == .gemini })
-        XCTAssertEqual(history.snapshots(for: apps.id).flatMap(\.bars).count, 5)
+        XCTAssertEqual(history.snapshots(for: apps.id).flatMap(\.bars).count, 6)
         XCTAssertFalse(store.isMetricVisible(accountID: apps.id, metricID: codingIDs[1]))
         XCTAssertFalse(store.isMetricVisible(accountID: apps.id, metricID: "gemini.weekly"))
         XCTAssertFalse(store.isMetricVisibleOnWatch(accountID: apps.id, metricID: codingIDs[1]))
         XCTAssertEqual(store.metricWidth(accountID: apps.id, metricID: codingIDs[1]), .half)
         XCTAssertEqual(store.visualizationStyle(accountID: apps.id, metricID: codingIDs[1]), .circularRing)
-        XCTAssertEqual(Array(try XCTUnwrap(store.metricLayouts[apps.id]).orderedMetricIDs.suffix(4)), Array(codingIDs.reversed()))
+        XCTAssertEqual(Array(try XCTUnwrap(store.metricLayouts[apps.id]).orderedMetricIDs.suffix(5)), Array(codingIDs.reversed()))
         XCTAssertTrue(store.isMetricVisible(accountID: unrelated.id, metricID: codingIDs[1]))
         XCTAssertEqual(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: apps)), "apps-secret")
         XCTAssertNotNil(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: coding)))
@@ -857,7 +876,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
     }
 
     @MainActor
-    func testScreenshotFixtureContainsOneGeminiAccountAndSixBuckets() {
+    func testScreenshotFixtureContainsOneGeminiAccountAndSevenChoices() {
         let store = ProviderConfigurationStore.appStoreScreenshotDemo()
         let results = AppStoreScreenshotFixtures.results(for: store)
         XCTAssertFalse(results.contains { $0.providerID == .antigravity })
@@ -866,7 +885,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
 
     private static let googleIDs = [
         "gemini.five-hour", "gemini.weekly", "antigravity.gemini-5h",
-        "antigravity.gemini-weekly", "antigravity.3p-5h", "antigravity.3p-weekly",
+        "antigravity.gemini-weekly", "antigravity.gemini-argon-wtu-weekly", "antigravity.3p-5h", "antigravity.3p-weekly",
     ]
 
     private static func unifiedResult(_ account: ProviderAccountConfiguration) throws -> ProviderUsageResult {
@@ -907,7 +926,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
     }
 
     private static func buckets() -> [[String: Any]] {
-        zip(AntigravityQuotaParser.metrics, [0.0, 0.69, 0.8, 0.4]).map { metric, remaining in
+        zip(AntigravityQuotaParser.metrics, [0.0, 0.69, 0.5, 0.8, 0.4]).map { metric, remaining in
             ["bucketId": metric.key, "window": metric.window, "remainingFraction": remaining, "resetTime": "2030-09-11T16:22:20Z"]
         }
     }

@@ -41,7 +41,7 @@ final class GrokUsageTests: XCTestCase, @unchecked Sendable {
         XCTAssertTrue(result.monetaryMetrics.isEmpty)
     }
 
-    func testOmittedUsageOnVerifiedPaidWeeklyPeriodShowsZero() throws {
+    func testOmittedUsageNeverInventsAZeroPercentage() throws {
         let data = Data(#"""
             {"config":{"isUnifiedBillingUser":true,
             "currentPeriod":{"type":"USAGE_PERIOD_TYPE_WEEKLY","start":"2026-09-21T00:00:00Z",
@@ -52,9 +52,8 @@ final class GrokUsageTests: XCTestCase, @unchecked Sendable {
             verifiedPlanName: "SuperGrok Lite"
         )
         XCTAssertEqual(result.verifiedGrokPlanName, "SuperGrok Lite")
-        XCTAssertEqual(result.bars.first?.used, 0)
-        XCTAssertEqual(result.bars.first?.resetsAt, ISO8601DateFormatter().date(from: "2026-09-28T00:00:00Z"))
-        XCTAssertEqual(result.subtitle, "No included usage reported by Grok.")
+        XCTAssertTrue(result.bars.isEmpty)
+        XCTAssertFalse(result.usageMessages.isEmpty)
         XCTAssertEqual(result.monetaryMetrics.map(\.minorUnits), [500])
         let unknownTier = try GrokUsageProvider.parseCredits(
             data, configuration: account, subject: "verified-user", now: now

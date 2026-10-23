@@ -290,6 +290,9 @@
 		3F16CC4165A5EC0DB2F90708 /* ProCommerceVerificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81102DE8447B99A314AD0A1B /* ProCommerceVerificationTests.swift */; };
 		EBD689101F58278A3C80CC7B /* ProCommerceRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B7FBEB417DF0D4CC8A58D88 /* ProCommerceRestoreTests.swift */; };
 		7D84B7CF44F1806A9CE9E685 /* StoreKitProPurchaseOutcomeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7F2C201EAE228FD14FAF37 /* StoreKitProPurchaseOutcomeTests.swift */; };
+		F5F094D1EC9F16C383C29945 /* SubscriptionUtilizationScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33BEE20ED30D3EBB5C803A0 /* SubscriptionUtilizationScore.swift */; };
+		4CCFD110708B85E5DB02EF5B /* SubscriptionUtilizationBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB77D1C5EB49C883F338AF63 /* SubscriptionUtilizationBadge.swift */; };
+		F071028D147C1935B924C9DE /* SubscriptionUtilizationScoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 577E13A4238AAC20D8D1B939 /* SubscriptionUtilizationScoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -635,6 +638,9 @@
 		81102DE8447B99A314AD0A1B /* ProCommerceVerificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommerceVerificationTests.swift; sourceTree = SOURCE_ROOT; };
 		0B7FBEB417DF0D4CC8A58D88 /* ProCommerceRestoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/ProCommerceRestoreTests.swift; sourceTree = SOURCE_ROOT; };
 		7E7F2C201EAE228FD14FAF37 /* StoreKitProPurchaseOutcomeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementTests/StoreKitProPurchaseOutcomeTests.swift; sourceTree = SOURCE_ROOT; };
+		B33BEE20ED30D3EBB5C803A0 /* SubscriptionUtilizationScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SubscriptionUtilizationScore.swift"; sourceTree = "<group>"; };
+		EB77D1C5EB49C883F338AF63 /* SubscriptionUtilizationBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SubscriptionUtilizationBadge.swift"; sourceTree = "<group>"; };
+		577E13A4238AAC20D8D1B939 /* SubscriptionUtilizationScoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../MetricTileContentTests/SubscriptionUtilizationScoreTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -728,6 +734,7 @@
 		700000000000000000000003 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				B33BEE20ED30D3EBB5C803A0 /* SubscriptionUtilizationScore.swift */,
 				200000000000000000000003 /* ProviderID.swift */,
 				200000000000000000000004 /* ProviderUsageResult.swift */,
 				A42000000000000000000102 /* ClaudeUsageResetInventory.swift */,
@@ -851,6 +858,7 @@
 		700000000000000000000005 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				EB77D1C5EB49C883F338AF63 /* SubscriptionUtilizationBadge.swift */,
 				5734DC4DF1B9538EDE913703 /* ProLifetimeConfirmationView.swift */,
 				F16CC7936B55F67E663E9F90 /* ProCommerceFixtureManagementView.swift */,
 				2983A68A2909034071381F09 /* ProCommerceContentView.swift */,
@@ -886,6 +894,7 @@
 		700000000000000000000007 /* CodexBarIOSTests */ = {
 			isa = PBXGroup;
 			children = (
+				577E13A4238AAC20D8D1B939 /* SubscriptionUtilizationScoreTests.swift */,
 				7E7F2C201EAE228FD14FAF37 /* StoreKitProPurchaseOutcomeTests.swift */,
 				0B7FBEB417DF0D4CC8A58D88 /* ProCommerceRestoreTests.swift */,
 				81102DE8447B99A314AD0A1B /* ProCommerceVerificationTests.swift */,
@@ -1335,6 +1344,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4CCFD110708B85E5DB02EF5B /* SubscriptionUtilizationBadge.swift in Sources */,
+				F5F094D1EC9F16C383C29945 /* SubscriptionUtilizationScore.swift in Sources */,
 				975E0FB408DB39D92A7CC5BD /* ProLifetimeConfirmationView.swift in Sources */,
 				AB6F16D43AFBDA9C4FC06CB5 /* ProCommerceFixtureManagementView.swift in Sources */,
 				6CFE69083F6D319CBA015584 /* ProCommerceContentView.swift in Sources */,
@@ -1488,6 +1499,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F071028D147C1935B924C9DE /* SubscriptionUtilizationScoreTests.swift in Sources */,
 				7D84B7CF44F1806A9CE9E685 /* StoreKitProPurchaseOutcomeTests.swift in Sources */,
 				EBD689101F58278A3C80CC7B /* ProCommerceRestoreTests.swift in Sources */,
 				3F16CC4165A5EC0DB2F90708 /* ProCommerceVerificationTests.swift in Sources */,

@@ -1,6 +1,6 @@
 # Gemini coding connection
 
-One Google Gemini account contains all six usage metrics in CodexBar. Its
+One Google Gemini account contains seven usage choices in CodexBar. Its
 Gemini Apps connection uses Google website cookies. Its Coding Usage connection
 uses an OAuth session to read Gemini Models and Other models,
 Claude/GPT. The two credential formats are separate and are never substituted
@@ -14,7 +14,7 @@ Franz's live comparisons remain follow-up verification for
 [#319](https://github.com/HemSoft/codexbar-ios/issues/319) and do not block agent
 implementation or merge.
 
-## Six metrics in one Gemini card
+## Seven metric choices in one Gemini card
 
 | Source | Metric label | Preserved identity |
 | --- | --- | --- |
@@ -22,14 +22,20 @@ implementation or merge.
 | Gemini Apps | Gemini Apps weekly | `gemini.weekly` |
 | Coding session | Gemini Models five-hour | `antigravity.gemini-5h` |
 | Coding session | Gemini Models weekly | `antigravity.gemini-weekly` |
+| Coding session | Argon weekly | `antigravity.gemini-argon-wtu-weekly` |
 | Coding session | Other models five-hour | `antigravity.3p-5h` |
 | Coding session | Other models weekly | `antigravity.3p-weekly` |
 
-All six choices appear together in Gemini's Metrics settings and Customize
+All seven choices appear together in Gemini's Metrics settings and Customize
 Card. Hide, order, width, and visualization preferences survive refresh and
 relaunch. Missing connections show Setup required without invented percentages
 or resets. Missing or disabled quotas retain their actual status. History,
 widgets, and Watch preserve source identities and contain only observed values.
+
+The current native quota summary may omit Gemini Models and Argon. Their
+choices then show unavailable quota and SUS `n/a`. The app does not run or
+import CLI data. A supported native retrieval source is tracked in
+[#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519).
 
 Existing standalone coding accounts remain stored until you link them from
 Gemini settings. Confirm that both sessions belong to the same Google account.
@@ -142,7 +148,7 @@ Franz can use these optional checks after receiving the updated build:
 2. After the agent delivers the configured build using `DEVICE-DEPLOYMENT.md`,
    complete Connect Coding Usage in Gemini settings.
 3. Refresh both sources in the same comparison interval. Record used versus
-   remaining semantics, values and supplied resets for all six metrics.
+   remaining semantics, values and supplied resets for the six existing metrics and Argon when reported.
 4. Toggle and customize each choice, relaunch, then hide or disconnect Apps
    and verify all four coding metrics remain in the same Gemini card. Keep before/after screenshots locally
    and publish only evidence without identity or credentials.

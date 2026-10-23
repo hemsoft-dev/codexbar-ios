@@ -243,8 +243,6 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
     public var verifiedGrokPlanName: String?
     /// The optional Grok tier read failed; a matching verified subject may retain its known tier.
     public let grokPlanLookupFailed: Bool
-    /// Fresh active-pool evidence that requires a verified paid tier before becoming visible.
-    public let grokInferredZeroCandidate: UsageBar?
     public let subtitle: String
     public let bars: [UsageBar]
     public let barsFetchedAt: Date?
@@ -280,7 +278,6 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
         plan: ProviderPlanDescriptor? = nil,
         verifiedGrokPlanName: String? = nil,
         grokPlanLookupFailed: Bool = false,
-        grokInferredZeroCandidate: UsageBar? = nil,
         subtitle: String,
         bars: [UsageBar],
         barsFetchedAt: Date? = nil,
@@ -313,7 +310,6 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
         self.plan = plan
         self.verifiedGrokPlanName = verifiedGrokPlanName
         self.grokPlanLookupFailed = providerID.usesXAIConsumerAuth && grokPlanLookupFailed
-        self.grokInferredZeroCandidate = providerID.usesXAIConsumerAuth && grokPlanLookupFailed ? grokInferredZeroCandidate : nil
         self.subtitle = subtitle
         self.bars = bars
         self.barsFetchedAt = bars.isEmpty ? nil : (barsFetchedAt ?? fetchedAt)

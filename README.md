@@ -21,8 +21,9 @@ The Windows reference implementation is checked out beside this repo at:
   with completed reviews kept distinct from pull requests and billing credits.
   The [Greptile allowance investigation](GREPTILE-USAGE.md) explains why its
   published review tools do not establish an account's remaining credits
-- One Google Gemini account with six usage metrics for Gemini Apps, Gemini Models,
-  and Other models, with separate five-hour and weekly limits for each source
+- One Google Gemini account with five-hour and weekly choices for Gemini Apps,
+  Gemini Models, and Other models, plus a separate Argon weekly choice. Missing
+  provider quotas stay unavailable
 - An embedded watchOS companion with a live, read-only dashboard that mirrors
   presentation-ready account metrics, visualization choices, ordering, and
   freshness from iPhone; provider setup, credentials, and provider networking
@@ -249,7 +250,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 ## Google Gemini sign-in
 
-One Gemini account contains all six Google usage metrics. Gemini Apps uses a
+One Gemini account contains seven Google usage choices, including Argon weekly. Gemini Apps uses a
 Google website session; Gemini Models and Other models use a separate
 coding OAuth session inside the same account. Both connections are experimental.
 See the verification boundaries in [Gemini sign-in evidence](GEMINI-SIGN-IN.md)
@@ -278,7 +279,7 @@ Confirm that you will choose the same Google account, then complete browser
 authorization. This flow requires the developer to configure a Google OAuth
 iOS client before deployment; end users do not enter client settings. Existing standalone coding accounts are retained and
 can be linked here after that confirmation; CodexBar does not guess associations
-from matching labels. All six metrics stay available in Metrics and Customize
+from matching labels. All seven choices stay available in Metrics and Customize
 Card even when a source needs setup. Their saved identities, layout, and history
 survive the account consolidation. See [coding session setup](ANTIGRAVITY-SETUP.md)
 for developer configuration and renewal details.
@@ -330,7 +331,10 @@ The current Windows app is a C# / WPF / .NET 9 system tray app with shared provi
 
 The Gemini account's Coding Usage connection reads Gemini Models and Other
 models, Claude/GPT, from the internal Antigravity quota adapter. Each has
-five-hour and weekly metrics alongside Gemini Apps on one dashboard card. See
+five-hour and weekly metrics alongside Gemini Apps on one dashboard card. Argon
+has a separate weekly choice. The native summary may omit Gemini Models or Argon;
+those pools stay unavailable, as tracked in [#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519).
+See
 [coding session setup](ANTIGRAVITY-SETUP.md) for browser setup, renewal, and the
 remaining live comparison checks.
 
@@ -363,3 +367,25 @@ expiry and the windows they restore. Using a reset requires a separate account
 confirmation. CodexBar refreshes usage after every result and protects an
 unconfirmed request against another consumption, including after relaunch.
 Unavailable reset details never appear as a zero balance.
+
+### Weekly Sub Utilization Score
+
+The iPhone and iPad dashboard and metric details show SUS beside each weekly
+quota. Green starts at 90, yellow at 75, and red is below 75. A score of 100
+means the current pace reaches the quota at reset. Underuse lowers the score;
+an early lockout lowers it by the share of the week spent without quota.
+Five-hour windows have no score. Missing quota, missing window times, expired
+windows, and windows under 12 hours old show `n/a`.
+
+Fleet SUS averages each account's scored weekly pools, then weights each account
+once by its monthly reference price. The editable table is in
+`SubscriptionUtilizationFleet.referenceMonthlyPrices`: Claude $200, Codex $200,
+and the unified Google Gemini/Antigravity subscription $19.99. A reported Codex
+`pro` plan uses $200 and `prolite` uses $100 immediately; no billing date is
+assumed. If any scored account's price is unknown, all accounts receive equal
+weight. Missing and stale pools do not contribute a score.
+
+The formula and rounding match the Chief's
+[pinned reference](https://github.com/hemsoft-dev/chief/blob/61d50412cbad1d653b3bda8a4ae2a68a6d38419e/scripts/usage.py).
+Only reported Grok and X Subscription percentages produce bars. Omitted usage
+stays unavailable even for a verified paid plan.

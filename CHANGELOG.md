@@ -6,7 +6,18 @@ building, testing, or releasing the app.
 
 ## 2.0.1 - Unreleased
 
+### Added
+
+- See a Sub Utilization Score beside each weekly quota and a fleet score in
+  the dashboard. Green, yellow and red bands show how close subscriptions are
+  to full use at reset. Fresh windows and missing quota show n/a.
+  ([#518](https://github.com/hemsoft-dev/codexbar-ios/issues/518))
+
 ### Fixed
+
+- Keep missing Grok and X Subscription usage unavailable instead of inferring
+  a zero percentage from the account's paid plan.
+  ([#518](https://github.com/hemsoft-dev/codexbar-ios/issues/518))
 
 - Keep subscription access current when StoreKit briefly returns an earlier status at expiration. Background checks wait for Purchase and Restore to finish so they cannot interrupt those requests. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 

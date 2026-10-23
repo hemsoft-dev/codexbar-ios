@@ -6,8 +6,6 @@ enum XSubscriptionCopy {
     static let poolMetricID = "\(ProviderID.xSubscription.rawValue).\(poolStableKey)"
     static let productSectionID = "xSubscription.product-usage"
     static let unavailableReason = "xAI did not report weekly pool usage."
-    static let inferredSubtitle = "No pool usage reported by xAI."
-    static let inferredMessage = "Inferred zero from xAI's CLI convention, not a reported measurement."
     static let creditsUnavailable = "xAI did not report Extra Usage Credits."
 }
 
@@ -37,10 +35,8 @@ extension GrokUsageProvider {
         let plan = unifiedPlan(verifiedPlanName)
         let window = activeWeeklyWindow(config.currentPeriod, now: now)
         let percent = reportedPercent(config.creditUsagePercent)
-        // Same first-party CLI convention as Grok, restricted to a verified unified plan.
-        let inferredZero = percent == nil && plan != nil && window != nil && omitsUsage(data)
         let bar = window.flatMap { window in
-            (percent ?? (inferredZero ? 0 : nil)).map { poolBar($0, window: window, inferred: inferredZero) }
+            percent.map { poolBar($0, window: window) }
         }
         let reason = unavailableReason(config.currentPeriod, window: window)
         let balance = money(config.prepaidBalance, kind: .balance, label: "Extra Usage Credits")
@@ -48,12 +44,10 @@ extension GrokUsageProvider {
         return ProviderUsageResult(
             accountID: configuration.id, providerID: .xSubscription, title: configuration.displayName,
             verifiedGrokPlanName: plan, grokPlanLookupFailed: planLookupFailed,
-            grokInferredZeroCandidate: percent == nil && omitsUsage(data)
-                ? window.map { poolBar(0, window: $0, inferred: true) } : nil,
-            subtitle: bar == nil ? reason : inferredZero ? XSubscriptionCopy.inferredSubtitle : "X Subscription weekly pool",
+            subtitle: bar == nil ? reason : "X Subscription weekly pool",
             bars: bar.map { [$0] } ?? [],
             monetaryMetrics: [balance].compactMap { $0 },
-            usageMessages: (bar == nil ? [reason] : inferredZero ? [XSubscriptionCopy.inferredMessage] : [])
+            usageMessages: (bar == nil ? [reason] : [])
                 + (balance == nil ? [XSubscriptionCopy.creditsUnavailable] : []),
             cardInformationSections: (products.isEmpty ? [] : [
                 ProviderCardInformationSection(
@@ -71,10 +65,10 @@ extension GrokUsageProvider {
         return (start, end)
     }
 
-    private static func poolBar(_ used: Double, window: (start: Date, end: Date), inferred: Bool) -> UsageBar {
+    private static func poolBar(_ used: Double, window: (start: Date, end: Date)) -> UsageBar {
         UsageBar(
             stableKey: XSubscriptionCopy.poolStableKey,
-            label: inferred ? "Weekly pool inferred" : "Weekly shared pool",
+            label: "Weekly shared pool",
             used: used, limit: 100, resetsAt: window.end, resetDisplayStyle: .relativeWithLocalTime,
             projectionCurrent: used, projectionLimit: 100,
             projectionPeriodStart: window.start, projectionPeriodEnd: window.end

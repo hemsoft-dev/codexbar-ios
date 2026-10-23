@@ -213,3 +213,66 @@ final class SettingsEvidenceUITests: XCTestCase {
         add(attachment)
     }
 }
+
+@MainActor
+final class SubscriptionUtilizationEvidenceUITests: XCTestCase {
+    func testMissingGooglePoolShowsUnavailableSUS() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchEnvironment = [
+            "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
+            "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "google-six",
+            "CODEXBAR_UI_TEST_DEFAULT_TEXT": "1",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        let argon = app.buttons["dashboard-metric-antigravity.gemini-argon-wtu-weekly"]
+        XCTAssertTrue(argon.waitForExistence(timeout: 15))
+        for _ in 0..<6 {
+            if argon.isHittable && argon.frame.maxY <= app.frame.maxY - 16 { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(argon.isHittable)
+        XCTAssertLessThanOrEqual(argon.frame.maxY, app.frame.maxY - 16)
+        XCTAssertTrue(argon.label.contains("Unavailable"))
+        XCTAssertTrue(argon.label.contains("SUS unavailable"))
+        capture("sus-missing-argon")
+    }
+
+    func testWeeklyBandsAndFleetScore() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchEnvironment = [
+            "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
+            "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "sus-evidence",
+            "CODEXBAR_UI_TEST_DEFAULT_TEXT": "1",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        let fleet = app.descendants(matching: .any)["fleet-sus"].firstMatch
+        XCTAssertTrue(fleet.waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "SUS 95 of 100, green band")).firstMatch.exists)
+        capture("sus-dashboard")
+        let green = app.buttons["dashboard-metric-claude.weekly-0"]
+        green.tap()
+        XCTAssertTrue(app.staticTexts["Sub Utilization Score: 100 means full use at reset. Weekly windows need 12 hours of history."]
+            .waitForExistence(timeout: 5))
+        capture("sus-detail")
+        app.buttons["Done"].tap()
+        let yellow = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "SUS 80 of 100, yellow band")).firstMatch
+        let red = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "SUS 50 of 100, red band")).firstMatch
+        let missing = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "SUS unavailable")).firstMatch
+        for element in [yellow, red, missing] {
+            for _ in 0..<5 where !element.isHittable { app.swipeUp() }
+            XCTAssertTrue(element.exists)
+            capture("sus-\(element == missing ? "unavailable" : element == red ? "red" : "yellow")")
+        }
+    }
+
+    private func capture(_ name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+}

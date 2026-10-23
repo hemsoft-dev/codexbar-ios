@@ -316,15 +316,11 @@ public final class GrokUsageProvider: UsageProvider {
             && start! <= now && end! > now
         let percent = config.creditUsagePercent
         let hasPercent = reportedPercent(percent) != nil
-        // The first-party CLI renders an omitted percent as zero. Restrict that fallback to a
-        // verified paid tier and an active shared weekly pool with no other reported usage.
-        let inferredZero = !hasPercent && knownPlan(verifiedPlanName) != nil
-            && config.isUnifiedBillingUser == true && activePeriod && omitsUsage(data)
-        let includedPercent = hasPercent ? percent : inferredZero ? 0 : nil
+        let includedPercent = hasPercent ? percent : nil
         let bar: UsageBar? = if activePeriod && includedPercent != nil && config.isUnifiedBillingUser == true {
             UsageBar(
                 stableKey: "included-usage",
-                label: inferredZero ? "Weekly usage inferred" : "Weekly subscription usage",
+                label: "Weekly subscription usage",
                 used: includedPercent!, limit: 100, resetsAt: end,
                 projectionCurrent: includedPercent!, projectionLimit: 100,
                 projectionPeriodStart: start, projectionPeriodEnd: end
@@ -339,12 +335,10 @@ public final class GrokUsageProvider: UsageProvider {
         return ProviderUsageResult(
             accountID: configuration.id, providerID: .grok, title: configuration.displayName,
             verifiedGrokPlanName: knownPlan(verifiedPlanName), grokPlanLookupFailed: planLookupFailed,
-            grokInferredZeroCandidate: inferredZeroCandidate(config, data: data, now: now),
-            subtitle: bar == nil ? reason : inferredZero ? "No included usage reported by Grok." : "Direct Grok subscription usage",
+            subtitle: bar == nil ? reason : "Direct Grok subscription usage",
             bars: bar.map { [$0] } ?? [],
             monetaryMetrics: [balance].compactMap { $0 },
-            usageMessages: (bar == nil ? [reason] : inferredZero
-                ? ["Inferred zero from Grok's CLI convention, not a reported measurement."] : [])
+            usageMessages: (bar == nil ? [reason] : [])
                 + (unifiedPlan(unifiedPlanName) == nil ? [] : [unifiedAccountPointer]),
             cardInformationSections: [
                 ProviderCardInformationSection(
@@ -378,42 +372,11 @@ public final class GrokUsageProvider: UsageProvider {
         Data(SHA256.hash(data: Data(subject.utf8))).base64EncodedString()
     }
 
-    private static func inferredZeroCandidate(_ config: GrokCreditsConfig, data: Data, now: Date) -> UsageBar? {
-        guard config.isUnifiedBillingUser == true, config.currentPeriod?.type == "USAGE_PERIOD_TYPE_WEEKLY",
-              let start = config.currentPeriod?.start.flatMap(date), let end = config.currentPeriod?.end.flatMap(date),
-              start <= now, end > now, omitsUsage(data) else { return nil }
-        return UsageBar(
-            stableKey: "included-usage", label: "Weekly usage inferred", used: 0, limit: 100, resetsAt: end,
-            projectionCurrent: 0, projectionLimit: 100, projectionPeriodStart: start, projectionPeriodEnd: end
-        )
-    }
-
     static func retainingVerifiedPlan(_ name: String?, for incoming: ProviderUsageResult) -> ProviderUsageResult {
         var result = incoming
         let isXSubscription = incoming.providerID == .xSubscription
         result.verifiedGrokPlanName = isXSubscription ? unifiedPlan(name) : knownPlan(name)
-        guard result.verifiedGrokPlanName != nil, incoming.bars.isEmpty,
-              let bar = incoming.grokInferredZeroCandidate else { return result }
-        // This candidate comes only from fresh billing; cached bars never supply its period or value.
-        return ProviderUsageResult(
-            accountID: incoming.accountID, providerID: incoming.providerID, title: incoming.title,
-            verifiedGrokPlanName: result.verifiedGrokPlanName, grokPlanLookupFailed: incoming.grokPlanLookupFailed,
-            subtitle: isXSubscription ? XSubscriptionCopy.inferredSubtitle : "No included usage reported by Grok.", bars: [bar],
-            monetaryMetrics: incoming.monetaryMetrics,
-            usageMessages: isXSubscription
-                ? incoming.usageMessages.filter { $0 != XSubscriptionCopy.unavailableReason } + [XSubscriptionCopy.inferredMessage]
-                : ["Inferred zero from Grok's CLI convention, not a reported measurement."],
-            cardInformationSections: incoming.cardInformationSections,
-            subscriptionRenewal: incoming.subscriptionRenewal,
-            cacheIdentity: incoming.cacheIdentity, cacheScope: incoming.cacheScope, fetchedAt: incoming.fetchedAt
-        )
-    }
-
-    static func omitsUsage(_ data: Data) -> Bool {
-        guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let config = object["config"] as? [String: Any] else { return false }
-        return ["creditUsagePercent", "productUsage", "used", "totalUsed", "monthlyLimit"]
-            .allSatisfy { config[$0] == nil }
+        return result
     }
 
     private static func unavailableReason(

@@ -88,6 +88,7 @@ final class UITestFixtures {
         appUpdateController = AppUpdateController(defaults: defaults)
 
         let scenario = environment["CODEXBAR_UI_TEST_SCENARIO"]
+        UITestSUSProvider.seed(in: configurationStore, scenario: scenario)
         commerceFixture?.seedAccounts(in: configurationStore)
         PlanTierFixture.seedAccountsIfNeeded(in: configurationStore, scenario: scenario)
         let recovery = scenario == "recovery"
@@ -158,7 +159,9 @@ final class UITestFixtures {
         }
         refreshService = UsageRefreshService(
             providers: PlanTierFixture.providers(
-                overriding: Self.providersForPlanPills(providers, scenario: scenario, suiteName: suite), scenario: scenario
+                overriding: UITestSUSProvider.overriding(
+                    Self.providersForPlanPills(providers, scenario: scenario, suiteName: suite), scenario: scenario
+                ), scenario: scenario
             ), initialResults: results
         )
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
@@ -231,6 +234,7 @@ final class UITestFixtures {
     nonisolated private static func initialResult(
         for configuration: ProviderAccountConfiguration, scenario: String?, googleSources: [ProviderID]
     ) -> ProviderUsageResult {
+        if scenario == "sus-evidence" { return UITestSUSProvider.result(for: configuration) }
         if scenario?.hasPrefix("opencode-renewal-") == true {
             return ProviderUsageResult(accountID: configuration.id, providerID: .openCodeZen, title: configuration.displayName,
                                        subtitle: "Waiting for synthetic Console response", bars: [], fetchedAt: Date())
@@ -1525,8 +1529,10 @@ final class UITestFixtures {
             "3p-5h": stage >= 3 ? 20 : 0, "3p-weekly": stage >= 3 ? 60 : 0,
         ]
         var unavailable: [String: String] = [:]
-        for definition in definitions where !sources.contains(definition.sourceProviderID) {
-            unavailable[definition.id] = "Setup required"
+        for definition in definitions {
+            if !sources.contains(definition.sourceProviderID) { unavailable[definition.id] = "Setup required" } else if used[definition.key] == nil {
+                unavailable[definition.id] = "Unavailable"
+            }
         }
         if sources.contains(.antigravity) && stage == 1 {
             unavailable["antigravity.gemini-weekly"] = "Unavailable"

@@ -21,6 +21,7 @@ public enum GoogleUsageMetricCatalog {
     static let codingDefinitions = [
         Definition(sourceProviderID: .antigravity, key: "gemini-5h", label: "Gemini Models five-hour", window: "5h"),
         Definition(sourceProviderID: .antigravity, key: "gemini-weekly", label: "Gemini Models weekly", window: "weekly"),
+        Definition(sourceProviderID: .antigravity, key: "gemini-argon-wtu-weekly", label: "Argon weekly", window: "weekly"),
         Definition(sourceProviderID: .antigravity, key: "3p-5h", label: "Other models five-hour", window: "5h"),
         Definition(sourceProviderID: .antigravity, key: "3p-weekly", label: "Other models weekly", window: "weekly"),
     ]
@@ -91,8 +92,8 @@ public enum GoogleUsageMetricCatalog {
     public static func setupDescription(for providerID: ProviderID) -> String? {
         switch providerID {
         case .gemini:
-            "Six limits belong to this Gemini account: Gemini Apps, Gemini Models, and Other models, "
-                + "each with a five-hour and weekly limit. Other models includes Claude and GPT. "
+            "Gemini Apps, Gemini Models, and Other models each have five-hour and weekly limits. "
+                + "Argon has a separate weekly limit. Other models includes Claude and GPT. "
                 + "Connect the Apps session and coding session separately here, using the same Google account."
         default:
             nil
