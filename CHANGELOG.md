@@ -27,6 +27,7 @@ building, testing, or releasing the app.
   preserving the 90-minute worker limit and automatic PR checks. Keep touch
   target assertions from rejecting 44-point controls due to floating-point noise.
   Distinguish reported zero Grok usage from missing percentages in UI fixtures.
+  Wait for billing warnings to disappear after reloading sign-in.
   ([#517](https://github.com/hemsoft-dev/codexbar-ios/issues/517))
 
 - Trace native StoreKit status delivery on the existing test receiver, preserve status and clock diagnostics without transaction identifiers, and verify stable test-store cleanup. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
