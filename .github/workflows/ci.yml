@@ -224,7 +224,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_perfection_runner.py' -v
 
   ios-ui-families:
-    name: iOS UI journeys (${{ matrix.family }})
+    name: iOS UI journeys (${{ matrix.family }}, ${{ matrix.shard }})
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' && success() }}
     needs:
       - swiftlint
@@ -240,6 +240,7 @@ jobs:
       fail-fast: false
       matrix:
         family: [iphone, ipad]
+        shard: [original-1, original-2, original-3, supplemental, synthetic, native]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -249,52 +250,39 @@ jobs:
       - name: Verify pinned release toolchain and installed runtimes
         run: python3 scripts/verify-release-toolchain.py --output "$RUNNER_TEMP/release-toolchain.json"
 
-      - name: Create an owned UI simulator
-        id: ui-device
-        run: |
-          ./scripts/run-pro-release-validation.sh provision --family "${{ matrix.family }}" --output "$RUNNER_TEMP/ui-device"
-          echo "id=$(jq -r .device.deviceId "$RUNNER_TEMP/ui-device/ownership.json")" >> "$GITHUB_OUTPUT"
+      - name: Verify manual shard failure fixtures
+        if: ${{ matrix.family == 'iphone' && matrix.shard == 'original-1' }}
+        run: python3 -m unittest scripts.tests.test_ui_release_shards -v
 
       - name: Run GitHub Billing API fixtures
-        if: ${{ matrix.family == 'iphone' }}
+        if: ${{ matrix.family == 'iphone' && matrix.shard == 'original-1' }}
         run: xcrun swift run GitHubBillingFixtureTests
 
-      - name: Run UI journeys
-        id: ui-base
-        if: ${{ !cancelled() && steps.ui-device.outcome == 'success' }}
-        env:
-          UI_TEST_REQUIRE_DEVICE_ID: '1'
-          UI_TEST_OWNERSHIP_RECEIPT: ${{ runner.temp }}/ui-device/ownership.json
-          UI_TEST_RESULTS_DIR: ${{ runner.temp }}/ui-tests
-          UI_TEST_DEVICE_ID: ${{ steps.ui-device.outputs.id }}
-        run: ./scripts/run-ui-tests.sh "${{ matrix.family }}"
-
-      - name: Run supplemental and commerce release phases
-        if: ${{ !cancelled() && steps.ui-base.outcome == 'success' }}
+      - name: Run the exact UI shard on a new qualified simulator
+        id: ui-shard
         run: >-
-          ./scripts/run-pro-release-validation.sh ui --family "${{ matrix.family }}"
-          --ownership "$RUNNER_TEMP/ui-device/ownership.json"
-          --base-results "$RUNNER_TEMP/ui-tests" --output "$RUNNER_TEMP/pro-ui"
+          python3 scripts/ui_release_shards.py run --family "${{ matrix.family }}"
+          --shard "${{ matrix.shard }}" --output "$RUNNER_TEMP/ui-shard"
 
-      - name: Shut down the owned UI simulator
-        if: ${{ always() && steps.ui-device.outcome == 'success' }}
-        run: >-
-          ./scripts/run-pro-release-validation.sh shutdown --family "${{ matrix.family }}"
-          --ownership "$RUNNER_TEMP/ui-device/ownership.json" --output "$RUNNER_TEMP/ui-shutdown"
+      - name: Publish compact shard proof
+        if: ${{ !cancelled() && steps.ui-shard.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ui-shard-proof-${{ matrix.family }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/ui-shard/proof.json
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 14
 
       - name: Preserve UI test results and failure screenshots
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: CodexBarIOSUITests-${{ matrix.family }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: CodexBarIOSUITests-${{ matrix.family }}-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            ${{ runner.temp }}/ui-tests
-            ${{ runner.temp }}/pro-ui
-            ${{ runner.temp }}/ui-device
-            ${{ runner.temp }}/ui-shutdown
+            ${{ runner.temp }}/ui-shard
             ${{ runner.temp }}/release-toolchain.json
-            !${{ runner.temp }}/ui-tests/*/DerivedData-*/**
-            !${{ runner.temp }}/pro-ui/DerivedData-*/**
+            !${{ runner.temp }}/ui-shard/DerivedData-*/**
           if-no-files-found: warn
           retention-days: 14
 
@@ -302,6 +290,9 @@ jobs:
     name: Full iOS UI validation
     if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' }}
     needs: ios-ui-families
+    permissions:
+      actions: read
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -316,6 +307,19 @@ jobs:
             fi
             exit 1
           fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Require exact-head proofs for all twelve shards
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --pattern 'ui-shard-proof-*' --dir "$RUNNER_TEMP/ui-proof"
+          python3 scripts/ui_release_shards.py aggregate --proofs "$RUNNER_TEMP/ui-proof" \
+            --output "$RUNNER_TEMP/full-ui-proof.json"
 
   account-menu-comparison:
     name: Account menu comparison

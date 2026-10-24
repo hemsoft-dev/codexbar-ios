@@ -91,7 +91,7 @@ class CITriggerPolicyTests(unittest.TestCase):
             "smoke-tests",
         ):
             self.assertIn(f"      - {required_job}\n", ui_job)
-        self.assertIn('run: ./scripts/run-ui-tests.sh "${{ matrix.family }}"', ui_job)
+        self.assertIn('python3 scripts/ui_release_shards.py run --family "${{ matrix.family }}"', ui_job)
         self.assertIn("family: [iphone, ipad]", ui_job)
         self.assertIn("fail-fast: false", ui_job)
         self.assertIn("retention-days: 14", ui_job)

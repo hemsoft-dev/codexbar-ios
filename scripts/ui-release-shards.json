@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "timing_run": "https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39810829566",
+  "shards": {
+    "original-1": {
+      "phase": "ui-original",
+      "tests": [
+        "CodexBarIOSUITests/AccountJourneysUITests/testGeminiOnlyDashboardShowsCodingSetupAndKeepsSelectionOnRelaunch",
+        "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingPermissionDisclosure",
+        "CodexBarIOSUITests/AccountJourneysUITests/testRefreshRecoveryHistoryAndAccountDeepLink",
+        "CodexBarIOSUITests/AccountJourneysUITests/testTwoCodexAccountsKeepSeparateUsageAfterRelaunch",
+        "CodexBarIOSUITests/CodexCreditsPoolUITests/testCompactCardHeadersAndIndependentControls",
+        "CodexBarIOSUITests/GrokSignInUITests/testGuidedSetupCancellationReconnectAndRemoval",
+        "CodexBarIOSUITests/OpenCodeSignInUITests/testDisconnectedAccountOffersGuidedSignIn",
+        "CodexBarIOSUITests/SettingsEvidenceUITests/testPendingDuplicateGroupBlocksDoneUntilCorrected"
+      ]
+    },
+    "original-2": {
+      "phase": "ui-original",
+      "tests": [
+        "CodexBarIOSUITests/AccountJourneysUITests/testAccountSetupPersistsGroupAndCredentialAtAccessibilitySize",
+        "CodexBarIOSUITests/AccountJourneysUITests/testSavedGeminiRingIsSelectedInVisualizationMenu",
+        "CodexBarIOSUITests/ClaudeUsageUITests/testWindowLabelsAndSavedCustomizationForProAndMax",
+        "CodexBarIOSUITests/CodexCreditsPoolUITests/testThirtyDayWindowLabelAndSavedVisibility",
+        "CodexBarIOSUITests/GreptileAllowanceUITests/testDetailReconnectStaysInApp",
+        "CodexBarIOSUITests/GrokSignInUITests/testGrokAndCursorMetersStaySeparateAndNoAllowanceIsUnavailable",
+        "CodexBarIOSUITests/GrokSignInUITests/testSavedGrokLayoutAndWeeklyStates",
+        "CodexBarIOSUITests/SettingsEvidenceUITests/testEverySettingsDestinationAndDoneBack"
+      ]
+    },
+    "original-3": {
+      "phase": "ui-original",
+      "tests": [
+        "CodexBarIOSUITests/AccountJourneysUITests/testCodingOnlyGeminiChoicesSurvivePartialAndFailedRefresh",
+        "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingActionableWarningStaysInline",
+        "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingAllowanceStates",
+        "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingProductSummaryAndRoutinePlacement",
+        "CodexBarIOSUITests/AccountJourneysUITests/testSixGoogleChoicesAndIndependentCustomizationPersist",
+        "CodexBarIOSUITests/CodexCreditsPoolUITests/testOptInBalanceStatesAndSavedAccountChoices",
+        "CodexBarIOSUITests/CodexCreditsPoolUITests/testPreciseSubscriptionPillsOnExpandedAndCollapsedCards",
+        "CodexBarIOSUITests/GreptileAllowanceUITests/testReviewHistoryAndBillingAvailabilityStates",
+        "CodexBarIOSUITests/GrokSignInUITests/testCursorFreshPercentagesBotAndSavedChoices",
+        "CodexBarIOSUITests/GrokSignInUITests/testCursorStaleSignInReconnectCancellationAndValidZero",
+        "CodexBarIOSUITests/OpenCodeSignInUITests/testVerificationFailureKeepsAccountDisconnectedAndAllowsRetry",
+        "CodexBarIOSUITests/SettingsEvidenceUITests/testSettingsDismissalSignalRejectsTheBackgroundGear",
+        "CodexBarIOSUITests/SettingsEvidenceUITests/testSyntheticGrantedAndDeniedNotificationFeedback"
+      ]
+    },
+    "supplemental": {
+      "phase": "ui-supplemental"
+    },
+    "synthetic": {
+      "phase": "ui-synthetic"
+    },
+    "native": {
+      "phases": [
+        "ui-preparation",
+        "ui-native",
+        "ui-error-preparation",
+        "ui-native-purchase-error"
+      ],
+      "cleanup": "ui-reset"
+    }
+  }
+}

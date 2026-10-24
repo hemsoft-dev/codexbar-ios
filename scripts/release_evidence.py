@@ -108,11 +108,11 @@ def load_manifest(path=MANIFEST):
         if not all(TEST_ID.fullmatch(test) for test in tests):
             raise ValueError(f'Only exact target/class/method selectors are allowed: {name}')
     journeys = [test for name in manifest['ui_journeys'] for test in manifest['phases'][name]['tests']]
-    if len(journeys) != 51 or len(set(journeys)) != 51:
-        raise ValueError('The UI partition must contain exactly 51 distinct user journeys')
+    if len(journeys) != 53 or len(set(journeys)) != 53:
+        raise ValueError('The UI partition must contain exactly 53 distinct user journeys')
     if set(journeys) & set(manifest['excluded_marketing']):
         raise ValueError('Marketing capture cannot be part of release journeys')
-    if [manifest['phases'][name]['count'] for name in manifest['ui_journeys']] != [29, 6, 14, 1, 1]:
+    if [manifest['phases'][name]['count'] for name in manifest['ui_journeys']] != [29, 8, 14, 1, 1]:
         raise ValueError('UI journey partition changed; reconcile the release contract')
     if [manifest['phases'][name]['count'] for name in manifest['native_phases']] != [1, 25, 1, 1]:
         raise ValueError('Native phase partition changed; reconcile the release contract')

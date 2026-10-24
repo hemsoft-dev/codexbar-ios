@@ -23,6 +23,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Split manual iPhone and iPad UI qualification into measured shards while
+  preserving the 90-minute worker limit and automatic PR checks.
+  ([#517](https://github.com/hemsoft-dev/codexbar-ios/issues/517))
+
 - Trace native StoreKit status delivery on the existing test receiver, preserve status and clock diagnostics without transaction identifiers, and verify stable test-store cleanup. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Record the App Review submission of 2.0.0 build 5 and keep the shipped

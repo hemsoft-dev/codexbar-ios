@@ -306,3 +306,35 @@ the Germany preparation and storefront phases or function-risk scoring had run.
 Its 25-minute test step covered the native build, 1,106 ordinary tests, native
 preparation and 25 native commerce tests. The new budget leaves room for the
 remaining phases and scoring without retries.
+
+## Manual UI sharding
+
+[Issue #517](https://github.com/hemsoft-dev/codexbar-ios/issues/517) partitions only
+`workflow_dispatch` UI work. Each iPhone/iPad family has three original shards,
+one supplemental shard, one synthetic-commerce shard and one native-commerce
+shard. Each worker retains its 90-minute timeout; no timeout increase is used.
+The existing Xcode 26.6 / 17F113 and iOS 26.2 / 23C54 verification remains mandatory.
+
+The retained [hosted run](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39810829566)
+took 7,214 seconds for the iPad original phase, including build and process
+overhead. Its 29 test durations sum to 6,624.54 seconds; the two longest tests
+were 1,620.38 and 1,603.84 seconds. Measured greedy partitioning assigns 2,212.66,
+2,205.04 and 2,206.84 test-seconds to the original shards. These are historical
+allocation inputs, not claimed candidate run times. The implementation PR records
+completed candidate measurements and the final exact-head hosted gate result.
+The [baseline data](docs/ci/issue-517-baseline.json) retains the source run and
+per-test values without downloading the multi-gigabyte result bundles.
+
+The automatic SwiftLint job, its steps, the four lightweight policy test methods,
+triggers, native-job dispatch conditions and automatic timeouts are retained.
+The new shard fixture suite runs only manually. Before/after automatic workflow
+elapsed time, summed job runtime and API billing values are recorded in the PR;
+manual shard durations are reported separately. Neither a queue delay nor an
+estimated shard budget is proof that automatic work stayed within the ceiling.
+
+`Full iOS UI validation` now requires all twelve successful workers and their
+current-source proofs. The compact artifacts identify every executed method,
+qualified toolchain/runtime, source SHA/fingerprint and owned simulator. The
+aggregate rejects missing, duplicate or substituted shards. The 53 journeys per
+family include the two SUS tests added after 2.0; the original local 29-test command
+is unchanged. StoreKit preparation and final reset cannot be split across workers.

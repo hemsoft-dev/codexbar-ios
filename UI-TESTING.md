@@ -21,8 +21,8 @@ attachments and the accessibility hierarchy from the result bundle. Open the
 ## Complete release phases
 
 The base command above still executes exactly 29 original journeys. The
-[phase manifest](scripts/pro-release-phases.json) requires 51 user journeys per
-family for a release: original 29, supplemental 6, synthetic commerce 14, and
+[phase manifest](scripts/pro-release-phases.json) requires 53 user journeys per
+family for a release: original 29, supplemental 8, synthetic commerce 14, and
 native purchase/restore and purchase-error journeys 1 each. The separate
 marketing capture method is excluded. Normal preparation, purchase-error
 preparation and a final normal reset add three separate XCTest invocations;
@@ -417,14 +417,38 @@ quality jobs pass, `Full iOS UI validation` runs both device families. The
 release cannot proceed unless every job passes for the candidate SHA. If that
 SHA changes, dispatch a new run.
 
-The two families run on independent manual workers, each with a 90-minute
-limit and its own artifact. Fail-fast is disabled. An always-run aggregate
-fails unless both workers succeed, including when a worker is cancelled or
-skipped. Each worker requires all 51 exact journey identities plus the three
-preparation/reset calls. The original runner retains its separate 29-pass contract.
-Every phase requires zero skips or expected failures. GitHub retains both destinations' result bundles, logs,
-summaries, and exported failure screenshots for 14 days. See
-[CI-POLICY.md](CI-POLICY.md) for dispatch and SHA-verification commands.
+Each family runs six independent manual shards: three original-journey partitions,
+supplemental, synthetic commerce, and native commerce. The original 29 tests are
+balanced using retained hosted durations into groups of 8, 8 and 13. Every shard
+keeps the 90-minute limit, pinned Xcode 26.6 / 17F113 and iOS 26.2 / 23C54,
+and provisions its own simulator. Fail-fast remains disabled.
+
+Native preparation, purchase/restore, purchase-error preparation, purchase-error
+and the final normal StoreKit reset stay sequential on one worker. The reset is
+attempted even after a journey failure. The two SUS evidence journeys are included
+in the supplemental eight, so the full gate covers 53 distinct journeys per
+family plus the three preparation/reset calls. Marketing capture remains excluded.
+The original local runner retains its separate 29-pass contract.
+
+The always-run aggregate requires all twelve workers to succeed and validates their
+compact proofs against the checked-out SHA and source fingerprint. Missing,
+duplicate, stale, wrong-runtime or substituted-test proofs fail the gate. Every
+phase still requires zero skips or expected failures. Full results, logs and
+exported failure screenshots remain available for 14 days, separate from the small
+proof artifacts used by the aggregate. See [CI-POLICY.md](CI-POLICY.md) for dispatch
+and SHA-verification commands.
+
+Reproduce one shard from a clean committed checkout on air:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode_26.6.app/Contents/Developer \
+  python3 scripts/ui_release_shards.py run --family iphone --shard original-1 \
+  --output /tmp/codexbar-ui-original-1
+```
+
+Choose any shard listed in [the shard plan](scripts/ui-release-shards.json), and a
+new output directory for each invocation. The command shuts down only its owned
+simulator. It does not launch provider sign-in or touch live account storage.
 
 To reproduce a failure, rerun the same family with the command above. Every
 journey resets its own storage, so no simulator-wide data wipe is needed.

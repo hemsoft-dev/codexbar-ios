@@ -39,14 +39,16 @@
     },
     "ui-supplemental": {
       "scheme": "CodexBarIOSUITests",
-      "count": 6,
+      "count": 8,
       "tests": [
         "CodexBarIOSUITests/FreeTierJourneyTests/testDowngradeAndUpgradeRestoreAccountsAndSavedAlertPreference",
         "CodexBarIOSUITests/FreeTierJourneyTests/testFreeHistoryRangesAreLockedAndDoNotLeaveTheSevenDayChart",
         "CodexBarIOSUITests/FreeTierJourneyTests/testFreeLimitAndAlertsUseTheSharedProDestination",
         "CodexBarIOSUITests/FreeTierJourneyTests/testPausedAccountsKeepValuesAndCanSwitchAtLargeTextSize",
         "CodexBarIOSUITests/GrokSignInUITests/testCursorSubscriptionPillsAreAccountScoped",
-        "CodexBarIOSUITests/GrokSignInUITests/testXSubscriptionGuidedSetupUsesOneXAISignIn"
+        "CodexBarIOSUITests/GrokSignInUITests/testXSubscriptionGuidedSetupUsesOneXAISignIn",
+        "CodexBarIOSUITests/SubscriptionUtilizationEvidenceUITests/testMissingGooglePoolShowsUnavailableSUS",
+        "CodexBarIOSUITests/SubscriptionUtilizationEvidenceUITests/testWeeklyBandsAndFleetScore"
       ],
       "kind": "journey"
     },
