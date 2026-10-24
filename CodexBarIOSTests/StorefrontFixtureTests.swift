@@ -3,6 +3,25 @@ import XCTest
 
 final class StorefrontFixtureTests: XCTestCase {
     @MainActor
+    func testGrokUIFixturesSeparateReportedZeroFromMissingQuota() {
+        let account = ProviderAccountConfiguration(id: "fixture-grok-zero", providerID: .grok,
+                                                   accountLabel: "Grok fixture", authMethod: .browserSession)
+        for scenario in ["grok-zero", "grok-existing-zero", "grok-spending-reported-zero"] {
+            let result = UITestFixtures.grokResult(for: account, scenario: scenario)
+            XCTAssertEqual(result.bars.map(\.used), [0], scenario)
+            XCTAssertTrue(result.usageMessages.isEmpty, scenario)
+        }
+        for scenario in [
+            "grok-spending-zero", "grok-percent-unavailable", "grok-existing-percent-unavailable",
+            "grok-spending-unavailable",
+        ] {
+            let result = UITestFixtures.grokResult(for: account, scenario: scenario)
+            XCTAssertTrue(result.bars.isEmpty, scenario)
+            XCTAssertEqual(result.usageMessages, ["Grok did not report included usage."], scenario)
+        }
+    }
+
+    @MainActor
     func testStorefrontFreeSceneResolvesOneAccountAndSevenDayHistory() async throws {
         let scene = try XCTUnwrap(AppStoreScreenshotConfiguration.parse(arguments: [
             "CodexBarIOS", "--app-store-screenshots", "--app-store-scene", "free-overview",

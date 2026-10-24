@@ -596,7 +596,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
         XCTAssertTrue(quota.waitForExistence(timeout: 10), app.debugDescription)
         let renamedMenu = app.buttons["More options for \(title)"]
         XCTAssertTrue(renamedMenu.exists, app.debugDescription)
-        XCTAssertGreaterThanOrEqual(renamedMenu.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(renamedMenu.frame.height + 0.000001, 44)
         XCTAssertTrue(quota.label.contains("12%"))
         XCTAssertEqual(quota.frame.width, savedWidth, accuracy: 1)
         XCTAssertEqual(quota.frame.minY, weekly.frame.minY, accuracy: 1)

@@ -804,8 +804,8 @@ final class UITestFixtures {
         let end = ISO8601DateFormatter().string(from: now.addingTimeInterval(5 * 86_400))
         let noAllowance = scenario == "grok-no-allowance"
         let percentField = switch scenario {
-        case "grok-zero", "grok-existing-zero", "grok-spending-zero": ""
-        case "grok-spending-reported-zero": "\"creditUsagePercent\":0,"
+        case "grok-spending-zero": ""
+        case "grok-zero", "grok-existing-zero", "grok-spending-reported-zero": "\"creditUsagePercent\":0,"
         case "grok-no-allowance", "grok-percent-unavailable", "grok-existing-percent-unavailable",
              "grok-spending-unavailable":
             "\"creditUsagePercent\":null,"
