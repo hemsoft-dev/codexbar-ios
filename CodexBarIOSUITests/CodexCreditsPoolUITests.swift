@@ -458,8 +458,9 @@ final class CodexCreditsPoolUITests: XCTestCase {
                 let quota = personalQuota(in: app)
                 XCTAssertTrue(quota.waitForExistence(timeout: 10), app.debugDescription)
                 let menu = app.buttons["More options for Personal Codex"]
-                XCTAssertGreaterThanOrEqual(menu.frame.width, 44)
-                XCTAssertGreaterThanOrEqual(menu.frame.height, 44)
+                // XCUI geometry can report a 44-point target just below 44 after floating-point subtraction.
+                XCTAssertGreaterThanOrEqual(menu.frame.width + 0.000001, 44)
+                XCTAssertGreaterThanOrEqual(menu.frame.height + 0.000001, 44)
                 keep("spacing-\(defaultText ? "default" : "accessibility2")-\(dark ? "dark" : "light")", app: app)
                 let disclosure = app.descendants(matching: .any)["Personal Codex, Plan unavailable, Synthetic Codex usage, Normal status"]
                 XCTAssertTrue(disclosure.exists, app.debugDescription)
@@ -479,7 +480,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
                 )).firstMatch
                 XCTAssertTrue(thirtyDay.waitForExistence(timeout: 10), badge.debugDescription)
                 let badgeMenu = badge.buttons["More options for Personal Codex"]
-                XCTAssertGreaterThanOrEqual(badgeMenu.frame.height, 44)
+                XCTAssertGreaterThanOrEqual(badgeMenu.frame.height + 0.000001, 44)
                 keep("spacing-badge-\(defaultText ? "default" : "accessibility2")-\(dark ? "dark" : "light")", app: badge)
                 badge.terminate()
             }

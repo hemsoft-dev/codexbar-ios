@@ -24,7 +24,8 @@ building, testing, or releasing the app.
 ### Developer Experience
 
 - Split manual iPhone and iPad UI qualification into measured shards while
-  preserving the 90-minute worker limit and automatic PR checks.
+  preserving the 90-minute worker limit and automatic PR checks. Keep touch
+  target assertions from rejecting 44-point controls due to floating-point noise.
   ([#517](https://github.com/hemsoft-dev/codexbar-ios/issues/517))
 
 - Trace native StoreKit status delivery on the existing test receiver, preserve status and clock diagnostics without transaction identifiers, and verify stable test-store cleanup. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
