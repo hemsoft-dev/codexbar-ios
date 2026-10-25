@@ -102,7 +102,7 @@ class CollectorEvidenceTests(unittest.TestCase):
         E.write(self.root / 'ownership.json', dict(owner=str(R.ROOT), tools=self.tools, device=self.device,
                 created=dict(exit=0, command=['xcrun', 'simctl', 'create', self.device['deviceName'], 'type', '/qualified/runtime'])))
         E.write(self.root / 'native-use.json', dict(deviceId=self.device['deviceId'], output=str(self.root)))
-        self.events = [dict(processID=10, processImagePath='/app/CodexBarIOS.app/CodexBarIOS',
+        self.events = [dict(timestamp='2026-10-25 05:00:10.000000+0000', processID=10, processImagePath='/app/CodexBarIOS.app/CodexBarIOS',
                 eventMessage=R.OBSERVER_PREFIX + json.dumps(dict(schema=1, stage=stage, run=self.run_id, pid=10, count=1, wallBefore=100, uptime=10, wallAfter=100.001,
                     launch='10000000-0000-0000-0000-000000000003')))
                 for stage in ('snapshotBegin', 'snapshotEnd', 'catalogBegin', 'catalogEnd', 'viewReadiness')]
@@ -141,16 +141,16 @@ class CollectorEvidenceTests(unittest.TestCase):
         calls = [call for call in self.commands if 'spawn' in call]
         self.assertTrue(all(call[3] == self.device['deviceId'] for call in calls))
         self.assertIn('processID == 10', calls[1][-1])
-        self.assertIn('2026-10-25 05:00:00.000000+0000', calls[0])
+        self.assertIn('2026-10-25 05:00:00+0000', calls[0])
         self.assertFalse((self.folder / 'native-observer/offline-export').exists())
         self.assertTrue((self.folder / 'native-observer/xctest-session.log').exists())
 
     def test_sdk_predicate_matches_retained_native_product_event_identities(self):
         # Producer40146062194/job121033727125, app-commerce-filtered.log47-48.
         # Sanitized identities only; product response payload is not a fixture.
-        retained = [dict(processID=25746, subsystem='com.apple.storekit'),
-                    dict(processID=25746, subsystem='com.apple.storekit'),
-                    dict(processID=25747, subsystem='com.apple.storekit')]
+        retained = [dict(timestamp='2026-10-25 05:00:10.000000+0000', processID=25746, subsystem='com.apple.storekit'),
+                    dict(timestamp='2026-10-25 05:00:10.000000+0000', processID=25746, subsystem='com.apple.storekit'),
+                    dict(timestamp='2026-10-25 05:00:10.000000+0000', processID=25747, subsystem='com.apple.storekit')]
         for event in self.events:
             event['processID'] = 25746
             row = json.loads(event['eventMessage'][len(R.OBSERVER_PREFIX):]); row['pid'] = 25746
@@ -215,6 +215,39 @@ class CollectorEvidenceTests(unittest.TestCase):
         with self.assertRaises(R.PhaseFailure):
             self.collect()
         self.assertEqual(self.commands, [])
+
+    def test_fractional_phase_uses_supported_log_dates_and_outward_query_bounds(self):
+        self.receipt.update(started='2026-10-25T01:00:00.900000-04:00', ended='2026-10-25T01:01:00.100000-04:00')
+        original = self.command
+        def exact_parser(folder, label, argv, deadline, export=None):
+            if label in ('app-trace', 'app-sdk'):
+                from datetime import datetime
+                for option in ('--start', '--end'):
+                    datetime.strptime(argv[argv.index(option)+1], '%Y-%m-%d %H:%M:%S%z')
+            return original(folder, label, argv, deadline, export)
+        with patch.object(R, 'observer_command', side_effect=exact_parser):
+            row = self.collect()
+        self.assertTrue(row['complete'])
+        argv = next(c for c in self.commands if 'spawn' in c)
+        self.assertIn('2026-10-25 05:00:00+0000', argv)
+        self.assertIn('2026-10-25 05:01:01+0000', argv)
+
+    def test_outward_query_does_not_admit_records_outside_exact_phase(self):
+        self.receipt.update(started='2026-10-25T01:00:00.900000-04:00', ended='2026-10-25T01:01:00.100000-04:00')
+        outside = dict(self.events[0], timestamp='2026-10-25 05:00:00.100000+0000')
+        row = json.loads(outside['eventMessage'][len(R.OBSERVER_PREFIX):]); row['run'] = '10000000-0000-0000-0000-000000000099'
+        outside['eventMessage'] = R.OBSERVER_PREFIX + json.dumps(row)
+        self.events.insert(0, outside)
+        original = self.command
+        def sdk_edges(folder, label, argv, deadline, export=None):
+            if label == 'app-sdk':
+                return json.dumps([dict(timestamp=stamp) for stamp in ['2026-10-25 05:00:00.100000+0000',
+                      '2026-10-25 05:00:10.000000+0000', '2026-10-25 05:01:00.900000+0000']]).encode()
+            return original(folder, label, argv, deadline, export)
+        with patch.object(R, 'observer_command', side_effect=sdk_edges):
+            row = self.collect()
+        self.assertEqual(len(row['app']), 5)
+        self.assertEqual(row['sdkEventCount'], 1)
 
     def test_missing_runner_boundary_never_qualifies(self):
         self.records.pop(); self.write_runner()

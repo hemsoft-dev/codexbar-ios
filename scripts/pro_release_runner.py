@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Explicit manual release phases; owns only newly provisioned simulators."""
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import math
 import os
@@ -329,6 +329,22 @@ def observer_runner_records(path):
     return records
 
 
+def observer_log_bounds(receipt):
+    start, end = [datetime.fromisoformat(receipt[key]).astimezone(timezone.utc) for key in ('started', 'ended')]
+    # log show accepts whole-second dates. Query outward, then enforce the exact phase below.
+    stop = end.replace(microsecond=0) + (timedelta(seconds=1) if end.microsecond else timedelta())
+    return [value.strftime('%Y-%m-%d %H:%M:%S%z') for value in (start.replace(microsecond=0), stop)]
+
+
+def observer_event_in_phase(event, receipt):
+    if not isinstance(event, dict) or not isinstance(event.get('timestamp'), str):
+        raise ValueError('Missing observer event timestamp')
+    timestamp = datetime.strptime(event['timestamp'], '%Y-%m-%d %H:%M:%S.%f%z')
+    if timestamp.utcoffset() is None:
+        raise ValueError('Observer event timestamp lacks timezone')
+    return datetime.fromisoformat(receipt['started']) <= timestamp <= datetime.fromisoformat(receipt['ended'])
+
+
 def collect_native_observer(runner, folder, result, receipt):
     """Read only the owned simulator, correlate app/runner UUID+PID, export before final hash."""
     output = folder / 'native-observer'
@@ -368,8 +384,8 @@ def collect_native_observer(runner, folder, result, receipt):
         if len(runs) != 1 or len({row['pid'] for row in records}) != 1:
             raise ValueError('Ambiguous native runner identity')
         report['runner'] = records
-        interval = [datetime.fromisoformat(receipt[key]).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f+0000')
-                    for key in ('started', 'ended')]
+        interval = observer_log_bounds(receipt)
+        report['queryInterval'] = interval
         prefix = ['/usr/bin/xcrun', 'simctl', 'spawn', runner.device['deviceId'], 'log', 'show', '--style', 'json',
                   '--start', interval[0], '--end', interval[1]]
         raw = observer_command(output, 'app-trace', prefix + ['--predicate', f'subsystem == "{OBSERVER_SUBSYSTEM}"'], deadline)
@@ -377,9 +393,13 @@ def collect_native_observer(runner, folder, result, receipt):
         if not isinstance(events, list):
             raise ValueError('Observer log is not a JSON event list')
         app = []
+        report['appOutsidePhaseCount'] = 0
         for event in events:
             if not isinstance(event, dict):
                 raise ValueError('Invalid app log event shape')
+            if not observer_event_in_phase(event, receipt):
+                report['appOutsidePhaseCount'] += 1
+                continue
             message = event.get('eventMessage', '')
             if not isinstance(message, str):
                 raise ValueError('Invalid app event message shape')
@@ -403,7 +423,9 @@ def collect_native_observer(runner, folder, result, receipt):
         sdk_events = json.loads(security)
         if not isinstance(sdk_events, list):
             raise ValueError('App SDK log is not a JSON list')
-        report['sdkEventCount'] = len(sdk_events)
+        exact_sdk = [event for event in sdk_events if observer_event_in_phase(event, receipt)]
+        report['sdkOutsidePhaseCount'] = len(sdk_events) - len(exact_sdk)
+        report['sdkEventCount'] = len(exact_sdk)
         if not result.exists():
             raise ValueError('No native xcresult for offline session export')
         observer_command(output, 'session-export', ['/usr/bin/xcrun', 'xcresulttool', 'export', 'diagnostics',
