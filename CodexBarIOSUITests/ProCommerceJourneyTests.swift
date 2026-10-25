@@ -374,13 +374,16 @@ final class ProCommerceNativeJourneyTests: XCTestCase {
 private struct ProCommerceJourneyDriver {
     static let proURL = URL(string: "codexbar://pro")!
     let app: XCUIApplication
+    private let nativeObserver: ProNativeWaitTrace?
 
     init(scenario: String, entry: String? = "limit", largeText: Bool = false, launch: Bool = true) {
+        let runID = UUID()
+        nativeObserver = scenario == "commerce-native-storekit" ? ProNativeWaitTrace(runID: runID) : nil
         app = XCUIApplication()
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launchEnvironment = [
             "CODEXBAR_UI_TESTS": "1",
-            "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
+            "CODEXBAR_UI_TEST_RUN_ID": runID.uuidString,
             "CODEXBAR_UI_TEST_RESET": "1",
             "CODEXBAR_UI_TEST_SCENARIO": scenario,
             "CODEXBAR_UI_TEST_DEFAULT_TEXT": largeText ? "0" : "1",
@@ -400,7 +403,16 @@ private struct ProCommerceJourneyDriver {
         let expectation = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", "ready"), object: element("codexbar-pro-presentation")
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed,
+        if let nativeObserver {
+            expectation.handler = {
+                nativeObserver.record(.predicatePositive)
+                return true
+            }
+        }
+        nativeObserver?.record(.waitBegin, timeout: timeout)
+        let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
+        nativeObserver?.record(.waitEnd, timeout: timeout, result: Int(result.rawValue))
+        XCTAssertEqual(result, .completed,
                        "Purchase information did not resolve. \(app.debugDescription)")
     }
 
@@ -486,5 +498,40 @@ private struct ProCommerceJourneyDriver {
             if target.exists && target.frame.midY < navigationBottom { app.swipeDown() } else { app.swipeUp() }
         }
         XCTFail("Unreachable commerce control: \(target). UI: \(app.debugDescription)")
+    }
+}
+
+/// XCTest's public handler is Sendable and does not promise MainActor execution.
+/// Only these diagnostic fields are protected; no assertion or AX operation moves here.
+private final class ProNativeWaitTrace: @unchecked Sendable {
+    enum Stage: String { case waitBegin, predicatePositive, waitEnd }
+    private let lock = NSLock()
+    private let runID: UUID
+    private let launch = UUID().uuidString
+    private var observedPositive = false
+    private var sequence = 0
+
+    init(runID: UUID) { self.runID = runID }
+
+    func record(_ stage: Stage, timeout: TimeInterval = 0, result: Int = 0) {
+        let wallBefore = Date().timeIntervalSince1970
+        let uptime = ProcessInfo.processInfo.systemUptime
+        let wallAfter = Date().timeIntervalSince1970
+        lock.lock()
+        defer { lock.unlock() }
+        if stage == .predicatePositive {
+            guard !observedPositive else { return }
+            observedPositive = true
+        }
+        sequence += 1
+        let record: [String: Any] = [
+            "schema": 1, "stage": stage.rawValue, "run": runID.uuidString, "launch": launch, "sequence": sequence,
+            "pid": ProcessInfo.processInfo.processIdentifier,
+            "wallBefore": wallBefore, "uptime": uptime, "wallAfter": wallAfter,
+            "timeout": timeout, "result": result,
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: record, options: [.sortedKeys]),
+              let message = String(data: data, encoding: .utf8) else { return }
+        print("CB517RUNNER \(message)")
     }
 }

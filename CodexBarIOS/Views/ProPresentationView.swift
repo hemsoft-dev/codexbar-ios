@@ -45,7 +45,7 @@ struct ProPresentationView: View {
             }
         }
         .accessibilityIdentifier("codexbar-pro-presentation")
-        .accessibilityValue(isReady ? "ready" : "loading")
+        .accessibilityValue(readinessValue)
         .interactiveDismissDisabled(entitlement.command != nil)
         .background {
             ProSubscriptionSheetPresenter(isPresented: $showsManagement, groupID: managementGroupID)
@@ -253,6 +253,21 @@ struct ProPresentationView: View {
 
     private var isBusy: Bool { entitlement.command != nil || isRefreshing || !entitlement.isResolved }
 
+    private var readinessValue: String {
+        let ready = isReady
+#if DEBUG && targetEnvironment(simulator)
+        let catalog: Int
+        switch entitlement.catalog {
+        case .idle: catalog = 0
+        case .loading: catalog = 1
+        case .loaded: catalog = 2
+        case .failed: catalog = 3
+        }
+        ProNativeReadinessTrace.readiness(ready, resolved: entitlement.isResolved, refreshing: isRefreshing, catalog: catalog)
+#endif
+        return ready ? "ready" : "loading"
+    }
+
     private var isReady: Bool {
         guard entitlement.isResolved, !isRefreshing else { return false }
         switch entitlement.catalog {
@@ -353,9 +368,20 @@ struct ProPresentationView: View {
     }
 
     private func refreshCommerce() async {
+#if DEBUG && targetEnvironment(simulator)
+        let traceOperation = UUID()
+#endif
         guard !isRefreshing, entitlement.command == nil else { return }
         isRefreshing = true
-        defer { isRefreshing = false }
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.viewRefreshBegin, operation: traceOperation)
+#endif
+        defer {
+            isRefreshing = false
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.viewRefreshEnd, operation: traceOperation)
+#endif
+        }
         await entitlement.refreshCommerce()
     }
 

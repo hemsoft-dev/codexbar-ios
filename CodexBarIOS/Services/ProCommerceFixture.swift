@@ -1,5 +1,60 @@
 #if DEBUG
 import Foundation
+#if targetEnvironment(simulator)
+import OSLog
+
+/// Observations only: never supplies readiness or changes a StoreKit operation.
+@MainActor
+enum ProNativeReadinessTrace {
+    enum Stage: String {
+        case snapshotBegin, snapshotEnd, appTransactionBegin, appTransactionReturn, appTransactionError
+        case entitlementsBegin, entitlementsEnd, latestBegin, latestReturn
+        case snapshotProductsBegin, snapshotProductsReturn, statusBegin, statusReturn, snapshotError
+        case catalogBegin, catalogEnd, catalogError, storefrontBegin, storefrontReturn
+        case productsBegin, productsReturn, modelsBegin, modelsEnd, finalStorefrontBegin, finalStorefrontReturn
+        case viewRefreshBegin, viewRefreshEnd, viewReadiness
+    }
+
+    private static let logger = Logger(subsystem: "com.hemsoft.CodexBarIOS.native-readiness", category: "fixture")
+    private static let launch = UUID().uuidString
+    private static var sequence = 0
+    private static var previousReadiness: String?
+
+    static func runID(environment: [String: String]) -> UUID? {
+        guard environment["CODEXBAR_UI_TESTS"] == "1",
+              environment["CODEXBAR_UI_TEST_SCENARIO"] == "commerce-native-storekit",
+              let raw = environment["CODEXBAR_UI_TEST_RUN_ID"] else { return nil }
+        return UUID(uuidString: raw)
+    }
+
+    static func emit(_ stage: Stage, count: Int = 0, operation: UUID? = nil) {
+        guard let run = runID(environment: ProcessInfo.processInfo.environment) else { return }
+        let wallBefore = Date().timeIntervalSince1970
+        let uptime = ProcessInfo.processInfo.systemUptime
+        let wallAfter = Date().timeIntervalSince1970
+        sequence += 1
+        let record: [String: Any] = [
+            "schema": 1, "stage": stage.rawValue, "run": run.uuidString, "launch": launch,
+            "sequence": sequence, "pid": ProcessInfo.processInfo.processIdentifier, "count": count,
+            "operation": operation?.uuidString ?? "none",
+            "wallBefore": wallBefore, "uptime": uptime, "wallAfter": wallAfter,
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: record, options: [.sortedKeys]),
+              let message = String(data: data, encoding: .utf8) else { return }
+        logger.notice("CB517NATIVE \(message, privacy: .public)")
+    }
+
+    static func readiness(_ ready: Bool, resolved: Bool, refreshing: Bool, catalog: Int) {
+        guard runID(environment: ProcessInfo.processInfo.environment) != nil else { return }
+        // Non-observed storage cannot invalidate SwiftUI or schedule more refreshes.
+        let state = "\(ready)-\(resolved)-\(refreshing)-\(catalog)"
+        guard previousReadiness != state else { return }
+        previousReadiness = state
+        // Fixed bit fields: ready=1, resolved=2, refreshing=4; catalog enum occupies bits 3+.
+        emit(.viewReadiness, count: (ready ? 1 : 0) | (resolved ? 2 : 0) | (refreshing ? 4 : 0) | (catalog << 3))
+    }
+}
+#endif
 
 /// Explicit simulator fixtures share the production reducer but never its stores or listeners.
 @MainActor

@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 """Explicit manual release phases; owns only newly provisioned simulators."""
 import argparse
+from datetime import datetime, timezone
 import json
+import math
 import os
+import re
+import selectors
+import shutil
+import signal
+import time
 from pathlib import Path
 import subprocess
 import sys
@@ -192,6 +199,254 @@ def binaries(derived, signed):
     return result
 
 
+# Native observation is manual-only and cannot alter XCTest's verdict.
+OBSERVER_PHASES = {'ui-native', 'ui-native-purchase-error'}
+OBSERVER_SUBSYSTEM = 'com.hemsoft.CodexBarIOS.native-readiness'
+OBSERVER_PREFIX = 'CB517NATIVE '
+OBSERVER_LIMITS = dict(commandSeconds=15, phaseSeconds=60, stdoutBytes=8 * 1024 * 1024,
+                       # Known retained export is197059893bytes; only the bounded session survives staging.
+                       exportBytes=256 * 1024 * 1024, exportFiles=2048, sessionBytes=32 * 1024 * 1024)
+
+
+def observer_export_cap(export):
+    if export and export.exists():
+        size = 0
+        for count, path in enumerate(export.rglob('*'), 1):
+            if count > OBSERVER_LIMITS['exportFiles'] or path.is_symlink():
+                raise ValueError('Observer export byte/file cap exceeded')
+            if path.is_file():
+                size += path.stat().st_size
+            if size > OBSERVER_LIMITS['exportBytes']:
+                raise ValueError('Observer export byte/file cap exceeded')
+
+
+def observer_clock(row):
+    keys = ('wallBefore', 'uptime', 'wallAfter')
+    if (row.get('schema') != 1 or any(type(row.get(key)) not in (int, float)
+            or not math.isfinite(row[key]) for key in keys) or row['wallAfter'] < row['wallBefore']):
+        raise ValueError('Invalid observer clock tuple')
+
+
+def observer_command(folder, label, argv, deadline, export=None):
+    """Finite process-group lifetime and byte/file caps, including partial output."""
+    start = time.monotonic()
+    receipt = dict(command=argv, started=now(), limits=OBSERVER_LIMITS, complete=False, truncated=False, timedOut=False)
+    path = folder / (label + '.json')
+    failure, process = None, None
+    stdout, stderr = bytearray(), bytearray()
+    try:
+        if time.monotonic() >= deadline:
+            raise ValueError('Observer phase deadline exhausted before command')
+        with selectors.DefaultSelector() as selector:
+            process = subprocess.Popen(argv, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                       start_new_session=True)
+            selector.register(process.stdout, selectors.EVENT_READ, stdout)
+            selector.register(process.stderr, selectors.EVENT_READ, stderr)
+            end = min(deadline, time.monotonic() + OBSERVER_LIMITS['commandSeconds'])
+            while selector.get_map():
+                if time.monotonic() >= end:
+                    raise ValueError('Observer command deadline exceeded')
+                observer_export_cap(export)
+                for key, _ in selector.select(timeout=min(0.05, max(0, end - time.monotonic()))):
+                    block = os.read(key.fileobj.fileno(), 65536)
+                    if not block:
+                        selector.unregister(key.fileobj)
+                    else:
+                        remaining = OBSERVER_LIMITS['stdoutBytes'] - len(stdout) - len(stderr)
+                        key.data.extend(block[:max(0, remaining)])
+                        if len(block) > remaining:
+                            raise ValueError('Observer output byte cap exceeded; partial output retained')
+            process.wait(timeout=max(0.001, end - time.monotonic()))
+            observer_export_cap(export)
+            if process.returncode:
+                raise ValueError(f'Observer command exited {process.returncode}')
+            receipt['complete'] = True
+    except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+        failure = PhaseFailure(str(error))
+        receipt.update(error=str(error), truncated='cap exceeded' in str(error),
+                       timedOut='deadline' in str(error) or isinstance(error, subprocess.TimeoutExpired))
+    finally:
+        cleanup_errors = []
+        if process:
+            # Each step uses only this retained Popen handle, once. A failed
+            # kill/wait/close must not skip the other cleanup or erase evidence.
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            except OSError as error:
+                cleanup_errors.append(dict(step='kill', error=str(error)))
+            try:
+                process.wait(timeout=2)
+            except (OSError, subprocess.TimeoutExpired) as error:
+                cleanup_errors.append(dict(step='wait', error=str(error)))
+            receipt['exit'] = process.returncode
+            for name, pipe in (('stdout', process.stdout), ('stderr', process.stderr)):
+                try:
+                    pipe.close()
+                except OSError as error:
+                    cleanup_errors.append(dict(step=name, error=str(error)))
+        if cleanup_errors:
+            receipt.update(complete=False, cleanupErrors=cleanup_errors)
+            details = '; '.join(item['step'] + ': ' + item['error'] for item in cleanup_errors)
+            message = 'Observer cleanup failed: ' + details
+            failure = PhaseFailure(f'{failure}; {message}' if failure else message, getattr(failure, 'code', 1))
+            receipt.setdefault('error', message)
+        receipt.update(ended=now(), seconds=time.monotonic() - start, stdoutBytes=len(stdout), stderrBytes=len(stderr))
+        write_errors = []
+        for name, data in (('stdout', stdout), ('stderr', stderr)):
+            try:
+                (folder / (label + '.' + name)).write_bytes(data)
+            except OSError as error:
+                write_errors.append(dict(stream=name, error=str(error)))
+        if write_errors:
+            receipt.update(complete=False, writeErrors=write_errors)
+            details = '; '.join(item['stream'] + ': ' + item['error'] for item in write_errors)
+            message = 'Observer output write failed: ' + details
+            failure = PhaseFailure(f'{failure}; {message}' if failure else message, getattr(failure, 'code', 1))
+            receipt.setdefault('error', message)
+        failure = persist(path, receipt, failure)
+    if failure:
+        raise failure
+    return bytes(stdout)
+
+
+def observer_runner_records(path):
+    if path.stat().st_size > 32 * 1024 * 1024:
+        raise ValueError('Native XCTest log exceeds observer parse cap')
+    records = []
+    for line in path.read_text().splitlines():
+        if 'CB517RUNNER ' not in line:
+            continue
+        record = json.loads(line.split('CB517RUNNER ', 1)[1])
+        if (not isinstance(record, dict) or record.get('stage') not in ('waitBegin', 'predicatePositive', 'waitEnd')
+                or not re_uuid(record.get('run', '')) or type(record.get('pid')) is not int):
+            raise ValueError('Invalid runner observation identity')
+        observer_clock(record)
+        records.append(record)
+    if not records or not {'waitBegin', 'waitEnd'} <= {row['stage'] for row in records}:
+        raise ValueError('Missing native wait boundary observations')
+    return records
+
+
+def collect_native_observer(runner, folder, result, receipt):
+    """Read only the owned simulator, correlate app/runner UUID+PID, export before final hash."""
+    output = folder / 'native-observer'
+    output.mkdir()
+    report = dict(schema=1, complete=False, limits=OBSERVER_LIMITS, source=runner.source,
+                  device=runner.device, tools=runner.tools, phase=receipt['phase'],
+                  started=receipt['started'], ended=receipt['ended'])
+    failure = None
+    staging = output / 'offline-export'
+    try:
+        deadline = time.monotonic() + OBSERVER_LIMITS['phaseSeconds']
+        require_pinned(runner.tools, runner.device)
+        developer = Path(runner.tools['developer_dir']).resolve()
+        if Path(os.environ.get('DEVELOPER_DIR', '')).resolve() != developer:
+            raise ValueError('Observer DEVELOPER_DIR differs from qualified build')
+        ownership = read(runner.output / 'ownership.json')
+        created = ownership.get('created', {})
+        argv = created.get('command', [])
+        if (ownership.get('owner') != str(ROOT) or ownership.get('tools') != runner.tools
+                or created.get('exit') != 0
+                or len(argv) != 6 or argv[:3] != ['xcrun', 'simctl', 'create']
+                or argv[3] != runner.device['deviceName'] or argv[5] != runner.device['runtimeBundlePath']
+                or not re_uuid(runner.device['deviceId'])):
+            raise ValueError('Observer lacks exact simulator ownership')
+        validate_device(ownership['device'], runner.device)
+        if ownership['device']['deviceName'] != runner.device['deviceName']:
+            raise ValueError('Observer simulator name changed')
+        used = read(runner.output / 'native-use.json')
+        if used.get('deviceId') != runner.device['deviceId'] or used.get('output') != str(runner.output):
+            raise ValueError('Observer native claim differs')
+        for tool in ('simctl', 'xcresulttool'):
+            found = observer_command(output, 'find-' + tool, ['/usr/bin/xcrun', '--find', tool], deadline)
+            if Path(found.decode().strip()).resolve() != developer / 'usr/bin' / tool:
+                raise ValueError('Observer tool outside qualified developer directory')
+        records = observer_runner_records(folder / 'xcodebuild.log')
+        runs = {row['run'] for row in records}
+        if len(runs) != 1 or len({row['pid'] for row in records}) != 1:
+            raise ValueError('Ambiguous native runner identity')
+        report['runner'] = records
+        interval = [datetime.fromisoformat(receipt[key]).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f+0000')
+                    for key in ('started', 'ended')]
+        prefix = ['/usr/bin/xcrun', 'simctl', 'spawn', runner.device['deviceId'], 'log', 'show', '--style', 'json',
+                  '--start', interval[0], '--end', interval[1]]
+        raw = observer_command(output, 'app-trace', prefix + ['--predicate', f'subsystem == "{OBSERVER_SUBSYSTEM}"'], deadline)
+        events = json.loads(raw)
+        if not isinstance(events, list):
+            raise ValueError('Observer log is not a JSON event list')
+        app = []
+        for event in events:
+            if not isinstance(event, dict):
+                raise ValueError('Invalid app log event shape')
+            message = event.get('eventMessage', '')
+            if not isinstance(message, str):
+                raise ValueError('Invalid app event message shape')
+            if not message.startswith(OBSERVER_PREFIX):
+                continue
+            row = json.loads(message[len(OBSERVER_PREFIX):])
+            if (not isinstance(row, dict) or row.get('run') not in runs or row.get('pid') != event.get('processID')
+                    or not event.get('processImagePath', '').endswith('/CodexBarIOS.app/CodexBarIOS')
+                    or not re_uuid(row.get('launch', ''))):
+                raise ValueError('Observer app identity differs from runner')
+            observer_clock(row)
+            app.append(dict(marker=row, timestamp=event.get('timestamp'), bootUUID=event.get('bootUUID'),
+                            processImageUUID=event.get('processImageUUID')))
+        if not app or len({row['marker']['pid'] for row in app}) != 1 or len({row['marker']['launch'] for row in app}) != 1:
+            raise ValueError('Missing or ambiguous native app trace')
+        report['app'] = app
+        app_pid = app[0]['marker']['pid']
+        # Strictly this app, not storekitd/trustd or other applications/accounts.
+        predicate = f'processID == {app_pid} AND (subsystem == "com.apple.securityd" OR subsystem == "com.apple.storekit")'
+        security = observer_command(output, 'app-sdk', prefix + ['--predicate', predicate], deadline)
+        sdk_events = json.loads(security)
+        if not isinstance(sdk_events, list):
+            raise ValueError('App SDK log is not a JSON list')
+        report['sdkEventCount'] = len(sdk_events)
+        if not result.exists():
+            raise ValueError('No native xcresult for offline session export')
+        observer_command(output, 'session-export', ['/usr/bin/xcrun', 'xcresulttool', 'export', 'diagnostics',
+                         '--path', str(result), '--output-path', str(staging)], deadline, export=staging)
+        # Offline extraction of already-captured xcresult diagnostics, no new sysdiagnose/host collection.
+        # Retain only this test bundle's Session logs. Other exported copies are removed below.
+        sessions = [path for path in staging.rglob('Session-*.log')
+                    if any(part.startswith('CodexBarIOSUITests-') for part in path.parts)]
+        if len(sessions) != 1:
+            raise ValueError('Missing or ambiguous XCTest session log')
+        report['sessionBytes'] = sessions[0].stat().st_size
+        if report['sessionBytes'] > OBSERVER_LIMITS['sessionBytes']:
+            raise ValueError('XCTest session byte cap exceeded')
+        target = output / 'xctest-session.log'
+        shutil.copyfile(sessions[0], target)
+        session_text = target.read_text()
+        runner_pid = records[0]['pid']
+        if f'CodexBarIOSUITests-Runner[{runner_pid}:' not in session_text or not re.search(rf'pid:\s*{app_pid}\b', session_text):
+            raise ValueError('XCTest session does not bind observed runner/app PIDs')
+        report['sessionSha256'] = digest(target)
+        stages = {row['marker']['stage'] for row in app}
+        if receipt.get('exit') == 0 and (not {'snapshotBegin', 'snapshotEnd', 'catalogBegin', 'catalogEnd', 'viewReadiness'} <= stages
+                or 'predicatePositive' not in {row['stage'] for row in records}
+                or not any(row['marker']['stage'] == 'viewReadiness' and row['marker'].get('count', 0) & 1 for row in app)):
+            raise ValueError('Passing native run lacks required app observations')
+        report['complete'] = True
+    except (ValueError, KeyError, TypeError, OSError, PhaseFailure) as error:
+        failure = error if isinstance(error, PhaseFailure) else PhaseFailure(str(error))
+        report['error'] = str(error)
+    finally:
+        try:
+            if staging.exists():
+                shutil.rmtree(staging)
+        except OSError as error:
+            report.update(complete=False, cleanupError=str(error))
+            failure = failure or PhaseFailure(str(error))
+        failure = persist(output / 'receipt.json', report, failure)
+    if failure:
+        raise failure
+    return report
+
+
+
 class Runner:
     def __init__(self, output, device, source, tools):
         self.output, self.device, self.source, self.tools = output, device, source, tools
@@ -311,6 +566,12 @@ class Runner:
             failure = error if isinstance(error, PhaseFailure) else PhaseFailure(str(error))
             receipt.update(exit=failure.code, error=str(error))
         receipt['ended'] = now()
+        if name in OBSERVER_PHASES:
+            try:
+                receipt['nativeObserver'] = collect_native_observer(self, folder, result, receipt)
+            except (PhaseFailure, ValueError, KeyError, TypeError, OSError) as error:
+                receipt['observerError'] = str(error)
+                failure = failure or (error if isinstance(error, PhaseFailure) else PhaseFailure(str(error)))
         try:
             if result.exists():
                 receipt['result_initial_sha256'] = digest(result)
