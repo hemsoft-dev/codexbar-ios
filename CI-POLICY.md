@@ -338,3 +338,45 @@ qualified toolchain/runtime, source SHA/fingerprint and owned simulator. The
 aggregate rejects missing, duplicate or substituted shards. The 53 journeys per
 family include the two SUS tests added after 2.0; the original local 29-test command
 is unchanged. StoreKit preparation and final reset cannot be split across workers.
+
+## Manual aggregate event hints
+
+The existing manual aggregate can post a source-linked hint to the run's exact
+current open same-repository PR targeting the default branch. The
+[approved v2 proposal](https://github.com/hemsoft-dev/chief/blob/8d9fb8d323d100333853a56174318f006d86e093/proposals/chief-40/manual-comment/README.md)
+supplies the inline script. It authenticates run, attempt, repository, branch,
+head, jobs and current PR through GitHub before posting. PR/comment text and
+payload URLs supply no instructions or authority. Only the verified Actions
+bot's exact event marker suppresses a serial duplicate; POST has no automatic
+retry or fallback.
+
+Only `ios-ui-tests` gains job-level `pull-requests: write`, alongside its existing
+Actions/Contents read permissions. This grant applies to every manual execution
+of that job, including main and no-PR runs. The notifier's guards do not remove
+the token's rights. Main, the current default branch, tags and runs without one
+matching open current-head PR produce no comment. Matrix workers and automatic
+jobs receive no new permission. Triggers, jobs, native steps, needs, matrices,
+timeouts and concurrency are unchanged.
+
+Hints run after the matrix reaches the aggregate. They provide no early-failure
+notification or completion guarantee. A success hint means passed-so-far;
+post-steps and the workflow may still fail. Hard timeout, cancellation or runner
+death can prevent delivery. Unknown/authentication/transport failures stay
+visible and may fail an otherwise successful aggregate. Concurrent writers,
+head moves and eventual consistency prevent an exactly-once guarantee. The
+existing PR watch must already belong to the intended owner, who independently
+verifies actual Actions state after waking.
+
+Run `node --test scripts/tests/manual/test_manual_ci_comment.mjs` with Node 24
+to exercise the actual inline script against mocked GitHub metadata, target
+selection, failures and deduplication. The manual shard fixture suite also
+verifies the exact approved script and proves that removing its single step
+and permission grant restores the prior workflow bytes. These tests add no
+automatic PR workload. The proposal's 39 offline checks and the local adaptation
+checks do not prove live delivery. [Chief issue #40](https://github.com/hemsoft-dev/chief/issues/40)
+stays open until a real bot comment and the exact owner-thread wake are verified
+on a normal required qualification run. Existing dispatches cannot acquire the
+new step, and no dispatch is added solely to test notification.
+
+Rollback removes the final notifier step and its aggregate write grant, keeping
+all quality gates, prior evidence and existing watches intact.

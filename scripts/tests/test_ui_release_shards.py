@@ -1,5 +1,6 @@
 """Manual-only shard completeness, provenance and cleanup failure controls."""
 import copy
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -140,6 +141,30 @@ class UIShardTests(unittest.TestCase):
         self.assertIn('shard: [' + ', '.join(SHARDS.SHARDS) + ']', worker)
         self.assertIn('verify-release-toolchain.py', worker)
         self.assertIn('ui_release_shards.py aggregate', job_block(workflow, 'ios-ui-tests'))
+
+    def test_manual_notifier_permission_and_full_workflow_scope(self):
+        workflow = (SCRIPTS.parent / '.github/workflows/ci.yml').read_text()
+        from scripts.tests.test_ci_policy import job_block
+        aggregate = job_block(workflow, 'ios-ui-tests')
+        marker = '      - name: Notify Chief of manual UI aggregate outcome\n'
+        self.assertEqual(workflow.count(marker), 1)
+        self.assertEqual(workflow.count('pull-requests: write'), 1)
+        self.assertNotIn('issues: write', workflow)
+        self.assertIn('      pull-requests: write\n', aggregate)
+        notifier = aggregate[aggregate.index(marker):]
+        self.assertIn('always() && !cancelled()', notifier)
+        self.assertIn("github.ref != 'refs/heads/main'", notifier)
+        self.assertIn('          retries: 0\n', notifier)
+        self.assertIn('          debug: false\n', notifier)
+        script = notifier.split('          script: |\n', 1)[1]
+        script = '\n'.join(line[12:] for line in script.splitlines() if line.startswith('            ')) + '\n'
+        self.assertEqual(hashlib.sha256(script.encode()).hexdigest(),
+                         '4f299b77c869f5674c5fc63a9af4cd208a0ac17c39a43b8b88b8538763229ead')
+        # Removing the approved step and its job-level grant must recover the
+        # entire prior workflow, including every automatic and native workload.
+        restored = workflow.replace(notifier, '').replace('      pull-requests: write\n', '', 1)
+        self.assertEqual(hashlib.sha256(restored.encode()).hexdigest(),
+                         'ff422d0b6e584bbdde570c4ca15ab05d97341b53bb34ab3451bdee3543a49d63')
 
 
 if __name__ == '__main__':

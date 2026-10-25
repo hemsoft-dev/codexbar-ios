@@ -292,6 +292,7 @@ jobs:
     needs: ios-ui-families
     permissions:
       actions: read
+      pull-requests: write
       contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -320,6 +321,161 @@ jobs:
             --pattern 'ui-shard-proof-*' --dir "$RUNNER_TEMP/ui-proof"
           python3 scripts/ui_release_shards.py aggregate --proofs "$RUNNER_TEMP/ui-proof" \
             --output "$RUNNER_TEMP/full-ui-proof.json"
+
+      - name: Notify Chief of manual UI aggregate outcome
+        if: ${{ always() && !cancelled() && github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main' }}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CHIEF_NOTIFY_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{ github.token }}
+          retries: 0
+          debug: false
+          script: |
+            // Candidate actions/github-script body. The patch embeds these exact bytes.
+            // No checkout code, PR body, comment instructions, or payload URLs are executed.
+            const owner = "hemsoft-dev", repo = "codexbar-ios", repositoryId = 1285058368;
+            const workflowId = 319463386;
+            const botId = 41898282;
+            const params = {owner, repo};
+            const reject = code => { throw new Error(code); };
+            const integer = value => {
+              if (!/^[1-9][0-9]*$/.test(String(value))) reject("invalid-integer");
+              const number = Number(value);
+              if (!Number.isSafeInteger(number)) reject("invalid-integer");
+              return number;
+            };
+            try {
+              const runId = integer(process.env.GITHUB_RUN_ID);
+              const attempt = integer(process.env.GITHUB_RUN_ATTEMPT);
+              const sha = context.sha;
+              const phase = "full-ui-summary";
+              const claimedStatus = process.env.CHIEF_NOTIFY_STATUS;
+              if (context.eventName !== "workflow_dispatch" || context.repo.owner !== owner ||
+                  context.repo.repo !== repo || !/^[0-9a-f]{40}$/.test(sha) ||
+                  typeof context.ref !== "string" || !/^refs\/(heads|tags)\/.+/.test(context.ref) ||
+                  !["success", "failure", "cancelled"].includes(claimedStatus)) reject("context-refused");
+              if (context.job !== "ios-ui-tests") reject("job-refused");
+              const branch = context.ref.startsWith("refs/heads/") ? context.ref.slice("refs/heads/".length) : null;
+              const checkRun = run => {
+                if (run.id !== runId || run.run_attempt !== attempt || run.workflow_id !== workflowId ||
+                    run.repository?.id !== repositoryId || run.repository?.full_name !== `${owner}/${repo}` ||
+                    run.head_repository?.id !== repositoryId || run.event !== "workflow_dispatch" ||
+                    run.path !== ".github/workflows/ci.yml" || run.head_sha !== sha ||
+                    (branch !== null && run.head_branch !== branch)) reject("run-refused");
+              };
+              const skip = reason => {
+                core.notice(`Chief notifier not applicable (${reason}); native validation is unchanged.`);
+                return {state: "not-applicable", reason};
+              };
+              const getRun = async () => (await github.rest.actions.getWorkflowRun({...params, run_id: runId})).data;
+              const getRepo = async () => (await github.rest.repos.get(params)).data;
+              const run = await getRun();
+              checkRun(run);
+              const metadata = await getRepo();
+              if (metadata.id !== repositoryId || metadata.full_name !== `${owner}/${repo}` ||
+                  typeof metadata.default_branch !== "string" || !metadata.default_branch) reject("repository-refused");
+              if (branch === null) return skip("non-branch-ref");
+              // Deliberately no historical-PR lookup on main/default-branch validation.
+              if (branch === "main" || branch === metadata.default_branch) return skip("main-or-default-branch");
+              // Bounded target resolution for this exact run branch, not repository monitoring.
+              const candidates = await github.paginate(github.rest.pulls.list,
+                {...params, state: "open", head: `${owner}:${branch}`, base: metadata.default_branch, per_page: 100});
+              const isTarget = pr => pr.state === "open" && pr.merged_at === null &&
+                pr.base?.repo?.id === repositoryId && pr.base?.ref === metadata.default_branch &&
+                pr.head?.repo?.id === repositoryId && pr.head?.sha === sha && pr.head?.ref === branch;
+              const matches = candidates.filter(isTarget);
+              if (matches.length === 0) return skip("no-current-open-pr");
+              if (matches.length !== 1) reject("ambiguous-pr");
+              const prNumber = integer(matches[0].number);
+              const stillTarget = pr => pr.number === prNumber && isTarget(pr);
+              const getPr = async () => (await github.rest.pulls.get({...params, pull_number: prNumber})).data;
+              if (!stillTarget(await getPr())) return skip("pr-closed-or-head-moved");
+              const jobs = await github.paginate(
+                "GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs",
+                {...params, run_id: runId, attempt_number: attempt, per_page: 100},
+              );
+              const jobNamed = name => {
+                const found = jobs.filter(job => job.name === name);
+                if (found.length > 1) reject("ambiguous-job");
+                if (found.length === 0) return null;
+                const job = found[0];
+                integer(job.id);
+                if (job.run_id !== runId || job.run_attempt !== attempt || job.head_sha !== sha) reject("job-refused");
+                return job;
+              };
+              const currentName = "Full iOS UI validation";
+              const current = jobNamed(currentName);
+              if (!current || !Array.isArray(current.steps)) reject("current-job-unavailable");
+              const failureSteps = current.steps.filter(step => step.status === "completed" && step.conclusion === "failure");
+              const prerequisites = ["SwiftLint", "Strict concurrency", "iOS tests", "watchOS tests", "SwiftPM smoke tests"];
+              const shards = ["iphone", "ipad"].flatMap(family =>
+                ["original-1", "original-2", "original-3", "supplemental", "synthetic", "native"].map(
+                  shard => `iOS UI journeys (${family}, ${shard})`,
+                ),
+              );
+              let outcome = "unknown";
+              let title = "Manual UI notification could not verify the observed outcome.";
+              const evidence = [];
+              const required = [...prerequisites, ...shards].map(jobNamed);
+              const incomplete = required.some(job => !job || job.status !== "completed" || job.conclusion !== "success");
+              const knownBad = required.some(job => job && job.status === "completed" && job.conclusion !== "success");
+              const proof = current.steps.find(step => step.name === "Require exact-head proofs for all twelve shards");
+              if (failureSteps.length > 0 || knownBad) {
+                outcome = "failure";
+                title = "Manual UI validation failed or is incomplete.";
+              } else if (!incomplete && claimedStatus === "success" && proof?.status === "completed" && proof.conclusion === "success") {
+                outcome = "passed-so-far";
+                title = "Manual UI quality steps succeeded before this notifier.";
+              }
+              for (const name of [...prerequisites, ...shards]) {
+                const job = jobNamed(name);
+                if (!job) evidence.push(`- ${name}: missing.`);
+                else if (job.status !== "completed" || job.conclusion !== "success") {
+                  evidence.push(`- ${name}: not verified successful. https://github.com/${owner}/${repo}/actions/runs/${runId}/job/${job.id}`);
+                }
+              }
+              const marker = `<!-- chief-manual-ci:v2:${repositoryId}:${runId}:${attempt}:${sha}:${phase}:${outcome} -->`;
+              const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}/attempts/${attempt}`;
+              const jobUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}/job/${current.id}`;
+              const body = [title, "", `[Run ${runId}, attempt ${attempt}](${runUrl}) at head \`${sha}\`.`,
+                `[Source job](${jobUrl}). This is an event hint. Chief must verify GitHub API state.`,
+                "The notifier runs before its own job and the workflow finish. This comment does not establish workflow completion or merge readiness.",
+                ...evidence, "", marker].join("\n");
+              const comments = await github.paginate(github.rest.issues.listComments, {...params, issue_number: prNumber, per_page: 100});
+              const previous = comments.filter(comment => comment.user?.id === botId &&
+                comment.user?.login === "github-actions[bot]" && comment.user?.type === "Bot" &&
+                String(comment.body).split("\n").includes(marker));
+              if (previous.length > 1) reject("duplicate-comments-already-exist");
+              // Recheck immediately before a write; GitHub has no atomic head-bound comment API.
+              checkRun(await getRun());
+              const latestRepo = await getRepo();
+              if (latestRepo.id !== repositoryId || latestRepo.full_name !== `${owner}/${repo}`) reject("repository-refused");
+              if (latestRepo.default_branch !== metadata.default_branch) return skip("default-branch-changed");
+              if (!stillTarget(await getPr())) return skip("pr-closed-or-head-moved");
+              if (previous.length === 1) {
+                core.notice("Chief manual CI hint already exists for this verified event.");
+                if (outcome === "unknown") core.setFailed("Chief notifier outcome remains unknown; root verification is required.");
+                return {state: "duplicate", outcome, commentId: integer(previous[0].id)};
+              }
+              // retries: 0 in the action prevents retrying an ambiguous POST automatically.
+              const response = await github.rest.issues.createComment({...params, issue_number: prNumber, body});
+              const comment = response.data;
+              if (response.status !== 201 || comment.user?.id !== botId || comment.user?.login !== "github-actions[bot]" ||
+                  comment.user?.type !== "Bot" || comment.body !== body ||
+                  comment.issue_url !== `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}`) reject("comment-response-unverified");
+              core.notice("Chief manual CI hint posted; delivery to the watching thread is not yet proven.");
+              if (outcome === "unknown") core.setFailed("Chief notifier outcome remains unknown; root verification is required.");
+              return {state: "created", outcome, commentId: integer(comment.id)};
+            } catch (error) {
+              // Never log API error text, request headers, tokens, response bodies or arbitrary PR text.
+              const codes = new Set(["invalid-integer", "context-refused", "job-refused", "run-refused",
+                "repository-refused", "ambiguous-pr", "ambiguous-job", "current-job-unavailable",
+                "duplicate-comments-already-exist", "comment-response-unverified"]);
+              const code = codes.has(error?.message) ? error.message : "github-api-unavailable";
+              core.setFailed(`Chief notifier refused delivery (${code}). Outcome remains unknown; root must inspect this manual run.`);
+              return {state: "unverified", reason: code};
+            }
 
   account-menu-comparison:
     name: Account menu comparison
