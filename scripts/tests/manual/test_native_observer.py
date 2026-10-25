@@ -195,6 +195,27 @@ class CollectorEvidenceTests(unittest.TestCase):
         self.assertFalse((self.folder / 'native-observer/xctest-session.log').exists())
         self.assertFalse(E.read(self.folder / 'native-observer/receipt.json')['complete'])
 
+    def test_supplied_ownership_in_separate_provisioning_directory(self):
+        device = self.root / 'device'; device.mkdir()
+        ownership = device / 'ownership.json'
+        (self.root / 'ownership.json').rename(ownership)
+        (self.root / 'native-use.json').rename(device / 'native-use.json')
+        # Exposes the supported input path to the actual collector, not a copied receipt.
+        self.runner = R.Runner(self.root, self.device, {}, self.tools, ownership=ownership)
+        row = self.collect()
+        self.assertTrue(row['complete'])
+        self.assertFalse((self.runner.output / 'ownership.json').exists())
+
+    def test_supplied_ownership_requires_claim_beside_receipt(self):
+        device = self.root / 'device'; device.mkdir()
+        ownership = device / 'ownership.json'
+        (self.root / 'ownership.json').rename(ownership)
+        self.runner = R.Runner(self.root, self.device, {}, self.tools, ownership=ownership)
+        # The unrelated claim left in the execution directory must not be accepted.
+        with self.assertRaises(R.PhaseFailure):
+            self.collect()
+        self.assertEqual(self.commands, [])
+
     def test_missing_runner_boundary_never_qualifies(self):
         self.records.pop(); self.write_runner()
         with self.assertRaisesRegex(R.PhaseFailure, 'boundary'):

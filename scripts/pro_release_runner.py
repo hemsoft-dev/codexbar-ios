@@ -344,7 +344,7 @@ def collect_native_observer(runner, folder, result, receipt):
         developer = Path(runner.tools['developer_dir']).resolve()
         if Path(os.environ.get('DEVELOPER_DIR', '')).resolve() != developer:
             raise ValueError('Observer DEVELOPER_DIR differs from qualified build')
-        ownership = read(runner.output / 'ownership.json')
+        ownership = read(runner.ownership)
         created = ownership.get('created', {})
         argv = created.get('command', [])
         if (ownership.get('owner') != str(ROOT) or ownership.get('tools') != runner.tools
@@ -356,7 +356,7 @@ def collect_native_observer(runner, folder, result, receipt):
         validate_device(ownership['device'], runner.device)
         if ownership['device']['deviceName'] != runner.device['deviceName']:
             raise ValueError('Observer simulator name changed')
-        used = read(runner.output / 'native-use.json')
+        used = read(runner.ownership.parent / 'native-use.json')
         if used.get('deviceId') != runner.device['deviceId'] or used.get('output') != str(runner.output):
             raise ValueError('Observer native claim differs')
         for tool in ('simctl', 'xcresulttool'):
@@ -448,8 +448,9 @@ def collect_native_observer(runner, folder, result, receipt):
 
 
 class Runner:
-    def __init__(self, output, device, source, tools):
+    def __init__(self, output, device, source, tools, ownership=None):
         self.output, self.device, self.source, self.tools = output, device, source, tools
+        self.ownership = Path(ownership).resolve() if ownership is not None else output / 'ownership.json'
         self.manifest = load_manifest()
         self.receipts = []
 
@@ -676,7 +677,7 @@ def main():
                 shutdown(output, device)
             outcome.update(exit=0, complete=True)
         else:
-            runner = Runner(output, device, source, tools)
+            runner = Runner(output, device, source, tools, ownership=args.ownership)
             manifest = runner.manifest
             if args.mode == 'base':
                 # Build the ordinary scheme's full test bundle (35 methods), then
