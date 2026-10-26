@@ -23,6 +23,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Include both subscription-utilization journeys in the release manifest so
+  manual iOS validation can start and verify all 53 journeys per device family.
+  ([#523](https://github.com/hemsoft-dev/codexbar-ios/issues/523))
+
 - Trace native StoreKit status delivery on the existing test receiver, preserve status and clock diagnostics without transaction identifiers, and verify stable test-store cleanup. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 - Record the App Review submission of 2.0.0 build 5 and keep the shipped

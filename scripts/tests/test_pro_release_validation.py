@@ -122,7 +122,7 @@ class PhaseManifestTests(unittest.TestCase):
         for name in manifest['ui_journeys']:
             declared.update(manifest['phases'][name]['tests'])
         self.assertEqual(discovered, declared)
-        self.assertEqual(len(discovered), 52)
+        self.assertEqual(len(discovered), 54)
         self.assertEqual(len(manifest['shared_pro_tests']), 197)
         self.assertEqual(len(manifest['shared_pro_sources']), 22)
 
