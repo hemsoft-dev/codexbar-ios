@@ -194,10 +194,51 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         let service = try await purchaseMonthly(context)
         let transaction = try XCTUnwrap(context.session.allTransactions().first { $0.productIdentifier == ProProductID.monthly.rawValue })
         try context.session.disableAutoRenewForTransaction(identifier: transaction.identifier)
-        try await storeKitEventually("Verified auto-renew-off did not arrive before natural expiration.", timeout: 25) {
-            let snapshot = await context.source.snapshot()
-            return snapshot.subscriptions.contains { $0.renewalVerified && $0.willAutoRenew == false }
-                && service.commerce.lifetimeAction == .available
+        let waitStarted = ProcessInfo.processInfo.systemUptime
+        var lastSnapshot: ProStoreSnapshot?
+        var lastAction: ProLifetimeAction?
+        var lastOff = false
+        var lastWallDate: Date?
+        var lastElapsed: TimeInterval?
+        var lastServiceStatusAvailable: Bool?
+        do {
+            try await storeKitEventually("Verified auto-renew-off did not arrive before natural expiration.", timeout: 25) {
+                let snapshot = await context.source.snapshot()
+                let off = snapshot.subscriptions.contains { $0.renewalVerified && $0.willAutoRenew == false }
+                // Preserve the original short circuit: inspect the lifetime action only after verified off.
+                let action: ProLifetimeAction? = off ? service.commerce.lifetimeAction : nil
+                lastSnapshot = snapshot
+                lastAction = action
+                lastOff = off
+                lastWallDate = Date()
+                lastElapsed = ProcessInfo.processInfo.systemUptime - waitStarted
+                lastServiceStatusAvailable = service.subscriptionStatusAvailable
+                return off && action == .available
+            }
+        } catch let primaryError {
+            do {
+                let statuses = lastSnapshot?.subscriptions ?? []
+                let rows = statuses.prefix(3).map {
+                    "product=\($0.purchase.product.rawValue),state=\($0.state),verified=\($0.renewalVerified)"
+                        + ",renewing=\(String(describing: $0.willAutoRenew)),purchased=\($0.purchase.purchasedAt)"
+                        + ",expires=\(String(describing: $0.purchase.expiresAt)),signed=\($0.signedAt)"
+                }
+                try storeKitEvent("auto-renew-off-timeout-last-observation", [
+                    "observationPresent": String(lastSnapshot != nil),
+                    "elapsedSinceWaitInvocation": String(describing: lastElapsed),
+                    "observedWallDate": String(describing: lastWallDate),
+                    "sourceStatusAvailable": String(describing: lastSnapshot?.subscriptionStatusAvailable),
+                    "sourceStatuses": rows.joined(separator: ";"),
+                    "sourceStatusCount": String(statuses.count),
+                    "sourceStatusesCapped": String(statuses.count > 3),
+                    "verifiedOffPredicate": String(lastOff),
+                    "lifetimeAction": lastAction.map { String(describing: $0) } ?? "not-evaluated",
+                    "serviceStatusAvailable": String(describing: lastServiceStatusAvailable),
+                ])
+            } catch {
+                print("Unable to preserve auto-renew-off diagnostics; retaining the primary failure.")
+            }
+            throw primaryError
         }
         try storeKitEvent("auto-renew-off-before-natural-expiry", await storeKitState(context, service: service))
         do {

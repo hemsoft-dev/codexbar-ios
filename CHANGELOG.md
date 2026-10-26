@@ -29,9 +29,15 @@ building, testing, or releasing the app.
   Distinguish reported zero Grok usage from missing percentages in UI fixtures.
   Wait for billing warnings to disappear after reloading sign-in.
   Add aggregate-only manual validation hints for matching open PR watches;
-  live notification delivery remains pending qualification.
+  early failure notification delivery remains unqualified.
   Require matching hosted image and toolchain identities for manual automatic-CI cost comparisons.
   ([#517](https://github.com/hemsoft-dev/codexbar-ios/issues/517))
+
+- Include both subscription-utilization journeys in the release manifest so
+  manual iOS validation can start and verify all 53 journeys per device family.
+  Retain the last verified-renewal predicate state if native expiration
+  validation fails, without changing its waits or acceptance conditions.
+  ([#523](https://github.com/hemsoft-dev/codexbar-ios/issues/523))
 
 - Trace native StoreKit status delivery on the existing test receiver, preserve status and clock diagnostics without transaction identifiers, and verify stable test-store cleanup. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 

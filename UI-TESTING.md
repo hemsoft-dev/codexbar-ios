@@ -61,7 +61,7 @@ fails qualification even if the journeys passed.
 Each phase enumerates the built tests and checks exact identities, passing
 counts, zero skips/expected failures and one expected destination. It records
 source and binary hashes, signing, commands, timestamps, summaries and xcresults.
-The supplemental six reuse the verified base build; native hosts are separately
+The supplemental eight reuse the verified base build; native hosts are separately
 built with coverage, the Debug isolation flag and ad hoc signatures. Each
 preparation exits before its consumer starts. Every native scheme execution is
 explicitly filtered. Fresh DerivedData lives inside each unique output directory;
