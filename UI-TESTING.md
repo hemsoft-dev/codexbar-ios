@@ -582,7 +582,9 @@ it never silently selects another image or retries.
 The manual guard verifies that effective automatic job commands/configuration
 match the baseline, rejects dirty or wrong source, and records exact source and
 tool identities. Only this manual mode fetches history for ancestor validation.
-The normal automatic checkout remains depth one. After the identical candidate
+The normal automatic checkout remains depth one with its original default ref.
+Only cost mode explicitly selects `github.sha`, so a branch dispatch creates a
+verified detached checkout of the immutable controller commit. After the identical candidate
 checkout, both controls retain the verified controller outside the workspace,
 remove the same candidate tracked paths, verify the index and worktree are empty
 (except `.git`), and materialize their selected revision from that state. Ignored

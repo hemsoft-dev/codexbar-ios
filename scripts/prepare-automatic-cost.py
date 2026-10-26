@@ -45,6 +45,7 @@ def automatic_job(workflow):
         r"^          fetch-depth: \$\{\{ inputs.ui_validation_mode == 'automatic-cost' && '0' \|\| '1' \}\}\n",
         '', block, flags=re.M,
     )
+    block = block.replace("          ref: ${{ inputs.ui_validation_mode == 'automatic-cost' && github.sha || '' }}\n", '', 1)
     block = block.replace(MANUAL_GUARD, '', 1)
     return block
 

@@ -214,9 +214,16 @@ class CostControls(unittest.TestCase):
         restored = restored[:begin] + restored[end:]
         restored = restored.replace(
             "          fetch-depth: ${{ inputs.ui_validation_mode == 'automatic-cost' && '0' || '1' }}\n", '', 1,
-        ).replace(COST.MANUAL_GUARD, '', 1).replace(" && inputs.ui_validation_mode != 'automatic-cost'", '')
+        ).replace("          ref: ${{ inputs.ui_validation_mode == 'automatic-cost' && github.sha || '' }}\n", '', 1).replace(COST.MANUAL_GUARD, '', 1).replace(" && inputs.ui_validation_mode != 'automatic-cost'", '')
         self.assertEqual(hashlib.sha256(restored.encode()).hexdigest(),
                          'a42e96c0bb86bf3d840a8067dabf696c137d5b8717e8664a3b1b59623e19df89')
+
+    def test_branch_dispatch_pins_only_cost_checkout_to_immutable_sha(self):
+        checkout = WORKFLOW.split('    steps:\n', 1)[1].split(COST.MANUAL_GUARD, 1)[0]
+        declaration = "          ref: ${{ inputs.ui_validation_mode == 'automatic-cost' && github.sha || '' }}\n"
+        self.assertIn(declaration, checkout)
+        self.assertEqual(WORKFLOW.count(declaration), 1)
+        self.assertNotIn('          ref:', COST.automatic_job(WORKFLOW))
 
     def test_workflow_keeps_normal_automatic_steps_and_manual_full_gates(self):
         automatic = COST.automatic_job(WORKFLOW)

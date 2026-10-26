@@ -54,6 +54,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: ${{ inputs.ui_validation_mode == 'automatic-cost' && '0' || '1' }}
+          ref: ${{ inputs.ui_validation_mode == 'automatic-cost' && github.sha || '' }}
 
       - name: Verify manual automatic-cost identity
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode == 'automatic-cost' }}
