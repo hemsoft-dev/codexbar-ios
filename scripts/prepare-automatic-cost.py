@@ -18,7 +18,9 @@ MANUAL_GUARD = """      - name: Verify manual automatic-cost identity
           AUTOMATIC_COST_BASE: ${{ inputs.comparison_base_sha }}
           AUTOMATIC_COST_IMAGE: ${{ inputs.cost_expected_image }}
           AUTOMATIC_COST_TOOLCHAIN: ${{ inputs.cost_expected_toolchain }}
-        run: python3 scripts/prepare-automatic-cost.py --receipt "$RUNNER_TEMP/automatic-cost.json"
+        run: |
+          cp scripts/prepare-automatic-cost.py "$RUNNER_TEMP/automatic-cost-controller.py"
+          python3 "$RUNNER_TEMP/automatic-cost-controller.py" --receipt "$RUNNER_TEMP/automatic-cost.json"
 
 """
 
@@ -69,13 +71,22 @@ def prepare(env, receipt):
     if developer != '/Applications/Xcode.app/Contents/Developer':
         raise Refused('different-automatic-toolchain-path')
     root = Path(command('git', 'rev-parse', '--show-toplevel')).resolve()
-    if root != Path.cwd().resolve() or command('git', 'rev-parse', 'HEAD') != candidate:
+    if (root != Path.cwd().resolve() or root != Path(env.get('GITHUB_WORKSPACE', '/nonexistent')).resolve()
+            or command('git', 'rev-parse', 'HEAD') != candidate):
         raise Refused('wrong-checkout')
+    if command('git', 'rev-parse', '--abbrev-ref', 'HEAD') != 'HEAD':
+        raise Refused('attached-checkout')
     if command('git', 'status', '--porcelain'):
         raise Refused('dirty-checkout')
     command('git', 'merge-base', '--is-ancestor', baseline, candidate)
     if receipt.resolve().parent != Path(env.get('RUNNER_TEMP', '/nonexistent')).resolve():
         raise Refused('receipt-outside-runner-temp')
+    controller = Path(__file__).resolve()
+    if controller.parent != receipt.resolve().parent:
+        raise Refused('controller-not-retained')
+    if controller.read_text().strip() != command('git', 'show', f'{candidate}:scripts/prepare-automatic-cost.py'):
+        raise Refused('controller-source-mismatch')
+    controller_sha = hashlib.sha256(controller.read_bytes()).hexdigest()
     workflow = '.github/workflows/ci.yml'
     before = automatic_job(command('git', 'show', f'{baseline}:{workflow}') + '\n')
     after = automatic_job(command('git', 'show', f'{candidate}:{workflow}') + '\n')
@@ -101,7 +112,11 @@ def prepare(env, receipt):
     if expected and expected != fingerprint:
         raise Refused('toolchain-mismatch')
     source = baseline if role == 'baseline' else candidate
-    command('git', 'checkout', '--detach', source)
+    removed = len(command('git', 'ls-files', '-z').rstrip('\0').split('\0'))
+    command('git', 'rm', '-r', '-f', '--quiet', '--', '.')
+    if command('git', 'ls-files') or any(path.name != '.git' for path in root.iterdir()):
+        raise Refused('materialization-start-not-empty')
+    command('git', 'checkout', '--force', '--detach', source)
     if command('git', 'rev-parse', 'HEAD') != source or command('git', 'status', '--porcelain'):
         raise Refused('source-switch-unverified')
     result = {
@@ -109,6 +124,9 @@ def prepare(env, receipt):
         'measuredSource': source, 'imageVersion': image, 'imageOS': env['ImageOS'],
         'toolchain': tools, 'toolchainSHA256': fingerprint,
         'automaticJobSHA256': hashlib.sha256(before.encode()).hexdigest(),
+        'sourcePreparation': {'controllerSHA256': controller_sha, 'commonStartingHEAD': candidate,
+                              'removedCandidatePaths': removed, 'indexEntriesBeforeMaterialization': 0,
+                              'worktreeEntriesBeforeMaterialization': 0},
         'measurement': 'Complete Actions run elapsed and summed non-skipped job runtime; no deductions',
     }
     receipt.write_text(json.dumps(result, indent=2) + '\n')

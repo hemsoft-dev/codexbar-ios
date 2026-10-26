@@ -165,7 +165,7 @@ class UIShardTests(unittest.TestCase):
         # manual cost controls recover the complete older workflow byte-for-byte.
         restored = workflow.replace(notifier, '').replace('      pull-requests: write\n', '', 1)
         self.assertEqual(hashlib.sha256(restored.encode()).hexdigest(),
-                         '6d5b13d1d4ecd0155cb77e7cea1a956b58fd3dd4a17a3c09253366b9a7f015b0')
+                         'c867d3c06a0db87cf2042c2558fbf3bd345b334948b9d659c5f3fcf9e2ab5294')
 
 
 if __name__ == '__main__':

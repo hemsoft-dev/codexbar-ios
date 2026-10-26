@@ -63,7 +63,9 @@ jobs:
           AUTOMATIC_COST_BASE: ${{ inputs.comparison_base_sha }}
           AUTOMATIC_COST_IMAGE: ${{ inputs.cost_expected_image }}
           AUTOMATIC_COST_TOOLCHAIN: ${{ inputs.cost_expected_toolchain }}
-        run: python3 scripts/prepare-automatic-cost.py --receipt "$RUNNER_TEMP/automatic-cost.json"
+        run: |
+          cp scripts/prepare-automatic-cost.py "$RUNNER_TEMP/automatic-cost-controller.py"
+          python3 "$RUNNER_TEMP/automatic-cost-controller.py" --receipt "$RUNNER_TEMP/automatic-cost.json"
 
       - name: Run pinned SwiftLint policy
         run: >-

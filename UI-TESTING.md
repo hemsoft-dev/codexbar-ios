@@ -570,8 +570,8 @@ account-menu manual modes retain their native jobs, selectors and ceilings.
 
 Use one predeclared baseline/candidate pair. Both dispatches use the same frozen
 candidate workflow ref; `comparison_base_sha` is its exact ancestor/default-base
-SHA. `cost_source_role=baseline` checks out that ancestor before the existing
-lint/policy workload; `candidate` retains the exact dispatch SHA. Both first
+SHA. `cost_source_role=baseline` materializes that ancestor before the existing
+lint/policy workload; `candidate` materializes the exact dispatch SHA. Both first
 verify an explicit `cost_expected_image` against the assigned runner's actual
 `ImageVersion`. The candidate also requires `cost_expected_toolchain`, copied
 from the successful baseline's `AUTOMATIC_COST_IDENTITY` log receipt. The hash
@@ -582,10 +582,17 @@ it never silently selects another image or retries.
 The manual guard verifies that effective automatic job commands/configuration
 match the baseline, rejects dirty or wrong source, and records exact source and
 tool identities. Only this manual mode fetches history for ancestor validation.
-The normal automatic checkout remains depth one. Source selection happens after
-checkout; the Actions run SHA identifies the workflow/controller, while the
-receipt's `measuredSource` identifies the source actually linted. A baseline cost
-run is not a current-head source-validation result.
+The normal automatic checkout remains depth one. After the identical candidate
+checkout, both controls retain the verified controller outside the workspace,
+remove the same candidate tracked paths, verify the index and worktree are empty
+(except `.git`), and materialize their selected revision from that state. Ignored
+or untracked leftovers fail rather than being silently deleted or reused. This
+avoids charging only the baseline for rewriting an already populated candidate
+checkout. All removal/materialization work still counts. Receipts bind the
+common controller/start and empty-state checks to each measured source. The
+Actions run SHA identifies the workflow/controller, while `measuredSource`
+identifies the source actually linted. A baseline cost run is not a current-head
+source-validation result.
 
 Acceptance remains completed Actions **workflow elapsed time and summed
 non-skipped job runtime**: candidate must be no larger in either measure. Count

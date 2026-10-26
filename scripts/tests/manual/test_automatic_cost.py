@@ -46,24 +46,37 @@ class CostControls(unittest.TestCase):
         self.base = self.git('rev-parse', 'HEAD')
         path.write_text(WORKFLOW)
         (self.repo / 'candidate.txt').write_text('candidate source\n')
+        controller = self.repo / 'scripts/prepare-automatic-cost.py'
+        controller.parent.mkdir(parents=True)
+        controller.write_bytes(Path(COST.__file__).read_bytes())
+        self.controller = self.folder / 'controller.py'
+        self.controller.write_bytes(controller.read_bytes())
         self.git('add', '.')
         self.git('commit', '-qm', 'candidate')
         self.head = self.git('rev-parse', 'HEAD')
+        self.git('checkout', '--detach', self.head)
         self.env = dict(
             GITHUB_ACTIONS='true', GITHUB_EVENT_NAME='workflow_dispatch',
             GITHUB_REPOSITORY='hemsoft-dev/codexbar-ios', GITHUB_SHA=self.head,
+            GITHUB_WORKSPACE=str(self.repo),
             AUTOMATIC_COST_MODE='automatic-cost', AUTOMATIC_COST_ROLE='baseline',
             AUTOMATIC_COST_BASE=self.base, AUTOMATIC_COST_IMAGE='20261021.0445.8',
             AUTOMATIC_COST_TOOLCHAIN='', ImageVersion='20261021.0445.8', ImageOS='macos26-arm64',
             DEVELOPER_DIR='/Applications/Xcode.app/Contents/Developer', RUNNER_TEMP=str(self.folder),
         )
         self.calls = []
+        self.materialization_states = []
 
     def git(self, *args):
         return subprocess.check_output(['git', *args], text=True, stderr=subprocess.PIPE).strip()
 
     def command(self, *args):
         self.calls.append(args)
+        if args[:2] == ('git', 'checkout'):
+            self.materialization_states.append({
+                'index': self.git('ls-files'),
+                'entries': sorted(p.name for p in self.repo.iterdir() if p.name != '.git'),
+            })
         if args == ('xcodebuild', '-version'):
             return 'Xcode fixture\nBuild version fixture'
         if args == ('xcrun', 'swift', '--version'):
@@ -71,7 +84,8 @@ class CostControls(unittest.TestCase):
         return self.real_command(*args)
 
     def run_control(self):
-        with patch.object(COST, 'command', self.command), contextlib.redirect_stdout(io.StringIO()):
+        with patch.object(COST, '__file__', str(self.controller)), \
+                patch.object(COST, 'command', self.command), contextlib.redirect_stdout(io.StringIO()):
             return COST.prepare(self.env, self.folder / 'receipt.json')
 
     def test_real_git_baseline_then_candidate_bind_receipts_and_toolchain(self):
@@ -86,6 +100,40 @@ class CostControls(unittest.TestCase):
         self.assertEqual(candidate['automaticJobSHA256'], hashlib.sha256(COST.automatic_job(WORKFLOW).encode()).hexdigest())
         self.assertEqual(json.loads((self.folder / 'receipt.json').read_text()), candidate)
         self.assertEqual(self.git('status', '--porcelain'), '')
+
+    def test_both_roles_materialize_from_the_same_empty_state(self):
+        baseline = self.run_control()
+        self.git('checkout', '--force', '--detach', self.head)
+        self.env.update(AUTOMATIC_COST_ROLE='candidate', AUTOMATIC_COST_TOOLCHAIN=baseline['toolchainSHA256'])
+        self.run_control()
+        self.assertEqual(len(self.materialization_states), 2)
+        self.assertEqual(self.materialization_states, [{'index': '', 'entries': []}] * 2)
+        self.assertTrue((self.repo / 'candidate.txt').is_file())
+        self.assertEqual(self.git('status', '--porcelain'), '')
+
+    def test_attached_checkout_is_never_cleared(self):
+        self.git('checkout', '-b', 'owned-branch')
+        with self.assertRaisesRegex(COST.Refused, 'attached-checkout'):
+            self.run_control()
+        self.assertTrue((self.repo / 'candidate.txt').exists())
+        self.assertEqual(self.git('status', '--porcelain'), '')
+
+    def test_modified_retained_controller_is_refused_before_clearing(self):
+        self.controller.write_text('different controller')
+        with self.assertRaisesRegex(COST.Refused, 'controller-source-mismatch'):
+            self.run_control()
+        self.assertTrue((self.repo / 'candidate.txt').exists())
+
+    def test_ignored_leftover_cannot_qualify_empty_materialization(self):
+        (self.repo / '.git/info/exclude').write_text('ignored-cache/\n')
+        ignored = self.repo / 'ignored-cache'
+        ignored.mkdir()
+        (ignored / 'retained').write_text('owned fixture')
+        with self.assertRaisesRegex(COST.Refused, 'materialization-start-not-empty'):
+            self.run_control()
+        self.assertTrue((ignored / 'retained').exists())
+        self.assertEqual(self.materialization_states, [])
+        self.assertFalse((self.folder / 'receipt.json').exists())
 
     def test_wrong_image_refused_before_any_command_or_source_switch(self):
         self.env['ImageVersion'] = '20261013.0424.1'
