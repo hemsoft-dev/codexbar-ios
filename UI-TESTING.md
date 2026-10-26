@@ -21,8 +21,8 @@ attachments and the accessibility hierarchy from the result bundle. Open the
 ## Complete release phases
 
 The base command above still executes exactly 29 original journeys. The
-[phase manifest](scripts/pro-release-phases.json) requires 51 user journeys per
-family for a release: original 29, supplemental 6, synthetic commerce 14, and
+[phase manifest](scripts/pro-release-phases.json) requires 53 user journeys per
+family for a release: original 29, supplemental 8, synthetic commerce 14, and
 native purchase/restore and purchase-error journeys 1 each. The separate
 marketing capture method is excluded. Normal preparation, purchase-error
 preparation and a final normal reset add three separate XCTest invocations;
@@ -61,7 +61,7 @@ fails qualification even if the journeys passed.
 Each phase enumerates the built tests and checks exact identities, passing
 counts, zero skips/expected failures and one expected destination. It records
 source and binary hashes, signing, commands, timestamps, summaries and xcresults.
-The supplemental six reuse the verified base build; native hosts are separately
+The supplemental eight reuse the verified base build; native hosts are separately
 built with coverage, the Debug isolation flag and ad hoc signatures. Each
 preparation exits before its consumer starts. Every native scheme execution is
 explicitly filtered. Fresh DerivedData lives inside each unique output directory;
@@ -420,7 +420,7 @@ SHA changes, dispatch a new run.
 The two families run on independent manual workers, each with a 90-minute
 limit and its own artifact. Fail-fast is disabled. An always-run aggregate
 fails unless both workers succeed, including when a worker is cancelled or
-skipped. Each worker requires all 51 exact journey identities plus the three
+skipped. Each worker requires all 53 exact journey identities plus the three
 preparation/reset calls. The original runner retains its separate 29-pass contract.
 Every phase requires zero skips or expected failures. GitHub retains both destinations' result bundles, logs,
 summaries, and exported failure screenshots for 14 days. See
