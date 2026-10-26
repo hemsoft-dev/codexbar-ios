@@ -558,3 +558,40 @@ disconnect and cancellation. Claude fixtures omit the unused legacy aliases.
 Set `CODEXBAR_UI_TEST_SUBJOURNEY` to `billing` in the copied xctestrun file to
 run only the guided billing recovery checks while diagnosing a connection flow.
 Use `renewals` for complete renewal-focused validation on both device families.
+
+
+## Manual automatic-CI cost controls
+
+`ui_validation_mode=automatic-cost` runs only the existing SwiftLint job. It does
+not run native quality jobs, UI workers, the full aggregate or its notifier.
+Ordinary PR runs still execute checkout, pinned SwiftLint and the four policy
+tests, with the existing runner, permissions and ten-minute limit. Full and
+account-menu manual modes retain their native jobs, selectors and ceilings.
+
+Use one predeclared baseline/candidate pair. Both dispatches use the same frozen
+candidate workflow ref; `comparison_base_sha` is its exact ancestor/default-base
+SHA. `cost_source_role=baseline` checks out that ancestor before the existing
+lint/policy workload; `candidate` retains the exact dispatch SHA. Both first
+verify an explicit `cost_expected_image` against the assigned runner's actual
+`ImageVersion`. The candidate also requires `cost_expected_toolchain`, copied
+from the successful baseline's `AUTOMATIC_COST_IDENTITY` log receipt. The hash
+binds the default developer directory, Xcode/Swift builds, OS build, architecture,
+CPU count and memory. A mismatch fails before the measured lint/policy workload;
+it never silently selects another image or retries.
+
+The manual guard verifies that effective automatic job commands/configuration
+match the baseline, rejects dirty or wrong source, and records exact source and
+tool identities. Only this manual mode fetches history for ancestor validation.
+The normal automatic checkout remains depth one. Source selection happens after
+checkout; the Actions run SHA identifies the workflow/controller, while the
+receipt's `measuredSource` identifies the source actually linted. A baseline cost
+run is not a current-head source-validation result.
+
+Acceptance remains completed Actions **workflow elapsed time and summed
+non-skipped job runtime**: candidate must be no larger in either measure. Count
+checkout, identity checks, source selection and all setup/cleanup time; make no
+queue/network/guard deductions, tolerance, per-file normalization or synthetic
+job-time claim. Both must pass on the same image, toolchain and hardware config.
+Retain original adverse observations and any invalid/failed pair. Do not repeat
+a pair or launch full native validation merely to obtain a green timing. A
+successful cost-only run does not qualify any native/full release gate.

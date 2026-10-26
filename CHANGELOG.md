@@ -30,6 +30,7 @@ building, testing, or releasing the app.
   Wait for billing warnings to disappear after reloading sign-in.
   Add aggregate-only manual validation hints for matching open PR watches;
   live notification delivery remains pending qualification.
+  Require matching hosted image and toolchain identities for manual automatic-CI cost comparisons.
   ([#517](https://github.com/hemsoft-dev/codexbar-ios/issues/517))
 
 - Trace native StoreKit status delivery on the existing test receiver, preserve status and clock diagnostics without transaction identifiers, and verify stable test-store cleanup. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))

@@ -5,14 +5,29 @@ on:
   workflow_dispatch:
     inputs:
       ui_validation_mode:
-        description: Full release gate or focused native account-menu diagnosis
+        description: Full release gate, focused account-menu diagnosis, or automatic-cost control
         type: choice
         options:
           - full
           - account-menu-comparison
+          - automatic-cost
         default: full
       comparison_base_sha:
-        description: Exact ancestor SHA for account-menu comparison only
+        description: Exact ancestor SHA for manual comparison modes
+        type: string
+        default: ''
+
+      cost_source_role:
+        description: Source measured by an automatic-cost control
+        type: choice
+        options: [baseline, candidate]
+        default: candidate
+      cost_expected_image:
+        description: Exact hosted ImageVersion required before cost workload
+        type: string
+        default: ''
+      cost_expected_toolchain:
+        description: Baseline toolchain SHA256; required for candidate cost control
         type: string
         default: ''
 
@@ -38,6 +53,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: ${{ inputs.ui_validation_mode == 'automatic-cost' && '0' || '1' }}
+
+      - name: Verify manual automatic-cost identity
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode == 'automatic-cost' }}
+        env:
+          AUTOMATIC_COST_MODE: ${{ inputs.ui_validation_mode }}
+          AUTOMATIC_COST_ROLE: ${{ inputs.cost_source_role }}
+          AUTOMATIC_COST_BASE: ${{ inputs.comparison_base_sha }}
+          AUTOMATIC_COST_IMAGE: ${{ inputs.cost_expected_image }}
+          AUTOMATIC_COST_TOOLCHAIN: ${{ inputs.cost_expected_toolchain }}
+        run: python3 scripts/prepare-automatic-cost.py --receipt "$RUNNER_TEMP/automatic-cost.json"
 
       - name: Run pinned SwiftLint policy
         run: >-
@@ -51,7 +77,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_ci_policy.py' -v
 
   strict-concurrency:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'automatic-cost' }}
     name: Strict concurrency
     runs-on: macos-26
     env:
@@ -70,7 +96,7 @@ jobs:
         run: ./scripts/check-strict-concurrency.sh
 
   ios-tests:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'automatic-cost' }}
     name: iOS tests
     runs-on: macos-26
     env:
@@ -126,7 +152,7 @@ jobs:
           retention-days: 14
 
   watch-tests:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'automatic-cost' }}
     name: watchOS tests
     runs-on: macos-26
     env:
@@ -199,7 +225,7 @@ jobs:
           retention-days: 14
 
   smoke-tests:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'automatic-cost' }}
     name: SwiftPM smoke tests
     runs-on: macos-26
     env:
@@ -225,7 +251,7 @@ jobs:
 
   ios-ui-families:
     name: iOS UI journeys (${{ matrix.family }}, ${{ matrix.shard }})
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' && success() }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' && inputs.ui_validation_mode != 'automatic-cost' && success() }}
     needs:
       - swiftlint
       - strict-concurrency
@@ -288,7 +314,7 @@ jobs:
 
   ios-ui-tests:
     name: Full iOS UI validation
-    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' }}
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' && inputs.ui_validation_mode != 'automatic-cost' }}
     needs: ios-ui-families
     permissions:
       actions: read
