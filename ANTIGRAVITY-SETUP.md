@@ -91,9 +91,17 @@ https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary
 
 The daily backend, `daily-cloudcode-pa.googleapis.com`, is used only when the
 production request fails with a transport error, an unusable response or an
-HTTP status other than 400, 401 or 403. Sign-in rejections never move to the
-daily backend. A successful production response is never filled in with daily
+HTTP status other than 400, 401 or 403, or when production answers with the
+all-full placeholder described below. Sign-in rejections never move to the
+daily backend. A usable production response is never filled in with daily
 pools, so omitted pools stay unavailable for that refresh.
+
+A production response is treated as a placeholder when every supplied,
+enabled canonical pool reports `remainingFraction` 1. That is the September 5
+shape, which still included reset times. Such a response is never shown. If
+the daily request then fails, the account shows the normal unavailable state
+rather than full bars. A genuinely unused account therefore reads from the
+daily backend, where omitted pools stay unavailable.
 
 The response contains `groups[].buckets[]`. The parser uses bucket IDs and
 windows, not translated display names or model lists:
@@ -128,14 +136,15 @@ to production first with daily as an error fallback
 ([robinebers/openusage#1395](https://github.com/robinebers/openusage/pull/1395),
 merged October 17, 2026). CodexBar follows that order.
 
-Neither backend is a Google-documented public contract. Both are the same
+On October 27, 2026 the Chief accepted this order for #519 because no
+documented contract exists: production first, daily on error, never mixed,
+with the placeholder guard above. Neither backend is a Google-documented
+public contract. Both are the same
 `v1internal` service the Antigravity CLI uses. No Google documentation for a
 supported quota-read API was found on October 27, 2026; the [`/usage`
 command page](https://www.antigravity.google/docs/cli/commands/usage) still
 documents only the interactive panel. Live comparison of production values
-against the CLI on a real account remains Franz's verification. If production
-again returns all-full placeholders, revert this order rather than mixing the
-two backends.
+against the CLI on a real account remains pending.
 
 Requests reject redirects, disable automatic cookies and caching, and never
 include raw server errors in user-facing messages. Quota requests go only to

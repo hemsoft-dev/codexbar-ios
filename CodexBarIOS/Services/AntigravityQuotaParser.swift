@@ -52,6 +52,17 @@ enum AntigravityQuotaParser {
         )
     }
 
+    /// On September 5, 2026 production answered HTTP 200 with every pool at full remaining while the CLI showed usage.
+    /// A response whose supplied canonical pools are all full cannot be told apart from that placeholder.
+    static func isAllFullPlaceholder(_ data: Data) -> Bool {
+        guard let summary = try? JSONDecoder().decode(Summary.self, from: data) else { return false }
+        let keys = Set(metrics.map(\.key))
+        let fractions = summary.groups.flatMap(\.buckets)
+            .filter { keys.contains($0.bucketId) && $0.disabled != true }
+            .compactMap(\.remainingFraction)
+        return !fractions.isEmpty && fractions.allSatisfy { $0 >= 1 }
+    }
+
     private static func bar(for metric: GoogleUsageMetricCatalog.Definition, bucket: Bucket, fetchedAt: Date) -> UsageBar? {
         guard bucket.window == metric.window, bucket.disabled != true,
               let remaining = bucket.remainingFraction,
