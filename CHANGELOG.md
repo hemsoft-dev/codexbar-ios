@@ -20,6 +20,11 @@ building, testing, or releasing the app.
 
 ### Fixed
 
+- Read Gemini Models and Argon weekly coding quotas from Google's main quota
+  service, which reports these pools when the backup service leaves them out.
+  The backup service is used only when the main one is unreachable.
+  ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
+
 - Keep missing Grok and X Subscription usage unavailable instead of inferring
   a zero percentage from the account's paid plan.
   ([#518](https://github.com/hemsoft-dev/codexbar-ios/issues/518))
