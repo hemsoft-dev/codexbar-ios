@@ -133,7 +133,9 @@ final class UITestFixtures {
             }
         }
         Self.seedXSubscriptionAccounts(in: configurationStore, scenario: scenario)
-        let results = PlanTierFixture.initialResults(in: configurationStore, scenario: scenario)
+        UITestMuseCodeFixture.seed(in: configurationStore, scenario: scenario)
+        let results = UITestMuseCodeFixture.results(in: configurationStore, scenario: scenario)
+            ?? PlanTierFixture.initialResults(in: configurationStore, scenario: scenario)
             ?? Self.initialResults(in: configurationStore, scenario: scenario, googleSources: googleSources, defaults: defaults)
         let providers: [any UsageProvider]
         if google {

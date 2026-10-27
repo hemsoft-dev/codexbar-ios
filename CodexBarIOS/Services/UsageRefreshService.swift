@@ -327,7 +327,8 @@ public final class UsageRefreshService: ObservableObject {
     }
 
     public func refresh() async {
-        await refresh(configurations: ProviderID.allCases.map(ProviderAccountConfiguration.defaultConfiguration))
+        await refresh(configurations: ProviderID.allCases.filter(\.isAvailableOnIPhone)
+            .map(ProviderAccountConfiguration.defaultConfiguration))
     }
 
     public func consumeClaudeReset(
@@ -625,7 +626,7 @@ public final class UsageRefreshService: ObservableObject {
 
     /// The same predicate protects batch work, individual requests and reconciliation.
     func canRefresh(_ configuration: ProviderAccountConfiguration) -> Bool {
-        configuration.isEnabled && configuration.providerID != .antigravity
+        configuration.isEnabled && configuration.providerID != .antigravity && configuration.providerID.isAvailableOnIPhone
             && (accountAccess?.permitsRefresh(configuration) ?? true)
     }
 

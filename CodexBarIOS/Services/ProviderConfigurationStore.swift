@@ -2419,7 +2419,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             normalized.authMethod = .browserSession
         case .antigravity:
             normalized.authMethod = .cliToken
-        case .copilot, .claude, .openRouter, .openCodeZen, .moonshot, .greptile:
+        case .copilot, .claude, .openRouter, .openCodeZen, .moonshot, .greptile, .museCode:
             break
         }
         return normalized
@@ -2987,6 +2987,11 @@ public extension ProviderConfigurationStore {
     }
 
     private func allowAccountInsertion(for providerID: ProviderID) -> Bool {
+        // A provider without a supported iPhone source never becomes an account, Pro or not.
+        guard providerID.isAvailableOnIPhone else {
+            lastError = "\(providerID.displayName) isn't available on iPhone."
+            return false
+        }
         guard canAddAccount(for: providerID) else {
             lastError = "CodexBar Pro is required to add another account."
             requestProPresentation()
@@ -3298,3 +3303,21 @@ extension ProviderConfigurationStore {
         }
     }
 }
+
+#if DEBUG
+extension ProviderConfigurationStore {
+    /// UI evidence and tests only. Accounts for a provider that can't be added on iPhone, so its fixture states render
+    /// through the real dashboard. Production has no path to such an account (MUSE-CODE.md).
+    func insertUnavailableProviderFixtureAccounts(_ fixtures: [ProviderAccountConfiguration]) {
+        precondition(fixtures.allSatisfy { !$0.providerID.isAvailableOnIPhone })
+        configurations += fixtures.filter { fixture in !configurations.contains { $0.id == fixture.id } }
+        sortConfigurations()
+        precondition(saveConfigurations())
+        for fixture in fixtures where metricLayouts[fixture.id] == nil {
+            metricLayouts[fixture.id] = AccountMetricLayout()
+        }
+        saveMetricLayouts()
+        refreshSecretAvailability()
+    }
+}
+#endif

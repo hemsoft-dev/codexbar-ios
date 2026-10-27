@@ -69,11 +69,12 @@ struct UITestSUSProvider: UsageProvider {
 
 struct SubscriptionUtilizationMetricView: View {
     let bar: UsageBar
+    let providerID: ProviderID
     let isCurrent: Bool
     var showsExplanation = false
 
     var body: some View {
-        if SubscriptionUtilizationScore.applies(to: bar) {
+        if SubscriptionUtilizationScore.applies(to: bar, providerID: providerID) {
             TimelineView(.periodic(from: .now, by: 60)) { context in
                 SubscriptionUtilizationBadge(score: isCurrent ? SubscriptionUtilizationScore(bar: bar, at: context.date) : nil)
             }

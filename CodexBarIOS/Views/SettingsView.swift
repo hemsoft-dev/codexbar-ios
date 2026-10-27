@@ -1487,7 +1487,8 @@ enum SettingsAccountsSectionRow: Identifiable, Equatable {
 }
 
 struct AddAccountFlowState: Equatable {
-    static let providerOptions = ProviderID.allCases.filter { $0 != .antigravity }
+    static let providerOptions = ProviderID.allCases.filter { $0 != .antigravity && $0.isAvailableOnIPhone }
+    static let unavailableProviders = ProviderID.allCases.filter { !$0.isAvailableOnIPhone }
 
     private(set) var accountID: String?
 
@@ -1566,18 +1567,29 @@ struct AddAccountSetupFlow: View {
                     }
                 }
             } else {
-                List(AddAccountFlowState.providerOptions) { providerID in
-                    Button {
-                        select(providerID)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Label(providerID.displayName, systemImage: providerID.addAccountIconName)
-                            if let description = GoogleUsageMetricCatalog.setupDescription(for: providerID) {
-                                Text(description).font(.caption).foregroundStyle(.secondary)
+                List {
+                    Section {
+                        ForEach(AddAccountFlowState.providerOptions) { providerID in
+                            Button {
+                                select(providerID)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Label(providerID.displayName, systemImage: providerID.addAccountIconName)
+                                    if let description = GoogleUsageMetricCatalog.setupDescription(for: providerID) {
+                                        Text(description).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            .accessibilityHint("Creates this account and opens its setup screen.")
+                        }
+                    } footer: {
+                        ForEach(AddAccountFlowState.unavailableProviders) { providerID in
+                            if let reason = providerID.phoneUnavailableReason {
+                                Text("\(providerID.displayName) isn't available on iPhone. \(reason)")
+                                    .accessibilityIdentifier("add-account.unavailable.\(providerID.rawValue)")
                             }
                         }
                     }
-                    .accessibilityHint("Creates this account and opens its setup screen.")
                 }
                 .navigationTitle("Choose a Provider")
                 .navigationBarTitleDisplayMode(.inline)
@@ -1642,6 +1654,8 @@ extension ProviderID {
             "diamond.fill"
         case .antigravity:
             "arrow.up.circle"
+        case .museCode:
+            "music.note"
         }
     }
 }
