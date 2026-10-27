@@ -272,7 +272,7 @@ final class AppAndWidgetTests: XCTestCase {
         let options = AddAccountFlowState.providerOptions
 
         XCTAssertEqual(options.count, Set(options).count)
-        XCTAssertEqual(Set(options), Set(ProviderID.allCases.filter { $0 != .antigravity }))
+        XCTAssertEqual(Set(options), Set(ProviderID.allCases.filter { $0 != .antigravity && $0.isAvailableOnIPhone }))
         XCTAssertTrue(options.allSatisfy { !$0.displayName.isEmpty })
         XCTAssertTrue(options.allSatisfy { !$0.addAccountIconName.isEmpty })
     }
@@ -898,7 +898,7 @@ final class AppAndWidgetTests: XCTestCase {
         let configurationStore = ProviderConfigurationStore.appStoreScreenshotDemo()
         let results = AppStoreScreenshotFixtures.results(for: configurationStore)
 
-        XCTAssertEqual(Set(results.map(\.providerID)), Set(ProviderID.allCases.filter { $0 != .antigravity }))
+        XCTAssertEqual(Set(results.map(\.providerID)), Set(ProviderID.allCases.filter { $0 != .antigravity && $0.isAvailableOnIPhone }))
         XCTAssertTrue(results.allSatisfy { $0.accountID.hasPrefix("app-store-screenshots.") })
         XCTAssertGreaterThanOrEqual(
             configurationStore.configurations.filter {
@@ -1512,7 +1512,7 @@ final class AppAndWidgetTests: XCTestCase {
                 .moonshot: "Moonshot (Kimi)",
                 .greptile: "Greptile",
                 .gemini: "Google Gemini",
-                .antigravity: "Antigravity",
+                .antigravity: "Antigravity", .museCode: "Muse Code",
             ]
         )
     }

@@ -36,7 +36,8 @@ public struct AccountPlanAccess: Equatable, Sendable {
     }
 
     public func permitsRefresh(_ configuration: ProviderAccountConfiguration) -> Bool {
-        guard configuration.isEnabled, configuration.providerID != .antigravity else { return false }
+        guard configuration.isEnabled, configuration.providerID != .antigravity,
+              configuration.providerID.isAvailableOnIPhone else { return false }
         return hasProAccess || (isResolved && activeAccountID == configuration.id)
     }
 
@@ -44,7 +45,8 @@ public struct AccountPlanAccess: Equatable, Sendable {
         for providerID: ProviderID,
         configurations: [ProviderAccountConfiguration]
     ) -> Bool {
-        providerID == .antigravity || hasProAccess
-            || !configurations.contains { $0.isEnabled && $0.providerID != .antigravity }
+        guard providerID.isAvailableOnIPhone else { return false }
+        return providerID == .antigravity || hasProAccess
+            || !configurations.contains { $0.isEnabled && $0.providerID != .antigravity && $0.providerID.isAvailableOnIPhone }
     }
 }

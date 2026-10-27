@@ -13,6 +13,11 @@ building, testing, or releasing the app.
   to full use at reset. Fresh windows and missing quota show n/a.
   ([#518](https://github.com/hemsoft-dev/codexbar-ios/issues/518))
 
+- Add Account now explains that Muse Code isn't available on iPhone. Meta
+  doesn't offer a sign-in or usage service that iPhone apps can use for Muse
+  Code subscriptions, and CodexBar won't estimate an allowance from token
+  activity. ([#522](https://github.com/hemsoft-dev/codexbar-ios/issues/522))
+
 ### Fixed
 
 - Keep missing Grok and X Subscription usage unavailable instead of inferring
@@ -32,6 +37,13 @@ building, testing, or releasing the app.
   early failure notification delivery remains unqualified.
   Require matching hosted image and toolchain identities for manual automatic-CI cost comparisons.
   ([#517](https://github.com/hemsoft-dev/codexbar-ios/issues/517))
+
+- Add a Muse Code allowance reader for schema 1 of `muse usage --json`, with
+  sanitized fixtures and distinct unavailable states, for use if Meta ships a
+  supported iPhone source. Muse Code can't be added, refreshed or published,
+  and gets no Sub Utilization Score. The contract and its limits are in
+  [MUSE-CODE.md](MUSE-CODE.md).
+  ([#522](https://github.com/hemsoft-dev/codexbar-ios/issues/522))
 
 - Include both subscription-utilization journeys in the release manifest so
   manual iOS validation can start and verify all 53 journeys per device family.

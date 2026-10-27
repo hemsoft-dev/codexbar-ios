@@ -406,6 +406,8 @@ extension ProviderID {
             "Google Gemini"
         case .antigravity:
             "Antigravity"
+        case .museCode:
+            "Muse Code"
         }
     }
 }

@@ -175,7 +175,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         XCTAssertEqual(
             Set(service.results.map(\.providerID)),
-            Set(ProviderID.allCases.filter { $0 != .antigravity })
+            Set(ProviderID.allCases.filter { $0 != .antigravity && $0.isAvailableOnIPhone })
         )
         XCTAssertFalse(service.isRefreshing)
         XCTAssertNil(service.lastRefreshError)

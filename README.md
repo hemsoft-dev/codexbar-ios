@@ -141,6 +141,11 @@ deleted. Third-party model spending in Cursor is not reported separately. See
 [the X Subscription contract](X-SUBSCRIPTION-CONTRACT.md). The live comparison
 with grok.com on a unified account is pending with the account owner.
 
+Muse Code isn't available on iPhone. Meta restricts the subscription credential
+to the Muse Code CLI and documents no sign-in or usage service an iPhone app can
+use, so Add Account explains the limit instead of offering a setup flow. See
+[the Muse Code contract](MUSE-CODE.md).
+
 ## GitHub Copilot Sign-In
 
 CodexBar bundles the public OAuth client ID and client secret used by

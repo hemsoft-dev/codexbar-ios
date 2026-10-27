@@ -14,6 +14,7 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
     case greptile
     case gemini
     case antigravity
+    case museCode
 
     public var id: String {
         rawValue
@@ -47,16 +48,28 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
             "Google Gemini"
         case .antigravity:
             "Antigravity"
+        case .museCode:
+            "Muse Code"
         }
     }
 
     public var supportsPlanBadge: Bool {
         switch self {
-        case .codex, .copilot, .githubBilling, .claude, .grok, .xSubscription:
+        case .codex, .copilot, .githubBilling, .claude, .grok, .xSubscription, .museCode:
             true
         case .openRouter, .openCodeZen, .moonshot, .cursor, .greptile, .gemini, .antigravity:
             false
         }
+    }
+
+    /// Why this provider can't be connected on iPhone, or nil when it has a supported sign-in.
+    /// Add Account names it with this reason; it can't be added, refreshed or hold an account slot (MUSE-CODE.md).
+    public var phoneUnavailableReason: String? {
+        self == .museCode ? MuseCodeAllowance.phoneAcquisitionUnavailableReason : nil
+    }
+
+    public var isAvailableOnIPhone: Bool {
+        phoneUnavailableReason == nil
     }
 
     /// Providers signed in through xAI's Grok CLI device authorization. They share the credential
