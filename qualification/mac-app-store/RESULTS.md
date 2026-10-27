@@ -21,10 +21,13 @@ Environment: Apple silicon air, macOS 26.6.2 `25G83`, Xcode 27.1 `27A9275`, Swif
 | Local signature tampering | PASS | Changed version metadata invalidated signature |
 | Local replacement and rollback rehearsal | PASS | Private installed version 1 atomically exchanged with signed version 2, then exchanged back; version-specific resource absence/presence and both signatures verified at each step; filesystem rehearsal only |
 | Shell syntax and Python generator syntax | PASS | `bash -n` and `python3 -m py_compile` |
-| Intel runtime, macOS 14 runtime | NOT RUN | Compile target is a candidate minimum, not a supported-runtime claim |
+| Universal arm64 + x86_64 bundle | PASS, October 27 | `qualify-portability.sh`; `lipo` reports both slices, each with minimum macOS 14.0 |
+| x86_64 slice under Rosetta 2 | PASS, October 27 | Sandboxed self-test 51 PASS, 0 failures, ad hoc and Apple Development signatures; Rosetta on Apple silicon, not native Intel hardware |
+| Native Intel hardware, macOS 14 runtime | NOT RUN | No Intel Mac or macOS 14 VM on air; macOS 14 remains a compile target, not a supported-runtime claim |
 | Live providers, real quota, registered OAuth | NOT RUN | Synthetic-only transport; Franz owns live account checks |
 | Original iOS purchaser, production AppTransaction, family/universal restore | NOT RUN | No portability or macOS cutoff assumption; qualification bundle differs from shipping identity |
-| Publisher signing, Mac profile and cross-update Keychain ACL | NOT RUN | Read-only identity inventory only; no identity used or profile configured |
+| Team identity signing | PASS, October 27 | Existing unrevoked Apple Development and Apple Distribution identities sign the bundle with the sandbox entitlements; strict verify passes; Gatekeeper rejects both locally, as expected without a Store signature or notarization |
+| Mac profile, installer certificate, cross-update Keychain ACL | NOT RUN | No Mac App Store profile or Mac Installer Distribution certificate exists; creating them is Franz's step in [STORE-HANDOFF.md](STORE-HANDOFF.md) |
 | App Store install, update, receipt preservation, review | NOT RUN | No record/platform mutation, upload, store account or publication |
 | Complete iOS/watchOS gates and full UI release workflow | NOT RUN | Unchanged production targets; no CI dispatch or expansion |
 
@@ -433,3 +436,33 @@ Store-delivery and purchase-portability limitations remain unchanged.
 The parent found previously unhandled finding 4341431276 in the full thread inventory. Earlier metadata-tamper evidence was confounded by the version-specific resource added before signing. `qualify-update.sh` now signs the complete version 2 candidate and requires strict signature verification before changing only CFBundleVersion. The actual run passes that baseline, rejects the plist mutation, then re-signs and passes seeded replacement and rollback. Receipt: `build/update.KvU9Cw/`; log `evidence/review508-r6-update.log`. A temporary copy of the old runner with the same pre-mutation verification fails with exit 61 before changing the plist (`evidence/review508-r6-old-control.log`). Historical old tamper results do not isolate metadata integrity.
 
 Only this local rehearsal procedure and results changed. Shipping source, standalone Swift checks, native StoreKit inputs and automatic CI are unchanged. The 51 standalone checks at 0f1aba3 and four native tests at 102d4bc remain historical evidence; no rerun of those suites is claimed. Store delivery, publisher trust and receipt preservation remain unqualified.
+
+## Portability and team-identity rehearsal, October 27, 2026
+
+`qualify-portability.sh` builds arm64 and x86_64 slices from the same sources
+as `build.sh`, combines them with `lipo`, signs ad hoc with the unchanged
+entitlements and runs the sandboxed self-test natively and with `arch -x86_64`
+under Rosetta 2. With `QUALIFY_PUBLISHER_IDENTITIES=1`, run through
+`scripts/with-codexbar-keychain.sh`, it also signs disposable copies by the hash
+of the single unrevoked Apple Development and Apple Distribution identity and
+records strict verification and Gatekeeper assessment. A revoked Development
+identity shares the current one's name, so signing by name is ambiguous; the
+first run recorded that failure. Each self-test has a watchdog
+(`SELF_TEST_TIMEOUT`, default 120 seconds). Air, macOS 26.6.2 `25G83`, Xcode
+27.1 `27A9275`. Summaries are retained in ignored `evidence/portability-*`.
+
+| Run, EDT | Result |
+| --- | --- |
+| 2:21 PM | Universal ad hoc: native and Rosetta 51 PASS each. Development signing FAIL, ambiguous name. Distribution signed, strict verify PASS, Gatekeeper rejected |
+| 2:25 PM | Universal ad hoc: native and Rosetta 51 PASS each. Development signed by hash, strict verify PASS. Its self-test blocked in `_libsecinit_appsandbox` before app code; stack sample retained; stopped manually |
+| 2:36 PM | Same bundle ID with 60-second watchdog: every launch, including ad hoc, timed out in sandbox initialization. Both team signatures still verify |
+| 2:40 PM | Team-signed copies under `com.hemsoft.qualification.mac476.devsigned`: Development self-test 51 PASS natively and under Rosetta. The ad hoc copy under the original ID still timed out |
+
+Interpretation, bounded: a differently signed build that opens an existing
+sandbox container for the same bundle ID waits on a system decision, and later
+launches of that ID wait too. The agent could not see the screen to confirm a
+prompt. A fresh bundle ID removes the block, so it is not a signing or
+entitlement failure. [STORE-HANDOFF.md](STORE-HANDOFF.md) records the
+one-team-per-bundle-ID rule and the remaining Franz-owned Store steps. No
+profile, certificate, App ID, record, upload or Store account was created or
+changed.
