@@ -333,6 +333,42 @@ final class MuseCodeAllowanceTests: XCTestCase {
         XCTAssertNil(service.lastRefreshError)
     }
 
+    @MainActor
+    func testUIEvidenceFixtureRendersEveryStateThroughTheProductionMapping() throws {
+        let suite = "MuseCodeFixture.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
+        UITestMuseCodeFixture.seed(in: store, scenario: "other")
+        XCTAssertNil(UITestMuseCodeFixture.results(in: store, scenario: "other"))
+        XCTAssertTrue(store.configurations.isEmpty)
+
+        UITestMuseCodeFixture.seed(in: store, scenario: UITestMuseCodeFixture.scenario)
+        let results = try XCTUnwrap(UITestMuseCodeFixture.results(in: store, scenario: UITestMuseCodeFixture.scenario, now: Self.now))
+        let byID = Dictionary(uniqueKeysWithValues: results.map { ($0.accountID, $0) })
+        XCTAssertEqual(results.count, 7)
+        XCTAssertTrue(store.configurations.allSatisfy { $0.providerID == .museCode && store.isConfigured($0) })
+
+        XCTAssertEqual(byID["ui-muse-code-measured"]?.bars.map(\.used), [15, 5])
+        XCTAssertEqual(byID["ui-muse-code-partial"]?.availableMetrics.map(\.id), ["museCode.weekly"])
+        XCTAssertEqual(byID["ui-muse-code-exhausted"]?.bars.first?.used, 100)
+        XCTAssertEqual(byID["ui-muse-code-stale"]?.hasCurrentBars, false)
+        XCTAssertEqual(byID["ui-muse-code-not-reported"]?.failureMessage, MuseCodeAllowance.Unavailable.allowanceNotReported.message)
+        XCTAssertEqual(byID["ui-muse-code-sign-in-expired"]?.recoveryAction, .reauthenticate)
+        XCTAssertEqual(
+            byID["ui-muse-code-not-on-iphone"]?.failureMessage, MuseCodeAllowance.Unavailable.phoneAcquisitionUnsupported.message
+        )
+
+        let service = UsageRefreshService(providers: [], initialResults: results)
+        UITestMuseCodeFixture.presentFailures(of: results, in: service, scenario: "other")
+        XCTAssertTrue(service.refreshErrorsByAccountID.isEmpty)
+        UITestMuseCodeFixture.presentFailures(of: results, in: service, scenario: UITestMuseCodeFixture.scenario)
+        XCTAssertEqual(
+            Set(service.refreshErrorsByAccountID.keys),
+            ["ui-muse-code-not-reported", "ui-muse-code-sign-in-expired", "ui-muse-code-not-on-iphone"]
+        )
+    }
+
     func testExistingProviderIdentifiersAreUnchanged() throws {
         XCTAssertEqual(ProviderID.allCases.map(\.rawValue), [
             "codex", "copilot", "githubBilling", "claude", "grok", "xSubscription", "openRouter",
