@@ -1202,7 +1202,7 @@ struct ProviderUsageCard: View {
             usageTileContent(item, bar: bar)
         case let .unavailableUsage(reason):
             unavailableTileContent(label: item.metric.label, reason: reason)
-            if item.metric.id.contains("weekly") { SubscriptionUtilizationBadge(score: nil) }
+            if item.metric.id.contains("weekly"), result.providerID.hasSubscriptionUtilizationScore { SubscriptionUtilizationBadge(score: nil) }
         case let .creditsRemaining(value, detail):
             creditsTileContent(label: item.metric.label, value: value, detail: detail)
         case let .monetary(metric, detail):
@@ -1278,7 +1278,7 @@ struct ProviderUsageCard: View {
                     .monospacedDigit()
             }
             MetricVisualizationView(bar: bar, style: visualizationStyle, showsSeverity: result.hasCurrentBars)
-            SubscriptionUtilizationMetricView(bar: bar, isCurrent: result.hasCurrentBars)
+            SubscriptionUtilizationMetricView(bar: bar, providerID: result.providerID, isCurrent: result.hasCurrentBars)
             let githubAllowanceSummary = result.providerID == .githubBilling
                 ? Self.githubAllowanceSummary(bar)
                 : nil
@@ -1452,7 +1452,7 @@ struct ProviderUsageCard: View {
             result.hasCurrentBars ? "fresh" : "stale",
             bar.localizedResetDescription(),
             result.hasCurrentBars ? bar.dashboardProjectionDescription() : nil,
-            SubscriptionUtilizationScore.applies(to: bar)
+            SubscriptionUtilizationScore.applies(to: bar, providerID: result.providerID)
                 ? (result.hasCurrentBars ? SubscriptionUtilizationScore(bar: bar)?.accessibilityText : nil) ?? "SUS unavailable" : nil,
         ]
         .compactMap { $0 }
@@ -2634,7 +2634,7 @@ private struct ProviderMetricTileDetailView: View {
                         : "Unavailable"
                 )
             }
-            SubscriptionUtilizationMetricView(bar: bar, isCurrent: result.hasCurrentBars, showsExplanation: true)
+            SubscriptionUtilizationMetricView(bar: bar, providerID: result.providerID, isCurrent: result.hasCurrentBars, showsExplanation: true)
             detailRow("Freshness", result.hasCurrentBars ? "Current" : "Last known value")
             if let resetDescription = bar.localizedResetDescription() {
                 detailRow("Reset", resetDescription)
@@ -2645,7 +2645,7 @@ private struct ProviderMetricTileDetailView: View {
             detailRow("Account status", statusText)
         case let .unavailableUsage(reason):
             detailRow("Availability", reason)
-            if metric.id.contains("weekly") { SubscriptionUtilizationBadge(score: nil) }
+            if metric.id.contains("weekly"), result.providerID.hasSubscriptionUtilizationScore { SubscriptionUtilizationBadge(score: nil) }
             detailRow("Account status", statusText)
         case .creditsRemaining:
             detailRow("Balance", valueText)

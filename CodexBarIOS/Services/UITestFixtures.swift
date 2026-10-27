@@ -133,7 +133,9 @@ final class UITestFixtures {
             }
         }
         Self.seedXSubscriptionAccounts(in: configurationStore, scenario: scenario)
-        let results = PlanTierFixture.initialResults(in: configurationStore, scenario: scenario)
+        UITestMuseCodeFixture.seed(in: configurationStore, scenario: scenario)
+        let results = UITestMuseCodeFixture.results(in: configurationStore, scenario: scenario)
+            ?? PlanTierFixture.initialResults(in: configurationStore, scenario: scenario)
             ?? Self.initialResults(in: configurationStore, scenario: scenario, googleSources: googleSources, defaults: defaults)
         let providers: [any UsageProvider]
         if google {
@@ -164,6 +166,7 @@ final class UITestFixtures {
                 ), scenario: scenario
             ), initialResults: results
         )
+        UITestMuseCodeFixture.presentFailures(of: results, in: refreshService, scenario: scenario)
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
             || scenario?.hasPrefix("subscription-renewals") == true
             || (greptile && environment["CODEXBAR_UI_TEST_MORE_INFORMATION"] == "1")

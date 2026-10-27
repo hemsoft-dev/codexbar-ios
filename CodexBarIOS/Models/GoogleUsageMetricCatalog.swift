@@ -34,6 +34,10 @@ public enum GoogleUsageMetricCatalog {
             codingDefinitions
         case .codex:
             [Definition(sourceProviderID: .codex, key: CodexUsageParser.creditsPoolStableKey, label: "Credits pool", window: "balance")]
+        case .museCode:
+            MuseCodeAllowance.Window.allCases.map {
+                Definition(sourceProviderID: .museCode, key: $0.rawValue, label: $0.label, window: $0 == .window ? "5h" : "weekly")
+            }
         default:
             []
         }

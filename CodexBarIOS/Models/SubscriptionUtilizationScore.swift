@@ -33,6 +33,10 @@ public struct SubscriptionUtilizationScore: Equatable, Sendable {
         return duration.isFinite && abs(duration - 7 * 86_400) <= 60
     }
 
+    public static func applies(to bar: UsageBar, providerID: ProviderID) -> Bool {
+        providerID.hasSubscriptionUtilizationScore && applies(to: bar)
+    }
+
     public static func applies(to bar: UsageBar) -> Bool {
         if let start = bar.projectionPeriodStart, let end = bar.projectionPeriodEnd {
             return isWeekly(start: start, end: end)
@@ -68,7 +72,7 @@ public enum SubscriptionUtilizationFleet {
 
     /// Average weekly pools once per account, then apply its subscription price once.
     public static func entry(for result: ProviderUsageResult, at now: Date = Date()) -> Entry? {
-        guard result.hasCurrentBars else { return nil }
+        guard result.hasCurrentBars, result.providerID.hasSubscriptionUtilizationScore else { return nil }
         let scores = result.enabledBarIndices.compactMap { SubscriptionUtilizationScore(bar: result.bars[$0], at: now)?.value }
         guard !scores.isEmpty else { return nil }
         let mean = Double(scores.reduce(0, +)) / Double(scores.count)
@@ -82,5 +86,12 @@ public enum SubscriptionUtilizationFleet {
         let weighted = zip(entries, weights).reduce(0.0) { $0 + Double($1.0.score.value) * $1.1 } / weights.reduce(0, +)
         guard weighted.isFinite else { return nil }
         return SubscriptionUtilizationScore(value: Int(weighted.rounded(.toNearestOrEven)))
+    }
+}
+
+public extension ProviderID {
+    /// Muse Code has no verified price or scoring scope, so its weekly window never gets a score (MUSE-CODE.md).
+    var hasSubscriptionUtilizationScore: Bool {
+        self != .museCode
     }
 }

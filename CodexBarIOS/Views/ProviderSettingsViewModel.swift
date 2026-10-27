@@ -254,6 +254,8 @@ final class ProviderSettingsViewModel: ObservableObject {
             [.browserSession, .cliToken]
         case .openRouter, .moonshot:
             [.apiKey]
+        case .museCode:
+            []
         }
     }
 
