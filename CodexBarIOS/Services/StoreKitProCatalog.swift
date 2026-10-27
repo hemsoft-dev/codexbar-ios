@@ -9,14 +9,34 @@ final class StoreKitProCatalog {
     private var generation = 0
 
     func load() async throws -> ProCatalog {
+#if DEBUG && targetEnvironment(simulator)
+        let traceOperation = UUID()
+#endif
         generation += 1
         let request = generation
-        guard let storefront = await Storefront.current else { throw ProCommerceError.catalogUnavailable }
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.storefrontBegin, operation: traceOperation)
+#endif
+        let initialStorefront = await Storefront.current
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.storefrontReturn, operation: traceOperation)
+#endif
+        guard let storefront = initialStorefront else { throw ProCommerceError.catalogUnavailable }
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.productsBegin, operation: traceOperation)
+#endif
         let fetched = try await Product.products(for: ProProductID.allCases.map(\.rawValue))
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.productsReturn, count: fetched.count, operation: traceOperation)
+#endif
+
         // Some runtimes report a failed lookup by returning no products instead of throwing.
         guard !fetched.isEmpty else { throw ProCommerceError.catalogUnavailable }
         var models: [ProProductID: ProCatalogProduct] = [:]
         var retained: [ProProductID: Product] = [:]
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.modelsBegin, operation: traceOperation)
+#endif
         for product in fetched {
             guard let identifier = ProProductID(rawValue: product.id) else { continue }
             let model = await Self.model(product, identifier: identifier, storefront: storefront.id)
@@ -24,7 +44,17 @@ final class StoreKitProCatalog {
             models[identifier] = model
             retained[identifier] = product
         }
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.modelsEnd, operation: traceOperation)
+#endif
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.finalStorefrontBegin, operation: traceOperation)
+#endif
         let currentStorefront = await Storefront.current
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.finalStorefrontReturn, operation: traceOperation)
+#endif
+
         try Task.checkCancellation()
         guard request == generation, currentStorefront?.id == storefront.id else { throw ProCommerceError.termsChanged }
         let catalog = ProCatalog(products: models, storefrontID: storefront.id)

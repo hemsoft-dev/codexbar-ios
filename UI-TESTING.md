@@ -417,14 +417,38 @@ quality jobs pass, `Full iOS UI validation` runs both device families. The
 release cannot proceed unless every job passes for the candidate SHA. If that
 SHA changes, dispatch a new run.
 
-The two families run on independent manual workers, each with a 90-minute
-limit and its own artifact. Fail-fast is disabled. An always-run aggregate
-fails unless both workers succeed, including when a worker is cancelled or
-skipped. Each worker requires all 53 exact journey identities plus the three
-preparation/reset calls. The original runner retains its separate 29-pass contract.
-Every phase requires zero skips or expected failures. GitHub retains both destinations' result bundles, logs,
-summaries, and exported failure screenshots for 14 days. See
-[CI-POLICY.md](CI-POLICY.md) for dispatch and SHA-verification commands.
+Each family runs six independent manual shards: three original-journey partitions,
+supplemental, synthetic commerce, and native commerce. The original 29 tests are
+balanced using retained hosted durations into groups of 8, 8 and 13. Every shard
+keeps the 90-minute limit, pinned Xcode 26.6 / 17F113 and iOS 26.2 / 23C54,
+and provisions its own simulator. Fail-fast remains disabled.
+
+Native preparation, purchase/restore, purchase-error preparation, purchase-error
+and the final normal StoreKit reset stay sequential on one worker. The reset is
+attempted even after a journey failure. The two SUS evidence journeys are included
+in the supplemental eight, so the full gate covers 53 distinct journeys per
+family plus the three preparation/reset calls. Marketing capture remains excluded.
+The original local runner retains its separate 29-pass contract.
+
+The always-run aggregate requires all twelve workers to succeed and validates their
+compact proofs against the checked-out SHA and source fingerprint. Missing,
+duplicate, stale, wrong-runtime or substituted-test proofs fail the gate. Every
+phase still requires zero skips or expected failures. Full results, logs and
+exported failure screenshots remain available for 14 days, separate from the small
+proof artifacts used by the aggregate. See [CI-POLICY.md](CI-POLICY.md) for dispatch
+and SHA-verification commands.
+
+Reproduce one shard from a clean committed checkout on air:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode_26.6.app/Contents/Developer \
+  python3 scripts/ui_release_shards.py run --family iphone --shard original-1 \
+  --output /tmp/codexbar-ui-original-1
+```
+
+Choose any shard listed in [the shard plan](scripts/ui-release-shards.json), and a
+new output directory for each invocation. The command shuts down only its owned
+simulator. It does not launch provider sign-in or touch live account storage.
 
 To reproduce a failure, rerun the same family with the command above. Every
 journey resets its own storage, so no simulator-wide data wipe is needed.
@@ -534,3 +558,49 @@ disconnect and cancellation. Claude fixtures omit the unused legacy aliases.
 Set `CODEXBAR_UI_TEST_SUBJOURNEY` to `billing` in the copied xctestrun file to
 run only the guided billing recovery checks while diagnosing a connection flow.
 Use `renewals` for complete renewal-focused validation on both device families.
+
+
+## Manual automatic-CI cost controls
+
+`ui_validation_mode=automatic-cost` runs only the existing SwiftLint job. It does
+not run native quality jobs, UI workers, the full aggregate or its notifier.
+Ordinary PR runs still execute checkout, pinned SwiftLint and the four policy
+tests, with the existing runner, permissions and ten-minute limit. Full and
+account-menu manual modes retain their native jobs, selectors and ceilings.
+
+Use one predeclared baseline/candidate pair. Both dispatches use the same frozen
+candidate workflow ref; `comparison_base_sha` is its exact ancestor/default-base
+SHA. `cost_source_role=baseline` materializes that ancestor before the existing
+lint/policy workload; `candidate` materializes the exact dispatch SHA. Both first
+verify an explicit `cost_expected_image` against the assigned runner's actual
+`ImageVersion`. The candidate also requires `cost_expected_toolchain`, copied
+from the successful baseline's `AUTOMATIC_COST_IDENTITY` log receipt. The hash
+binds the default developer directory, Xcode/Swift builds, OS build, architecture,
+CPU count and memory. A mismatch fails before the measured lint/policy workload;
+it never silently selects another image or retries.
+
+The manual guard verifies that effective automatic job commands/configuration
+match the baseline, rejects dirty or wrong source, and records exact source and
+tool identities. Only this manual mode fetches history for ancestor validation.
+The normal automatic checkout remains depth one with its original default ref.
+Only cost mode explicitly selects `github.sha`, so a branch dispatch creates a
+verified detached checkout of the immutable controller commit. After the identical candidate
+checkout, both controls retain the verified controller outside the workspace,
+remove the same candidate tracked paths, verify the index and worktree are empty
+(except `.git`), and materialize their selected revision from that state. Ignored
+or untracked leftovers fail rather than being silently deleted or reused. This
+avoids charging only the baseline for rewriting an already populated candidate
+checkout. All removal/materialization work still counts. Receipts bind the
+common controller/start and empty-state checks to each measured source. The
+Actions run SHA identifies the workflow/controller, while `measuredSource`
+identifies the source actually linted. A baseline cost run is not a current-head
+source-validation result.
+
+Acceptance remains completed Actions **workflow elapsed time and summed
+non-skipped job runtime**: candidate must be no larger in either measure. Count
+checkout, identity checks, source selection and all setup/cleanup time; make no
+queue/network/guard deductions, tolerance, per-file normalization or synthetic
+job-time claim. Both must pass on the same image, toolchain and hardware config.
+Retain original adverse observations and any invalid/failed pair. Do not repeat
+a pair or launch full native validation merely to obtain a green timing. A
+successful cost-only run does not qualify any native/full release gate.

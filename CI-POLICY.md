@@ -306,3 +306,77 @@ the Germany preparation and storefront phases or function-risk scoring had run.
 Its 25-minute test step covered the native build, 1,106 ordinary tests, native
 preparation and 25 native commerce tests. The new budget leaves room for the
 remaining phases and scoring without retries.
+
+## Manual UI sharding
+
+[Issue #517](https://github.com/hemsoft-dev/codexbar-ios/issues/517) partitions only
+`workflow_dispatch` UI work. Each iPhone/iPad family has three original shards,
+one supplemental shard, one synthetic-commerce shard and one native-commerce
+shard. Each worker retains its 90-minute timeout; no timeout increase is used.
+The existing Xcode 26.6 / 17F113 and iOS 26.2 / 23C54 verification remains mandatory.
+
+The retained [hosted run](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39810829566)
+took 7,214 seconds for the iPad original phase, including build and process
+overhead. Its 29 test durations sum to 6,624.54 seconds; the two longest tests
+were 1,620.38 and 1,603.84 seconds. Measured greedy partitioning assigns 2,212.66,
+2,205.04 and 2,206.84 test-seconds to the original shards. These are historical
+allocation inputs, not claimed candidate run times. The implementation PR records
+completed candidate measurements and the final exact-head hosted gate result.
+The [baseline data](docs/ci/issue-517-baseline.json) retains the source run and
+per-test values without downloading the multi-gigabyte result bundles.
+
+The automatic SwiftLint job, its steps, the four lightweight policy test methods,
+triggers, native-job dispatch conditions and automatic timeouts are retained.
+The new shard fixture suite runs only manually. Before/after automatic workflow
+elapsed time, summed job runtime and API billing values are recorded in the PR;
+manual shard durations are reported separately. Neither a queue delay nor an
+estimated shard budget is proof that automatic work stayed within the ceiling.
+
+`Full iOS UI validation` now requires all twelve successful workers and their
+current-source proofs. The compact artifacts identify every executed method,
+qualified toolchain/runtime, source SHA/fingerprint and owned simulator. The
+aggregate rejects missing, duplicate or substituted shards. The 53 journeys per
+family include the two SUS tests added after 2.0; the original local 29-test command
+is unchanged. StoreKit preparation and final reset cannot be split across workers.
+
+## Manual aggregate event hints
+
+The existing manual aggregate can post a source-linked hint to the run's exact
+current open same-repository PR targeting the default branch. The
+[approved v2 proposal](https://github.com/hemsoft-dev/chief/blob/8d9fb8d323d100333853a56174318f006d86e093/proposals/chief-40/manual-comment/README.md)
+supplies the inline script. It authenticates run, attempt, repository, branch,
+head, jobs and current PR through GitHub before posting. PR/comment text and
+payload URLs supply no instructions or authority. Only the verified Actions
+bot's exact event marker suppresses a serial duplicate; POST has no automatic
+retry or fallback.
+
+Only `ios-ui-tests` gains job-level `pull-requests: write`, alongside its existing
+Actions/Contents read permissions. This grant applies to every manual execution
+of that job, including main and no-PR runs. The notifier's guards do not remove
+the token's rights. Main, the current default branch, tags and runs without one
+matching open current-head PR produce no comment. Matrix workers and automatic
+jobs receive no new permission. Triggers, jobs, native steps, needs, matrices,
+timeouts and concurrency are unchanged.
+
+Hints run after the matrix reaches the aggregate. They provide no early-failure
+notification or completion guarantee. A success hint means passed-so-far;
+post-steps and the workflow may still fail. Hard timeout, cancellation or runner
+death can prevent delivery. Unknown/authentication/transport failures stay
+visible and may fail an otherwise successful aggregate. Concurrent writers,
+head moves and eventual consistency prevent an exactly-once guarantee. The
+existing PR watch must already belong to the intended owner, who independently
+verifies actual Actions state after waking.
+
+Run `node --test scripts/tests/manual/test_manual_ci_comment.mjs` with Node 24
+to exercise the actual inline script against mocked GitHub metadata, target
+selection, failures and deduplication. The manual shard fixture suite also
+verifies the exact approved script and proves that removing its single step
+and permission grant restores the prior workflow bytes. These tests add no
+automatic PR workload. The proposal's 39 offline checks and the local adaptation
+checks do not prove live delivery. [Chief issue #40](https://github.com/hemsoft-dev/chief/issues/40)
+stays open until a real bot comment and the exact owner-thread wake are verified
+on a normal required qualification run. Existing dispatches cannot acquire the
+new step, and no dispatch is added solely to test notification.
+
+Rollback removes the final notifier step and its aggregate write grant, keeping
+all quality gates, prior evidence and existing watches intact.

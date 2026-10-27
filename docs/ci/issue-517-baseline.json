@@ -1,0 +1,82 @@
+{
+  "manual_run": "https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39810829566",
+  "manual_head": "9995bc14ee090d4688a7d31ae1a210dd31b78aad",
+  "ipad_original_step_seconds": 7214,
+  "original_test_seconds": {
+    "CodexBarIOSUITests/AccountJourneysUITests/testAccountSetupPersistsGroupAndCredentialAtAccessibilitySize": 190.38641798496246,
+    "CodexBarIOSUITests/AccountJourneysUITests/testCodingOnlyGeminiChoicesSurvivePartialAndFailedRefresh": 185.9075390100479,
+    "CodexBarIOSUITests/AccountJourneysUITests/testGeminiOnlyDashboardShowsCodingSetupAndKeepsSelectionOnRelaunch": 146.40053403377533,
+    "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingActionableWarningStaysInline": 11.181080937385559,
+    "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingAllowanceStates": 49.49990403652191,
+    "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingPermissionDisclosure": 142.06247901916504,
+    "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingProductSummaryAndRoutinePlacement": 56.41284894943237,
+    "CodexBarIOSUITests/AccountJourneysUITests/testRefreshRecoveryHistoryAndAccountDeepLink": 55.12314808368683,
+    "CodexBarIOSUITests/AccountJourneysUITests/testSavedGeminiRingIsSelectedInVisualizationMenu": 84.94209694862366,
+    "CodexBarIOSUITests/AccountJourneysUITests/testSixGoogleChoicesAndIndependentCustomizationPersist": 234.73875200748444,
+    "CodexBarIOSUITests/AccountJourneysUITests/testTwoCodexAccountsKeepSeparateUsageAfterRelaunch": 74.75701797008514,
+    "CodexBarIOSUITests/ClaudeUsageUITests/testWindowLabelsAndSavedCustomizationForProAndMax": 1603.8373860120773,
+    "CodexBarIOSUITests/CodexCreditsPoolUITests/testCompactCardHeadersAndIndependentControls": 1620.3830180168152,
+    "CodexBarIOSUITests/CodexCreditsPoolUITests/testOptInBalanceStatesAndSavedAccountChoices": 399.53378999233246,
+    "CodexBarIOSUITests/CodexCreditsPoolUITests/testPreciseSubscriptionPillsOnExpandedAndCollapsedCards": 267.53720700740814,
+    "CodexBarIOSUITests/CodexCreditsPoolUITests/testThirtyDayWindowLabelAndSavedVisibility": 122.59079003334045,
+    "CodexBarIOSUITests/GreptileAllowanceUITests/testDetailReconnectStaysInApp": 25.48348903656006,
+    "CodexBarIOSUITests/GreptileAllowanceUITests/testReviewHistoryAndBillingAvailabilityStates": 451.6969130039215,
+    "CodexBarIOSUITests/GrokSignInUITests/testCursorFreshPercentagesBotAndSavedChoices": 94.11898100376129,
+    "CodexBarIOSUITests/GrokSignInUITests/testCursorStaleSignInReconnectCancellationAndValidZero": 71.34450507164001,
+    "CodexBarIOSUITests/GrokSignInUITests/testGrokAndCursorMetersStaySeparateAndNoAllowanceIsUnavailable": 41.37902390956879,
+    "CodexBarIOSUITests/GrokSignInUITests/testGuidedSetupCancellationReconnectAndRemoval": 35.021477937698364,
+    "CodexBarIOSUITests/GrokSignInUITests/testSavedGrokLayoutAndWeeklyStates": 71.8157240152359,
+    "CodexBarIOSUITests/OpenCodeSignInUITests/testDisconnectedAccountOffersGuidedSignIn": 92.38425695896149,
+    "CodexBarIOSUITests/OpenCodeSignInUITests/testVerificationFailureKeepsAccountDisconnectedAndAllowsRetry": 255.2149029970169,
+    "CodexBarIOSUITests/SettingsEvidenceUITests/testEverySettingsDestinationAndDoneBack": 64.60541903972626,
+    "CodexBarIOSUITests/SettingsEvidenceUITests/testPendingDuplicateGroupBlocksDoneUntilCorrected": 46.53203594684601,
+    "CodexBarIOSUITests/SettingsEvidenceUITests/testSettingsDismissalSignalRejectsTheBackgroundGear": 15.621724009513855,
+    "CodexBarIOSUITests/SettingsEvidenceUITests/testSyntheticGrantedAndDeniedNotificationFeedback": 114.02973997592926
+  },
+  "automatic_run": "https://github.com/hemsoft-dev/codexbar-ios/actions/runs/40010770987",
+  "automatic_head": "9dec9e34b8b01093624ee714e76e129c5d5eb7bd",
+  "automatic_workflow_elapsed_seconds": 3215.0,
+  "automatic_summed_job_seconds": 43.0,
+  "automatic_jobs": [
+    {
+      "name": "SwiftLint",
+      "seconds": 43.0,
+      "conclusion": "success"
+    },
+    {
+      "name": "Strict concurrency",
+      "seconds": 0,
+      "conclusion": "skipped"
+    },
+    {
+      "name": "watchOS tests",
+      "seconds": 0,
+      "conclusion": "skipped"
+    },
+    {
+      "name": "iOS tests",
+      "seconds": 0,
+      "conclusion": "skipped"
+    },
+    {
+      "name": "SwiftPM smoke tests",
+      "seconds": 0,
+      "conclusion": "skipped"
+    },
+    {
+      "name": "iOS UI journeys (${{ matrix.family }})",
+      "seconds": 0,
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Account menu comparison",
+      "seconds": 0,
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Full iOS UI validation",
+      "seconds": 0,
+      "conclusion": "skipped"
+    }
+  ]
+}

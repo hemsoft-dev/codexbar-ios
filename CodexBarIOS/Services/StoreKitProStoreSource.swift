@@ -6,23 +6,82 @@ final class StoreKitProStoreSource: ProStoreSource {
     private var restoredClockEvidence: ProFreshClockEvidence?
     private let commerceCatalog = StoreKitProCatalog()
 
-    func catalog() async throws -> ProCatalog { try await commerceCatalog.load() }
+    func catalog() async throws -> ProCatalog {
+#if DEBUG && targetEnvironment(simulator)
+        let traceOperation = UUID()
+#endif
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.catalogBegin, operation: traceOperation)
+#endif
+        do {
+            let catalog = try await commerceCatalog.load()
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.catalogEnd, count: catalog.products.count, operation: traceOperation)
+#endif
+            return catalog
+        } catch {
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.catalogError, operation: traceOperation)
+#endif
+            throw error
+        }
+    }
 
     func storefrontUpdates() -> AsyncStream<String> { commerceCatalog.storefrontUpdates() }
 
     func snapshot() async -> ProStoreSnapshot {
+#if DEBUG && targetEnvironment(simulator)
+        let traceOperation = UUID()
+#endif
+
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.snapshotBegin, operation: traceOperation)
+#endif
+        defer {
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.snapshotEnd, operation: traceOperation)
+#endif
+        }
         var snapshot = ProStoreSnapshot()
         await appendAppPurchase(to: &snapshot)
         snapshot.freshClockEvidence = restoredClockEvidence
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.entitlementsBegin, operation: traceOperation)
+#endif
         for await result in Transaction.currentEntitlements { append(result, to: &snapshot) }
+#if DEBUG && targetEnvironment(simulator)
+        ProNativeReadinessTrace.emit(.entitlementsEnd, operation: traceOperation)
+#endif
+
         // Latest signed records also expose revocations omitted by currentEntitlements, including after relaunch.
         for product in ProProductID.allCases {
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.latestBegin, operation: traceOperation)
+#endif
             if let result = await Transaction.latest(for: product.rawValue) { append(result, to: &snapshot) }
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.latestReturn, operation: traceOperation)
+#endif
+
         }
         do {
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.snapshotProductsBegin, operation: traceOperation)
+#endif
             let products = try await Product.products(for: ProProductID.allCases.map(\.rawValue))
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.snapshotProductsReturn, count: products.count, operation: traceOperation)
+#endif
+
             if let subscription = products.first(where: { $0.subscription != nil })?.subscription {
+#if DEBUG && targetEnvironment(simulator)
+                ProNativeReadinessTrace.emit(.statusBegin, operation: traceOperation)
+#endif
                 let statuses = try await subscription.status
+#if DEBUG && targetEnvironment(simulator)
+                ProNativeReadinessTrace.emit(.statusReturn, count: statuses.count, operation: traceOperation)
+#endif
+
                 snapshot.subscriptionStatusProducts = []
                 for status in statuses {
                     if let evidence = Self.subscription(status) {
@@ -39,6 +98,9 @@ final class StoreKitProStoreSource: ProStoreSource {
                 snapshot.subscriptionStatusAvailable = true
             }
         } catch {
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.snapshotError, operation: traceOperation)
+#endif
             // StoreKit can be unavailable offline. Only a previous verified decision may supply the allowance.
         }
         return snapshot
@@ -132,8 +194,18 @@ final class StoreKitProStoreSource: ProStoreSource {
     }
 
     private func appendAppPurchase(to snapshot: inout ProStoreSnapshot) async {
+#if DEBUG && targetEnvironment(simulator)
+        let traceOperation = UUID()
+#endif
         do {
-            switch try await AppTransaction.shared {
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.appTransactionBegin, operation: traceOperation)
+#endif
+            let result = try await AppTransaction.shared
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.appTransactionReturn, operation: traceOperation)
+#endif
+            switch result {
             case let .verified(transaction):
                 guard let environment = Self.environment(transaction.environment) else { return }
                 snapshot.appendVerifiedAppPurchase(
@@ -148,6 +220,9 @@ final class StoreKitProStoreSource: ProStoreSource {
                 snapshot.appVerificationEnvironment = Self.environment(transaction.environment)
             }
         } catch {
+#if DEBUG && targetEnvironment(simulator)
+            ProNativeReadinessTrace.emit(.appTransactionError, operation: traceOperation)
+#endif
             // An unavailable AppTransaction does not replace a previously verified permanent grant.
         }
     }

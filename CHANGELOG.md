@@ -28,6 +28,16 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Split manual iPhone and iPad UI qualification into measured shards while
+  preserving the 90-minute worker limit and automatic PR checks. Keep touch
+  target assertions from rejecting 44-point controls due to floating-point noise.
+  Distinguish reported zero Grok usage from missing percentages in UI fixtures.
+  Wait for billing warnings to disappear after reloading sign-in.
+  Add aggregate-only manual validation hints for matching open PR watches;
+  early failure notification delivery remains unqualified.
+  Require matching hosted image and toolchain identities for manual automatic-CI cost comparisons.
+  ([#517](https://github.com/hemsoft-dev/codexbar-ios/issues/517))
+
 - Add a Muse Code allowance reader for schema 1 of `muse usage --json`, with
   sanitized fixtures and distinct unavailable states, for use if Meta ships a
   supported iPhone source. Muse Code can't be added, refreshed or published,

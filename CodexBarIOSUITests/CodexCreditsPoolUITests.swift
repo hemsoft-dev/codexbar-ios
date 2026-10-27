@@ -387,7 +387,8 @@ final class CodexCreditsPoolUITests: XCTestCase {
             keep("billing-\(title)-wrong-account", app: app)
             tap(app.buttons["Reload Sign-In"], in: app)
             XCTAssertTrue(app.buttons["subscription-billing-synthetic-match"].waitForExistence(timeout: 5))
-            XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "different account")).firstMatch.exists)
+            let mismatch = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "different account")).firstMatch
+            XCTAssertTrue(mismatch.waitForNonExistence(timeout: 5), app.debugDescription)
             keep("billing-\(title)-reloaded", app: app)
             tap(app.buttons["subscription-billing-synthetic-match"], in: app)
             XCTAssertTrue(app.buttons["subscription-billing-disconnect"].waitForExistence(timeout: 10), app.debugDescription)
@@ -458,8 +459,9 @@ final class CodexCreditsPoolUITests: XCTestCase {
                 let quota = personalQuota(in: app)
                 XCTAssertTrue(quota.waitForExistence(timeout: 10), app.debugDescription)
                 let menu = app.buttons["More options for Personal Codex"]
-                XCTAssertGreaterThanOrEqual(menu.frame.width, 44)
-                XCTAssertGreaterThanOrEqual(menu.frame.height, 44)
+                // XCUI geometry can report a 44-point target just below 44 after floating-point subtraction.
+                XCTAssertGreaterThanOrEqual(menu.frame.width + 0.000001, 44)
+                XCTAssertGreaterThanOrEqual(menu.frame.height + 0.000001, 44)
                 keep("spacing-\(defaultText ? "default" : "accessibility2")-\(dark ? "dark" : "light")", app: app)
                 let disclosure = app.descendants(matching: .any)["Personal Codex, Plan unavailable, Synthetic Codex usage, Normal status"]
                 XCTAssertTrue(disclosure.exists, app.debugDescription)
@@ -479,7 +481,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
                 )).firstMatch
                 XCTAssertTrue(thirtyDay.waitForExistence(timeout: 10), badge.debugDescription)
                 let badgeMenu = badge.buttons["More options for Personal Codex"]
-                XCTAssertGreaterThanOrEqual(badgeMenu.frame.height, 44)
+                XCTAssertGreaterThanOrEqual(badgeMenu.frame.height + 0.000001, 44)
                 keep("spacing-badge-\(defaultText ? "default" : "accessibility2")-\(dark ? "dark" : "light")", app: badge)
                 badge.terminate()
             }
@@ -595,7 +597,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
         XCTAssertTrue(quota.waitForExistence(timeout: 10), app.debugDescription)
         let renamedMenu = app.buttons["More options for \(title)"]
         XCTAssertTrue(renamedMenu.exists, app.debugDescription)
-        XCTAssertGreaterThanOrEqual(renamedMenu.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(renamedMenu.frame.height + 0.000001, 44)
         XCTAssertTrue(quota.label.contains("12%"))
         XCTAssertEqual(quota.frame.width, savedWidth, accuracy: 1)
         XCTAssertEqual(quota.frame.minY, weekly.frame.minY, accuracy: 1)

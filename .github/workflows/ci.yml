@@ -5,14 +5,29 @@ on:
   workflow_dispatch:
     inputs:
       ui_validation_mode:
-        description: Full release gate or focused native account-menu diagnosis
+        description: Full release gate, focused account-menu diagnosis, or automatic-cost control
         type: choice
         options:
           - full
           - account-menu-comparison
+          - automatic-cost
         default: full
       comparison_base_sha:
-        description: Exact ancestor SHA for account-menu comparison only
+        description: Exact ancestor SHA for manual comparison modes
+        type: string
+        default: ''
+
+      cost_source_role:
+        description: Source measured by an automatic-cost control
+        type: choice
+        options: [baseline, candidate]
+        default: candidate
+      cost_expected_image:
+        description: Exact hosted ImageVersion required before cost workload
+        type: string
+        default: ''
+      cost_expected_toolchain:
+        description: Baseline toolchain SHA256; required for candidate cost control
         type: string
         default: ''
 
@@ -38,6 +53,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: ${{ inputs.ui_validation_mode == 'automatic-cost' && '0' || '1' }}
+          ref: ${{ inputs.ui_validation_mode == 'automatic-cost' && github.sha || '' }}
+
+      - name: Verify manual automatic-cost identity
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode == 'automatic-cost' }}
+        env:
+          AUTOMATIC_COST_MODE: ${{ inputs.ui_validation_mode }}
+          AUTOMATIC_COST_ROLE: ${{ inputs.cost_source_role }}
+          AUTOMATIC_COST_BASE: ${{ inputs.comparison_base_sha }}
+          AUTOMATIC_COST_IMAGE: ${{ inputs.cost_expected_image }}
+          AUTOMATIC_COST_TOOLCHAIN: ${{ inputs.cost_expected_toolchain }}
+        run: |
+          cp scripts/prepare-automatic-cost.py "$RUNNER_TEMP/automatic-cost-controller.py"
+          python3 "$RUNNER_TEMP/automatic-cost-controller.py" --receipt "$RUNNER_TEMP/automatic-cost.json"
 
       - name: Run pinned SwiftLint policy
         run: >-
@@ -51,7 +80,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_ci_policy.py' -v
 
   strict-concurrency:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'automatic-cost' }}
     name: Strict concurrency
     runs-on: macos-26
     env:
@@ -70,7 +99,7 @@ jobs:
         run: ./scripts/check-strict-concurrency.sh
 
   ios-tests:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'automatic-cost' }}
     name: iOS tests
     runs-on: macos-26
     env:
@@ -126,7 +155,7 @@ jobs:
           retention-days: 14
 
   watch-tests:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'automatic-cost' }}
     name: watchOS tests
     runs-on: macos-26
     env:
@@ -199,7 +228,7 @@ jobs:
           retention-days: 14
 
   smoke-tests:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'automatic-cost' }}
     name: SwiftPM smoke tests
     runs-on: macos-26
     env:
@@ -224,8 +253,8 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_perfection_runner.py' -v
 
   ios-ui-families:
-    name: iOS UI journeys (${{ matrix.family }})
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' && success() }}
+    name: iOS UI journeys (${{ matrix.family }}, ${{ matrix.shard }})
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' && inputs.ui_validation_mode != 'automatic-cost' && success() }}
     needs:
       - swiftlint
       - strict-concurrency
@@ -240,6 +269,7 @@ jobs:
       fail-fast: false
       matrix:
         family: [iphone, ipad]
+        shard: [original-1, original-2, original-3, supplemental, synthetic, native]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -249,59 +279,50 @@ jobs:
       - name: Verify pinned release toolchain and installed runtimes
         run: python3 scripts/verify-release-toolchain.py --output "$RUNNER_TEMP/release-toolchain.json"
 
-      - name: Create an owned UI simulator
-        id: ui-device
-        run: |
-          ./scripts/run-pro-release-validation.sh provision --family "${{ matrix.family }}" --output "$RUNNER_TEMP/ui-device"
-          echo "id=$(jq -r .device.deviceId "$RUNNER_TEMP/ui-device/ownership.json")" >> "$GITHUB_OUTPUT"
+      - name: Verify manual shard failure fixtures
+        if: ${{ matrix.family == 'iphone' && matrix.shard == 'original-1' }}
+        run: python3 -m unittest scripts.tests.test_ui_release_shards -v
 
       - name: Run GitHub Billing API fixtures
-        if: ${{ matrix.family == 'iphone' }}
+        if: ${{ matrix.family == 'iphone' && matrix.shard == 'original-1' }}
         run: xcrun swift run GitHubBillingFixtureTests
 
-      - name: Run UI journeys
-        id: ui-base
-        if: ${{ !cancelled() && steps.ui-device.outcome == 'success' }}
-        env:
-          UI_TEST_REQUIRE_DEVICE_ID: '1'
-          UI_TEST_OWNERSHIP_RECEIPT: ${{ runner.temp }}/ui-device/ownership.json
-          UI_TEST_RESULTS_DIR: ${{ runner.temp }}/ui-tests
-          UI_TEST_DEVICE_ID: ${{ steps.ui-device.outputs.id }}
-        run: ./scripts/run-ui-tests.sh "${{ matrix.family }}"
-
-      - name: Run supplemental and commerce release phases
-        if: ${{ !cancelled() && steps.ui-base.outcome == 'success' }}
+      - name: Run the exact UI shard on a new qualified simulator
+        id: ui-shard
         run: >-
-          ./scripts/run-pro-release-validation.sh ui --family "${{ matrix.family }}"
-          --ownership "$RUNNER_TEMP/ui-device/ownership.json"
-          --base-results "$RUNNER_TEMP/ui-tests" --output "$RUNNER_TEMP/pro-ui"
+          python3 scripts/ui_release_shards.py run --family "${{ matrix.family }}"
+          --shard "${{ matrix.shard }}" --output "$RUNNER_TEMP/ui-shard"
 
-      - name: Shut down the owned UI simulator
-        if: ${{ always() && steps.ui-device.outcome == 'success' }}
-        run: >-
-          ./scripts/run-pro-release-validation.sh shutdown --family "${{ matrix.family }}"
-          --ownership "$RUNNER_TEMP/ui-device/ownership.json" --output "$RUNNER_TEMP/ui-shutdown"
+      - name: Publish compact shard proof
+        if: ${{ !cancelled() && steps.ui-shard.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ui-shard-proof-${{ matrix.family }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/ui-shard/proof.json
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 14
 
       - name: Preserve UI test results and failure screenshots
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: CodexBarIOSUITests-${{ matrix.family }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: CodexBarIOSUITests-${{ matrix.family }}-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            ${{ runner.temp }}/ui-tests
-            ${{ runner.temp }}/pro-ui
-            ${{ runner.temp }}/ui-device
-            ${{ runner.temp }}/ui-shutdown
+            ${{ runner.temp }}/ui-shard
             ${{ runner.temp }}/release-toolchain.json
-            !${{ runner.temp }}/ui-tests/*/DerivedData-*/**
-            !${{ runner.temp }}/pro-ui/DerivedData-*/**
+            !${{ runner.temp }}/ui-shard/DerivedData-*/**
           if-no-files-found: warn
           retention-days: 14
 
   ios-ui-tests:
     name: Full iOS UI validation
-    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' }}
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode != 'account-menu-comparison' && inputs.ui_validation_mode != 'automatic-cost' }}
     needs: ios-ui-families
+    permissions:
+      actions: read
+      pull-requests: write
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -316,6 +337,174 @@ jobs:
             fi
             exit 1
           fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Require exact-head proofs for all twelve shards
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --pattern 'ui-shard-proof-*' --dir "$RUNNER_TEMP/ui-proof"
+          python3 scripts/ui_release_shards.py aggregate --proofs "$RUNNER_TEMP/ui-proof" \
+            --output "$RUNNER_TEMP/full-ui-proof.json"
+
+      - name: Notify Chief of manual UI aggregate outcome
+        if: ${{ always() && !cancelled() && github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main' }}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CHIEF_NOTIFY_STATUS: ${{ job.status }}
+        with:
+          github-token: ${{ github.token }}
+          retries: 0
+          debug: false
+          script: |
+            // Candidate actions/github-script body. The patch embeds these exact bytes.
+            // No checkout code, PR body, comment instructions, or payload URLs are executed.
+            const owner = "hemsoft-dev", repo = "codexbar-ios", repositoryId = 1285058368;
+            const workflowId = 319463386;
+            const botId = 41898282;
+            const params = {owner, repo};
+            const reject = code => { throw new Error(code); };
+            const integer = value => {
+              if (!/^[1-9][0-9]*$/.test(String(value))) reject("invalid-integer");
+              const number = Number(value);
+              if (!Number.isSafeInteger(number)) reject("invalid-integer");
+              return number;
+            };
+            try {
+              const runId = integer(process.env.GITHUB_RUN_ID);
+              const attempt = integer(process.env.GITHUB_RUN_ATTEMPT);
+              const sha = context.sha;
+              const phase = "full-ui-summary";
+              const claimedStatus = process.env.CHIEF_NOTIFY_STATUS;
+              if (context.eventName !== "workflow_dispatch" || context.repo.owner !== owner ||
+                  context.repo.repo !== repo || !/^[0-9a-f]{40}$/.test(sha) ||
+                  typeof context.ref !== "string" || !/^refs\/(heads|tags)\/.+/.test(context.ref) ||
+                  !["success", "failure", "cancelled"].includes(claimedStatus)) reject("context-refused");
+              if (context.job !== "ios-ui-tests") reject("job-refused");
+              const branch = context.ref.startsWith("refs/heads/") ? context.ref.slice("refs/heads/".length) : null;
+              const checkRun = run => {
+                if (run.id !== runId || run.run_attempt !== attempt || run.workflow_id !== workflowId ||
+                    run.repository?.id !== repositoryId || run.repository?.full_name !== `${owner}/${repo}` ||
+                    run.head_repository?.id !== repositoryId || run.event !== "workflow_dispatch" ||
+                    run.path !== ".github/workflows/ci.yml" || run.head_sha !== sha ||
+                    (branch !== null && run.head_branch !== branch)) reject("run-refused");
+              };
+              const skip = reason => {
+                core.notice(`Chief notifier not applicable (${reason}); native validation is unchanged.`);
+                return {state: "not-applicable", reason};
+              };
+              const getRun = async () => (await github.rest.actions.getWorkflowRun({...params, run_id: runId})).data;
+              const getRepo = async () => (await github.rest.repos.get(params)).data;
+              const run = await getRun();
+              checkRun(run);
+              const metadata = await getRepo();
+              if (metadata.id !== repositoryId || metadata.full_name !== `${owner}/${repo}` ||
+                  typeof metadata.default_branch !== "string" || !metadata.default_branch) reject("repository-refused");
+              if (branch === null) return skip("non-branch-ref");
+              // Deliberately no historical-PR lookup on main/default-branch validation.
+              if (branch === "main" || branch === metadata.default_branch) return skip("main-or-default-branch");
+              // Bounded target resolution for this exact run branch, not repository monitoring.
+              const candidates = await github.paginate(github.rest.pulls.list,
+                {...params, state: "open", head: `${owner}:${branch}`, base: metadata.default_branch, per_page: 100});
+              const isTarget = pr => pr.state === "open" && pr.merged_at === null &&
+                pr.base?.repo?.id === repositoryId && pr.base?.ref === metadata.default_branch &&
+                pr.head?.repo?.id === repositoryId && pr.head?.sha === sha && pr.head?.ref === branch;
+              const matches = candidates.filter(isTarget);
+              if (matches.length === 0) return skip("no-current-open-pr");
+              if (matches.length !== 1) reject("ambiguous-pr");
+              const prNumber = integer(matches[0].number);
+              const stillTarget = pr => pr.number === prNumber && isTarget(pr);
+              const getPr = async () => (await github.rest.pulls.get({...params, pull_number: prNumber})).data;
+              if (!stillTarget(await getPr())) return skip("pr-closed-or-head-moved");
+              const jobs = await github.paginate(
+                "GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs",
+                {...params, run_id: runId, attempt_number: attempt, per_page: 100},
+              );
+              const jobNamed = name => {
+                const found = jobs.filter(job => job.name === name);
+                if (found.length > 1) reject("ambiguous-job");
+                if (found.length === 0) return null;
+                const job = found[0];
+                integer(job.id);
+                if (job.run_id !== runId || job.run_attempt !== attempt || job.head_sha !== sha) reject("job-refused");
+                return job;
+              };
+              const currentName = "Full iOS UI validation";
+              const current = jobNamed(currentName);
+              if (!current || !Array.isArray(current.steps)) reject("current-job-unavailable");
+              const failureSteps = current.steps.filter(step => step.status === "completed" && step.conclusion === "failure");
+              const prerequisites = ["SwiftLint", "Strict concurrency", "iOS tests", "watchOS tests", "SwiftPM smoke tests"];
+              const shards = ["iphone", "ipad"].flatMap(family =>
+                ["original-1", "original-2", "original-3", "supplemental", "synthetic", "native"].map(
+                  shard => `iOS UI journeys (${family}, ${shard})`,
+                ),
+              );
+              let outcome = "unknown";
+              let title = "Manual UI notification could not verify the observed outcome.";
+              const evidence = [];
+              const required = [...prerequisites, ...shards].map(jobNamed);
+              const incomplete = required.some(job => !job || job.status !== "completed" || job.conclusion !== "success");
+              const knownBad = required.some(job => job && job.status === "completed" && job.conclusion !== "success");
+              const proof = current.steps.find(step => step.name === "Require exact-head proofs for all twelve shards");
+              if (failureSteps.length > 0 || knownBad) {
+                outcome = "failure";
+                title = "Manual UI validation failed or is incomplete.";
+              } else if (!incomplete && claimedStatus === "success" && proof?.status === "completed" && proof.conclusion === "success") {
+                outcome = "passed-so-far";
+                title = "Manual UI quality steps succeeded before this notifier.";
+              }
+              for (const name of [...prerequisites, ...shards]) {
+                const job = jobNamed(name);
+                if (!job) evidence.push(`- ${name}: missing.`);
+                else if (job.status !== "completed" || job.conclusion !== "success") {
+                  evidence.push(`- ${name}: not verified successful. https://github.com/${owner}/${repo}/actions/runs/${runId}/job/${job.id}`);
+                }
+              }
+              const marker = `<!-- chief-manual-ci:v2:${repositoryId}:${runId}:${attempt}:${sha}:${phase}:${outcome} -->`;
+              const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}/attempts/${attempt}`;
+              const jobUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}/job/${current.id}`;
+              const body = [title, "", `[Run ${runId}, attempt ${attempt}](${runUrl}) at head \`${sha}\`.`,
+                `[Source job](${jobUrl}). This is an event hint. Chief must verify GitHub API state.`,
+                "The notifier runs before its own job and the workflow finish. This comment does not establish workflow completion or merge readiness.",
+                ...evidence, "", marker].join("\n");
+              const comments = await github.paginate(github.rest.issues.listComments, {...params, issue_number: prNumber, per_page: 100});
+              const previous = comments.filter(comment => comment.user?.id === botId &&
+                comment.user?.login === "github-actions[bot]" && comment.user?.type === "Bot" &&
+                String(comment.body).split("\n").includes(marker));
+              if (previous.length > 1) reject("duplicate-comments-already-exist");
+              // Recheck immediately before a write; GitHub has no atomic head-bound comment API.
+              checkRun(await getRun());
+              const latestRepo = await getRepo();
+              if (latestRepo.id !== repositoryId || latestRepo.full_name !== `${owner}/${repo}`) reject("repository-refused");
+              if (latestRepo.default_branch !== metadata.default_branch) return skip("default-branch-changed");
+              if (!stillTarget(await getPr())) return skip("pr-closed-or-head-moved");
+              if (previous.length === 1) {
+                core.notice("Chief manual CI hint already exists for this verified event.");
+                if (outcome === "unknown") core.setFailed("Chief notifier outcome remains unknown; root verification is required.");
+                return {state: "duplicate", outcome, commentId: integer(previous[0].id)};
+              }
+              // retries: 0 in the action prevents retrying an ambiguous POST automatically.
+              const response = await github.rest.issues.createComment({...params, issue_number: prNumber, body});
+              const comment = response.data;
+              if (response.status !== 201 || comment.user?.id !== botId || comment.user?.login !== "github-actions[bot]" ||
+                  comment.user?.type !== "Bot" || comment.body !== body ||
+                  comment.issue_url !== `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}`) reject("comment-response-unverified");
+              core.notice("Chief manual CI hint posted; delivery to the watching thread is not yet proven.");
+              if (outcome === "unknown") core.setFailed("Chief notifier outcome remains unknown; root verification is required.");
+              return {state: "created", outcome, commentId: integer(comment.id)};
+            } catch (error) {
+              // Never log API error text, request headers, tokens, response bodies or arbitrary PR text.
+              const codes = new Set(["invalid-integer", "context-refused", "job-refused", "run-refused",
+                "repository-refused", "ambiguous-pr", "ambiguous-job", "current-job-unavailable",
+                "duplicate-comments-already-exist", "comment-response-unverified"]);
+              const code = codes.has(error?.message) ? error.message : "github-api-unavailable";
+              core.setFailed(`Chief notifier refused delivery (${code}). Outcome remains unknown; root must inspect this manual run.`);
+              return {state: "unverified", reason: code};
+            }
 
   account-menu-comparison:
     name: Account menu comparison
