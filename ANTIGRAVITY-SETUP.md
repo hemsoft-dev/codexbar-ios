@@ -90,9 +90,10 @@ https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary
 ```
 
 The daily backend, `daily-cloudcode-pa.googleapis.com`, is used only when the
-production request fails with a transport error, an unusable response or an
-HTTP status other than 400, 401 or 403, or when production answers with the
-all-full placeholder described below. Sign-in rejections never move to the
+production request fails with a transport error or an HTTP status other than
+400, 401 or 403, or when a successful production response is malformed,
+contains no current canonical pool, or is the all-full placeholder described
+below. The daily response is then parsed as before. Sign-in rejections never move to the
 daily backend. A usable production response is never filled in with daily
 pools, so omitted pools stay unavailable for that refresh.
 

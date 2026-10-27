@@ -479,6 +479,36 @@ final class AntigravityUsageProviderTests: XCTestCase {
         }
     }
 
+    func testUnusableProductionSuccessUsesDailyBackend() async throws {
+        let expired = Self.buckets().map { bucket -> [String: Any] in
+            var stale = bucket
+            stale["resetTime"] = "2020-01-01T00:00:00Z"
+            return stale
+        }
+        let bodies: [(String, Data)] = [
+            ("malformed", Data("not json".utf8)),
+            ("empty groups", Data(#"{"groups":[]}"#.utf8)),
+            ("unrelated pools", try Self.payload([["bucketId": "unrelated", "window": "weekly", "remainingFraction": 0.5]])),
+            ("expired resets", try Self.payload(expired)),
+        ]
+        for (label, body) in bodies {
+            let secrets = MemorySecretStore()
+            try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+            let hosts = LockedHosts()
+            let fixture = IsolatedTestURLSession { request in
+                hosts.append(request.url?.host)
+                let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
+                return (try Self.response(request, status: 200), isDaily ? try Self.payload() : body)
+            }
+            defer { fixture.invalidate() }
+            let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+            let result = try await provider.fetchUsage(for: Self.configuration)
+            XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com"], label)
+            XCTAssertEqual(result.bars.count, 5, label)
+            XCTAssertNil(result.failureMessage, label)
+        }
+    }
+
     func testPlaceholderDetectionRequiresEverySuppliedPoolFull() throws {
         XCTAssertTrue(AntigravityQuotaParser.isAllFullPlaceholder(try Self.septemberFifthPlaceholder()))
         var oneUsed = Self.buckets().map { bucket -> [String: Any] in

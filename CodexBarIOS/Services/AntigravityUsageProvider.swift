@@ -123,11 +123,12 @@ final class AntigravityUsageProvider: UsageProvider {
     }
 
     /// Ask the daily backend only when production is unreachable, errors for a reason other than sign-in,
-    /// or answers with the all-full placeholder. A usable production response is never mixed with daily pools.
+    /// or answers without a usable metric or with the all-full placeholder.
+    /// A usable production response is never mixed with daily pools.
     private func summaryData(token: String) async throws -> Data {
         do {
             let data = try await responseData(for: quotaRequest(token: token))
-            guard !AntigravityQuotaParser.isAllFullPlaceholder(data) else { throw FetchError.response }
+            guard AntigravityQuotaParser.isUsableProductionSummary(data) else { throw FetchError.response }
             return data
         } catch let error where Self.allowsDailyFallback(after: error) {
             try Task.checkCancellation()
