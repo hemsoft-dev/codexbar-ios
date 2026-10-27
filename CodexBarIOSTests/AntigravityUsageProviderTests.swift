@@ -368,7 +368,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         try secrets.saveSecret(#"{"access_token":"account-one"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
         let fixture = IsolatedTestURLSession { request in
             XCTAssertEqual(request.url, AntigravityUsageProvider.quotaURL)
-            XCTAssertEqual(request.url?.host, "daily-cloudcode-pa.googleapis.com")
+            XCTAssertEqual(request.url?.host, "cloudcode-pa.googleapis.com")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer account-one")
             XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
             XCTAssertEqual(request.httpMethod, "POST")
@@ -384,6 +384,181 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let missing = try await provider.fetchUsage(for: other)
         XCTAssertNotNil(missing.failureMessage)
         XCTAssertTrue(missing.bars.isEmpty)
+    }
+
+    func testProductionGeminiPoolsAreUsedWithoutAskingDailyBackend() async throws {
+        let secrets = MemorySecretStore()
+        try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+        let hosts = LockedHosts()
+        let fixture = IsolatedTestURLSession { request in
+            hosts.append(request.url?.host)
+            let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
+            let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
+            return (try Self.response(request, status: 200), try Self.payload(isDaily ? otherModelsOnly : Self.buckets()))
+        }
+        defer { fixture.invalidate() }
+        let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+        let result = try await provider.fetchUsage(for: Self.configuration)
+        XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com"])
+        XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly", "3p-5h", "3p-weekly"])
+        XCTAssertTrue(result.unavailableUsageMetrics.isEmpty)
+    }
+
+    func testPartialProductionResponseIsNotFilledFromDailyBackend() async throws {
+        let secrets = MemorySecretStore()
+        try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+        let hosts = LockedHosts()
+        let fixture = IsolatedTestURLSession { request in
+            hosts.append(request.url?.host)
+            let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
+            let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
+            return (try Self.response(request, status: 200), try Self.payload(isDaily ? Self.buckets() : otherModelsOnly))
+        }
+        defer { fixture.invalidate() }
+        let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+        let result = try await provider.fetchUsage(for: Self.configuration)
+        XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com"])
+        XCTAssertEqual(result.bars.map(\.stableKey), ["3p-5h", "3p-weekly"])
+        for key in ["gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly"] {
+            XCTAssertEqual(result.unavailableUsageMetrics["antigravity.\(key)"], "Unavailable")
+        }
+    }
+
+    /// Shape of the September 5, 2026 production response: HTTP 200, the same four pools, every fraction 1,
+    /// and supplied resets, while the daily backend and the CLI reported Gemini weekly 0.7202861 remaining.
+    private static func septemberFifthPlaceholder() throws -> Data {
+        let resets = [
+            "gemini-weekly": "2030-09-12T22:26:05Z", "gemini-5h": "2030-09-06T03:26:05Z",
+            "3p-weekly": "2030-09-12T22:26:05Z", "3p-5h": "2030-09-06T03:26:05Z",
+        ]
+        let windows = ["gemini-weekly": "weekly", "gemini-5h": "5h", "3p-weekly": "weekly", "3p-5h": "5h"]
+        return try payload(resets.keys.sorted().map { key in
+            ["bucketId": key, "window": windows[key] ?? "", "remainingFraction": 1, "resetTime": resets[key] ?? ""]
+        })
+    }
+
+    func testAllFullProductionPlaceholderUsesDailyBackend() async throws {
+        let secrets = MemorySecretStore()
+        try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+        let hosts = LockedHosts()
+        let fixture = IsolatedTestURLSession { request in
+            hosts.append(request.url?.host)
+            guard request.url == AntigravityUsageProvider.dailyQuotaURL else {
+                return (try Self.response(request, status: 200), try Self.septemberFifthPlaceholder())
+            }
+            let daily: [String: Any] = [
+                "bucketId": "gemini-weekly", "window": "weekly", "remainingFraction": 0.7202861,
+                "resetTime": "2030-09-11T16:22:20Z",
+            ]
+            return (try Self.response(request, status: 200), try Self.payload([daily]))
+        }
+        defer { fixture.invalidate() }
+        let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+        let result = try await provider.fetchUsage(for: Self.configuration)
+        XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com"])
+        XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-weekly"])
+        XCTAssertEqual(try XCTUnwrap(result.bars.first).used, 27.97139, accuracy: 0.000_001)
+        XCTAssertEqual(result.unavailableUsageMetrics["antigravity.gemini-5h"], "Unavailable")
+    }
+
+    func testAllFullProductionPlaceholderNeverShowsFullBarsWhenDailyFails() async throws {
+        for dailyStatus in [500, 401] {
+            let secrets = MemorySecretStore()
+            try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+            let fixture = IsolatedTestURLSession { request in
+                if request.url == AntigravityUsageProvider.dailyQuotaURL {
+                    return (try Self.response(request, status: dailyStatus), Data())
+                }
+                return (try Self.response(request, status: 200), try Self.septemberFifthPlaceholder())
+            }
+            defer { fixture.invalidate() }
+            let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+            let result = try await provider.fetchUsage(for: Self.configuration)
+            XCTAssertTrue(result.bars.isEmpty, "daily \(dailyStatus)")
+            XCTAssertNotNil(result.failureMessage, "daily \(dailyStatus)")
+        }
+    }
+
+    func testUnusableProductionSuccessUsesDailyBackend() async throws {
+        let expired = Self.buckets().map { bucket -> [String: Any] in
+            var stale = bucket
+            stale["resetTime"] = "2020-01-01T00:00:00Z"
+            return stale
+        }
+        let bodies: [(String, Data)] = [
+            ("malformed", Data("not json".utf8)),
+            ("empty groups", Data(#"{"groups":[]}"#.utf8)),
+            ("unrelated pools", try Self.payload([["bucketId": "unrelated", "window": "weekly", "remainingFraction": 0.5]])),
+            ("expired resets", try Self.payload(expired)),
+        ]
+        for (label, body) in bodies {
+            let secrets = MemorySecretStore()
+            try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+            let hosts = LockedHosts()
+            let fixture = IsolatedTestURLSession { request in
+                hosts.append(request.url?.host)
+                let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
+                return (try Self.response(request, status: 200), isDaily ? try Self.payload() : body)
+            }
+            defer { fixture.invalidate() }
+            let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+            let result = try await provider.fetchUsage(for: Self.configuration)
+            XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com"], label)
+            XCTAssertEqual(result.bars.count, 5, label)
+            XCTAssertNil(result.failureMessage, label)
+        }
+    }
+
+    func testPlaceholderDetectionRequiresEverySuppliedPoolFull() throws {
+        XCTAssertTrue(AntigravityQuotaParser.isAllFullPlaceholder(try Self.septemberFifthPlaceholder()))
+        var oneUsed = Self.buckets().map { bucket -> [String: Any] in
+            var full = bucket
+            full["remainingFraction"] = 1
+            return full
+        }
+        XCTAssertTrue(AntigravityQuotaParser.isAllFullPlaceholder(try Self.payload(oneUsed)))
+        oneUsed[1]["remainingFraction"] = 0.99
+        XCTAssertFalse(AntigravityQuotaParser.isAllFullPlaceholder(try Self.payload(oneUsed)))
+        XCTAssertFalse(AntigravityQuotaParser.isAllFullPlaceholder(try Self.payload([])))
+        XCTAssertFalse(AntigravityQuotaParser.isAllFullPlaceholder(try Self.payload([
+            ["bucketId": "unrelated", "window": "weekly", "remainingFraction": 1],
+        ])))
+        XCTAssertFalse(AntigravityQuotaParser.isAllFullPlaceholder(Data("not json".utf8)))
+    }
+
+    func testDailyBackendIsFallbackOnlyForProductionOutages() async throws {
+        let outages: [(Int?, Bool)] = [
+            (500, true), (503, true), (429, true), (302, true), (nil, true),
+            (400, false), (401, false), (403, false),
+        ]
+        for (status, expectsDaily) in outages {
+            let secrets = MemorySecretStore()
+            try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+            let hosts = LockedHosts()
+            let fixture = IsolatedTestURLSession { request in
+                hosts.append(request.url?.host)
+                if request.url == AntigravityUsageProvider.dailyQuotaURL {
+                    XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer test")
+                    XCTAssertEqual(requestBodyData(from: request), Data("{}".utf8))
+                    return (try Self.response(request, status: 200), try Self.payload())
+                }
+                guard let status else { throw URLError(.cannotConnectToHost) }
+                return (try Self.response(request, status: status), Data("secret-response-body".utf8))
+            }
+            defer { fixture.invalidate() }
+            let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+            let result = try await provider.fetchUsage(for: Self.configuration)
+            let label = String(describing: status)
+            if expectsDaily {
+                XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com"], label)
+                XCTAssertNil(result.failureMessage, label)
+                XCTAssertEqual(result.bars.count, 5, label)
+            } else {
+                XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com"], label)
+                XCTAssertTrue(result.bars.isEmpty, label)
+                XCTAssertEqual(result.recoveryAction, .reauthenticate, label)
+            }
+        }
     }
 
     func testExpiredCredentialRenewsAndPersistsOnlyItsOwnAccount() async throws {
@@ -937,5 +1112,18 @@ final class AntigravityUsageProviderTests: XCTestCase {
 
     private static func result(_ data: Data) throws -> ProviderUsageResult {
         try AntigravityQuotaParser.result(from: data, configuration: configuration, fetchedAt: now)
+    }
+}
+
+private final class LockedHosts: @unchecked Sendable {
+    private let lock = NSLock()
+    private var hosts: [String] = []
+
+    func append(_ host: String?) {
+        lock.withLock { hosts.append(host ?? "") }
+    }
+
+    var values: [String] {
+        lock.withLock { hosts }
     }
 }

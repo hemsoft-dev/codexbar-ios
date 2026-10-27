@@ -4,7 +4,9 @@ final class AntigravityUsageProvider: UsageProvider {
     let providerID = ProviderID.antigravity
     private let secretStore: SecretStore
     private let session: URLSession
-    static let quotaURL = URL(string: "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary")!
+    /// Production returns the Gemini and Argon pools; the daily backend can answer with only other-model pools.
+    static let quotaURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary")!
+    static let dailyQuotaURL = URL(string: "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary")!
     static let tokenURL = URL(string: "https://oauth2.googleapis.com/token")!
 
     private final class RedirectDelegate: NSObject, URLSessionTaskDelegate, Sendable {
@@ -101,7 +103,7 @@ final class AntigravityUsageProvider: UsageProvider {
         _ credentials: AntigravityCredentials,
         for configuration: ProviderAccountConfiguration
     ) async throws {
-        let data = try await responseData(for: quotaRequest(token: credentials.accessToken))
+        let data = try await summaryData(token: credentials.accessToken)
         try Task.checkCancellation()
         let result = try AntigravityQuotaParser.result(from: data, configuration: configuration)
         guard result.failureMessage == nil, !result.bars.isEmpty else { throw FetchError.response }
@@ -110,18 +112,41 @@ final class AntigravityUsageProvider: UsageProvider {
     private func quotaData(_ credentials: AntigravityCredentials, account: String, original: String) async throws -> Data {
         if credentials.expiry.map({ $0 <= Date().addingTimeInterval(60) }) == true {
             let renewed = try await refresh(credentials, account: account, original: original)
-            return try await responseData(for: quotaRequest(token: renewed.accessToken))
+            return try await summaryData(token: renewed.accessToken)
         }
         do {
-            return try await responseData(for: quotaRequest(token: credentials.accessToken))
+            return try await summaryData(token: credentials.accessToken)
         } catch FetchError.http(401) where credentials.canRefresh {
             let renewed = try await refresh(credentials, account: account, original: original)
-            return try await responseData(for: quotaRequest(token: renewed.accessToken))
+            return try await summaryData(token: renewed.accessToken)
         }
     }
 
-    func quotaRequest(token: String) -> URLRequest {
-        var request = URLRequest(url: Self.quotaURL)
+    /// Ask the daily backend only when production is unreachable, errors for a reason other than sign-in,
+    /// or answers without a usable metric or with the all-full placeholder.
+    /// A usable production response is never mixed with daily pools.
+    private func summaryData(token: String) async throws -> Data {
+        do {
+            let data = try await responseData(for: quotaRequest(token: token))
+            guard AntigravityQuotaParser.isUsableProductionSummary(data) else { throw FetchError.response }
+            return data
+        } catch let error where Self.allowsDailyFallback(after: error) {
+            try Task.checkCancellation()
+            return try await responseData(for: quotaRequest(token: token, url: Self.dailyQuotaURL))
+        }
+    }
+
+    private static func allowsDailyFallback(after error: Error) -> Bool {
+        switch error {
+        case FetchError.http(let status): return ![400, 401, 403].contains(status)
+        case FetchError.response: return true
+        case let error as URLError: return error.code != .cancelled
+        default: return false
+        }
+    }
+
+    func quotaRequest(token: String, url: URL = quotaURL) -> URLRequest {
+        var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.httpShouldHandleCookies = false
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

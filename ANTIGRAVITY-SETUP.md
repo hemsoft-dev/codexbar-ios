@@ -82,11 +82,27 @@ this remains pending and is not an implementation prerequisite.
 
 ## Quota contract
 
-The verified request is an authenticated JSON `POST` with body `{}` to:
+The request is an authenticated JSON `POST` with body `{}` to the production
+backend first:
 
 ```text
-https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary
+https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary
 ```
+
+The daily backend, `daily-cloudcode-pa.googleapis.com`, is used only when the
+production request fails with a transport error or an HTTP status other than
+400, 401 or 403, or when a successful production response is malformed,
+contains no current canonical pool, or is the all-full placeholder described
+below. The daily response is then parsed as before. Sign-in rejections never move to the
+daily backend. A usable production response is never filled in with daily
+pools, so omitted pools stay unavailable for that refresh.
+
+A production response is treated as a placeholder when every supplied,
+enabled canonical pool reports `remainingFraction` 1. That is the September 5
+shape, which still included reset times. Such a response is never shown. If
+the daily request then fails, the account shows the normal unavailable state
+rather than full bars. A genuinely unused account therefore reads from the
+daily backend, where omitted pools stay unavailable.
 
 The response contains `groups[].buckets[]`. The parser uses bucket IDs and
 windows, not translated display names or model lists:
@@ -95,6 +111,7 @@ windows, not translated display names or model lists:
 | --- | --- | --- |
 | `gemini-5h` | `5h` | Gemini Models five-hour |
 | `gemini-weekly` | `weekly` | Gemini Models weekly |
+| `gemini-argon-wtu-weekly` | `weekly` | Argon weekly |
 | `3p-5h` | `5h` | Other models five-hour |
 | `3p-weekly` | `weekly` | Other models weekly |
 
@@ -105,17 +122,35 @@ buckets stay unavailable. Partial responses retain only proven current metrics
 and identify the missing ones. A wholly unavailable response follows the app's
 existing failure and stale-data presentation.
 
-There is deliberately no fallback to `cloudcode-pa.googleapis.com`. A live
-request on September 5 returned four all-full buckets there, while the CLI's
-daily backend returned Gemini weekly `0.7202861` remaining, or 27.97139% used.
-Supplying a project ID did not correct the other backend. The daily response
-matched the CLI-local fractions and active Gemini weekly reset. Untouched
-bucket resets advanced with request time and still need hands-on comparison.
-See the [sanitized investigation receipt](https://github.com/HemSoft/codexbar-ios/issues/314#issuecomment-5555218152).
+### Backend order history
+
+Until October 2026 the app read only the daily backend. A live request on
+September 5 returned four all-full buckets from production, while the daily
+backend matched the CLI's Gemini weekly fraction. See the [sanitized
+investigation receipt](https://github.com/HemSoft/codexbar-ios/issues/314#issuecomment-5555218152).
+
+After Antigravity added the separate Argon weekly pool, the daily backend began
+answering successfully with only the other-model pools while the CLI still
+reported Gemini and Argon usage ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519)).
+The open-source OpenUsage client independently found the same split and moved
+to production first with daily as an error fallback
+([robinebers/openusage#1395](https://github.com/robinebers/openusage/pull/1395),
+merged October 17, 2026). CodexBar follows that order.
+
+On October 27, 2026 the Chief accepted this order for #519 because no
+documented contract exists: production first, daily on error, never mixed,
+with the placeholder guard above. Neither backend is a Google-documented
+public contract. Both are the same
+`v1internal` service the Antigravity CLI uses. No Google documentation for a
+supported quota-read API was found on October 27, 2026; the [`/usage`
+command page](https://www.antigravity.google/docs/cli/commands/usage) still
+documents only the interactive panel. Live comparison of production values
+against the CLI on a real account remains pending.
 
 Requests reject redirects, disable automatic cookies and caching, and never
-include raw server errors in user-facing messages. Quotas go only to the daily
-backend; renewal credentials go only to `oauth2.googleapis.com/token`.
+include raw server errors in user-facing messages. Quota requests go only to
+the two Cloud Code backends above; renewal credentials go only to
+`oauth2.googleapis.com/token`.
 
 ## Live verification follow-up for issue #319
 
