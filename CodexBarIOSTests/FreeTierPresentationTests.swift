@@ -158,8 +158,15 @@ final class FreeTierPresentationTests: XCTestCase {
 
     func testDashboardShowsLoadingUntilInitialRefreshCompletes() throws {
         try withDashboard(performsLifecycleWork: true, settles: false) { probe in
-            XCTAssertEqual(
-                probe.element(identifier: "dashboard-account-loading")?.accessibilityLabel, "Loading accounts…", "\(probe.labels)"
+            // The toolbar can publish before the dashboard body, so wait for the first body state.
+            XCTAssertTrue(probe.waitUntil {
+                probe.element(identifier: "dashboard-account-loading") != nil
+                    || probe.element(label: "Connect your first account") != nil
+            }, "\(probe.labels)")
+            XCTAssertTrue(
+                HostedViewProbe.isProgressLabel(
+                    probe.element(identifier: "dashboard-account-loading")?.accessibilityLabel, "Loading accounts…"
+                ), "\(probe.labels)"
             )
             XCTAssertNil(probe.element(label: "Connect your first account"))
 
