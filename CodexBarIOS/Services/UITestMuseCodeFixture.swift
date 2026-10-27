@@ -51,6 +51,12 @@ enum UITestMuseCodeFixture {
         }
     }
 
+    /// Shows unavailable states with the same error presentation a failed refresh would produce.
+    static func presentFailures(of results: [ProviderUsageResult], in service: UsageRefreshService, scenario: String?) {
+        guard scenario == Self.scenario else { return }
+        service.recordFixtureFailures(from: results)
+    }
+
     private static func result(for state: State, configuration: ProviderAccountConfiguration, now: Date) -> ProviderUsageResult {
         let outcome: MuseCodeAllowance.Outcome
         switch state {

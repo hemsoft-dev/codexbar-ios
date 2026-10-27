@@ -166,6 +166,7 @@ final class UITestFixtures {
                 ), scenario: scenario
             ), initialResults: results
         )
+        UITestMuseCodeFixture.presentFailures(of: results, in: refreshService, scenario: scenario)
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
             || scenario?.hasPrefix("subscription-renewals") == true
             || (greptile && environment["CODEXBAR_UI_TEST_MORE_INFORMATION"] == "1")

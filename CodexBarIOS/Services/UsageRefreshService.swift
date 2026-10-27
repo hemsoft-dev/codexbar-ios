@@ -811,3 +811,14 @@ public extension UsageRefreshService {
         )
     }
 }
+
+#if DEBUG
+extension UsageRefreshService {
+    /// UI evidence only: presents fixture failures the way a failed refresh would.
+    func recordFixtureFailures(from fixtureResults: [ProviderUsageResult]) {
+        for result in fixtureResults {
+            if let message = result.failureMessage { refreshErrorsByAccountID[result.accountID] = message }
+        }
+    }
+}
+#endif

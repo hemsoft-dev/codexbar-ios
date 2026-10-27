@@ -227,6 +227,7 @@ final class MuseCodeAllowanceTests: XCTestCase {
         let weekly = try XCTUnwrap(result.bars.last)
         XCTAssertTrue(SubscriptionUtilizationScore.applies(to: weekly))
         XCTAssertFalse(SubscriptionUtilizationScore.applies(to: weekly, providerID: .museCode))
+        XCTAssertFalse(ProviderID.museCode.hasSubscriptionUtilizationScore)
         XCTAssertTrue(SubscriptionUtilizationScore.applies(to: weekly, providerID: .claude))
         XCTAssertNil(SubscriptionUtilizationFleet.entry(for: result, at: Self.now.addingTimeInterval(2 * 86400)))
         XCTAssertNil(SubscriptionUtilizationFleet.monthlyPrice(for: result))

@@ -1202,7 +1202,7 @@ struct ProviderUsageCard: View {
             usageTileContent(item, bar: bar)
         case let .unavailableUsage(reason):
             unavailableTileContent(label: item.metric.label, reason: reason)
-            if item.metric.id.contains("weekly") { SubscriptionUtilizationBadge(score: nil) }
+            if item.metric.id.contains("weekly"), result.providerID.hasSubscriptionUtilizationScore { SubscriptionUtilizationBadge(score: nil) }
         case let .creditsRemaining(value, detail):
             creditsTileContent(label: item.metric.label, value: value, detail: detail)
         case let .monetary(metric, detail):
@@ -2645,7 +2645,7 @@ private struct ProviderMetricTileDetailView: View {
             detailRow("Account status", statusText)
         case let .unavailableUsage(reason):
             detailRow("Availability", reason)
-            if metric.id.contains("weekly") { SubscriptionUtilizationBadge(score: nil) }
+            if metric.id.contains("weekly"), result.providerID.hasSubscriptionUtilizationScore { SubscriptionUtilizationBadge(score: nil) }
             detailRow("Account status", statusText)
         case .creditsRemaining:
             detailRow("Balance", valueText)

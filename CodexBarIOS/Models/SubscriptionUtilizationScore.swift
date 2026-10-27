@@ -33,11 +33,8 @@ public struct SubscriptionUtilizationScore: Equatable, Sendable {
         return duration.isFinite && abs(duration - 7 * 86_400) <= 60
     }
 
-    /// Providers whose weekly windows never get a score: Muse Code has no verified price or scoring scope (MUSE-CODE.md).
-    public static let unscoredProviders: Set<ProviderID> = [.museCode]
-
     public static func applies(to bar: UsageBar, providerID: ProviderID) -> Bool {
-        !unscoredProviders.contains(providerID) && applies(to: bar)
+        providerID.hasSubscriptionUtilizationScore && applies(to: bar)
     }
 
     public static func applies(to bar: UsageBar) -> Bool {
@@ -75,7 +72,7 @@ public enum SubscriptionUtilizationFleet {
 
     /// Average weekly pools once per account, then apply its subscription price once.
     public static func entry(for result: ProviderUsageResult, at now: Date = Date()) -> Entry? {
-        guard result.hasCurrentBars, !SubscriptionUtilizationScore.unscoredProviders.contains(result.providerID) else { return nil }
+        guard result.hasCurrentBars, result.providerID.hasSubscriptionUtilizationScore else { return nil }
         let scores = result.enabledBarIndices.compactMap { SubscriptionUtilizationScore(bar: result.bars[$0], at: now)?.value }
         guard !scores.isEmpty else { return nil }
         let mean = Double(scores.reduce(0, +)) / Double(scores.count)
@@ -89,5 +86,12 @@ public enum SubscriptionUtilizationFleet {
         let weighted = zip(entries, weights).reduce(0.0) { $0 + Double($1.0.score.value) * $1.1 } / weights.reduce(0, +)
         guard weighted.isFinite else { return nil }
         return SubscriptionUtilizationScore(value: Int(weighted.rounded(.toNearestOrEven)))
+    }
+}
+
+public extension ProviderID {
+    /// Muse Code has no verified price or scoring scope, so its weekly window never gets a score (MUSE-CODE.md).
+    var hasSubscriptionUtilizationScore: Bool {
+        self != .museCode
     }
 }
