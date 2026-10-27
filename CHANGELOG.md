@@ -28,6 +28,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Keep the loading and Use Reset progress unit tests passing when the
+  simulator has app accessibility enabled, where the system reads progress
+  labels as "In progress, …". Wait for the dashboard body before checking the
+  loading state. ([#527](https://github.com/hemsoft-dev/codexbar-ios/issues/527))
+
 - Split manual iPhone and iPad UI qualification into measured shards while
   preserving the 90-minute worker limit and automatic PR checks. Keep touch
   target assertions from rejecting 44-point controls due to floating-point noise.

@@ -437,6 +437,15 @@ final class ProviderUsageCardHiddenSeverityTests: XCTestCase {
     }
 
     @MainActor
+    func testProgressLabelMatchAcceptsOnlyTheLabelOrItsInProgressForm() {
+        XCTAssertTrue(HostedViewProbe.isProgressLabel("Using reset…", "Using reset…"))
+        XCTAssertTrue(HostedViewProbe.isProgressLabel("In progress, Using reset…", "Using reset…"))
+        for label in [nil, "", "In progress", "Use one reset", "Using reset", "In progress, Use one reset", "Using reset…, In progress"] {
+            XCTAssertFalse(HostedViewProbe.isProgressLabel(label, "Using reset…"), "\(String(describing: label))")
+        }
+    }
+
+    @MainActor
     func testResetInventoryShowsProgressThenFeedbackWhileUsingConfirmedReset() throws {
         let now = Date()
         let grant = Self.resetGrant(id: "selected", remainingCount: 1, now: now)
@@ -459,7 +468,9 @@ final class ProviderUsageCardHiddenSeverityTests: XCTestCase {
         XCTAssertTrue(probe.waitUntil { probe.element(label: "Use reset") != nil }, "\(probe.labels)")
         XCTAssertTrue(probe.chooseAlertAction("Use reset"), "\(probe.labels)")
         XCTAssertTrue(probe.waitUntil { gate.request != nil }, "\(probe.labels)")
-        XCTAssertTrue(probe.waitUntil { probe.labels.contains("Using reset…") }, "\(probe.labels)")
+        XCTAssertTrue(
+            probe.waitUntil { probe.labels.contains { HostedViewProbe.isProgressLabel($0, "Using reset…") } }, "\(probe.labels)"
+        )
         XCTAssertEqual(gate.request?.grantID, grant.id)
         XCTAssertEqual(gate.request?.binding, "binding")
 
@@ -622,6 +633,12 @@ final class HostedViewProbe {
 
     func element(labelPrefix: String) -> NSObject? {
         elements.first { $0.accessibilityLabel?.hasPrefix(labelPrefix) == true }
+    }
+
+    /// SwiftUI reports a labelled ProgressView as "In progress, <label>" while the device has
+    /// application accessibility enabled, and as "<label>" otherwise.
+    static func isProgressLabel(_ label: String?, _ text: String) -> Bool {
+        label == text || label == "In progress, \(text)"
     }
 
     func element(identifier: String) -> NSObject? { elements(identifier: identifier).first }
