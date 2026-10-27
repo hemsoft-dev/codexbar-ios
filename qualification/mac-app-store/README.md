@@ -11,7 +11,7 @@ This directory is disposable development tooling. It changes no iOS/watchOS targ
 | Channel | Native Mac App Store, subject to a later shipping decision |
 | Framework | SwiftUI window hosted by AppKit; Network loopback listener; Security Keychain |
 | Minimum OS | macOS 14 compile target, not a qualified minimum supported runtime |
-| Architecture | arm64 built and run on air; Intel runtime not tested |
+| Architecture | Universal arm64 + x86_64; x86_64 run under Rosetta 2 on air, not on Intel hardware |
 | Owning repository | hemsoft-dev/codexbar-ios, this directory only |
 | Local identity | `com.hemsoft.qualification.mac476`, deliberately separate from the shipping app |
 | Usage | Fixed, visibly synthetic personal/work samples |
@@ -26,7 +26,16 @@ From the repository root on a Mac with Xcode installed:
 'qualification/mac-app-store/build/CodexBar Qualification.app/Contents/MacOS/CodexBarQualification' --self-test
 open 'qualification/mac-app-store/build/CodexBar Qualification.app'
 ./qualification/mac-app-store/qualify-update.sh
+./qualification/mac-app-store/qualify-portability.sh
+# Optional team-identity signing, using the dedicated signing keychain:
+./scripts/with-codexbar-keychain.sh env QUALIFY_PUBLISHER_IDENTITIES=1 \
+  PUBLISHER_BUNDLE_SUFFIX=devsigned ./qualification/mac-app-store/qualify-portability.sh
 ```
+
+`PUBLISHER_BUNDLE_SUFFIX` gives team-signed copies their own sandbox container.
+Without it, a team-signed launch under an ID that an ad hoc build already used
+blocks in sandbox initialization. See [RESULTS.md](RESULTS.md#portability-and-team-identity-rehearsal-october-27-2026).
+Franz-owned Store steps are in [STORE-HANDOFF.md](STORE-HANDOFF.md).
 
 `build.sh` uses Xcode explicitly, Swift 6 warnings as errors, the current host architecture and ad hoc signing. It creates a local `.app` inside ignored `build/`, with no dependency downloads. The developer-only StoreKitTest framework remains an Xcode runtime dependency. This bundle is not a distribution candidate. Closing the last window exits it.
 

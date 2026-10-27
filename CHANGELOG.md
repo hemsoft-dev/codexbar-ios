@@ -33,6 +33,12 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Extend the provisional Mac App Store qualification with a universal arm64 and
+  x86_64 build that passes its sandboxed self-test under Rosetta 2. The existing
+  Apple Development and Apple Distribution identities now sign the qualification
+  bundle locally. Add a hand-off list of the remaining Store steps that need
+  Franz's account. ([#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476))
+
 - Keep the loading and Use Reset progress unit tests passing when the
   simulator has app accessibility enabled, where the system reads progress
   labels as "In progress, …". Wait for the dashboard body before checking the
