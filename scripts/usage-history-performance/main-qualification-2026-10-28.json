@@ -1,0 +1,3924 @@
+{
+  "recordingFormat": "hosted-qualification-v1",
+  "experiments": [
+    {
+      "name": "usage-history-performance-39717553452-1",
+      "url": "https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39717553452",
+      "recordingFormat": "uniform-retained-state-v1",
+      "metadata": {
+        "startedAt": "2026-10-22T03:37:36.122269+00:00",
+        "baselineRevision": "3395ee6094ce8e4199577f7ede493e3a50ee1269",
+        "candidateRevision": "c77528d1da3cc6009ed8ff5b80d974835c6d6951",
+        "candidateDirty": false,
+        "hardware": "VirtualMac2,1",
+        "cpu": "Apple M1 (Virtual)",
+        "memoryBytes": "7516192768",
+        "architecture": "arm64",
+        "operatingSystem": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83",
+        "swift": "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)\nTarget: arm64-apple-macosx26.0",
+        "xcode": "Xcode 26.6\nBuild version 17F113",
+        "configuration": "release",
+        "timezone": "UTC",
+        "benchmarkSHA256": "f32a3ada7d30253404aea22a4ad1e9d63987d81d5dc70196f298ff4374b449be",
+        "slowdownProof": false,
+        "policy": {
+          "revision": "3395ee6094ce8e4199577f7ede493e3a50ee1269",
+          "maximumLatencyRatio": 1.25,
+          "maximumRunCV": 0.15,
+          "maximumSerializedRatio": 1.0,
+          "maximumGrowthBytesPerAccount": 0
+        }
+      },
+      "result": {
+        "passed": false,
+        "findings": [
+          "INCONCLUSIVE 1 accounts recordMilliseconds: run CV 0.224",
+          "INCONCLUSIVE 1 accounts seriesMilliseconds: run CV 0.206",
+          "INCONCLUSIVE 25 accounts recordMilliseconds: run CV 0.199",
+          "INCONCLUSIVE 25 accounts seriesMilliseconds: run CV 0.196"
+        ],
+        "timings": [
+          {
+            "accounts": 1,
+            "metric": "recordMilliseconds",
+            "referenceMedians": [
+              13.092584,
+              8.580083,
+              8.1875
+            ],
+            "candidateMedians": [
+              7.851292,
+              8.888416,
+              9.339125
+            ],
+            "ratios": [
+              0.5996747471698481,
+              1.0359358994545855,
+              1.1406564885496182
+            ],
+            "medianRatio": 1.0359358994545855,
+            "noiseCV": 0.2235946521080083,
+            "withinRunCV": {
+              "reference": [
+                0.20506536726730903,
+                0.04181255131796204,
+                0.023022491826920823
+              ],
+              "candidate": [
+                0.01297224832608416,
+                0.02310184900261124,
+                0.023957215786276555
+              ]
+            }
+          },
+          {
+            "accounts": 1,
+            "metric": "seriesMilliseconds",
+            "referenceMedians": [
+              3.7085582,
+              2.5817832,
+              2.3473082
+            ],
+            "candidateMedians": [
+              2.4465334,
+              2.763975,
+              2.7440418
+            ],
+            "ratios": [
+              0.6596993408381726,
+              1.070568202628323,
+              1.1690164078155567
+            ],
+            "medianRatio": 1.070568202628323,
+            "noiseCV": 0.20637361282180744,
+            "withinRunCV": {
+              "reference": [
+                0.5296245556987492,
+                0.06133838297205413,
+                0.022891892306193148
+              ],
+              "candidate": [
+                0.01526700698276643,
+                0.01877448830958752,
+                0.01086166949116141
+              ]
+            }
+          },
+          {
+            "accounts": 10,
+            "metric": "recordMilliseconds",
+            "referenceMedians": [
+              85.413125,
+              98.467084,
+              80.408625
+            ],
+            "candidateMedians": [
+              84.957334,
+              95.254708,
+              87.880833
+            ],
+            "ratios": [
+              0.9946636889822262,
+              0.9673761436867573,
+              1.0929279414988131
+            ],
+            "medianRatio": 0.9946636889822262,
+            "noiseCV": 0.08641175523961375,
+            "withinRunCV": {
+              "reference": [
+                0.23495519737853715,
+                0.05517942102878094,
+                0.020868628917050405
+              ],
+              "candidate": [
+                0.03168510470270742,
+                0.05561550383826929,
+                0.08119936278649748
+              ]
+            }
+          },
+          {
+            "accounts": 10,
+            "metric": "seriesMilliseconds",
+            "referenceMedians": [
+              30.1498916,
+              32.6013666,
+              27.323183399999998
+            ],
+            "candidateMedians": [
+              28.8529834,
+              32.6125166,
+              32.8175916
+            ],
+            "ratios": [
+              0.9569846479978721,
+              1.0003420102027256,
+              1.2010896065646584
+            ],
+            "medianRatio": 1.0003420102027256,
+            "noiseCV": 0.07182804112424283,
+            "withinRunCV": {
+              "reference": [
+                0.0819878198464285,
+                0.06840148576539265,
+                0.03170650050016302
+              ],
+              "candidate": [
+                0.054224123579765124,
+                0.06441671968432072,
+                0.07370065414946268
+              ]
+            }
+          },
+          {
+            "accounts": 25,
+            "metric": "recordMilliseconds",
+            "referenceMedians": [
+              183.550833,
+              229.562875,
+              180.044292
+            ],
+            "candidateMedians": [
+              203.804625,
+              284.812667,
+              181.308875
+            ],
+            "ratios": [
+              1.1103443208018564,
+              1.240673898164065,
+              1.0070237328045923
+            ],
+            "medianRatio": 1.1103443208018564,
+            "noiseCV": 0.19904716336870487,
+            "withinRunCV": {
+              "reference": [
+                0.1280430361913479,
+                0.03486361780076008,
+                0.13844622720822794
+              ],
+              "candidate": [
+                0.12043967132482827,
+                0.08705356387342121,
+                0.05145584875851762
+              ]
+            }
+          },
+          {
+            "accounts": 25,
+            "metric": "seriesMilliseconds",
+            "referenceMedians": [
+              94.1882332,
+              105.66589160000001,
+              89.6603918
+            ],
+            "candidateMedians": [
+              98.646225,
+              149.05995000000001,
+              102.53263340000001
+            ],
+            "ratios": [
+              1.0473306659286608,
+              1.4106723346855288,
+              1.1435666445526285
+            ],
+            "medianRatio": 1.1435666445526285,
+            "noiseCV": 0.19618821969147615,
+            "withinRunCV": {
+              "reference": [
+                0.09320972134630322,
+                0.0927962708641598,
+                0.10480458742943481
+              ],
+              "candidate": [
+                0.0992894015511453,
+                0.0801482949954809,
+                0.08034512578660452
+              ]
+            }
+          }
+        ]
+      },
+      "artifactFilesSHA256": {
+        "1-candidate-after-machine.json": "9ecb67d5a216a087d003f76cf9c34cd87c1a8aba8d862ecfe882955f41245b3d",
+        "1-candidate-before-machine.json": "d1a90434bdb0bfe1fc8e1155480c2523b9a3c7a1afcec7aecb404aadfd2fd48a",
+        "1-candidate.json": "3cc1195d3808e0af40e5f8ee7d47b1b2d2b15e90b86421073f12388279c2e97a",
+        "1-candidate.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "1-reference-after-machine.json": "816dff0e54b6e217b31fd097869f407cb102e7fb7ad33ad9103aee7d44069ffa",
+        "1-reference-before-machine.json": "e1fba6709723b1bcb731d11c6fa54172a66918460b78720159851af1d6e9c22c",
+        "1-reference.json": "28d0bb5f6f189665bdbc3080e6d887d64d1b8e9802d6195ad44efaa9823acb19",
+        "1-reference.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2-candidate-after-machine.json": "e3da38bc43defbdfe358ced902e210bb7b673c80e4f04e74119a93a8fe8a3767",
+        "2-candidate-before-machine.json": "da1be03518681ea7ce9ab76602d3a5313ee196d8f7a51c253aeaf814a34688dc",
+        "2-candidate.json": "c7d65e6798ead893943a4332c15d6189fad2b4714ede584b311ba94b6c913316",
+        "2-candidate.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2-reference-after-machine.json": "a5c1a4eb230f0846036369b55eb0bd716f17a37f29736642c330446275ab4e4d",
+        "2-reference-before-machine.json": "07b5a55664dcdedb6d307899fbf7198200fbd1ecab45e3651a312487c56a8a0d",
+        "2-reference.json": "50490272d716639aec3d4b228686003b797d35fb39b37d6816c7ef9f2ea5cd56",
+        "2-reference.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "3-candidate-after-machine.json": "f372ceed129145e89f1c6a60f01d66b97992212c65577d4d3eeec7457e3db7a3",
+        "3-candidate-before-machine.json": "78aa139c4138413a5ed682bd35337496caea1d28b4e2105c361b52f1ba4a6b95",
+        "3-candidate.json": "f8f45b9d3cefd2186098d013e8277a91ea0799fd1dbf69c19eb2413290fb8ae3",
+        "3-candidate.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "3-reference-after-machine.json": "92349ab7d61cc842e748b184f14bd8b067f4cea35134b70e4e371c54c15bb69a",
+        "3-reference-before-machine.json": "128fe5b3babbc5248520d8db71378fac04c893efe639a94f6024d15b28bc2db7",
+        "3-reference.json": "8d403efaa62c152aa04dfd85324b403dba0267bd84f0036a03942c8fc3b0ad10",
+        "3-reference.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "candidate-build.log": "12fcf813051c8ab335a29e2b6a714320cb2a890e8326048c968f853579652b74",
+        "host-admission.json": "d8979157ed69e9bf5a0eb4d22bb199afc4cb7adc4095fbb0a43d4d01081382f5",
+        "metadata.json": "664db41f095086f1ed991e73a92080624205031270a7a98383fdaec6c6b779ce",
+        "reference-build.log": "ae11951cf2d9d044bf5e5a8a927624c715efebe128b28336c63f955c3616fd5f",
+        "result.json": "8e812a6c3fa1674fc87eeef734f67349209fac5205a44d82a50bf4bbe8f07b34"
+      },
+      "runs": [
+        {
+          "reference": {
+            "configuration": "release",
+            "fixtureVersion": 1,
+            "measuredBatches": 5,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  12.296875,
+                  15.2345,
+                  12.586875,
+                  14.5245,
+                  11.829334,
+                  13.092584,
+                  20.06575
+                ],
+                "seriesMilliseconds": [
+                  2.7168832,
+                  3.0720832000000002,
+                  3.5318666,
+                  4.2578332,
+                  3.7085582,
+                  3.32095,
+                  10.315175
+                ],
+                "seriesPointCount": 11515,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  112.700916,
+                  89.47125,
+                  140.093958,
+                  85.413125,
+                  82.687542,
+                  86.528583,
+                  82.21475
+                ],
+                "seriesMilliseconds": [
+                  34.68,
+                  32.2764082,
+                  29.413058200000002,
+                  30.1498916,
+                  35.443200000000004,
+                  30.809175,
+                  27.988475
+                ],
+                "seriesPointCount": 115150,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  174.843834,
+                  175.870333,
+                  179.632875,
+                  183.550833,
+                  171.935709,
+                  205.470125,
+                  241.518917
+                ],
+                "seriesMilliseconds": [
+                  89.1907,
+                  89.9124582,
+                  98.062225,
+                  86.0840916,
+                  86.5140416,
+                  94.1882332,
+                  110.1842582
+                ],
+                "seriesPointCount": 287875,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          },
+          "candidate": {
+            "configuration": "release",
+            "fixtureVersion": 1,
+            "measuredBatches": 5,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  8.1785,
+                  7.858916,
+                  7.925209,
+                  7.72875,
+                  7.952209,
+                  7.699958,
+                  7.851292
+                ],
+                "seriesMilliseconds": [
+                  2.4631668,
+                  2.466725,
+                  2.4613,
+                  2.4407084,
+                  2.4465334,
+                  2.5378418,
+                  2.4362084
+                ],
+                "seriesPointCount": 11515,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  92.086917,
+                  103.57325,
+                  88.193709,
+                  84.859792,
+                  88.647417,
+                  81.152417,
+                  84.957334
+                ],
+                "seriesMilliseconds": [
+                  36.252575,
+                  33.0362334,
+                  32.6356584,
+                  28.54955,
+                  28.214850000000002,
+                  28.8529834,
+                  29.964133399999998
+                ],
+                "seriesPointCount": 115150,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  179.659958,
+                  179.399333,
+                  239.439542,
+                  206.921333,
+                  178.679875,
+                  171.206917,
+                  203.804625
+                ],
+                "seriesMilliseconds": [
+                  99.62927499999999,
+                  108.55210819999999,
+                  98.95575840000001,
+                  107.8989,
+                  84.1225,
+                  83.6600332,
+                  98.646225
+                ],
+                "seriesPointCount": 287875,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          }
+        },
+        {
+          "reference": {
+            "configuration": "release",
+            "fixtureVersion": 1,
+            "measuredBatches": 5,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  9.644666,
+                  8.590708,
+                  8.847542,
+                  7.891791,
+                  8.303417,
+                  8.580083,
+                  8.80775
+                ],
+                "seriesMilliseconds": [
+                  2.5289918,
+                  2.3962834,
+                  2.5817832,
+                  2.2530334,
+                  2.5039084,
+                  2.7094416,
+                  2.6229084
+                ],
+                "seriesPointCount": 11515,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  90.902333,
+                  99.906375,
+                  99.855791,
+                  101.808792,
+                  92.104791,
+                  87.612459,
+                  98.467084
+                ],
+                "seriesMilliseconds": [
+                  33.904591599999996,
+                  33.8001916,
+                  32.6013666,
+                  34.0234668,
+                  28.844716599999998,
+                  31.049241799999997,
+                  35.107749999999996
+                ],
+                "seriesPointCount": 115150,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  225.939334,
+                  257.773542,
+                  216.276709,
+                  236.482459,
+                  229.562875,
+                  231.625917,
+                  218.03075
+                ],
+                "seriesMilliseconds": [
+                  103.58677499999999,
+                  105.01140000000001,
+                  101.2194666,
+                  105.66589160000001,
+                  125.36155819999999,
+                  98.2282082,
+                  116.8494584
+                ],
+                "seriesPointCount": 287875,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          },
+          "candidate": {
+            "configuration": "release",
+            "fixtureVersion": 1,
+            "measuredBatches": 5,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  8.874875,
+                  8.809042,
+                  8.732333,
+                  9.256167,
+                  8.888416,
+                  8.670541,
+                  8.960917
+                ],
+                "seriesMilliseconds": [
+                  2.7806584,
+                  2.725,
+                  2.8209334,
+                  2.8071,
+                  2.7626916,
+                  2.6724166,
+                  2.763975
+                ],
+                "seriesPointCount": 11515,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  95.263541,
+                  94.084459,
+                  105.744375,
+                  89.2105,
+                  97.653167,
+                  94.861167,
+                  95.254708
+                ],
+                "seriesMilliseconds": [
+                  39.3320084,
+                  41.72725,
+                  37.3864832,
+                  33.304424999999995,
+                  31.167566599999997,
+                  32.149475,
+                  32.6125166
+                ],
+                "seriesPointCount": 115150,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  320.237833,
+                  243.695709,
+                  285.039833,
+                  329.73675,
+                  273.752917,
+                  284.812667,
+                  253.999125
+                ],
+                "seriesMilliseconds": [
+                  136.92575,
+                  118.39665,
+                  149.05995000000001,
+                  131.516325,
+                  151.64968340000001,
+                  133.31222499999998,
+                  162.41991660000002
+                ],
+                "seriesPointCount": 287875,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          }
+        },
+        {
+          "reference": {
+            "configuration": "release",
+            "fixtureVersion": 1,
+            "measuredBatches": 5,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  8.550041,
+                  8.152875,
+                  8.085584,
+                  8.162083,
+                  8.628,
+                  8.1875,
+                  8.245334
+                ],
+                "seriesMilliseconds": [
+                  2.8221666,
+                  2.3614834,
+                  2.3473082,
+                  2.3300666,
+                  2.3102666,
+                  2.44605,
+                  2.427525
+                ],
+                "seriesPointCount": 11515,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  83.19,
+                  82.166084,
+                  83.975375,
+                  80.408625,
+                  80.772875,
+                  78.8865,
+                  80.209792
+                ],
+                "seriesMilliseconds": [
+                  28.7994418,
+                  28.690558399999997,
+                  28.6186666,
+                  27.2242166,
+                  27.208083199999997,
+                  29.3674084,
+                  27.323183399999998
+                ],
+                "seriesPointCount": 115150,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  268.86675,
+                  188.378917,
+                  213.378458,
+                  239.47325,
+                  175.1075,
+                  168.196375,
+                  180.044292
+                ],
+                "seriesMilliseconds": [
+                  109.7204334,
+                  101.97302499999999,
+                  101.6069416,
+                  110.7301,
+                  89.6603918,
+                  84.52317500000001,
+                  87.0203082
+                ],
+                "seriesPointCount": 287875,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          },
+          "candidate": {
+            "configuration": "release",
+            "fixtureVersion": 1,
+            "measuredBatches": 5,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  8.985917,
+                  9.406709,
+                  9.194125,
+                  9.805,
+                  9.234208,
+                  9.5405,
+                  9.339125
+                ],
+                "seriesMilliseconds": [
+                  2.6130334,
+                  2.7274833999999997,
+                  2.7270665999999997,
+                  2.7440418,
+                  2.7631916,
+                  2.6958666,
+                  2.7824166000000004
+                ],
+                "seriesPointCount": 11515,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  91.914458,
+                  89.056584,
+                  92.648916,
+                  101.768792,
+                  87.880833,
+                  80.171458,
+                  85.652667
+                ],
+                "seriesMilliseconds": [
+                  32.605091599999994,
+                  34.4493916,
+                  34.5309582,
+                  34.9214082,
+                  32.8175916,
+                  28.229041799999997,
+                  31.92475
+                ],
+                "seriesPointCount": 115150,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  186.353667,
+                  175.729625,
+                  182.742292,
+                  169.441417,
+                  181.308875,
+                  197.632209,
+                  176.1465
+                ],
+                "seriesMilliseconds": [
+                  100.2173166,
+                  91.2291666,
+                  85.4453,
+                  103.51842500000001,
+                  102.53263340000001,
+                  103.08006660000001,
+                  89.320375
+                ],
+                "seriesPointCount": 287875,
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          }
+        }
+      ],
+      "hostAdmission": {
+        "passed": true,
+        "maximumSeconds": 420,
+        "requiredConsecutiveSamples": 9,
+        "sampleIntervalSeconds": 15,
+        "maximumNormalizedLoad": 1.0,
+        "samples": [
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:41:15.724601+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                5.26611328125,
+                15.923828125,
+                13.306640625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 0.11477633300000889,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:41:30.881372+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                4.31396484375,
+                15.19189453125,
+                13.0908203125
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 15.263895374999947,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:41:46.015117+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                3.56103515625,
+                14.4951171875,
+                12.87841796875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 30.390088291999973,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:42:01.195997+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                3.15283203125,
+                13.86669921875,
+                12.68212890625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 45.56351125000003,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:42:16.459803+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                2.45361328125,
+                13.18701171875,
+                12.45947265625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 60.819613541999956,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 1
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:42:31.540043+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                2.1494140625,
+                12.59033203125,
+                12.2587890625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 75.89220241700002,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 2
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:42:46.690401+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.67236328125,
+                11.97314453125,
+                12.04345703125
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 91.035127375,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 3
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:43:01.896952+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.89208984375,
+                11.51611328125,
+                11.87890625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 106.23397375000002,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 4
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:43:17.135849+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.47216796875,
+                10.951171875,
+                11.6708984375
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 121.46531262500002,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 5
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:43:32.228615+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.41650390625,
+                10.47802734375,
+                11.4892578125
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 136.550453542,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 6
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:43:47.383830+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.26220703125,
+                9.9970703125,
+                11.29931640625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 151.69810829200003,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 7
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:44:02.582219+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.19091796875,
+                9.55517578125,
+                11.11865234375
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 166.88885225,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 8
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T03:44:17.753149+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.1474609375,
+                9.1357421875,
+                10.94091796875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 182.05223787499995,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 9
+          }
+        ],
+        "elapsedSeconds": 182.05253925
+      }
+    },
+    {
+      "name": "usage-history-performance-39726374605-1",
+      "url": "https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39726374605",
+      "recordingFormat": "uniform-retained-state-v1",
+      "metadata": {
+        "startedAt": "2026-10-22T05:09:15.752739+00:00",
+        "baselineRevision": "3395ee6094ce8e4199577f7ede493e3a50ee1269",
+        "candidateRevision": "3ac002e6ea0e61f1c5109d31ed1e136588cc2cf2",
+        "candidateDirty": false,
+        "hardware": "VirtualMac2,1",
+        "cpu": "Apple M1 (Virtual)",
+        "memoryBytes": "7516192768",
+        "architecture": "arm64",
+        "operatingSystem": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83",
+        "swift": "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)\nTarget: arm64-apple-macosx26.0",
+        "xcode": "Xcode 26.6\nBuild version 17F113",
+        "configuration": "release",
+        "timezone": "UTC",
+        "benchmarkSHA256": "482d0b4cb73b5a5640c6534ea0b2faa3c7d6092002f0a6aea0f71b231d2c8875",
+        "slowdownProof": false,
+        "requiredQoSClass": 25,
+        "deterministicHashing": true,
+        "policy": {
+          "revision": "3395ee6094ce8e4199577f7ede493e3a50ee1269",
+          "maximumLatencyRatio": 1.25,
+          "maximumRunCV": 0.15,
+          "maximumSerializedRatio": 1.0,
+          "maximumGrowthBytesPerAccount": 0
+        }
+      },
+      "result": {
+        "passed": true,
+        "findings": [],
+        "timings": [
+          {
+            "accounts": 1,
+            "metric": "recordMilliseconds",
+            "referenceMedians": [
+              8.450167,
+              8.321458,
+              7.877459
+            ],
+            "candidateMedians": [
+              7.665958,
+              9.076042,
+              7.736375
+            ],
+            "ratios": [
+              0.9071960352972905,
+              1.0906793016319976,
+              0.9820901638459812
+            ],
+            "medianRatio": 0.9820901638459812,
+            "noiseCV": 0.0795101512883977,
+            "withinRunCV": {
+              "reference": [
+                0.03388036706694795,
+                0.030047439925556193,
+                0.06560110037720462
+              ],
+              "candidate": [
+                0.00645950824574663,
+                0.02306283754750068,
+                0.059162646412391
+              ]
+            }
+          },
+          {
+            "accounts": 1,
+            "metric": "seriesMilliseconds",
+            "referenceMedians": [
+              2.3745582,
+              2.46835,
+              2.2741
+            ],
+            "candidateMedians": [
+              2.3936916,
+              2.8168334,
+              2.413475
+            ],
+            "ratios": [
+              1.0080576673168087,
+              1.1411807077602447,
+              1.0612879820588366
+            ],
+            "medianRatio": 1.0612879820588366,
+            "noiseCV": 0.07672166159828896,
+            "withinRunCV": {
+              "reference": [
+                0.05929118894088148,
+                0.018501161391219528,
+                0.02213536714914574
+              ],
+              "candidate": [
+                0.0051515391808673195,
+                0.1032727371290089,
+                0.02422820006043706
+              ]
+            }
+          },
+          {
+            "accounts": 10,
+            "metric": "recordMilliseconds",
+            "referenceMedians": [
+              79.107875,
+              84.026834,
+              76.80075
+            ],
+            "candidateMedians": [
+              90.800291,
+              82.352583,
+              83.767708
+            ],
+            "ratios": [
+              1.1478034392909682,
+              0.9800748056269739,
+              1.0907147130724635
+            ],
+            "medianRatio": 1.0907147130724635,
+            "noiseCV": 0.04313620814888267,
+            "withinRunCV": {
+              "reference": [
+                0.10210968223548285,
+                0.00916017913967666,
+                0.0394339912635322
+              ],
+              "candidate": [
+                0.05721701616661481,
+                0.017206164609823642,
+                0.05776695613668298
+              ]
+            }
+          },
+          {
+            "accounts": 10,
+            "metric": "seriesMilliseconds",
+            "referenceMedians": [
+              27.979674999999997,
+              29.073991799999998,
+              26.9467334
+            ],
+            "candidateMedians": [
+              33.3039916,
+              29.725491799999997,
+              30.55865
+            ],
+            "ratios": [
+              1.190292296104226,
+              1.0224083436661078,
+              1.1340391262415503
+            ],
+            "medianRatio": 1.1340391262415503,
+            "noiseCV": 0.04900813377226581,
+            "withinRunCV": {
+              "reference": [
+                0.04486315267288916,
+                0.021113061450336604,
+                0.011977029583813014
+              ],
+              "candidate": [
+                0.0747441956514637,
+                0.02429958813444836,
+                0.043277601859363087
+              ]
+            }
+          },
+          {
+            "accounts": 25,
+            "metric": "recordMilliseconds",
+            "referenceMedians": [
+              167.742458,
+              180.109209,
+              166.436583
+            ],
+            "candidateMedians": [
+              178.359209,
+              190.97975,
+              174.741875
+            ],
+            "ratios": [
+              1.0632919722685832,
+              1.0603552758926391,
+              1.049900639933229
+            ],
+            "medianRatio": 1.0603552758926391,
+            "noiseCV": 0.038379174291693394,
+            "withinRunCV": {
+              "reference": [
+                0.06954556088217043,
+                0.026700207529539093,
+                0.00527828690348846
+              ],
+              "candidate": [
+                0.017706041973988843,
+                0.1652342897521576,
+                0.04483114967199933
+              ]
+            }
+          },
+          {
+            "accounts": 25,
+            "metric": "seriesMilliseconds",
+            "referenceMedians": [
+              84.4685334,
+              93.1611168,
+              86.09863340000001
+            ],
+            "candidateMedians": [
+              95.1845416,
+              109.02311660000001,
+              93.4745332
+            ],
+            "ratios": [
+              1.1268639074062579,
+              1.170264165403393,
+              1.08566802408736
+            ],
+            "medianRatio": 1.1268639074062579,
+            "noiseCV": 0.07015915784043389,
+            "withinRunCV": {
+              "reference": [
+                0.06983529883687067,
+                0.05866302659111647,
+                0.005633238333494554
+              ],
+              "candidate": [
+                0.018345627233168748,
+                0.08001802262858035,
+                0.032538615189998524
+              ]
+            }
+          }
+        ]
+      },
+      "artifactFilesSHA256": {
+        "1-candidate-after-machine.json": "6a711a1ae40be35d9c9a6c682534705807cbcb42681438664782e805dccf9571",
+        "1-candidate-before-machine.json": "6097fc0277d9b98e81183a81017e92ddcca666c70e08ac5c785a934c2c8f445c",
+        "1-candidate.json": "6155277206c8d457b6cead2b745c4644fe316590e6813e6a771998a8e5b5a7e4",
+        "1-candidate.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "1-reference-after-machine.json": "1c0b3586c6be96d895af9d3e660a0d259821fd8b97b9ed09a3e95d06e7ba1a1f",
+        "1-reference-before-machine.json": "5a8a5da6a4412c33fd85d6ad2954558e412c36269ae9c4838759682512d58e79",
+        "1-reference.json": "b4a09bfe7a91fa55f7104d3e4e4b2cdc96bdc5a28efef0c51ac7e195e0491fb9",
+        "1-reference.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2-candidate-after-machine.json": "9ad657dc9ec66644f1cfc710f8f13896bc3b546cbf5742a70ea8e683012235d5",
+        "2-candidate-before-machine.json": "968cc7590033a6532ba3f2a961884faa0fae9d3a31c20a81517181fd6a904188",
+        "2-candidate.json": "ae644b27a203e05bc1ed354f7576299b9cee8b1e465b6fc26240390579790434",
+        "2-candidate.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2-reference-after-machine.json": "bd5cd20d5250c8a06fa14eb57a3614c946c2cf8f58d6913cf661153421c8711a",
+        "2-reference-before-machine.json": "658c0312ebe0da8dd04c23c348a7c1e2430fcf6782a22d9c9fc89407bb299653",
+        "2-reference.json": "c1dc85382498d551e8d789e282cd4f6de90be0d782f3f1702a55c7c50831cb5d",
+        "2-reference.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "3-candidate-after-machine.json": "0967dd34f56be3943d4db81ac67d9d2f47f90fd1470cd91ad21f8d47acf7ae37",
+        "3-candidate-before-machine.json": "9464f500026d591e63efad30d549635a96d9e4e382480619ff2780d90905e6e5",
+        "3-candidate.json": "8263308f846f2de23fd83f44ee398ed1e5fe605b42e805e79f5029ab680789c8",
+        "3-candidate.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "3-reference-after-machine.json": "af8396f3b7519deec37877441a6304a06afda144845b8f8ee5b190c379315efb",
+        "3-reference-before-machine.json": "f2e048e9688c54563d33c8cab643cbfa20585736b0cec1a2ac2d2a92fc3be018",
+        "3-reference.json": "acb28b31256a3012e7a610cca77d2247665d48cdb0504911d33d607f98494460",
+        "3-reference.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "candidate-build.log": "c0e27d22e1e300b50803a6e55c0644ac66ed1082c65dcee7cf0989ae8e15a59e",
+        "host-admission.json": "785be046f1de7682337b2ae4300b1f7f247f307e7db51f0417c7fe3698694798",
+        "metadata.json": "297a6a37f4284d528c1c997904435c490d9d7c8fb40ea63e35c3f4a13610f697",
+        "reference-build.log": "ef7dc4d55e9cefa89f95ebc51df487ac14b2619b489f71c170aefe19101f641d",
+        "result.json": "1a86d5862e09a1355e4de9c6d83cd35ad6fff93dee253b1899f5fd964eb71c0d"
+      },
+      "runs": [
+        {
+          "reference": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  8.975875,
+                  8.56925,
+                  8.498,
+                  8.751625,
+                  8.061375,
+                  8.450167,
+                  7.998125
+                ],
+                "recordThreadCPUMilliseconds": [
+                  8.122084,
+                  8.00475,
+                  7.987834,
+                  8.233791,
+                  7.583333,
+                  7.948459,
+                  7.514
+                ],
+                "seriesMilliseconds": [
+                  2.3237916,
+                  2.4011332,
+                  2.6849832,
+                  2.4186916,
+                  2.2879332000000003,
+                  2.3745582,
+                  2.306425
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.3244333999999998,
+                  2.40185,
+                  2.6873334,
+                  2.419625,
+                  2.2883082000000003,
+                  2.3752,
+                  2.3066168
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  76.887625,
+                  85.064042,
+                  90.683542,
+                  99.127208,
+                  78.943709,
+                  76.49575,
+                  79.107875
+                ],
+                "recordThreadCPUMilliseconds": [
+                  74.898083,
+                  82.850708,
+                  87.109167,
+                  92.630625,
+                  77.315125,
+                  74.954,
+                  77.631291
+                ],
+                "seriesMilliseconds": [
+                  27.243591600000002,
+                  29.934616799999997,
+                  29.8950582,
+                  29.488183199999998,
+                  27.0632666,
+                  26.732799999999997,
+                  27.979674999999997
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  27.244549999999997,
+                  29.8896916,
+                  29.8503834,
+                  29.234608400000003,
+                  27.064024999999997,
+                  26.7338916,
+                  27.9723584
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  168.149792,
+                  161.847917,
+                  164.878291,
+                  164.321209,
+                  173.406792,
+                  196.638958,
+                  167.742458
+                ],
+                "recordThreadCPUMilliseconds": [
+                  164.394333,
+                  158.224875,
+                  161.009833,
+                  160.659625,
+                  168.944583,
+                  190.388459,
+                  164.075333
+                ],
+                "seriesMilliseconds": [
+                  82.2558418,
+                  83.4367416,
+                  82.748025,
+                  83.3718418,
+                  98.3492834,
+                  84.4685334,
+                  92.7138
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  82.2128168,
+                  83.4239916,
+                  82.7410666,
+                  82.94512499999999,
+                  97.551525,
+                  84.45734159999999,
+                  92.71113340000001
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          },
+          "candidate": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  8.407666,
+                  8.117583,
+                  7.600625,
+                  7.748083,
+                  7.665958,
+                  7.699125,
+                  7.647
+                ],
+                "recordThreadCPUMilliseconds": [
+                  7.9745,
+                  7.68825,
+                  7.216708,
+                  7.375208,
+                  7.303125,
+                  7.327542,
+                  7.32175
+                ],
+                "seriesMilliseconds": [
+                  2.46705,
+                  2.42685,
+                  2.394875,
+                  2.3936916,
+                  2.3844332,
+                  2.418375,
+                  2.3849084
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.4673331999999997,
+                  2.427275,
+                  2.3950582000000002,
+                  2.3942334,
+                  2.3847750000000003,
+                  2.41875,
+                  2.3850834
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  87.92725,
+                  83.495667,
+                  82.11775,
+                  86.130584,
+                  90.800291,
+                  94.614375,
+                  95.769167
+                ],
+                "recordThreadCPUMilliseconds": [
+                  86.131958,
+                  81.527042,
+                  80.19375,
+                  83.99225,
+                  87.7405,
+                  91.971333,
+                  93.026917
+                ],
+                "seriesMilliseconds": [
+                  31.47535,
+                  30.458524999999998,
+                  33.3039916,
+                  38.936175,
+                  32.0583,
+                  36.3152584,
+                  32.679783400000005
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  31.476850000000002,
+                  30.4297168,
+                  33.305958399999994,
+                  38.8998666,
+                  32.036791799999996,
+                  36.314875,
+                  32.6740584
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  186.976375,
+                  188.299791,
+                  178.472084,
+                  175.052959,
+                  176.417958,
+                  184.307041,
+                  178.359209
+                ],
+                "recordThreadCPUMilliseconds": [
+                  181.246167,
+                  182.828333,
+                  172.5705,
+                  170.122125,
+                  170.648875,
+                  173.678208,
+                  171.47475
+                ],
+                "seriesMilliseconds": [
+                  107.80861680000001,
+                  105.9682584,
+                  92.99785,
+                  95.1845416,
+                  97.1676834,
+                  96.1557584,
+                  92.7241582
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  107.80834999999999,
+                  105.93677499999998,
+                  92.9683584,
+                  95.10180820000001,
+                  94.974625,
+                  95.89841659999999,
+                  92.717325
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          }
+        },
+        {
+          "reference": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  8.844875,
+                  8.534541,
+                  8.219791,
+                  8.321458,
+                  8.262709,
+                  8.455791,
+                  8.916541
+                ],
+                "recordThreadCPUMilliseconds": [
+                  8.282375,
+                  8.098291,
+                  7.782583,
+                  7.893334,
+                  7.8485,
+                  7.857833,
+                  8.212792
+                ],
+                "seriesMilliseconds": [
+                  2.485525,
+                  2.4727332,
+                  2.4488,
+                  2.524625,
+                  2.46835,
+                  2.5534334000000003,
+                  2.4327084
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.4860916,
+                  2.4705749999999997,
+                  2.4494584,
+                  2.5223834,
+                  2.4662916,
+                  2.5543500000000003,
+                  2.4333168
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  82.021,
+                  84.634292,
+                  83.656292,
+                  83.926791,
+                  84.026834,
+                  85.094084,
+                  85.674583
+                ],
+                "recordThreadCPUMilliseconds": [
+                  80.059666,
+                  82.30575,
+                  81.066,
+                  81.475625,
+                  81.221291,
+                  82.234292,
+                  82.192875
+                ],
+                "seriesMilliseconds": [
+                  28.825066600000003,
+                  29.063033400000002,
+                  28.524141800000002,
+                  29.408724999999997,
+                  29.073991799999998,
+                  28.850708400000002,
+                  30.3286834
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  28.8234916,
+                  29.0652918,
+                  28.524533400000003,
+                  29.4106418,
+                  29.027891599999997,
+                  28.850175,
+                  30.33095
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  180.991167,
+                  179.26925,
+                  180.109209,
+                  181.158875,
+                  176.616333,
+                  179.162458,
+                  190.7825
+                ],
+                "recordThreadCPUMilliseconds": [
+                  176.872792,
+                  174.957625,
+                  175.597625,
+                  176.696166,
+                  172.353834,
+                  174.422541,
+                  185.553709
+                ],
+                "seriesMilliseconds": [
+                  92.23422500000001,
+                  93.0600584,
+                  93.1611168,
+                  90.8697332,
+                  90.3717584,
+                  99.76235,
+                  104.8263166
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  92.1780916,
+                  93.03930820000001,
+                  93.15617499999999,
+                  90.86125,
+                  90.3461918,
+                  99.74845,
+                  103.995525
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          },
+          "candidate": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  8.800875,
+                  9.154583,
+                  9.07525,
+                  8.894667,
+                  9.076042,
+                  9.29875,
+                  9.506834
+                ],
+                "recordThreadCPUMilliseconds": [
+                  8.294042,
+                  8.673583,
+                  8.63475,
+                  8.44125,
+                  8.58775,
+                  8.646834,
+                  8.791542
+                ],
+                "seriesMilliseconds": [
+                  2.6090584,
+                  2.863,
+                  2.7928666,
+                  2.7181918,
+                  2.8168334,
+                  3.5579583999999995,
+                  2.9099418
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.609975,
+                  2.8603666,
+                  2.7847168,
+                  2.7174166,
+                  2.7630832,
+                  3.2378500000000003,
+                  2.8307332
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  87.641333,
+                  81.85275,
+                  82.352583,
+                  82.219666,
+                  83.168417,
+                  79.68925,
+                  83.86375
+                ],
+                "recordThreadCPUMilliseconds": [
+                  85.727375,
+                  80.313666,
+                  80.624333,
+                  80.372542,
+                  81.259209,
+                  78.176917,
+                  82.354709
+                ],
+                "seriesMilliseconds": [
+                  31.0157332,
+                  30.3023666,
+                  30.8056668,
+                  31.0168166,
+                  29.725491799999997,
+                  29.2284,
+                  29.4345334
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  31.0160916,
+                  30.304174999999997,
+                  30.789133399999997,
+                  30.995125,
+                  29.713900000000002,
+                  29.2116084,
+                  29.431775
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  177.602375,
+                  176.96175,
+                  181.451041,
+                  190.97975,
+                  275.818542,
+                  227.20525,
+                  189.288333
+                ],
+                "recordThreadCPUMilliseconds": [
+                  172.233458,
+                  171.730583,
+                  175.639708,
+                  187.214792,
+                  245.436375,
+                  194.182,
+                  181.994083
+                ],
+                "seriesMilliseconds": [
+                  94.2424166,
+                  96.6176334,
+                  109.02311660000001,
+                  95.64161659999999,
+                  119.60225,
+                  99.49210000000001,
+                  111.27685
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  94.16175,
+                  96.6116166,
+                  108.2489,
+                  95.6277834,
+                  116.4740834,
+                  98.2219666,
+                  103.5380582
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          }
+        },
+        {
+          "reference": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  8.101333,
+                  7.901042,
+                  7.864084,
+                  7.699125,
+                  7.877459,
+                  9.157417,
+                  7.927709
+                ],
+                "recordThreadCPUMilliseconds": [
+                  7.615291,
+                  7.395667,
+                  7.396,
+                  7.282334,
+                  7.411334,
+                  8.105458,
+                  7.352041
+                ],
+                "seriesMilliseconds": [
+                  2.2881334,
+                  2.2902084,
+                  2.2618584,
+                  2.2956834,
+                  2.2575334000000002,
+                  2.3950084,
+                  2.2741
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.2886166,
+                  2.290425,
+                  2.262125,
+                  2.2961166,
+                  2.2579249999999997,
+                  2.3956918000000003,
+                  2.274375
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  79.8755,
+                  75.765542,
+                  81.942708,
+                  82.625,
+                  76.80075,
+                  76.15825,
+                  75.221792
+                ],
+                "recordThreadCPUMilliseconds": [
+                  77.740458,
+                  73.76175,
+                  79.903458,
+                  80.477542,
+                  74.932917,
+                  74.323,
+                  73.523417
+                ],
+                "seriesMilliseconds": [
+                  27.033133199999998,
+                  27.2604084,
+                  26.6272584,
+                  27.43845,
+                  26.5827084,
+                  26.9467334,
+                  27.1581
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  27.034724999999998,
+                  27.2621666,
+                  26.61405,
+                  27.4217416,
+                  26.5837582,
+                  26.948291599999997,
+                  27.15735
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  167.277291,
+                  165.658542,
+                  166.436583,
+                  165.145959,
+                  165.876709,
+                  166.967959,
+                  167.700458
+                ],
+                "recordThreadCPUMilliseconds": [
+                  164.107875,
+                  161.828458,
+                  162.162042,
+                  161.289458,
+                  161.830916,
+                  163.298709,
+                  163.818375
+                ],
+                "seriesMilliseconds": [
+                  84.550725,
+                  84.8165832,
+                  86.1231584,
+                  86.09863340000001,
+                  86.44533320000001,
+                  85.09145,
+                  85.52809160000001
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  84.54640839999999,
+                  84.7755834,
+                  86.10561659999999,
+                  86.03585000000001,
+                  86.38645,
+                  85.088975,
+                  85.4773584
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          },
+          "candidate": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  8.643875,
+                  8.446042,
+                  8.793959,
+                  7.736375,
+                  7.742541,
+                  7.556292,
+                  7.554084
+                ],
+                "recordThreadCPUMilliseconds": [
+                  8.030542,
+                  8.007208,
+                  8.315625,
+                  7.32225,
+                  7.326833,
+                  7.216458,
+                  7.201708
+                ],
+                "seriesMilliseconds": [
+                  2.5819084,
+                  2.6799916,
+                  2.3988584,
+                  2.413475,
+                  2.3580918,
+                  2.5277084,
+                  2.4683668
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.5828417999999997,
+                  2.6811418,
+                  2.3994,
+                  2.4140832,
+                  2.3582832,
+                  2.5284584,
+                  2.4686
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  76.759709,
+                  81.97375,
+                  89.49925,
+                  83.767708,
+                  74.936834,
+                  80.635292,
+                  84.103334
+                ],
+                "recordThreadCPUMilliseconds": [
+                  75.168416,
+                  80.201833,
+                  85.235292,
+                  81.965208,
+                  73.419625,
+                  78.925041,
+                  82.333667
+                ],
+                "seriesMilliseconds": [
+                  29.332608399999998,
+                  28.684441800000002,
+                  30.55865,
+                  30.1438668,
+                  28.182625,
+                  31.618758200000002,
+                  31.896441600000003
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  29.334108199999996,
+                  28.684391599999998,
+                  30.560641800000003,
+                  30.143958199999997,
+                  28.1838416,
+                  31.6073416,
+                  31.4978834
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  189.727625,
+                  171.791209,
+                  169.87025,
+                  190.769291,
+                  183.17575,
+                  174.741875,
+                  170.825
+                ],
+                "recordThreadCPUMilliseconds": [
+                  185.850833,
+                  168.208167,
+                  166.05075,
+                  185.763875,
+                  178.489833,
+                  168.42675,
+                  166.720666
+                ],
+                "seriesMilliseconds": [
+                  94.5026,
+                  89.727975,
+                  91.7720834,
+                  98.055675,
+                  91.05516659999999,
+                  98.2820666,
+                  93.4745332
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  94.4817666,
+                  89.713125,
+                  91.73325,
+                  98.0125832,
+                  91.04775,
+                  98.1877168,
+                  93.4126918
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          }
+        }
+      ],
+      "hostAdmission": {
+        "passed": true,
+        "maximumSeconds": 420,
+        "requiredConsecutiveSamples": 9,
+        "sampleIntervalSeconds": 15,
+        "maximumNormalizedLoad": 1.0,
+        "samples": [
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:11:47.008448+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                4.82763671875,
+                14.60986328125,
+                11.93359375
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 0.06981354100003045,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:12:02.177423+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                3.7578125,
+                13.8935546875,
+                11.72412109375
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 15.23873095800002,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:12:17.419518+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                2.9248046875,
+                13.21240234375,
+                11.5185546875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 30.48087879100001,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 1
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:12:32.496235+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                2.51025390625,
+                12.6142578125,
+                11.333984375
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 45.55757337500006,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 2
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:12:47.602459+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                2.11376953125,
+                12.029296875,
+                11.146484375
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 60.66381479100005,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 3
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:13:02.842434+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.64501953125,
+                11.439453125,
+                10.951171875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 75.90373695799997,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 4
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:13:17.961054+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.513671875,
+                10.92822265625,
+                10.77685546875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 91.02240262500004,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 5
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:13:33.210212+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.47314453125,
+                10.45751953125,
+                10.611328125
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 106.27152370800002,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 6
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:13:48.284297+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.29345703125,
+                9.9775390625,
+                10.43701171875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 121.34559962499998,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 7
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:14:03.357398+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.23974609375,
+                9.53759765625,
+                10.271484375
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 136.41870137500007,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 8
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-22T05:14:18.462388+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                0.96435546875,
+                9.06982421875,
+                10.09130859375
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 151.52399275000005,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 9
+          }
+        ],
+        "elapsedSeconds": 151.52525724999998
+      }
+    },
+    {
+      "name": "usage-history-performance-40680677913-1",
+      "url": "https://github.com/hemsoft-dev/codexbar-ios/actions/runs/40680677913",
+      "recordingFormat": "uniform-retained-state-v1",
+      "metadata": {
+        "startedAt": "2026-10-28T12:19:41.922437+00:00",
+        "baselineRevision": "3395ee6094ce8e4199577f7ede493e3a50ee1269",
+        "candidateRevision": "fd3f1217f6a441fb5c195ebe83a482256b632d72",
+        "candidateDirty": false,
+        "hardware": "VirtualMac2,1",
+        "cpu": "Apple M1 (Virtual)",
+        "memoryBytes": "7516192768",
+        "architecture": "arm64",
+        "operatingSystem": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83",
+        "swift": "Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)\nTarget: arm64-apple-macosx26.0",
+        "xcode": "Xcode 26.6\nBuild version 17F113",
+        "configuration": "release",
+        "timezone": "UTC",
+        "benchmarkSHA256": "482d0b4cb73b5a5640c6534ea0b2faa3c7d6092002f0a6aea0f71b231d2c8875",
+        "slowdownProof": false,
+        "requiredQoSClass": 25,
+        "deterministicHashing": true,
+        "policy": {
+          "revision": "3395ee6094ce8e4199577f7ede493e3a50ee1269",
+          "maximumLatencyRatio": 1.25,
+          "maximumRunCV": 0.15,
+          "maximumSerializedRatio": 1.0,
+          "maximumGrowthBytesPerAccount": 0
+        }
+      },
+      "result": {
+        "passed": true,
+        "findings": [],
+        "timings": [
+          {
+            "accounts": 1,
+            "metric": "recordMilliseconds",
+            "referenceMedians": [
+              9.205958,
+              8.719125,
+              9.055125
+            ],
+            "candidateMedians": [
+              9.1445,
+              8.983167,
+              9.467292
+            ],
+            "ratios": [
+              0.9933241059757171,
+              1.0302830845985118,
+              1.0455175384105686
+            ],
+            "medianRatio": 1.0302830845985118,
+            "noiseCV": 0.02262595902649463,
+            "withinRunCV": {
+              "reference": [
+                0.2876237334061028,
+                0.02005705002007734,
+                0.018016863794107035
+              ],
+              "candidate": [
+                0.03314488383427818,
+                0.09089290057902345,
+                0.015396132709069539
+              ]
+            }
+          },
+          {
+            "accounts": 1,
+            "metric": "seriesMilliseconds",
+            "referenceMedians": [
+              2.6056916,
+              2.4693584,
+              2.5403583999999997
+            ],
+            "candidateMedians": [
+              2.7116834,
+              2.7315584,
+              2.7777166
+            ],
+            "ratios": [
+              1.0406770317715266,
+              1.106181427531945,
+              1.0934349263474006
+            ],
+            "medianRatio": 1.0934349263474006,
+            "noiseCV": 0.02193204254543374,
+            "withinRunCV": {
+              "reference": [
+                0.06842778684773933,
+                0.021326951805822406,
+                0.055657623465925836
+              ],
+              "candidate": [
+                0.032089097900893634,
+                0.14170885237816197,
+                0.01593678883266612
+              ]
+            }
+          },
+          {
+            "accounts": 10,
+            "metric": "recordMilliseconds",
+            "referenceMedians": [
+              96.472,
+              84.628416,
+              92.909084
+            ],
+            "candidateMedians": [
+              85.962375,
+              85.058792,
+              90.84675
+            ],
+            "ratios": [
+              0.8910603594825441,
+              1.0050854786174894,
+              0.9778026656683001
+            ],
+            "medianRatio": 0.9778026656683001,
+            "noiseCV": 0.05431938985175511,
+            "withinRunCV": {
+              "reference": [
+                0.0711043627834999,
+                0.02521623644035595,
+                0.10968006893560237
+              ],
+              "candidate": [
+                0.011170033162224887,
+                0.017622968874742517,
+                0.0633634051855524
+              ]
+            }
+          },
+          {
+            "accounts": 10,
+            "metric": "seriesMilliseconds",
+            "referenceMedians": [
+              32.7229666,
+              29.74905,
+              33.1667584
+            ],
+            "candidateMedians": [
+              31.4682666,
+              30.910000000000004,
+              33.943683199999995
+            ],
+            "ratios": [
+              0.9616568994083806,
+              1.039024775581069,
+              1.023424803552704
+            ],
+            "medianRatio": 1.023424803552704,
+            "noiseCV": 0.047597087839239896,
+            "withinRunCV": {
+              "reference": [
+                0.08287251457741694,
+                0.009405305840308707,
+                0.08706447700152704
+              ],
+              "candidate": [
+                0.018986788621182266,
+                0.01725937387954375,
+                0.03632019917213723
+              ]
+            }
+          },
+          {
+            "accounts": 25,
+            "metric": "recordMilliseconds",
+            "referenceMedians": [
+              187.745334,
+              187.720625,
+              187.159417
+            ],
+            "candidateMedians": [
+              193.509708,
+              214.056,
+              194.895208
+            ],
+            "ratios": [
+              1.0307031545188758,
+              1.1402902584625423,
+              1.0413326303532993
+            ],
+            "medianRatio": 1.0413326303532993,
+            "noiseCV": 0.04668913405245451,
+            "withinRunCV": {
+              "reference": [
+                0.04253194257597832,
+                0.03362036812340593,
+                0.027167444439462493
+              ],
+              "candidate": [
+                0.025736837990863206,
+                0.09839472950929101,
+                0.0620463836497805
+              ]
+            }
+          },
+          {
+            "accounts": 25,
+            "metric": "seriesMilliseconds",
+            "referenceMedians": [
+              98.6028334,
+              92.4421668,
+              94.58122499999999
+            ],
+            "candidateMedians": [
+              102.68902499999999,
+              121.7031418,
+              97.74634160000001
+            ],
+            "ratios": [
+              1.0414409146177739,
+              1.3165327686801906,
+              1.0334645337909296
+            ],
+            "medianRatio": 1.0414409146177739,
+            "noiseCV": 0.09617655763884413,
+            "withinRunCV": {
+              "reference": [
+                0.08251659461534668,
+                0.027328174236768216,
+                0.09941562641921753
+              ],
+              "candidate": [
+                0.09554826846728783,
+                0.1915866883750347,
+                0.15342611105866794
+              ]
+            }
+          }
+        ]
+      },
+      "artifactFilesSHA256": {
+        "1-candidate-after-machine.json": "81ee0bf4afacee0419c1bf62d14bfa48ccd555afec9684e85df7abdf2cb0b72e",
+        "1-candidate-before-machine.json": "9bc0101221e33d3a6071ba0aca8872d98a99b4654be71237618a5f7dae531d32",
+        "1-candidate.json": "4c5fa8f2690a6f6a07575f6a6b8e0294df3fb2aeaa3c6cf9bca308b1d28529e1",
+        "1-candidate.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "1-reference-after-machine.json": "25aef731b646a696442b796bdff80360858040b25d731d1e116c3ae392c53ed8",
+        "1-reference-before-machine.json": "5324b788210899c28de41b1926e644ccb53b4a04c0395a1a9f5eeb5ed278ac39",
+        "1-reference.json": "843c6636c5b6cc65b0ae79185c80b29f929bb58a4cdffad7b0b26936724f2f3c",
+        "1-reference.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2-candidate-after-machine.json": "80146bec179485a9b5342861a2abfef64509ac754f757755a06ef050ab65ea8e",
+        "2-candidate-before-machine.json": "9ad7098e06481a2a1ff3559acefb30ab767e0d15c26593cbd7e9be9081b29fd6",
+        "2-candidate.json": "75458c4568ff51e05b4aeee14cf99055cfaba501bb781608de2ff4076c057013",
+        "2-candidate.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2-reference-after-machine.json": "c772c14e121dfd87cd5392011893fa8947b8d931416864e9868e6541a5eebefa",
+        "2-reference-before-machine.json": "73a1b53bdbccae4357cd0e8e4a1c1c18573990312947585ca1a8e81e5fc42e0d",
+        "2-reference.json": "d64dc3d00bc0f0b09075c975fb6762a091193123f71a724e5173dc76a2e9aaa7",
+        "2-reference.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "3-candidate-after-machine.json": "94dfc4d78e8ac14d10ab494879deca02700816e008c68ffc4139114257f95be2",
+        "3-candidate-before-machine.json": "9561b26732f363a11ffac2a812aa7b8de9d46e1ad199294f829639cb39a8dc40",
+        "3-candidate.json": "99c1608b7a61fe7385e92810232c7c9d4e099f3dade7fef26e1c727036b7cc19",
+        "3-candidate.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "3-reference-after-machine.json": "d3da636bc01d4b5f57e59cd68978df2f91e8def20fec91127c6144f083fed78e",
+        "3-reference-before-machine.json": "228c8212876cea765623244ae149b07da0ec68d76526845cc87df51b692a7a9e",
+        "3-reference.json": "05c134a6a85bc23eb006fa9fdf90de32fbcf7f8b4c944c6a1ed503b8e23295fc",
+        "3-reference.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "candidate-build.log": "7bd4ddeabc19ef0ea6c48ee11fc2d0e301adc07467e62a8835222dbbb04f767c",
+        "host-admission.json": "4e3f839897f0677253fc81cb0e6e272e7f60280350683af1e8880509650a7ef7",
+        "metadata.json": "92d693b145f586b72e7b3c2a12a7b101d4ab0a90ba729f4adf09bbf9f69dd817",
+        "reference-build.log": "7ec45d718993ccb917663df4c3680d1701836acf762b1055157413a83c4db177",
+        "result.json": "0625fe088aab5ac49daaf69fa4ec17f76ce0fb20e17eea119951f80fda699ee7"
+      },
+      "runs": [
+        {
+          "reference": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  15.408334,
+                  8.387292,
+                  9.205958,
+                  8.791375,
+                  9.143875,
+                  17.302083,
+                  11.192709
+                ],
+                "recordThreadCPUMilliseconds": [
+                  14.017375,
+                  7.923625,
+                  8.701458,
+                  8.334792,
+                  8.650334,
+                  16.337792,
+                  10.60975
+                ],
+                "seriesMilliseconds": [
+                  2.4682334,
+                  2.4797834,
+                  2.5689332,
+                  2.5374166,
+                  2.6056916,
+                  3.04255,
+                  2.7159915999999997
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.4692250000000002,
+                  2.4805918,
+                  2.5710249999999997,
+                  2.53885,
+                  2.6075582,
+                  3.0443666,
+                  2.7181
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  89.550209,
+                  83.985208,
+                  94.02275,
+                  84.944541,
+                  105.454208,
+                  100.3265,
+                  96.472
+                ],
+                "recordThreadCPUMilliseconds": [
+                  86.065916,
+                  81.242,
+                  84.665792,
+                  82.592084,
+                  101.459458,
+                  98.559792,
+                  93.500875
+                ],
+                "seriesMilliseconds": [
+                  29.283475,
+                  29.7770916,
+                  30.2923832,
+                  29.71195,
+                  32.7229666,
+                  36.488074999999995,
+                  35.635625
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  29.265358400000004,
+                  29.779374999999998,
+                  30.2807082,
+                  29.71055,
+                  32.5873,
+                  35.9515418,
+                  34.730525
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  220.028334,
+                  193.088584,
+                  185.963958,
+                  206.733292,
+                  187.745334,
+                  188.054208,
+                  184.900583
+                ],
+                "recordThreadCPUMilliseconds": [
+                  202.459167,
+                  186.789666,
+                  179.930292,
+                  200.993209,
+                  182.161417,
+                  180.551834,
+                  180.383541
+                ],
+                "seriesMilliseconds": [
+                  109.4457584,
+                  97.368825,
+                  98.6028334,
+                  118.8514584,
+                  99.6088916,
+                  97.5473166,
+                  96.1427084
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  107.50654159999999,
+                  97.3380168,
+                  98.57480000000001,
+                  115.84725840000002,
+                  99.5123332,
+                  97.5290332,
+                  96.0355834
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          },
+          "candidate": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  10.159167,
+                  9.009791,
+                  8.846959,
+                  8.718458,
+                  9.375667,
+                  9.1445,
+                  9.513834
+                ],
+                "recordThreadCPUMilliseconds": [
+                  9.078458,
+                  8.484125,
+                  8.304166,
+                  8.215708,
+                  8.558542,
+                  8.555666,
+                  8.84475
+                ],
+                "seriesMilliseconds": [
+                  2.805075,
+                  2.6802918,
+                  2.6411584,
+                  2.6065416,
+                  2.8429583999999997,
+                  2.7116834,
+                  2.78145
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.8062334,
+                  2.6820168,
+                  2.6419,
+                  2.608025,
+                  2.84465,
+                  2.71345,
+                  2.7826581999999997
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  90.916333,
+                  96.708625,
+                  85.890625,
+                  84.438417,
+                  85.962375,
+                  87.070959,
+                  87.0265
+                ],
+                "recordThreadCPUMilliseconds": [
+                  88.370875,
+                  94.243792,
+                  83.224167,
+                  82.20625,
+                  83.727042,
+                  84.600917,
+                  84.139083
+                ],
+                "seriesMilliseconds": [
+                  34.168150000000004,
+                  31.5208416,
+                  30.9909334,
+                  31.1646834,
+                  31.9448416,
+                  32.657625,
+                  31.4682666
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  34.1702,
+                  31.5187834,
+                  30.9924666,
+                  31.13005,
+                  31.9452,
+                  32.6410082,
+                  31.4698916
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  189.081333,
+                  188.962625,
+                  204.109416,
+                  193.509708,
+                  197.474292,
+                  192.174542,
+                  189.715333
+                ],
+                "recordThreadCPUMilliseconds": [
+                  185.06425,
+                  184.785917,
+                  197.383708,
+                  186.777166,
+                  192.7825,
+                  184.91775,
+                  185.161125
+                ],
+                "seriesMilliseconds": [
+                  103.4045834,
+                  102.55118339999999,
+                  100.0098584,
+                  105.76590819999998,
+                  102.05521680000001,
+                  102.68902499999999,
+                  127.93710819999998
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  103.35775000000001,
+                  102.54907499999999,
+                  99.9683832,
+                  105.68215000000001,
+                  102.01061680000001,
+                  102.65003340000001,
+                  125.74713320000001
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          }
+        },
+        {
+          "reference": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  15.177791,
+                  9.369791,
+                  8.719125,
+                  8.744083,
+                  9.07475,
+                  8.623875,
+                  8.572292
+                ],
+                "recordThreadCPUMilliseconds": [
+                  14.161292,
+                  8.809416,
+                  8.180459,
+                  8.175833,
+                  8.532834,
+                  8.1045,
+                  8.0235
+                ],
+                "seriesMilliseconds": [
+                  2.63405,
+                  2.4847666,
+                  2.4144666,
+                  2.4693584,
+                  2.4417834,
+                  2.4861666,
+                  2.5700332
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.6353416,
+                  2.4855332,
+                  2.4150834,
+                  2.4701334,
+                  2.4424416,
+                  2.4867916,
+                  2.5711582
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  85.519542,
+                  95.664166,
+                  86.686709,
+                  84.628416,
+                  87.74525,
+                  82.178834,
+                  82.865625
+                ],
+                "recordThreadCPUMilliseconds": [
+                  81.781459,
+                  85.5535,
+                  83.9255,
+                  81.086167,
+                  84.894,
+                  79.595542,
+                  80.510167
+                ],
+                "seriesMilliseconds": [
+                  29.4324,
+                  28.686525,
+                  30.0589668,
+                  29.659125,
+                  29.8448916,
+                  29.2137,
+                  29.74905
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  29.4336082,
+                  28.684633400000003,
+                  30.048341599999997,
+                  29.6614666,
+                  29.847649999999998,
+                  29.183024999999997,
+                  29.750066600000004
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  191.516917,
+                  191.861042,
+                  177.220791,
+                  195.597459,
+                  192.268875,
+                  185.2685,
+                  187.720625
+                ],
+                "recordThreadCPUMilliseconds": [
+                  187.500417,
+                  188.008875,
+                  172.839459,
+                  191.160875,
+                  188.053333,
+                  180.819792,
+                  183.306167
+                ],
+                "seriesMilliseconds": [
+                  105.12375,
+                  96.32554999999999,
+                  91.98085,
+                  89.8768,
+                  92.4421668,
+                  95.75404160000001,
+                  96.8167916
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  104.7544334,
+                  96.27285,
+                  91.9662416,
+                  89.8018416,
+                  92.4074584,
+                  95.727475,
+                  96.8182
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          },
+          "candidate": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  9.353625,
+                  8.909708,
+                  8.933375,
+                  8.799292,
+                  9.098917,
+                  8.983167,
+                  11.070875
+                ],
+                "recordThreadCPUMilliseconds": [
+                  8.759791,
+                  8.44,
+                  8.425042,
+                  8.252083,
+                  8.617334,
+                  8.467458,
+                  9.775667
+                ],
+                "seriesMilliseconds": [
+                  2.7113668,
+                  2.6698834000000002,
+                  2.6255918,
+                  2.7315584,
+                  2.6955416,
+                  2.7408,
+                  3.72185
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.7131666,
+                  2.671725,
+                  2.626325,
+                  2.7259333999999997,
+                  2.696825,
+                  2.7423165999999997,
+                  3.7194668
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  82.747666,
+                  83.676917,
+                  85.058792,
+                  87.377791,
+                  82.682,
+                  85.013041,
+                  85.569125
+                ],
+                "recordThreadCPUMilliseconds": [
+                  80.848834,
+                  81.823792,
+                  83.095833,
+                  84.979333,
+                  80.796916,
+                  81.620625,
+                  83.534833
+                ],
+                "seriesMilliseconds": [
+                  30.7960666,
+                  31.3212668,
+                  30.6355834,
+                  30.674475,
+                  31.9276334,
+                  30.910000000000004,
+                  31.693624999999997
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  30.7598666,
+                  31.3237082,
+                  30.633575,
+                  30.6763834,
+                  31.9102666,
+                  30.9119668,
+                  31.6831416
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  185.564792,
+                  181.138167,
+                  193.436625,
+                  191.915041,
+                  248.989875,
+                  223.522875,
+                  214.056
+                ],
+                "recordThreadCPUMilliseconds": [
+                  181.608125,
+                  177.22725,
+                  188.989292,
+                  182.662791,
+                  226.446542,
+                  207.327125,
+                  201.856458
+                ],
+                "seriesMilliseconds": [
+                  100.184,
+                  98.8251084,
+                  105.1763416,
+                  176.9007666,
+                  121.7031418,
+                  122.87393340000001,
+                  118.7482166
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  100.1102832,
+                  98.80850840000001,
+                  105.030425,
+                  149.2225332,
+                  115.50979179999999,
+                  118.215625,
+                  114.068425
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          }
+        },
+        {
+          "reference": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  9.610167,
+                  8.8625,
+                  9.055125,
+                  8.828917,
+                  8.993375,
+                  9.249166,
+                  9.264375
+                ],
+                "recordThreadCPUMilliseconds": [
+                  8.828875,
+                  8.304916,
+                  8.525583,
+                  8.228916,
+                  8.416625,
+                  8.689292,
+                  8.652
+                ],
+                "seriesMilliseconds": [
+                  2.5355584,
+                  2.6853666,
+                  2.3421,
+                  2.7891749999999997,
+                  2.5403583999999997,
+                  2.540375,
+                  2.5390334
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.5367916,
+                  2.68675,
+                  2.3426,
+                  2.7834084,
+                  2.5412500000000002,
+                  2.5410584,
+                  2.5406084
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  86.106959,
+                  84.247625,
+                  80.1405,
+                  109.955708,
+                  92.909084,
+                  96.211709,
+                  85.489959
+                ],
+                "recordThreadCPUMilliseconds": [
+                  82.944625,
+                  79.65825,
+                  77.032125,
+                  107.189459,
+                  90.548208,
+                  94.454,
+                  83.620834
+                ],
+                "seriesMilliseconds": [
+                  30.2801834,
+                  28.128916600000004,
+                  36.821916599999994,
+                  34.4669918,
+                  33.1667584,
+                  31.4296,
+                  28.3359
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  30.2750582,
+                  28.1080916,
+                  36.701516600000005,
+                  34.2227668,
+                  33.1003584,
+                  31.4290832,
+                  28.325591600000003
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  204.622375,
+                  179.552875,
+                  187.159417,
+                  186.2705,
+                  193.959833,
+                  187.94,
+                  178.099
+                ],
+                "recordThreadCPUMilliseconds": [
+                  200.196708,
+                  174.792291,
+                  178.133792,
+                  179.338458,
+                  187.877291,
+                  183.6805,
+                  174.541625
+                ],
+                "seriesMilliseconds": [
+                  94.5979334,
+                  104.148025,
+                  91.5061834,
+                  93.2485334,
+                  118.2283332,
+                  94.58122499999999,
+                  96.82535820000001
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  94.595325,
+                  104.144075,
+                  91.4897082,
+                  93.2107668,
+                  117.76023339999999,
+                  94.5529084,
+                  96.80532500000001
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          },
+          "candidate": {
+            "configuration": "release",
+            "deterministicHashing": true,
+            "fixtureVersion": 1,
+            "hashProbe": -7542346336776785169,
+            "measuredBatches": 5,
+            "qosClass": 25,
+            "scenarios": [
+              {
+                "accounts": 1,
+                "recordMilliseconds": [
+                  9.552667,
+                  9.332583,
+                  9.467292,
+                  9.380584,
+                  9.293,
+                  9.722542,
+                  9.531542
+                ],
+                "recordThreadCPUMilliseconds": [
+                  8.764834,
+                  8.681667,
+                  8.783209,
+                  8.662916,
+                  8.650166,
+                  9.042125,
+                  8.775042
+                ],
+                "seriesMilliseconds": [
+                  2.7817582,
+                  2.8475332,
+                  2.7236418000000002,
+                  2.7588833999999998,
+                  2.7777166,
+                  2.8237332,
+                  2.847175
+                ],
+                "seriesPointCount": 11515,
+                "seriesThreadCPUMilliseconds": [
+                  2.7826334,
+                  2.8487834,
+                  2.724825,
+                  2.7604084,
+                  2.77895,
+                  2.8248916,
+                  2.8484582
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 180,
+                  "serializedBytes": 218162,
+                  "snapshots": 240
+                }
+              },
+              {
+                "accounts": 10,
+                "recordMilliseconds": [
+                  98.738167,
+                  100.522,
+                  96.593916,
+                  87.712292,
+                  88.985166,
+                  90.84675,
+                  103.763417
+                ],
+                "recordThreadCPUMilliseconds": [
+                  93.209292,
+                  96.79825,
+                  92.568417,
+                  84.294708,
+                  85.532375,
+                  86.450708,
+                  98.865208
+                ],
+                "seriesMilliseconds": [
+                  33.78475,
+                  33.6902166,
+                  36.485775000000004,
+                  33.5497918,
+                  33.943683199999995,
+                  33.700675000000004,
+                  36.0769582
+                ],
+                "seriesPointCount": 115150,
+                "seriesThreadCPUMilliseconds": [
+                  33.7608166,
+                  33.6797332,
+                  36.468275,
+                  33.5012082,
+                  33.937275,
+                  33.7027584,
+                  36.0784666
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 1800,
+                  "serializedBytes": 2181602,
+                  "snapshots": 2400
+                }
+              },
+              {
+                "accounts": 25,
+                "recordMilliseconds": [
+                  165.34075,
+                  182.518958,
+                  175.854583,
+                  195.431958,
+                  179.303667,
+                  208.312834,
+                  194.895208
+                ],
+                "recordThreadCPUMilliseconds": [
+                  161.48475,
+                  177.15475,
+                  171.835541,
+                  190.839167,
+                  175.229709,
+                  203.607666,
+                  190.2075
+                ],
+                "seriesMilliseconds": [
+                  86.4290082,
+                  94.0279418,
+                  95.4742,
+                  97.74634160000001,
+                  93.380075,
+                  113.49780840000001,
+                  137.2357082
+                ],
+                "seriesPointCount": 287875,
+                "seriesThreadCPUMilliseconds": [
+                  86.427775,
+                  94.0295082,
+                  95.4673418,
+                  97.7389,
+                  93.36313340000001,
+                  113.473,
+                  136.64580840000002
+                ],
+                "retainedObservationCount": 47,
+                "retainedState": {
+                  "dailySnapshots": 4500,
+                  "serializedBytes": 5454002,
+                  "snapshots": 6000
+                }
+              }
+            ],
+            "seriesIterationsPerBatch": 5,
+            "timeZone": "UTC",
+            "warmupBatches": 2
+          }
+        }
+      ],
+      "hostAdmission": {
+        "passed": true,
+        "maximumSeconds": 420,
+        "requiredConsecutiveSamples": 9,
+        "sampleIntervalSeconds": 15,
+        "maximumNormalizedLoad": 1.0,
+        "samples": [
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:23:35.976532+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                14.33935546875,
+                26.23828125,
+                15.61474609375
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 0.10948795799998834,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:23:51.149507+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                12.65185546875,
+                25.2919921875,
+                15.462890625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 15.274877124999989,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:24:06.276762+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                9.92236328125,
+                24.06884765625,
+                15.19775390625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 30.394588999999996,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:24:21.385906+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                8.76171875,
+                23.1181640625,
+                15.0126953125
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 45.49619233300001,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:24:36.497117+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                7.26318359375,
+                22.0830078125,
+                14.7841796875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 60.59986162499996,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:24:51.713892+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                7.330078125,
+                21.375,
+                14.6591796875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 75.816499125,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:25:06.837566+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                5.84716796875,
+                20.35986328125,
+                14.41455078125
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 90.94014949999996,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:25:22.049514+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                4.55126953125,
+                19.36181640625,
+                14.16259765625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 106.152106833,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:25:37.247496+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                3.70263671875,
+                18.44580078125,
+                13.9267578125
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 121.35008779099996,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:25:52.349955+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                3.27001953125,
+                17.62353515625,
+                13.71142578125
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 136.452506083,
+            "valid": true,
+            "quiet": false,
+            "consecutiveQuietSamples": 0
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:26:07.524272+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                2.98779296875,
+                16.857421875,
+                13.50634765625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 151.62685291599996,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 1
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:26:22.724218+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                2.48583984375,
+                16.06396484375,
+                13.28076171875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 166.82678675,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 2
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:26:37.867226+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.9345703125,
+                15.27587890625,
+                13.0478515625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 181.96983662499997,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 3
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:26:52.996106+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.84423828125,
+                14.60693359375,
+                12.84765625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 197.09872174999998,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 4
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:27:08.185360+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.58203125,
+                13.92333984375,
+                12.6337890625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 212.28793925000002,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 5
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:27:23.342560+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.45849609375,
+                13.2900390625,
+                12.43017578125
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 227.44510858299998,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 6
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:27:38.469817+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.43603515625,
+                12.7041015625,
+                12.2353515625
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 242.57238637499995,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 7
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:27:53.595988+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.5048828125,
+                12.1640625,
+                12.05029296875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 257.698551458,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 8
+          },
+          {
+            "observation": {
+              "capturedAt": "2026-10-28T12:28:08.729036+00:00",
+              "logicalCPUs": 3,
+              "loadAverage": [
+                1.1708984375,
+                11.56787109375,
+                11.83935546875
+              ],
+              "busyProcesses": []
+            },
+            "elapsedSeconds": 272.831600708,
+            "valid": true,
+            "quiet": true,
+            "consecutiveQuietSamples": 9
+          }
+        ],
+        "elapsedSeconds": 272.8317109999999
+      }
+    }
+  ]
+}
