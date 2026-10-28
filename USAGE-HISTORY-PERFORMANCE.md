@@ -117,18 +117,20 @@ repeatable user journey for a separate memory investigation, following Apple's
 | Physical iPhone/iPad and watchOS | Not benchmarked here | No inferred performance result or device latency claim |
 
 The workflow `Usage history performance` runs only by manual dispatch. Its
-`Usage history Release budget` job is not a required merge check. Automatic PR
-and scheduled runs are disabled while
-[issue #325](https://github.com/HemSoft/codexbar-ios/issues/325) investigates
-measurement variability and evaluates CI policy. Existing correctness checks
-remain required. See [CI-POLICY.md](CI-POLICY.md) for the measured time budget,
+`Usage history Release budget` job is not a required merge check. There are no
+schedule, push, pull-request or path-filter triggers. New commits do not replace
+the latest main result; a maintainer must dispatch a new run. This preserves the
+manual-workload policy adopted in
+[issue #325](https://github.com/hemsoft-dev/codexbar-ios/issues/325).
+See [CI-POLICY.md](CI-POLICY.md) for the measured time budget,
 live required checks and manual failure ownership.
 
-Select a reviewed branch in Actions > Usage history performance > Run workflow,
+Select a reviewed branch in
+[Actions > Usage history performance > Run workflow](https://github.com/hemsoft-dev/codexbar-ios/actions/workflows/usage-history-performance.yml),
 or run:
 
 ```sh
-gh workflow run usage-history-performance.yml --repo HemSoft/codexbar-ios --ref <reviewed-branch>
+gh workflow run usage-history-performance.yml --repo hemsoft-dev/codexbar-ios --ref <reviewed-branch>
 ```
 
 Run it when reviewing history storage, chart generation or benchmark changes,
@@ -470,4 +472,89 @@ variability, serialization and retention thresholds unchanged. Admission is
 not a guarantee of stability for the rest of the experiment. Later noise
 still fails the gate; no measurements are discarded or selected for a pass.
 The manual workflow timeout and all automatic CI work remain unchanged.
-Hosted verification of this adjustment is pending.
+The October 28 qualification below verifies the combined admission, hashing and
+scheduling controls on one hosted main run. It does not isolate admission's
+effect or establish repeatability on every runner.
+
+## Main qualification, October 28, 2026
+
+[Issue #531](https://github.com/hemsoft-dev/codexbar-ios/issues/531) investigated
+the stale red main result from
+[run 39717553452](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39717553452).
+That run finished on October 21 at 11:47 p.m. EDT, October 22 in the API's UTC
+date, at `c77528d1da3cc6009ed8ff5b80d974835c6d6951`. It failed only with four
+INCONCLUSIVE findings. Neither latency nor retained-data budgets failed.
+Reference medians varied as well as candidate medians. For example, one-account
+reference recording medians were 13.093, 8.580 and 8.188 ms, producing the
+22.36% CV that failed that comparison.
+
+[PR #513](https://github.com/hemsoft-dev/codexbar-ios/pull/513) subsequently
+controlled Swift hash seeding and observed scheduling in both benchmark
+processes. Its
+[hosted branch run 39726374605](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39726374605)
+passed at `3ac002e6ea0e61f1c5109d31ed1e136588cc2cf2`. It merged on October 22
+at 1:22 a.m. EDT as `2a9dc53e4b1442d553a5266159dc4f87c09508df`.
+No later main dispatch occurred before this investigation, so the manual-only
+workflow continued to display the earlier failure on main.
+
+[Main run 40680677913](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/40680677913)
+passed on October 28 at 8:31 a.m. EDT at clean revision
+`fd3f1217f6a441fb5c195ebe83a482256b632d72`. This is fresh main qualification
+of the already-landed benchmark repair, not a new production optimization.
+Each cell below reports median candidate/reference latency ratio and the larger
+of the reference and candidate CVs across the three run medians.
+
+| Accounts | Operation | Historical main | Stabilized branch | October 28 main |
+| ---: | --- | ---: | ---: | ---: |
+| 1 | Record | 1.036x / 22.36% | 0.982x / 7.95% | 1.030x / 2.26% |
+| 1 | Series | 1.071x / 20.64% | 1.061x / 7.67% | 1.093x / 2.19% |
+| 10 | Record | 0.995x / 8.64% | 1.091x / 4.31% | 0.978x / 5.43% |
+| 10 | Series | 1.000x / 7.18% | 1.134x / 4.90% | 1.023x / 4.76% |
+| 25 | Record | 1.110x / 19.90% | 1.060x / 3.84% | 1.041x / 4.67% |
+| 25 | Series | 1.144x / 19.62% | 1.127x / 7.02% | 1.041x / 9.62% |
+
+All three runs used the same frozen revision
+`3395ee6094ce8e4199577f7ede493e3a50ee1269`, 1.25x latency ceiling, 15% CV
+ceiling, 1.0x serialized-size ceiling and zero retained-growth allowance.
+They report VirtualMac2,1, Apple M1 Virtual, arm64, macOS 26.6.2 build 25G83,
+Xcode 26.6 build 17F113 and Swift 6.3.3. These identities do not imply the same
+physical runner or identical host load.
+
+The October 28 runner waited 272.83 seconds for admission. One-minute load
+started at 14.34 on three logical CPUs; the final nine observations qualified
+over at least two minutes. All six reports observed QoS class 25 and the same
+deterministic hash probe. All fixture, serialization and retention checks passed.
+
+The diagnosed failure class is measurement variance in the earlier uncontrolled
+benchmark. The artifacts do not isolate random hashing from scheduling or other
+runner effects as the sole cause. There is no demonstrated current usage-history
+regression or evidence that the frozen baseline is wrong. Keep the baseline,
+budgets, sample count and manual triggers unchanged. A future inconclusive run
+still fails and needs its own investigation.
+
+[The qualification recording](scripts/usage-history-performance/main-qualification-2026-10-28.json)
+preserves all seven timings and all retained observations from all 18 processes
+using the existing lossless uniform-state format, plus metadata, original gate
+results, current admission receipt and SHA-256 digests of the downloaded files.
+Build logs, stderr and machine snapshots remain in the linked runs' artifacts
+and the investigation archive. The recordings keep the old failure as failed.
+To replay all three verdicts with the existing evaluator:
+
+```sh
+python3 - <<'PY'
+import json
+import sys
+from pathlib import Path
+sys.path.insert(0, "scripts/usage-history-performance")
+from replay import expand_runs, same_timing_summary
+from run import evaluate
+directory = Path("scripts/usage-history-performance")
+recording = json.loads((directory / "main-qualification-2026-10-28.json").read_text())
+policy = json.loads((directory / "baseline.json").read_text())
+for experiment in recording["experiments"]:
+    assert experiment["metadata"]["policy"] == policy
+    actual = evaluate(expand_runs(experiment), policy)
+    assert same_timing_summary(experiment["result"], actual)
+    print(experiment["name"], actual["passed"], actual["findings"])
+PY
+```

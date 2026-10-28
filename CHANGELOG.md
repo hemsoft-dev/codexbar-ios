@@ -33,6 +33,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Record fresh hosted main qualification of the existing history benchmark
+  controls. Preserve the earlier inconclusive result and paired samples, clarify
+  manual dispatch ownership, and keep the frozen baseline and budgets unchanged.
+  ([#531](https://github.com/hemsoft-dev/codexbar-ios/issues/531))
+
 - Extend the provisional Mac App Store qualification with a universal arm64 and
   x86_64 build that passes its sandboxed self-test under Rosetta 2. The existing
   Apple Development and Apple Distribution identities now sign the qualification
