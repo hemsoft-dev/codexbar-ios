@@ -92,8 +92,9 @@ synthetic fixtures or the local [StoreKit configuration](../StoreKit/CodexBarPro
 
 The purchase failure was observed on Xcode 27.1 with iOS 26.5, not the
 Xcode 26.6 and iOS 26.2 toolchain on which build 5 passed this journey on
-October 19. It is unresolved here and does not affect live purchases. The
-production purchase, trial and Restore checks after `T` remain under #470.
+October 19. Its cause is unknown and unresolved here. It says nothing about
+live purchases either way; no production purchase was tested. The production
+purchase, trial and Restore checks after `T` remain under #470.
 
 ## Remaining for #469
 
