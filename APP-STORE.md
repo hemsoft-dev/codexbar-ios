@@ -2,7 +2,7 @@
 
 This document tracks the work required to ship CodexBar for iOS and iPadOS through TestFlight and App Store review.
 
-Status last reviewed: October 21, 2026
+Status last reviewed: October 29, 2026
 
 ## CodexBar 2.0 policy and preparation
 
@@ -29,6 +29,71 @@ owns the disclosures and draft products;
 qualification, submission, release and the timed price change.
 Keep both issues open until their actual acceptance criteria are complete;
 merged preparation code and saved draft settings do not qualify a release.
+
+### October 29 price transition checkpoint
+
+This is a prepared record for [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
+Hold its PR for the Chief until a fresh readback confirms Free. No Free change
+is claimed by this checkpoint. All Apple calls in this work were GET requests.
+
+At 2:48 PM EDT, `2026-10-29T18:48:15Z`, iTunes lookup returned:
+
+| Country | Version | Download price |
+| --- | --- | --- |
+| [US](https://itunes.apple.com/lookup?id=6787769891&country=us) | 2.0.0 | USD 3.99 |
+| [Canada](https://itunes.apple.com/lookup?id=6787769891&country=ca) | 2.0.0 | CAD 4.99 |
+| [UK](https://itunes.apple.com/lookup?id=6787769891&country=gb) | 2.0.0 | GBP 3.99 |
+| [Germany](https://itunes.apple.com/lookup?id=6787769891&country=de) | 2.0.0 | EUR 3.99 |
+| [Japan](https://itunes.apple.com/lookup?id=6787769891&country=jp) | 2.0.0 | JPY 600 |
+| [Australia](https://itunes.apple.com/lookup?id=6787769891&country=au) | 2.0.0 | AUD 5.99 |
+
+All six report the public release instant October 23, 11:56:39 AM EDT.
+The sales credential returned 403 for the price schedule. An existing local
+app-manager credential returned 200: one manual USA price, customer price
+3.99, null start/end dates; 174 automatic regional prices, no pagination,
+and no zero-price point or future Free entry in either collection.
+This confirms no scheduled Free change at this observation, rather than
+inferring it from the six public prices. Credentials and tokens are excluded.
+Sanitized receipts are in [the checkpoint evidence](docs/evidence/2026-10-29-store-checkpoint.json).
+
+The intended T-minus-72-hour target was October 28, 8 PM EDT and is missed.
+Franz should set Free immediately in
+[App Store Connect pricing](https://appstoreconnect.apple.com/apps/6787769891/distribution/pricing).
+For this incident, the latest conservative decision time is **October 29,
+8 PM EDT**, T minus 48 hours. This preserves the plan's removal window if Free
+cannot be established. Select the earliest available effective date and inspect
+the latest regional start. Do not choose October 31 merely because T falls on
+that local calendar date.
+
+The mathematical last bound is strictly before **October 30, 8 PM EDT** for
+the *latest storefront's effective start*, allowing Apple's stated 24-hour
+display delay. That is not a safe deadline to begin scheduling: regional starts
+vary, and there would be no removal margin. Apple's
+[regional timing guidance](https://developer.apple.com/help/app-store-connect/reference/pricing-and-availability/app-store-pricing-and-availability-start-times-by-country-or-region)
+says already-passed scheduled times take effect immediately but can take up to
+24 hours to display. A universally safe future calendar date cannot be certified
+without the regional preview. If the preview/readback cannot establish Free
+before T, Franz must use the approved removal contingency by October 29, 8 PM
+EDT and verify several storefronts. This task authorizes neither action by agents.
+
+At **October 31, 8 PM EDT**, `2026-11-01T00:00:00Z`, the binary does not change
+the App Store price or grant access based on money charged. A first acquisition
+of build 5 at or after T fails the strict `originalPurchaseDate < T` check and
+the paid-version check, which accepts integer builds through 4 or dotted
+versions below 2.0. Without a separate verified Pro entitlement, that customer
+gets one active account and seven days of history even if Apple charged $3.99.
+They must purchase Pro to unlock Pro features unless support remedies the case.
+Qualifying earlier acquisitions, including deliberate free downloads before T,
+keep lifetime Pro; later reinstalls retain original purchase evidence. T must
+remain fixed. Never raise the price after T.
+
+Before merging this record, append the requested Free date, actual schedule
+readback with regional starts, and fresh zero-price storefront observations.
+The six-country sample does not prove all 175 sale territories. Leave the
+all-storefront and post-T checks open until their evidence exists. Record the
+hosted UI gate as failed, with the historical release decision unverified;
+[the final hosted receipt](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6355906921)
+reports one failure per family. Shipping is not evidence that the gate passed.
 
 ### Product configuration and review handoff
 
@@ -68,9 +133,9 @@ App version `2.0.0`, ID `2c7b9bd4-b877-454d-a5a2-036b25a151f5`, uses build 5
 release. Review submission `af75f0db-4b2c-403d-81e2-c3b14ab05986` was submitted
 on October 22, 2026 at 8:20 AM EDT, `2026-10-22T12:20:11Z`. It holds five
 items: the app version, the CodexBar Pro group version, and the monthly, yearly
-and lifetime versions. The version and all products read back as
-`WAITING_FOR_REVIEW`. Do not prepare or submit another draft; continue from
-review in the [launch sequence](#approved-launch-sequence). The three local
+and lifetime versions. The October 29 GET readback confirms version `READY_FOR_SALE` and all three
+products `APPROVED`. Do not prepare or submit another draft; continue the
+[launch sequence](#approved-launch-sequence). The three local
 StoreKit review screenshots demonstrate app UI and test-configuration prices.
 They do not establish live App Store prices or production original-purchaser
 access.
@@ -134,8 +199,9 @@ Family members of original purchasers must install before October 31, 2026 at
 8:00 PM EDT, `2026-11-01T00:00:00Z`.
 The [support page](SUPPORT.md#codexbar-pro-and-restoring-purchases) explains the
 one-time free lifetime offer-code route for missed cases. No codes are created
-or distributed by this disclosure work. Franz's original-purchase and family
-device checks remain pending; local StoreKit tests do not prove either result.
+or distributed by this disclosure work. Franz confirmed production original-purchaser lifetime Pro on October 25
+([receipt](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6401351346)).
+The family-device check remains pending; local StoreKit tests do not prove it.
 Those production checks belong to Franz and are not prerequisites for
 agent-owned implementation or automated delivery.
 
@@ -175,7 +241,9 @@ approved build while it is Pending Developer Release and submit a replacement
 
 If 2.0 is already distributed and paid distribution cannot end safely before
 `T`, remove it from sale at least 48 hours before `T`. Verify removal in several
-storefronts and keep it off sale until a 2.0.1 with a later cutoff is live.
+storefronts. Since Free may already have reached a region, preserve the compiled
+cutoff and resume acquisition only after Free is verified. A later cutoff must
+not be used to resume paid sales after this distributed release.
 After the Free transition, existing grants stay granted. Do not raise the
 price or extend `T` to restore paid sales; that would also grant lifetime Pro
 to intervening free downloads. If acquisition must stop, remove the app from
@@ -186,13 +254,13 @@ sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.
 | Final candidate and cutoff | Freeze build 5 | Uploaded October 19, 7:12 PM EDT; `VALID` | Not applicable | `62f6d8e` / 2.0.0 (5) / `2026-11-01T00:00:00Z` | None |
 | Exact-candidate qualification | Before release | Local gates passed October 19; hosted gate failed October 19, rerun pending | Not applicable | `62f6d8e` / 2.0.0 (5) | Live provider comparisons remain separate |
 | Manual submission | App 2.0 plus all first products; paid price; no phased release | Submitted October 22, 2026 at 8:20 AM EDT (`2026-10-22T12:20:11Z`); review submission `af75f0db`, Waiting for Review | US$3.99 retained | `62f6d8e` / 2.0.0 (5) / `2026-11-01T00:00:00Z` | Small Business enrollment (optional) |
-| Manual release | No later than `2026-10-26T00:00:00Z` (October 25, 8:00 PM EDT), six full days before T | Pending approval | Record release visibility | Same build | None |
-| Propagation | Wait full 48 hours after release | Pending release | Record checked storefronts and observed 2.0 versions | Record source/build/T | None |
+| Manual release | No later than October 25, 8 PM EDT | Observed public October 23, 11:56:39 AM EDT, `2026-10-23T15:56:39Z`; actor/action timestamp unverified | 2.0.0 in six countries October 29 | Same build | None |
+| Propagation | Wait full 48 hours after release | October 29 readback exceeds 48 hours | US, CA, GB, DE, JP, AU all 2.0.0; not proof of every territory | Same build/T | None |
 | Free schedule | About 72 hours before T; include latest region start | Pending #470 | Verify every storefront Free before T | Record source/build/T and schedule | None |
 | Post-cutoff | After T | Pending launch | Production download, Pro, trial and Restore | Record source/build/T | Original 1.x purchase and family device |
 
 The release ledger stays open through the price transition and post-cutoff
-checks. The following release actions have not been completed:
+checks. Completed and remaining actions follow:
 
 - [x] Freeze build 5 at `62f6d8e` and verify the cutoff, release copy and built
   `2.0.0 (5)` versions.
@@ -207,8 +275,10 @@ checks. The following release actions have not been completed:
 - [x] Archive, export, upload and verify processing, then select that exact build.
 - [x] Submit app version 2.0, the CodexBar Pro subscription group and all three
   products once (review submission `af75f0db`, October 22).
-- [ ] Record approval and manually release no later than `2026-10-26T00:00:00Z`.
-- [ ] Wait 48 hours and record storefront observations serving 2.0.
+- [x] Record approval and observed public distribution before the deadline.
+  [October 23 receipt](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6376812259);
+  the agent did not release the app.
+- [x] Wait 48 hours and record six storefront observations serving 2.0.
 - [ ] Schedule Free, record requested and actual regional times, and verify
   every storefront is Free before T.
 - [ ] Record post-cutoff production checks and Franz's original-purchase and
