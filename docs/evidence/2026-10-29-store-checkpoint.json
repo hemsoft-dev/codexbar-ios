@@ -1,0 +1,1327 @@
+{
+  "checkedAt": "2026-10-29T18:48:15.718191+00:00",
+  "storefronts": [
+    {
+      "country": "us",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=us",
+      "status": 200,
+      "version": "2.0.0",
+      "price": 3.99,
+      "currency": "USD",
+      "formattedPrice": "$3.99",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    },
+    {
+      "country": "ca",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=ca",
+      "status": 200,
+      "version": "2.0.0",
+      "price": 4.99,
+      "currency": "CAD",
+      "formattedPrice": "$4.99",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    },
+    {
+      "country": "gb",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=gb",
+      "status": 200,
+      "version": "2.0.0",
+      "price": 3.99,
+      "currency": "GBP",
+      "formattedPrice": "\u00a33.99",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    },
+    {
+      "country": "de",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=de",
+      "status": 200,
+      "version": "2.0.0",
+      "price": 3.99,
+      "currency": "EUR",
+      "formattedPrice": "3,99\u00a0\u20ac",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    },
+    {
+      "country": "jp",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=jp",
+      "status": 200,
+      "version": "2.0.0",
+      "price": 600.0,
+      "currency": "JPY",
+      "formattedPrice": "\u00a5600",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    },
+    {
+      "country": "au",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=au",
+      "status": 200,
+      "version": "2.0.0",
+      "price": 5.99,
+      "currency": "AUD",
+      "formattedPrice": "$5.99",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    }
+  ],
+  "manualPrices": [
+    {
+      "territory": "USA",
+      "customerPrice": "3.99",
+      "manual": true,
+      "startDate": null,
+      "endDate": null
+    }
+  ],
+  "automaticPrices": [
+    {
+      "territory": "AFG",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "AGO",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "AIA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ALB",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ARE",
+      "customerPrice": "14.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ARG",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ARM",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ATG",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "AUS",
+      "customerPrice": "5.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "AUT",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "AZE",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BEL",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BEN",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BFA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BGR",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BHR",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BHS",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BIH",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BLR",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BLZ",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BMU",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BOL",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BRA",
+      "customerPrice": "24.9",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BRB",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BRN",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BTN",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BWA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CAN",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CHE",
+      "customerPrice": "3.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CHL",
+      "customerPrice": "4990",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CHN",
+      "customerPrice": "28.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CIV",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CMR",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "COD",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "COG",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "COL",
+      "customerPrice": "19900.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CPV",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CRI",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CYM",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CYP",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CZE",
+      "customerPrice": "99.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "DEU",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "DMA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "DNK",
+      "customerPrice": "39.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "DOM",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "DZA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ECU",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "EGY",
+      "customerPrice": "199.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ESP",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "EST",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "FIN",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "FJI",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "FRA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "FSM",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GAB",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GBR",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GEO",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GHA",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GMB",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GNB",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GRC",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GRD",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GTM",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GUY",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "HKG",
+      "customerPrice": "32.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "HND",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "HRV",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "HUN",
+      "customerPrice": "1790",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "IDN",
+      "customerPrice": "79000",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "IND",
+      "customerPrice": "399.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "IRL",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "IRQ",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ISL",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ISR",
+      "customerPrice": "12.9",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ITA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "JAM",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "JOR",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "JPN",
+      "customerPrice": "600",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KAZ",
+      "customerPrice": "2490.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KEN",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KGZ",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KHM",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KNA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KOR",
+      "customerPrice": "6600",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KWT",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LAO",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LBN",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LBR",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LBY",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LCA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LKA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LTU",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LUX",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LVA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MAC",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MAR",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MDA",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MDG",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MDV",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MEX",
+      "customerPrice": "89.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MKD",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MLI",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MLT",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MMR",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MNE",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MNG",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MOZ",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MRT",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MSR",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MUS",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MWI",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MYS",
+      "customerPrice": "19.9",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NAM",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NER",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NGA",
+      "customerPrice": "6900.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NIC",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NLD",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NOR",
+      "customerPrice": "49.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NPL",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NRU",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NZL",
+      "customerPrice": "6.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "OMN",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PAK",
+      "customerPrice": "1100.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PAN",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PER",
+      "customerPrice": "17.9",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PHL",
+      "customerPrice": "249.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PLW",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PNG",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "POL",
+      "customerPrice": "19.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PRT",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PRY",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "QAT",
+      "customerPrice": "14.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ROU",
+      "customerPrice": "19.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "RUS",
+      "customerPrice": "349.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "RWA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SAU",
+      "customerPrice": "17.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SEN",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SGP",
+      "customerPrice": "5.98",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SLB",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SLE",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SLV",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SRB",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "STP",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SUR",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SVK",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SVN",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SWE",
+      "customerPrice": "49.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SWZ",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SYC",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TCA",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TCD",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "THA",
+      "customerPrice": "149.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TJK",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TKM",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TON",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TTO",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TUN",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TUR",
+      "customerPrice": "199.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TWN",
+      "customerPrice": "120",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TZA",
+      "customerPrice": "11900.0",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "UGA",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "UKR",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "URY",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "UZB",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "VCT",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "VEN",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "VGB",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "VNM",
+      "customerPrice": "119000",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "VUT",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "XKS",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "YEM",
+      "customerPrice": "3.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ZAF",
+      "customerPrice": "79.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ZMB",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ZWE",
+      "customerPrice": "4.99",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    }
+  ],
+  "apiStatus": {
+    "salesSchedule": 403,
+    "appManagerSchedule": 200
+  },
+  "pagination": {
+    "manualPrices": {
+      "records": 1,
+      "next": null
+    },
+    "automaticPrices": {
+      "records": 174,
+      "next": null
+    }
+  },
+  "versionState": {
+    "versionString": "2.0.0",
+    "appStoreState": "READY_FOR_SALE",
+    "releaseType": "MANUAL"
+  },
+  "productStates": {
+    "6824195141": {
+      "productId": "com.hemsoft.CodexBarIOS.pro.monthly",
+      "state": "APPROVED"
+    },
+    "6824195239": {
+      "productId": "com.hemsoft.CodexBarIOS.pro.yearly",
+      "state": "APPROVED"
+    },
+    "6824195355": {
+      "productId": "com.hemsoft.CodexBarIOS.pro.lifetime",
+      "state": "APPROVED"
+    }
+  }
+}
