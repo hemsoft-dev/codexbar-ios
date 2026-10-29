@@ -36,7 +36,8 @@ readback completed at **2:55:54 PM EDT**, `2026-10-29T18:55:54Z`, confirms:
 
 - One manual USA price and 174 automatic regional prices, 175 distinct
   territories, exactly matching the prior 175-territory inventory.
-- Every `customerPrice` is `0.0`, equivalent to 0.00 in its local currency.
+- Every `customerPrice` is numeric zero, encoded as `0` or `0.0`, equivalent
+  to 0.00 in its local currency.
 - Every `startDate` is `null` and every `endDate` is `null`. These are current,
   open-ended price records, with no future dated Free entry. The API does not
   expose the exact effective start timestamp; do not substitute the observation
