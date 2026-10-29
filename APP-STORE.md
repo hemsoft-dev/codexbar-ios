@@ -315,6 +315,10 @@ local account identifiers, labels and usage. Apple's
 distinguishes on-device processing and Apple's own collection from developer
 collection. Record the actual privacy-label readback separately; the source
 review alone is not proof of saved App Store Connect answers.
+On October 29, 2026 the published US page showed Data Not Collected; see the
+[acceptance checkpoint](docs/2026-10-29-pro-acceptance.md#live-product-page-and-privacy).
+That check also found the App Store Connect privacy URL still on the old
+`HemSoft/codexbar-ios` path.
 
 The release owner's separate [app-information audit](/tmp/codexbar-470-app-info/audit.json)
 passed 17 checks over seven complete read-only collections observed on

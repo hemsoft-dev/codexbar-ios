@@ -1,6 +1,6 @@
 # CodexBar Privacy Policy
 
-Effective date: October 18, 2026
+Effective date: October 29, 2026
 
 CodexBar Usage Monitor is a local dashboard for monitoring AI provider usage, limits, and API balances. It does not require a CodexBar account and does not send your provider credentials or usage data to HemSoft servers.
 
@@ -58,6 +58,16 @@ Keychain and sent only to `auth.x.ai` and `cli-chat-proxy.grok.com` for
 read-only usage, credits and plan name. CodexBar does not sign in to Cursor
 for this account or read billing pages.
 
+For Cursor subscription renewal dates, CodexBar sends the saved Cursor session
+only to `cursor.com`. There it confirms the signed-in user and asks Cursor to
+open that account's billing portal, which is hosted by Stripe, Cursor's payment
+processor. CodexBar then reads the portal page from `billing.stripe.com` and
+the subscription details from `api.stripe.com` with the temporary portal access
+that Cursor returns. The Cursor session is never sent to Stripe, and the
+temporary portal access stays in memory and is not saved. These requests are
+read-only: CodexBar does not pay for, change or cancel a subscription. If any
+step fails, Cursor usage still refreshes without a renewal date.
+
 For Google Gemini, CodexBar opens Google's website in a new nonpersistent
 browser store for each sign-in attempt. You enter your password on Google's
 page; CodexBar does not inspect the page, password fields, or JavaScript.
@@ -104,6 +114,13 @@ The GitHub Status request does not use or send a GitHub account, token, provider
 account identifier, credential, or usage or balance history. GitHub processes
 the request under its own
 [Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
+
+CodexBar checks for a newer version when it opens, unless a check succeeded
+within the last day, and when you tap Check for Updates in Settings. It
+requests CodexBar's public App Store listing from Apple's `itunes.apple.com`
+lookup service. The request contains only CodexBar's App Store ID, not
+provider credentials, account labels, usage or purchase information. Apple
+processes it under its own [privacy policy](https://www.apple.com/legal/privacy/).
 
 For GitHub Copilot browser sign-in, CodexBar includes public OAuth application
 credentials that identify the Copilot-compatible client. They are not personal
