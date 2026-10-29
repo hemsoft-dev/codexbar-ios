@@ -1,0 +1,1595 @@
+{
+  "checkedAt": "2026-10-29T18:55:54.890078+00:00",
+  "method": "GET",
+  "pagination": {
+    "manualPrices": {
+      "pages": 1,
+      "records": 1
+    },
+    "automaticPrices": {
+      "pages": 1,
+      "records": 174
+    }
+  },
+  "expectedTerritories": [
+    "AFG",
+    "AGO",
+    "AIA",
+    "ALB",
+    "ARE",
+    "ARG",
+    "ARM",
+    "ATG",
+    "AUS",
+    "AUT",
+    "AZE",
+    "BEL",
+    "BEN",
+    "BFA",
+    "BGR",
+    "BHR",
+    "BHS",
+    "BIH",
+    "BLR",
+    "BLZ",
+    "BMU",
+    "BOL",
+    "BRA",
+    "BRB",
+    "BRN",
+    "BTN",
+    "BWA",
+    "CAN",
+    "CHE",
+    "CHL",
+    "CHN",
+    "CIV",
+    "CMR",
+    "COD",
+    "COG",
+    "COL",
+    "CPV",
+    "CRI",
+    "CYM",
+    "CYP",
+    "CZE",
+    "DEU",
+    "DMA",
+    "DNK",
+    "DOM",
+    "DZA",
+    "ECU",
+    "EGY",
+    "ESP",
+    "EST",
+    "FIN",
+    "FJI",
+    "FRA",
+    "FSM",
+    "GAB",
+    "GBR",
+    "GEO",
+    "GHA",
+    "GMB",
+    "GNB",
+    "GRC",
+    "GRD",
+    "GTM",
+    "GUY",
+    "HKG",
+    "HND",
+    "HRV",
+    "HUN",
+    "IDN",
+    "IND",
+    "IRL",
+    "IRQ",
+    "ISL",
+    "ISR",
+    "ITA",
+    "JAM",
+    "JOR",
+    "JPN",
+    "KAZ",
+    "KEN",
+    "KGZ",
+    "KHM",
+    "KNA",
+    "KOR",
+    "KWT",
+    "LAO",
+    "LBN",
+    "LBR",
+    "LBY",
+    "LCA",
+    "LKA",
+    "LTU",
+    "LUX",
+    "LVA",
+    "MAC",
+    "MAR",
+    "MDA",
+    "MDG",
+    "MDV",
+    "MEX",
+    "MKD",
+    "MLI",
+    "MLT",
+    "MMR",
+    "MNE",
+    "MNG",
+    "MOZ",
+    "MRT",
+    "MSR",
+    "MUS",
+    "MWI",
+    "MYS",
+    "NAM",
+    "NER",
+    "NGA",
+    "NIC",
+    "NLD",
+    "NOR",
+    "NPL",
+    "NRU",
+    "NZL",
+    "OMN",
+    "PAK",
+    "PAN",
+    "PER",
+    "PHL",
+    "PLW",
+    "PNG",
+    "POL",
+    "PRT",
+    "PRY",
+    "QAT",
+    "ROU",
+    "RUS",
+    "RWA",
+    "SAU",
+    "SEN",
+    "SGP",
+    "SLB",
+    "SLE",
+    "SLV",
+    "SRB",
+    "STP",
+    "SUR",
+    "SVK",
+    "SVN",
+    "SWE",
+    "SWZ",
+    "SYC",
+    "TCA",
+    "TCD",
+    "THA",
+    "TJK",
+    "TKM",
+    "TON",
+    "TTO",
+    "TUN",
+    "TUR",
+    "TWN",
+    "TZA",
+    "UGA",
+    "UKR",
+    "URY",
+    "USA",
+    "UZB",
+    "VCT",
+    "VEN",
+    "VGB",
+    "VNM",
+    "VUT",
+    "XKS",
+    "YEM",
+    "ZAF",
+    "ZMB",
+    "ZWE"
+  ],
+  "prices": [
+    {
+      "territory": "AFG",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "AGO",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "AIA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ALB",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ARE",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ARG",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ARM",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ATG",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "AUS",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "AUT",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "AZE",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BEL",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BEN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BFA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BGR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BHR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BHS",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BIH",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BLR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BLZ",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BMU",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BOL",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BRA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BRB",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BRN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BTN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "BWA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CAN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CHE",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CHL",
+      "customerPrice": "0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CHN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CIV",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CMR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "COD",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "COG",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "COL",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CPV",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CRI",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CYM",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CYP",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "CZE",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "DEU",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "DMA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "DNK",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "DOM",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "DZA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ECU",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "EGY",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ESP",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "EST",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "FIN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "FJI",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "FRA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "FSM",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GAB",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GBR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GEO",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GHA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GMB",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GNB",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GRC",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GRD",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GTM",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "GUY",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "HKG",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "HND",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "HRV",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "HUN",
+      "customerPrice": "0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "IDN",
+      "customerPrice": "0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "IND",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "IRL",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "IRQ",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ISL",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ISR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ITA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "JAM",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "JOR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "JPN",
+      "customerPrice": "0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KAZ",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KEN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KGZ",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KHM",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KNA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KOR",
+      "customerPrice": "0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "KWT",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LAO",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LBN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LBR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LBY",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LCA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LKA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LTU",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LUX",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "LVA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MAC",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MAR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MDA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MDG",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MDV",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MEX",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MKD",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MLI",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MLT",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MMR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MNE",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MNG",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MOZ",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MRT",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MSR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MUS",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MWI",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "MYS",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NAM",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NER",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NGA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NIC",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NLD",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NOR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NPL",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NRU",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "NZL",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "OMN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PAK",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PAN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PER",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PHL",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PLW",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PNG",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "POL",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PRT",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "PRY",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "QAT",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ROU",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "RUS",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "RWA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SAU",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SEN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SGP",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SLB",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SLE",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SLV",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SRB",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "STP",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SUR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SVK",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SVN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SWE",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SWZ",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "SYC",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TCA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TCD",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "THA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TJK",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TKM",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TON",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TTO",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TUN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TUR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TWN",
+      "customerPrice": "0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "TZA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "UGA",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "UKR",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "URY",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "USA",
+      "customerPrice": "0.0",
+      "kind": "manualPrices",
+      "manual": true,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "UZB",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "VCT",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "VEN",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "VGB",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "VNM",
+      "customerPrice": "0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "VUT",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "XKS",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "YEM",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ZAF",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ZMB",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    },
+    {
+      "territory": "ZWE",
+      "customerPrice": "0.0",
+      "kind": "automaticPrices",
+      "manual": false,
+      "startDate": null,
+      "endDate": null
+    }
+  ],
+  "missingFreeTerritories": [],
+  "conflictingPaidEntries": []
+}

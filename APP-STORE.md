@@ -19,22 +19,54 @@ shows Apple's localized prices and billing periods before purchase. Family
 Sharing is off for all three new products. Eligible original purchasers keep
 lifetime Pro after Apple verifies their purchase.
 
-The app download moves to Free through the launch sequence below. Its existing
-US$3.99 base price remains in place through the initial 2.0 rollout. A free plan
-inside the app does not mean the download is already free. This repository
-preparation does not upload a build, submit App Review, or change download
-pricing. [Issue #469](https://github.com/hemsoft-dev/codexbar-ios/issues/469)
+Free is configured for all 175 territories in the October 29, 2:55 PM EDT
+App Store Connect readback below. Public lookup still shows paid prices in the
+six sampled storefronts during propagation. The earlier US$3.99 rollout remains
+recorded as history. This documentation update makes no App Store Connect write. [Issue #469](https://github.com/hemsoft-dev/codexbar-ios/issues/469)
 owns the disclosures and draft products;
 [issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) owns final
 qualification, submission, release and the timed price change.
 Keep both issues open until their actual acceptance criteria are complete;
 merged preparation code and saved draft settings do not qualify a release.
 
-### October 29 price transition checkpoint
+### October 29 confirmed Free configuration
 
-This is a prepared record for [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
-Hold its PR for the Chief until a fresh readback confirms Free. No Free change
-is claimed by this checkpoint. All Apple calls in this work were GET requests.
+Franz reported completing the Free change at **2:54 PM EDT**. A read-only ASC
+readback completed at **2:55:54 PM EDT**, `2026-10-29T18:55:54Z`, confirms:
+
+- One manual USA price and 174 automatic regional prices, 175 distinct
+  territories, exactly matching the prior 175-territory inventory.
+- Every `customerPrice` is `0.0`, equivalent to 0.00 in its local currency.
+- Every `startDate` is `null` and every `endDate` is `null`. These are current,
+  open-ended price records, with no future dated Free entry. The API does not
+  expose the exact effective start timestamp; do not substitute the observation
+  or Franz's reported action time for a scheduled start date.
+- Both collections fit in one page each, with no next page. There are no paid
+  entries at all, including no conflicting future paid entry. Missing
+  territories: **none**.
+
+The [per-territory receipt](docs/evidence/2026-10-29-free-schedule-readback.json)
+records every territory, price and null date, the expected inventory and page
+counts. All requests were GETs through the existing app-manager credential.
+No ASC state was changed by this agent.
+
+The [six-country public lookup receipt](docs/evidence/2026-10-29-storefronts-after-schedule.json)
+still reports paid 2.0.0 in US, CA, GB, DE, JP and AU at this checkpoint. The
+lookup batch began at 2:55:54 PM EDT after the schedule readback. A correct ASC
+schedule does not prove public display propagation has completed. The requested
+follow-ups are October 29 at 8 PM EDT and October 30 at 9 AM EDT. Report the
+first observed Free timestamp per sampled country; the exact display-change
+time and all-territory public visibility remain unverified.
+
+The earlier hold for an ASC Free readback is satisfied. The Chief owns guarded
+merge after clean final-head review and required SwiftLint. Public Free
+verification and all post-cutoff production checks remain open under
+[#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
+
+### October 29 pre-change checkpoint, retained history
+
+This earlier checkpoint observed paid pricing before Franz's action above.
+All Apple calls in this work were GET requests.
 
 At 2:48 PM EDT, `2026-10-29T18:48:15Z`, iTunes lookup returned:
 
@@ -57,8 +89,9 @@ inferring it from the six public prices. Credentials and tokens are excluded.
 Sanitized receipts are in [the checkpoint evidence](docs/evidence/2026-10-29-store-checkpoint.json).
 
 The intended T-minus-72-hour target was October 28, 8 PM EDT and is missed.
-Franz should set Free immediately in
+The pre-change instruction was for Franz to set Free immediately in
 [App Store Connect pricing](https://appstoreconnect.apple.com/apps/6787769891/distribution/pricing).
+The confirmed configuration above supersedes that pending action.
 For this incident, the latest conservative decision time is **October 29,
 8 PM EDT**, T minus 48 hours. This preserves the plan's removal window if Free
 cannot be established. Select the earliest available effective date and inspect
@@ -87,8 +120,9 @@ Qualifying earlier acquisitions, including deliberate free downloads before T,
 keep lifetime Pro; later reinstalls retain original purchase evidence. T must
 remain fixed. Never raise the price after T.
 
-Before merging this record, append the requested Free date, actual schedule
-readback with regional starts, and fresh zero-price storefront observations.
+The confirmed readback above records Free with null start/end dates. Exact
+regional effective timestamps are not supplied by these API records. Fresh
+zero-price public storefront observations remain pending.
 The six-country sample does not prove all 175 sale territories. Leave the
 all-storefront and post-T checks open until their evidence exists. Record the
 hosted UI gate as failed, with the historical release decision unverified;
@@ -256,7 +290,7 @@ sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.
 | Manual submission | App 2.0 plus all first products; paid price; no phased release | Submitted October 22, 2026 at 8:20 AM EDT (`2026-10-22T12:20:11Z`); review submission `af75f0db`, Waiting for Review | US$3.99 retained | `62f6d8e` / 2.0.0 (5) / `2026-11-01T00:00:00Z` | Small Business enrollment (optional) |
 | Manual release | No later than October 25, 8 PM EDT | Observed public October 23, 11:56:39 AM EDT, `2026-10-23T15:56:39Z`; actor/action timestamp unverified | 2.0.0 in six countries October 29 | Same build | None |
 | Propagation | Wait full 48 hours after release | October 29 readback exceeds 48 hours | US, CA, GB, DE, JP, AU all 2.0.0; not proof of every territory | Same build/T | None |
-| Free schedule | About 72 hours before T; include latest region start | Pending #470 | Verify every storefront Free before T | Record source/build/T and schedule | None |
+| Free schedule | Franz reports completed October 29, 2:54 PM EDT; target October 28 was missed | GET confirms 175/175 current zero-price records at 2:55:54 PM EDT; all start/end dates null | Six-country lookup still paid; public Free propagation pending | Same build/T; per-territory receipt above | None |
 | Post-cutoff | After T | Pending launch | Production download, Pro, trial and Restore | Record source/build/T | Original 1.x purchase and family device |
 
 The release ledger stays open through the price transition and post-cutoff

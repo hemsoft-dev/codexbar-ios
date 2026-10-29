@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-10-29T18:55:54.890473+00:00",
+  "storefronts": [
+    {
+      "country": "us",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=us",
+      "version": "2.0.0",
+      "price": 3.99,
+      "currency": "USD",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    },
+    {
+      "country": "ca",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=ca",
+      "version": "2.0.0",
+      "price": 4.99,
+      "currency": "CAD",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    },
+    {
+      "country": "gb",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=gb",
+      "version": "2.0.0",
+      "price": 3.99,
+      "currency": "GBP",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    },
+    {
+      "country": "de",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=de",
+      "version": "2.0.0",
+      "price": 3.99,
+      "currency": "EUR",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    },
+    {
+      "country": "jp",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=jp",
+      "version": "2.0.0",
+      "price": 600.0,
+      "currency": "JPY",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    },
+    {
+      "country": "au",
+      "url": "https://itunes.apple.com/lookup?id=6787769891&country=au",
+      "version": "2.0.0",
+      "price": 5.99,
+      "currency": "AUD",
+      "currentVersionReleaseDate": "2026-10-23T15:56:39Z"
+    }
+  ]
+}
