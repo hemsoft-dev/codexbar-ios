@@ -274,20 +274,21 @@ approved build while it is Pending Developer Release and submit a replacement
 2.0 build with a later `T` and fresh qualification. Do not attempt to create
 2.0.1 before 2.0 has been distributed.
 
-If 2.0 is already distributed and paid distribution cannot end safely before
-`T`, remove it from sale at least 48 hours before `T`. Verify removal in several
-storefronts. Since Free may already have reached a region, preserve the compiled
-cutoff and resume acquisition only after Free is verified. A later cutoff must
-not be used to resume paid sales after this distributed release.
-After the Free transition, existing grants stay granted. Do not raise the
-price or extend `T` to restore paid sales; that would also grant lifetime Pro
-to intervening free downloads. If acquisition must stop, remove the app from
-sale. These are the [approved rollback rules](docs/2026-10-16-codexbar-pro-plan.md#rollback).
+The [approved rollback plan](docs/2026-10-16-codexbar-pro-plan.md#rollback)
+distinguishes two cases. Before any Free transition, if paid distribution
+cannot end safely before `T`, remove the app from sale at least 48 hours before
+`T`, verify removal in several storefronts, and keep it off sale until the
+plan's replacement-build recovery is ready. That historical before-price-change
+branch specifies a 2.0.1 with a later cutoff. After the Free transition, existing
+grants stay granted; never raise the price or extend `T` to restore paid sales,
+since doing so would grant lifetime Pro to intervening free downloads. Remove
+the app from sale if acquisition must stop. The current confirmed Free
+configuration uses this after-price-change branch. T remains fixed.
 
 | Checkpoint | Requested action and time | Actual App Store Connect time | Storefront observations | Source SHA / build / T | Pending Franz checks |
 | --- | --- | --- | --- | --- | --- |
 | Final candidate and cutoff | Freeze build 5 | Uploaded October 19, 7:12 PM EDT; `VALID` | Not applicable | `62f6d8e` / 2.0.0 (5) / `2026-11-01T00:00:00Z` | None |
-| Exact-candidate qualification | Before release | Local gates passed October 19; hosted gate failed October 19, rerun pending | Not applicable | `62f6d8e` / 2.0.0 (5) | Live provider comparisons remain separate |
+| Exact-candidate qualification | Before release | Local gates passed October 19; hosted full UI gate did not pass, including the final October 23 receipt; release decision rationale unverified | Not applicable | `62f6d8e` / 2.0.0 (5) | Live provider comparisons remain separate |
 | Manual submission | App 2.0 plus all first products; paid price; no phased release | Submitted October 22, 2026 at 8:20 AM EDT (`2026-10-22T12:20:11Z`); review submission `af75f0db`, Waiting for Review | US$3.99 retained | `62f6d8e` / 2.0.0 (5) / `2026-11-01T00:00:00Z` | Small Business enrollment (optional) |
 | Manual release | No later than October 25, 8 PM EDT | Observed public October 23, 11:56:39 AM EDT, `2026-10-23T15:56:39Z`; actor/action timestamp unverified | 2.0.0 in six countries October 29 | Same build | None |
 | Propagation | Wait full 48 hours after release | October 29 readback exceeds 48 hours | US, CA, GB, DE, JP, AU all 2.0.0; not proof of every territory | Same build/T | None |
@@ -301,12 +302,15 @@ checks. Completed and remaining actions follow:
   `2.0.0 (5)` versions.
 - [x] Pass the local release gates on Xcode 26.6 / 17F113 with iOS 26.2,
   including native commerce, both UI families and function risk.
-- [ ] Before manual release, pass the hosted release gate for exact SHA
-  `62f6d8e` (tag `v2.0.0-build5`): all five quality jobs and
-  `Full iOS UI validation`. The October 19 hosted run did not pass; the
-  [October 22 rerun](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39779930660)
-  is pending. If it fails, Franz decides whether to release on the local
-  exact-source evidence; record that decision here instead of checking this box.
+- [ ] Pass the hosted release gate for exact SHA `62f6d8e`
+  (tag `v2.0.0-build5`). This historical requirement was not satisfied before
+  release. All five quality jobs passed in
+  [run 39779930660](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39779930660),
+  but the full UI gate did not pass. The
+  [final UI receipt](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6355906921)
+  reports one failure in each family. Public release is observed; its actor,
+  explicit gate exception and decision rationale remain unverified. No pending
+  rerun or future decision is implied, and this box must remain unchecked.
 - [x] Archive, export, upload and verify processing, then select that exact build.
 - [x] Submit app version 2.0, the CodexBar Pro subscription group and all three
   products once (review submission `af75f0db`, October 22).

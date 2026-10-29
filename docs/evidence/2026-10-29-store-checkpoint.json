@@ -1294,5 +1294,34 @@
   "apiStatus": {
     "salesSchedule": 403,
     "appManagerSchedule": 200
+  },
+  "pagination": {
+    "manualPrices": {
+      "records": 1,
+      "next": null
+    },
+    "automaticPrices": {
+      "records": 174,
+      "next": null
+    }
+  },
+  "versionState": {
+    "versionString": "2.0.0",
+    "appStoreState": "READY_FOR_SALE",
+    "releaseType": "MANUAL"
+  },
+  "productStates": {
+    "6824195141": {
+      "productId": "com.hemsoft.CodexBarIOS.pro.monthly",
+      "state": "APPROVED"
+    },
+    "6824195239": {
+      "productId": "com.hemsoft.CodexBarIOS.pro.yearly",
+      "state": "APPROVED"
+    },
+    "6824195355": {
+      "productId": "com.hemsoft.CodexBarIOS.pro.lifetime",
+      "state": "APPROVED"
+    }
   }
 }
