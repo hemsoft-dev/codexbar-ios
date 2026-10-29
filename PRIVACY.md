@@ -132,7 +132,8 @@ entry and are removed when that account is disconnected.
 
 ## Purchases
 
-Apple processes CodexBar Pro purchases and payments. CodexBar uses StoreKit on
+Apple processes CodexBar Pro purchases and payments through your App Store
+account. CodexBar does not receive your payment card details. CodexBar uses StoreKit on
 your device to check purchase status, renewals, expiration, refunds and access
 for people who bought the original paid app. It does not send purchase
 information to a HemSoft server or require a CodexBar account.
