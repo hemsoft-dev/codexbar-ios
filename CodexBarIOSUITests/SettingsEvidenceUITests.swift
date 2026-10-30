@@ -237,8 +237,9 @@ final class WeeklyUsageEvidenceUITests: XCTestCase {
         XCTAssertTrue(argon.label.contains("Unavailable"))
         capture("weekly-missing-argon-dashboard")
         argon.tap()
-        XCTAssertTrue(app.staticTexts["Availability"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Unavailable"].firstMatch.exists)
+        let availability = detailRow(in: app, named: "Availability")
+        XCTAssertTrue(availability.waitForExistence(timeout: 5))
+        XCTAssertTrue(availability.label.contains("Unavailable"))
         capture("weekly-missing-argon-detail")
         app.buttons["Done"].tap()
     }
@@ -261,13 +262,20 @@ final class WeeklyUsageEvidenceUITests: XCTestCase {
         XCTAssertTrue(weekly.label.contains("fresh"))
         capture("weekly-usage-dashboard")
         weekly.tap()
-        XCTAssertTrue(app.staticTexts["Freshness"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Current"].exists)
-        XCTAssertTrue(app.staticTexts["Reset"].exists)
-        XCTAssertTrue(app.staticTexts["45"].exists)
+        let freshness = detailRow(in: app, named: "Freshness")
+        XCTAssertTrue(freshness.waitForExistence(timeout: 5))
+        XCTAssertTrue(freshness.label.contains("Current"))
+        XCTAssertTrue(detailRow(in: app, named: "Reset").exists)
+        XCTAssertTrue(detailRow(in: app, named: "Used").label.contains("45"))
         capture("weekly-usage-detail")
         app.buttons["Done"].tap()
         XCTAssertTrue(weekly.waitForExistence(timeout: 5))
+    }
+
+    private func detailRow(in app: XCUIApplication, named name: String) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", name))
+            .firstMatch
     }
 
     private func capture(_ name: String) {
