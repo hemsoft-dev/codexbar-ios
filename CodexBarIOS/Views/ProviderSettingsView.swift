@@ -408,6 +408,9 @@ struct ProviderSettingsView: View {
                 } else if providerID == .gemini {
                     geminiAppsConnection
                 } else if providerID == .greptile {
+                    Text(GreptileSignInAvailability.googleNotice)
+                        .font(.footnote).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("greptile-google-sign-in-notice")
                     if configuration.authMethod == .apiKey, configurationStore.hasSecret(for: configuration) {
                         Text("Keep this API-key account's review history. Add a separate account to sign in to Greptile.")
                             .font(.footnote).foregroundStyle(.secondary)

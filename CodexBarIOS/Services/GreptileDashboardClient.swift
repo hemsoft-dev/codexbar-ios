@@ -110,6 +110,7 @@ struct GreptileDashboardClient: Sendable {
         let (data, response) = try await session.data(for: request)
         guard let response = response as? HTTPURLResponse else { throw GreptileSignInError.unavailable }
         if response.statusCode == 401 { throw GreptileSignInError.expired }
+        if response.statusCode == 403 { throw GreptileSignInError.accessDenied }
         guard response.statusCode == 200 else { throw GreptileSignInError.unavailable }
         return data
     }
