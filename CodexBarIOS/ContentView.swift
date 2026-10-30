@@ -151,22 +151,6 @@ struct ContentView: View {
                                 )
                             }
 
-                            if !cardItems.isEmpty {
-                                TimelineView(.periodic(from: .now, by: 60)) { context in
-                                    let entries = cardItems.filter { $0.configuration.isEnabled }.compactMap {
-                                        $0.result.flatMap { SubscriptionUtilizationFleet.entry(for: $0, at: context.date) }
-                                    }
-                                    HStack {
-                                        SubscriptionUtilizationBadge(score: SubscriptionUtilizationFleet.score(entries: entries), title: "Fleet SUS")
-                                        Spacer()
-                                        Text("Weekly utilization").font(.caption).foregroundStyle(.secondary)
-                                    }
-                                    .accessibilityIdentifier("fleet-sus")
-                                    .accessibilityHint("Price-weighted mean of weekly subscription scores. Equal weights when any monthly price is unknown.")
-                                    .padding(.horizontal, 4)
-                                }
-                            }
-
                             ForEach(sections) { section in
                                 let hasCollapsedCard = section.items.contains { item in
                                     guard let accountID = item.result?.accountID else {

@@ -215,8 +215,8 @@ final class SettingsEvidenceUITests: XCTestCase {
 }
 
 @MainActor
-final class SubscriptionUtilizationEvidenceUITests: XCTestCase {
-    func testMissingGooglePoolShowsUnavailableSUS() {
+final class WeeklyUsageEvidenceUITests: XCTestCase {
+    func testMissingGooglePoolStaysUnavailable() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchEnvironment = [
@@ -235,38 +235,47 @@ final class SubscriptionUtilizationEvidenceUITests: XCTestCase {
         XCTAssertTrue(argon.isHittable)
         XCTAssertLessThanOrEqual(argon.frame.maxY, app.frame.maxY - 16)
         XCTAssertTrue(argon.label.contains("Unavailable"))
-        XCTAssertTrue(argon.label.contains("SUS unavailable"))
-        capture("sus-missing-argon")
+        capture("weekly-missing-argon-dashboard")
+        argon.tap()
+        let availability = detailRow(in: app, named: "Availability")
+        XCTAssertTrue(availability.waitForExistence(timeout: 5))
+        XCTAssertTrue(availability.label.contains("Unavailable"))
+        capture("weekly-missing-argon-detail")
+        app.buttons["Done"].tap()
     }
 
-    func testWeeklyBandsAndFleetScore() {
+    func testWeeklyUsageAndResetDetails() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchEnvironment = [
             "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
-            "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "sus-evidence",
+            "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "google-six",
             "CODEXBAR_UI_TEST_DEFAULT_TEXT": "1",
         ]
         app.launch()
         defer { app.terminate() }
-        let fleet = app.descendants(matching: .any)["fleet-sus"].firstMatch
-        XCTAssertTrue(fleet.waitForExistence(timeout: 15))
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "SUS 95 of 100, green band")).firstMatch.exists)
-        capture("sus-dashboard")
-        let green = app.buttons["dashboard-metric-claude.weekly-0"]
-        green.tap()
-        XCTAssertTrue(app.staticTexts["Sub Utilization Score: 100 means full use at reset. Weekly windows need 12 hours of history."]
-            .waitForExistence(timeout: 5))
-        capture("sus-detail")
+        let weekly = app.buttons["dashboard-metric-gemini.weekly"]
+        XCTAssertTrue(weekly.waitForExistence(timeout: 15))
+        for _ in 0..<6 where !weekly.isHittable { app.swipeUp() }
+        XCTAssertTrue(weekly.isHittable)
+        XCTAssertTrue(weekly.label.contains("45%"))
+        XCTAssertTrue(weekly.label.contains("fresh"))
+        capture("weekly-usage-dashboard")
+        weekly.tap()
+        let freshness = detailRow(in: app, named: "Freshness")
+        XCTAssertTrue(freshness.waitForExistence(timeout: 5))
+        XCTAssertTrue(freshness.label.contains("Current"))
+        XCTAssertTrue(detailRow(in: app, named: "Reset").exists)
+        XCTAssertTrue(detailRow(in: app, named: "Used").label.contains("45"))
+        capture("weekly-usage-detail")
         app.buttons["Done"].tap()
-        let yellow = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "SUS 80 of 100, yellow band")).firstMatch
-        let red = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "SUS 50 of 100, red band")).firstMatch
-        let missing = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "SUS unavailable")).firstMatch
-        for element in [yellow, red, missing] {
-            for _ in 0..<5 where !element.isHittable { app.swipeUp() }
-            XCTAssertTrue(element.exists)
-            capture("sus-\(element == missing ? "unavailable" : element == red ? "red" : "yellow")")
-        }
+        XCTAssertTrue(weekly.waitForExistence(timeout: 5))
+    }
+
+    private func detailRow(in app: XCUIApplication, named name: String) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", name))
+            .firstMatch
     }
 
     private func capture(_ name: String) {

@@ -33,7 +33,7 @@ or resets. Missing or disabled quotas retain their actual status. History,
 widgets, and Watch preserve source identities and contain only observed values.
 
 The current native quota summary may omit Gemini Models and Argon. Their
-choices then show unavailable quota and SUS `n/a`. The app does not run or
+choices then show unavailable quota. The app does not run or
 import CLI data. A supported native retrieval source is tracked in
 [#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519).
 

@@ -425,7 +425,7 @@ and provisions its own simulator. Fail-fast remains disabled.
 
 Native preparation, purchase/restore, purchase-error preparation, purchase-error
 and the final normal StoreKit reset stay sequential on one worker. The reset is
-attempted even after a journey failure. The two SUS evidence journeys are included
+attempted even after a journey failure. The two usage-detail and missing-quota evidence journeys are included
 in the supplemental eight, so the full gate covers 53 distinct journeys per
 family plus the three preparation/reset calls. Marketing capture remains excluded.
 The original local runner retains its separate 29-pass contract.
