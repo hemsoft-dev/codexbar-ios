@@ -98,10 +98,8 @@ windows. The app shows none of them and derives none from plan multipliers,
 token totals or the published prompt range. Monthly renewal isn't a quota
 reset. OpenCode's Muse Spark and pay-as-you-go Meta API keys are separate pools.
 
-### Scores, alerts and surfaces
+### Alerts and surfaces
 
-- No Sub Utilization Score and no reference price, per tile or in the fleet
-  score.
 - Alerts use only current bars, so stale or unavailable readings raise none.
 - Widget and watch snapshots carry bars, plan label and times only. No
   credential or new networking reaches an extension.

@@ -47,8 +47,8 @@
         "CodexBarIOSUITests/FreeTierJourneyTests/testPausedAccountsKeepValuesAndCanSwitchAtLargeTextSize",
         "CodexBarIOSUITests/GrokSignInUITests/testCursorSubscriptionPillsAreAccountScoped",
         "CodexBarIOSUITests/GrokSignInUITests/testXSubscriptionGuidedSetupUsesOneXAISignIn",
-        "CodexBarIOSUITests/SubscriptionUtilizationEvidenceUITests/testMissingGooglePoolShowsUnavailableSUS",
-        "CodexBarIOSUITests/SubscriptionUtilizationEvidenceUITests/testWeeklyBandsAndFleetScore"
+        "CodexBarIOSUITests/WeeklyUsageEvidenceUITests/testMissingGooglePoolStaysUnavailable",
+        "CodexBarIOSUITests/WeeklyUsageEvidenceUITests/testWeeklyUsageAndResetDetails"
       ],
       "kind": "journey"
     },

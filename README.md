@@ -373,24 +373,5 @@ confirmation. CodexBar refreshes usage after every result and protects an
 unconfirmed request against another consumption, including after relaunch.
 Unavailable reset details never appear as a zero balance.
 
-### Weekly Sub Utilization Score
-
-The iPhone and iPad dashboard and metric details show SUS beside each weekly
-quota. Green starts at 90, yellow at 75, and red is below 75. A score of 100
-means the current pace reaches the quota at reset. Underuse lowers the score;
-an early lockout lowers it by the share of the week spent without quota.
-Five-hour windows have no score. Missing quota, missing window times, expired
-windows, and windows under 12 hours old show `n/a`.
-
-Fleet SUS averages each account's scored weekly pools, then weights each account
-once by its monthly reference price. The editable table is in
-`SubscriptionUtilizationFleet.referenceMonthlyPrices`: Claude $200, Codex $200,
-and the unified Google Gemini/Antigravity subscription $19.99. A reported Codex
-`pro` plan uses $200 and `prolite` uses $100 immediately; no billing date is
-assumed. If any scored account's price is unknown, all accounts receive equal
-weight. Missing and stale pools do not contribute a score.
-
-The formula and rounding match the Chief's
-[pinned reference](https://github.com/hemsoft-dev/chief/blob/61d50412cbad1d653b3bda8a4ae2a68a6d38419e/scripts/usage.py).
 Only reported Grok and X Subscription percentages produce bars. Omitted usage
 stays unavailable even for a verified paid plan.

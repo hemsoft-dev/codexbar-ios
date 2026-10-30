@@ -254,7 +254,6 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let present = try Self.result(Self.payload(buckets))
         let argon = try XCTUnwrap(present.bars.first { $0.stableKey == "gemini-argon-wtu-weekly" })
         XCTAssertEqual(argon.used, 40, accuracy: 0.000_001)
-        XCTAssertEqual(SubscriptionUtilizationScore(bar: argon, at: now)?.value, 80)
         XCTAssertEqual(present.unavailableUsageMetrics["antigravity.gemini-weekly"], "Unavailable")
     }
 

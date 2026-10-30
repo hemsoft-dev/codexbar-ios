@@ -88,7 +88,6 @@ final class UITestFixtures {
         appUpdateController = AppUpdateController(defaults: defaults)
 
         let scenario = environment["CODEXBAR_UI_TEST_SCENARIO"]
-        UITestSUSProvider.seed(in: configurationStore, scenario: scenario)
         commerceFixture?.seedAccounts(in: configurationStore)
         PlanTierFixture.seedAccountsIfNeeded(in: configurationStore, scenario: scenario)
         let recovery = scenario == "recovery"
@@ -161,9 +160,7 @@ final class UITestFixtures {
         }
         refreshService = UsageRefreshService(
             providers: PlanTierFixture.providers(
-                overriding: UITestSUSProvider.overriding(
-                    Self.providersForPlanPills(providers, scenario: scenario, suiteName: suite), scenario: scenario
-                ), scenario: scenario
+                overriding: Self.providersForPlanPills(providers, scenario: scenario, suiteName: suite), scenario: scenario
             ), initialResults: results
         )
         UITestMuseCodeFixture.presentFailures(of: results, in: refreshService, scenario: scenario)
@@ -237,7 +234,6 @@ final class UITestFixtures {
     nonisolated private static func initialResult(
         for configuration: ProviderAccountConfiguration, scenario: String?, googleSources: [ProviderID]
     ) -> ProviderUsageResult {
-        if scenario == "sus-evidence" { return UITestSUSProvider.result(for: configuration) }
         if scenario?.hasPrefix("opencode-renewal-") == true {
             return ProviderUsageResult(accountID: configuration.id, providerID: .openCodeZen, title: configuration.displayName,
                                        subtitle: "Waiting for synthetic Console response", bars: [], fetchedAt: Date())

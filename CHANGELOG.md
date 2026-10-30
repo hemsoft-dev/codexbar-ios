@@ -8,15 +8,16 @@ building, testing, or releasing the app.
 
 ### Added
 
-- See a Sub Utilization Score beside each weekly quota and a fleet score in
-  the dashboard. Green, yellow and red bands show how close subscriptions are
-  to full use at reset. Fresh windows and missing quota show n/a.
-  ([#518](https://github.com/hemsoft-dev/codexbar-ios/issues/518))
-
 - Add Account now explains that Muse Code isn't available on iPhone. Meta
   doesn't offer a sign-in or usage service that iPhone apps can use for Muse
   Code subscriptions, and CodexBar won't estimate an allowance from token
   activity. ([#522](https://github.com/hemsoft-dev/codexbar-ios/issues/522))
+
+### Changed
+
+- Simplify the dashboard and weekly quota details to show usage and reset
+  information without subscription scores.
+  ([#537](https://github.com/hemsoft-dev/codexbar-ios/issues/537))
 
 ### Fixed
 
@@ -67,12 +68,12 @@ building, testing, or releasing the app.
 
 - Add a Muse Code allowance reader for schema 1 of `muse usage --json`, with
   sanitized fixtures and distinct unavailable states, for use if Meta ships a
-  supported iPhone source. Muse Code can't be added, refreshed or published,
-  and gets no Sub Utilization Score. The contract and its limits are in
+  supported iPhone source. Muse Code can't be added, refreshed or published.
+  The contract and its limits are in
   [MUSE-CODE.md](MUSE-CODE.md).
   ([#522](https://github.com/hemsoft-dev/codexbar-ios/issues/522))
 
-- Include both subscription-utilization journeys in the release manifest so
+- Include usage-detail and missing-quota journeys in the release manifest so
   manual iOS validation can start and verify all 53 journeys per device family.
   Retain the last verified-renewal predicate state if native expiration
   validation fails, without changing its waits or acceptance conditions.

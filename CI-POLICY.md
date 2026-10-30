@@ -336,7 +336,7 @@ estimated shard budget is proof that automatic work stayed within the ceiling.
 current-source proofs. The compact artifacts identify every executed method,
 qualified toolchain/runtime, source SHA/fingerprint and owned simulator. The
 aggregate rejects missing, duplicate or substituted shards. The 53 journeys per
-family include the two SUS tests added after 2.0; the original local 29-test command
+family include usage-detail and missing-quota regression coverage; the original local 29-test command
 is unchanged. StoreKit preparation and final reset cannot be split across workers.
 
 ## Manual aggregate event hints

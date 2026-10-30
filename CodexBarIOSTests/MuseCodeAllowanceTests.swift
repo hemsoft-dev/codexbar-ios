@@ -213,25 +213,13 @@ final class MuseCodeAllowanceTests: XCTestCase {
             XCTAssertTrue(result.bars.isEmpty, state.rawValue)
             XCTAssertNil(result.creditsRemaining, state.rawValue)
             XCTAssertEqual(result.failureMessage, state.message, state.rawValue)
-            XCTAssertNil(SubscriptionUtilizationFleet.entry(for: result, at: Self.now), state.rawValue)
             XCTAssertEqual(result.recoveryAction, state == .authorizationExpired ? .reauthenticate : .retryRefresh, state.rawValue)
             XCTAssertEqual(result.preserveCachedBarsOnFailure, state != .phoneAcquisitionUnsupported, state.rawValue)
         }
         XCTAssertTrue(MuseCodeAllowance.Unavailable.phoneAcquisitionUnsupported.message.contains("isn't available on iPhone"))
     }
 
-    // MARK: Scores, metric choices and surfaces
-
-    func testMuseCodeHasNoSubscriptionUtilizationScore() throws {
-        let result = result(Self.measured)
-        let weekly = try XCTUnwrap(result.bars.last)
-        XCTAssertTrue(SubscriptionUtilizationScore.applies(to: weekly))
-        XCTAssertFalse(SubscriptionUtilizationScore.applies(to: weekly, providerID: .museCode))
-        XCTAssertFalse(ProviderID.museCode.hasSubscriptionUtilizationScore)
-        XCTAssertTrue(SubscriptionUtilizationScore.applies(to: weekly, providerID: .claude))
-        XCTAssertNil(SubscriptionUtilizationFleet.entry(for: result, at: Self.now.addingTimeInterval(2 * 86400)))
-        XCTAssertNil(SubscriptionUtilizationFleet.monthlyPrice(for: result))
-    }
+    // MARK: Metric choices and surfaces
 
     func testMetricChoicesKeepUnavailableWindowsSelectable() {
         let partial = result(Self.partial)
