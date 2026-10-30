@@ -40,6 +40,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Align source version and draft App Store release notes with 2.0.1, retaining
+  build 6 for the next candidate after the read-only upload inventory check.
+  ([#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469))
+
 - Record fresh hosted main qualification of the existing history benchmark
   controls. Preserve the earlier inconclusive result and paired samples, clarify
   manual dispatch ownership, and keep the frozen baseline and budgets unchanged.

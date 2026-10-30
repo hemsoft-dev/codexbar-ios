@@ -1,11 +1,10 @@
-CodexBar 2.0 introduces the free plan and CodexBar Pro.
+CodexBar 2.0.1
 
-- The free plan includes one active account from any supported provider, a customizable dashboard and seven days of history. GitHub service-status notices stay free.
-- Pro adds all saved accounts, Home Screen and Lock Screen widgets, Apple Watch and complications, up to 90 days of daily history, and usage alerts. Choose monthly, yearly or lifetime Pro. Eligible yearly subscribers can start with a seven-day free trial.
-- Thanks for buying the original CodexBar app. You keep lifetime Pro after Apple verifies your purchase, with no new purchase required. A one-time thank-you confirms your access. Family members must install before October 31, 2026 at 8:00 PM EDT, which is November 1, 2026 at 00:00 UTC, to qualify. Support can help with a lifetime offer code if they miss the deadline.
-- Manage Pro and Restore Purchases in Settings > CodexBar Pro. See verified renewal dates, upcoming plan changes and payment recovery. If purchase information cannot be verified, restore or refresh it before buying again.
-- If Pro ends, choose the account that keeps refreshing. Saved accounts, credentials, history, layouts and alert preferences stay on your device. Widgets and Watch show an unlock message and resume with saved selections when Pro returns.
+- Simplify dashboard and weekly quota details to focus on usage and reset information.
+- Improve retrieval of Gemini Models and Argon weekly coding quotas. Missing values remain unavailable.
+- Explain when Google-backed Greptile billing sign-in is unavailable and preserve saved connections when sign-in is canceled.
+- Keep missing Grok and X Subscription usage unavailable rather than inferring zero usage from a paid plan.
+- Improve subscription access checks around expiration without interrupting Purchase or Restore.
+- Explain Muse Code availability when adding an account on iPhone.
 
-This release also adds X Subscription's shared weekly pool and Extra Usage Credits with one xAI sign-in. See verified provider subscription renewal dates where supported, including Claude, Grok, Cursor and OpenCode. Greptile dashboard accounts show actual free-credit usage and renewal dates. Claude accounts can view and confirm available saved usage resets.
-
-Provider data depends on your account and the service. Missing values stay unavailable. Fresh Google-backed Greptile billing sign-in or reconnection may still be unavailable.
+Provider data depends on your account and service. This update does not add Google-backed Greptile billing access or Muse Code usage on iPhone.
