@@ -1,5 +1,16 @@
 import Foundation
 
+enum GreptileSignInAvailability {
+    static let googleNotice = "Google sign-in can't connect Greptile billing to CodexBar yet. Existing saved sessions can still refresh."
+    static let googleRecovery = "Greptile hasn't provided the billing access CodexBar needs for Google sign-in yet. "
+        + "Return to sign-in only if you already use another method for this Greptile account, or cancel to keep your saved connection."
+
+    static func isGoogleSignIn(_ url: URL) -> Bool {
+        let host = url.host?.lowercased() ?? ""
+        return host == "accounts.google.com" || host.hasSuffix(".accounts.google.com")
+    }
+}
+
 struct GreptileOrganization: Codable, Equatable, Identifiable, Sendable {
     let tenantExternalId: String
     let name: String
@@ -74,16 +85,17 @@ struct GreptileSessionCredentials: Codable, Equatable, Sendable {
 }
 
 enum GreptileSignInError: LocalizedError, Equatable {
-    case canceled, expired, invalidSession, wrongAccount, unavailable, invalidBillingResponse, invalidIdentityResponse
+    case canceled, expired, accessDenied, invalidSession, wrongAccount, unavailable, invalidBillingResponse, invalidIdentityResponse
 
     var requiresAuthentication: Bool {
-        self == .expired || self == .wrongAccount || self == .invalidSession
+        self == .expired || self == .accessDenied || self == .wrongAccount || self == .invalidSession
     }
 
     var errorDescription: String? {
         switch self {
         case .canceled: "Greptile sign-in canceled. Your saved account was not changed."
         case .expired: "Your Greptile session expired. Sign in again."
+        case .accessDenied: "Greptile denied access to this session. Your saved account was not changed. Try another existing sign-in method or cancel."
         case .invalidSession: "Greptile sign-in could not be verified. Your saved account was not changed."
         case .wrongAccount: "This session belongs to another Greptile account or organization. Add a separate account to connect it."
         default: "Greptile could not return valid account data. Check the connection or try refreshing later."

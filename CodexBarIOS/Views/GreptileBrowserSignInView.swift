@@ -10,6 +10,7 @@ final class GreptileBrowserSignInSession: NSObject, ObservableObject, Identifiab
     @Published private(set) var organizations: [GreptileOrganization] = []
     @Published private(set) var message: String?
     @Published private(set) var isVerifying = false
+    @Published private(set) var isGoogleSignInUnavailable = false
     private let client: GreptileDashboardClient
     private var identity: GreptileDashboardIdentity?
     private var cookies: [GreptileSessionCookie] = []
@@ -20,6 +21,8 @@ final class GreptileBrowserSignInSession: NSObject, ObservableObject, Identifiab
     private var cookieInspectionPending = false
     private var observedSessionTokens: [String: String]?
     private var latestSessionCookies: [GreptileSessionCookie]?
+    private let usesSignInFixture: Bool
+    private var fixtureDocumentPending = false
     @Published private(set) var canGoBack = false
 
     init(
@@ -30,6 +33,12 @@ final class GreptileBrowserSignInSession: NSObject, ObservableObject, Identifiab
         configuration.websiteDataStore = .nonPersistent()
         webView = WKWebView(frame: .zero, configuration: configuration)
         self.client = client
+        #if DEBUG
+        usesSignInFixture = UITestFixtures.current != nil
+            && ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"]?.hasPrefix("greptile-") == true
+        #else
+        usesSignInFixture = false
+        #endif
         self.completion = completion
         super.init()
         webView.navigationDelegate = self
@@ -46,6 +55,18 @@ final class GreptileBrowserSignInSession: NSObject, ObservableObject, Identifiab
     func openUsage() {
         resetInspection()
         message = nil
+        #if DEBUG
+        if usesSignInFixture {
+            fixtureDocumentPending = true
+            webView.loadHTMLString("""
+                <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+                <body><p>Isolated Greptile sign-in fixture. No live account is accessed.</p>
+                <p><a href="https://accounts.google.com/o/oauth2/v2/auth">Continue with Google</a></p>
+                <p><a target="_blank" href="https://accounts.google.com/o/oauth2/v2/auth">Google popup</a></p></body></html>
+                """, baseURL: URL(string: "https://app.greptile.com/"))
+            return
+        }
+        #endif
         webView.load(URLRequest(url: URL(string: "https://app.greptile.com/-/settings/usage")!))
     }
 
@@ -58,6 +79,7 @@ final class GreptileBrowserSignInSession: NSObject, ObservableObject, Identifiab
         task?.cancel()
         task = nil
         isVerifying = false
+        isGoogleSignInUnavailable = false
         organizations = []
         identity = nil
         cookies = []
@@ -207,6 +229,16 @@ final class GreptileBrowserSignInSession: NSObject, ObservableObject, Identifiab
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
         guard organizations.isEmpty else { return .cancel }
+        if blockGoogleSignIn(action.request.url) { return .cancel }
+        #if DEBUG
+        if usesSignInFixture {
+            // Allow only the local document created by openUsage, then block external fixture traffic.
+            guard fixtureDocumentPending, action.navigationType == .other,
+                  ["about:blank", "https://app.greptile.com/"].contains(action.request.url?.absoluteString ?? "") else { return .cancel }
+            fixtureDocumentPending = false
+            return .allow
+        }
+        #endif
         guard let url = action.request.url, url.scheme == "https", url.user == nil, url.password == nil,
               url.port == nil || url.port == 443 else {
             explainBlockedNavigation(action)
@@ -220,6 +252,10 @@ final class GreptileBrowserSignInSession: NSObject, ObservableObject, Identifiab
         for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures
     ) -> WKWebView? {
         guard navigationAction.targetFrame == nil else { return nil }
+        if blockGoogleSignIn(navigationAction.request.url) { return nil }
+        #if DEBUG
+        if usesSignInFixture { return nil }
+        #endif
         if let url = navigationAction.request.url, url.scheme == "https", url.user == nil, url.password == nil,
            url.port == nil || url.port == 443 {
             webView.load(navigationAction.request)
@@ -227,6 +263,14 @@ final class GreptileBrowserSignInSession: NSObject, ObservableObject, Identifiab
             explainBlockedNavigation(navigationAction)
         }
         return nil
+    }
+
+    private func blockGoogleSignIn(_ url: URL?) -> Bool {
+        guard let url, GreptileSignInAvailability.isGoogleSignIn(url) else { return false }
+        resetInspection()
+        webView.stopLoading()
+        isGoogleSignInUnavailable = true
+        return true
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
@@ -256,20 +300,35 @@ struct GreptileBrowserSignInView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
-                Text("Sign in on Greptile's website, then choose your organization. CodexBar verifies access and returns automatically.")
-                    .font(.footnote).padding(.horizontal)
+                if session.isGoogleSignInUnavailable {
+                    ContentUnavailableView {
+                        Label("Google sign-in unavailable", systemImage: "person.crop.circle.badge.exclamationmark")
+                    } description: {
+                        Text(GreptileSignInAvailability.googleRecovery)
+                    } actions: {
+                        Button("Return to sign-in") { session.openUsage() }
+                            .accessibilityIdentifier("greptile-return-to-sign-in")
+                    }
+                } else {
+                    Text(GreptileSignInAvailability.googleNotice)
+                        .font(.footnote).padding(.horizontal)
+                    Text("Use an existing sign-in method for your Greptile account, then choose your organization.")
+                        .font(.footnote).padding(.horizontal)
+                }
                 if let message = session.message {
                     Text(message).font(.footnote).foregroundStyle(.secondary).padding(.horizontal)
                 }
                 if session.isVerifying { ProgressView("Verifying Greptile access…") }
-                if session.organizations.isEmpty {
+                if session.isGoogleSignInUnavailable {
+                    EmptyView()
+                } else if session.organizations.isEmpty {
                     GreptileSignInWebView(session: session)
                 } else {
                     List(session.organizations) { organization in
                         Button("Connect \(organization.name)") { session.connect(organization) }
                             .disabled(session.isVerifying)
                     }
-                    Text("Your verified organization session is saved securely for this account.")
+                    Text("Connect to save your verified organization session securely for this account.")
                         .font(.footnote).padding()
                 }
             }

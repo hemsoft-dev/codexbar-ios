@@ -305,6 +305,7 @@ final class GreptileRenewalRegressionTests: XCTestCase, @unchecked Sendable {
     func testConnectionStillRejectsExpiredWrongAndCanceledSessions() async throws {
         for replies in [
             [try identity(), .payload(Data("{}".utf8), status: 401)],
+            [try identity(), .payload(Data("{}".utf8), status: 403)],
             [try identity(subject: "another-user")],
             [try identity(), .failure(URLError(.cancelled))],
         ] {
@@ -317,6 +318,36 @@ final class GreptileRenewalRegressionTests: XCTestCase, @unchecked Sendable {
             } catch {
                 XCTAssertTrue((error as? GreptileSignInError)?.requiresAuthentication == true || error is URLError)
             }
+        }
+    }
+
+    func testBillingDenialStaysUnavailableAndOffersRecovery() async throws {
+        let fixture = GreptileHTTPFixture([
+            try identity(), .payload(Data("{}".utf8), status: 403),
+            try GreptileHTTPFixture.page(["one"], total: 1),
+        ])
+        defer { fixture.invalidate() }
+        let result = try await provider(fixture, credential: credential()).fetchUsage(for: browserAccount())
+        XCTAssertNil(result.greptileAllowanceRenewal?.renewsAt)
+        XCTAssertNil(result.greptileAllowanceRenewal?.isApplicable)
+        XCTAssertEqual(result.greptileAllowanceRenewal?.requiresAuthentication, true)
+        XCTAssertEqual(result.greptileAllowanceRenewal?.unavailableReason, GreptileSignInError.accessDenied.localizedDescription)
+        XCTAssertEqual(result.bars.map(\.stableKey), [GreptileUsageIdentity.completedReviewsStableKey])
+    }
+
+    func testGoogleAuthorizationIsRecognizedWithoutBlockingGreptileOrOtherProviders() throws {
+        for address in [
+            "https://accounts.google.com/o/oauth2/v2/auth", "https://ACCOUNTS.GOOGLE.COM/signin",
+            "https://oauth.accounts.google.com/",
+        ] {
+            XCTAssertTrue(GreptileSignInAvailability.isGoogleSignIn(try XCTUnwrap(URL(string: address))))
+        }
+        for address in [
+            "https://app.greptile.com/-/settings/usage", "https://auth.greptile.com/oauth2/auth",
+            "https://github.com/login/oauth/authorize", "https://accounts.google.com.example.org/",
+            "https://example.org/?next=https://accounts.google.com", "about:blank",
+        ] {
+            XCTAssertFalse(GreptileSignInAvailability.isGoogleSignIn(try XCTUnwrap(URL(string: address))))
         }
     }
 

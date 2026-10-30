@@ -9,6 +9,15 @@ history are excluded from this document.
 
 ## Current app behavior
 
+Google-backed fresh billing login and reconnect remain unavailable. The
+[October 29 public-contract recheck](#google-backed-billing-login-october-29-2026)
+found no supported billing OAuth grant or native dashboard-session exchange.
+Account settings explains this before sign-in. Google authorization links in
+the temporary browser stop at a recovery screen, with Return to sign-in and
+Cancel actions. Another method is useful only if it already belongs to that
+Greptile account. The app never recommends changing the account's login method
+or opening Safari as a way to transfer its session.
+
 Issue [#406](https://github.com/HemSoft/codexbar-ios/issues/406) adds guided
 Greptile sign-in on the phone. A private, temporary browser session opens
 [Greptile Usage](https://app.greptile.com/-/settings/usage), verifies the signed-in
@@ -26,6 +35,10 @@ Unrelated cookies do not reset account selection. A changed auth cookie is
 reverified while the chooser stays visible; an expired or invalid identity
 clears the prior chooser. Connection cannot finish with a pending cookie change.
 The browser session is discarded after connection or cancel.
+HTTP 401 and 403 responses reject connection before credentials are saved.
+Canceling a fresh attempt leaves it unconnected; canceling reconnect preserves
+the saved credential, selected organization and review history. Existing saved
+dashboard sessions can still refresh through the account-verifying reader.
 
 The app reads `GET /api/auth/session` with the saved session to re-verify identity
 and membership before every billing read. It then reads
@@ -468,3 +481,109 @@ billing login needs Greptile to authorize OAuth access to billing or provide an
 authorized exchange into its dashboard session. The current temporary browser
 flow fixes dashboard-cookie flicker, but does not resolve that provider-side
 native authentication limitation.
+
+## Google-backed billing login, October 29, 2026
+
+Research for [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409),
+following the deferred Google compatibility finding in
+[PR #408](https://github.com/hemsoft-dev/codexbar-ios/pull/408#discussion_r4189900439).
+Only first-party public documentation, anonymous public metadata and this app's
+code were used. No provider account, browser session, credential export,
+OAuth registration or authenticated endpoint probe was used for this recheck.
+
+### Finding and exact missing capability
+
+No provider-supported route from native Google sign-in to Greptile billing
+could be established. Greptile needs to publish either:
+
+1. A read-only billing API or MCP tool, with an OAuth grant that authorizes
+   the selected user and organization and returns its actual billing period
+   end. The scope, resource/audience, membership checks and renewal semantics
+   must be specified. Identity access alone is insufficient.
+2. An authorized dashboard-session exchange with native callback registration,
+   bound to the initiating app attempt and verified user/organization. It must
+   let the native app retain billing authorization securely without copying
+   browser cookies or tokens.
+
+The [OAuth authorization-server metadata](https://auth.greptile.com/.well-known/oauth-authorization-server)
+advertises Authorization Code, refresh tokens, public-client authentication,
+dynamic registration and S256 PKCE. Its scopes are `offline_access`, `offline`,
+`openid` and `read`. The separate
+[MCP resource metadata](https://api.greptile.com/.well-known/oauth-protected-resource/mcp)
+advertises `read`, `write` and `offline_access` for `https://api.greptile.com/mcp`.
+Neither describes billing permission or an exchange into dashboard authorization.
+A broad `read` scope must not be assumed to grant billing access.
+
+The current [MCP setup](https://www.greptile.com/docs/mcp/setup) documents browser
+OAuth. Its [tools reference](https://www.greptile.com/docs/mcp/tools) describes
+identity/organization discovery, repositories, reviews, context, knowledge bases
+and analytics, without a billing/credit/subscription read. The
+[CLI reference](https://www.greptile.com/docs/code-review/greptile-cli) likewise
+does not specify billing access or native session transfer. The
+[documentation index](https://www.greptile.com/docs/llms.txt) identifies no such
+authorization contract. This is a bounded documentation finding, not a claim
+that every credential or private deployment rejects billing.
+The [public changelog](https://www.greptile.com/changelog) also establishes no
+new native billing authorization route.
+
+The anonymous [dashboard providers response](https://app.greptile.com/api/auth/providers)
+still advertises Google and Greptile callbacks under
+`https://app.greptile.com/api/auth/callback/`. These are dashboard server
+callbacks, not native return or session-exchange contracts. The anonymous
+[dashboard session](https://app.greptile.com/api/auth/session) is `null`, as
+expected without authentication. That response alone proves no limitation on
+an authenticated session. The earlier identity-200/billing-401 probe remains
+historical evidence from October 5, not a new result from this investigation.
+
+Google's [native-app OAuth policy](https://developers.google.com/identity/protocols/oauth2/native-app)
+requires an external user agent and identifies embedded WebKit as a source of
+`disallowed_useragent`. Apple's
+[ASWebAuthenticationSession](https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession)
+returns a provider callback to the app. Replacing WebKit with that browser
+does not itself supply billing authorization or transfer an HttpOnly dashboard
+cookie. CodexBar therefore does not start a Google flow it cannot complete.
+
+Today's [billing guide](https://www.greptile.com/docs/account/billing-seats)
+describes prepaid, organization-shared credits and the human-facing Billing
+dashboard. It supplies no billing API or native authorization contract. This
+differs from the October 3/5 plan descriptions above, which are historical
+records. New plan copy does not establish an account's allowance or renewal
+date, and this change does not reinterpret stored results or invent a period.
+
+### Reproduction and delivery boundary
+
+At 8:10 PM EDT on October 29, fresh anonymous GETs to the six documentation
+sources and four metadata/session sources above returned HTTP 200. The legacy
+`mcp-v2` and `code-review-bot/billing-seats` documentation URLs redirect to the
+current paths linked here. The Markdown sources are also available by appending
+`.md` to documentation page paths. To repeat the metadata check without any
+account or cookies:
+
+```sh
+curl --fail --silent --show-error \
+  https://auth.greptile.com/.well-known/oauth-authorization-server
+curl --fail --silent --show-error \
+  https://api.greptile.com/.well-known/oauth-protected-resource/mcp
+curl --fail --silent --show-error https://app.greptile.com/api/auth/providers
+curl --fail --silent --show-error https://app.greptile.com/api/auth/session
+```
+
+The app-side fallback explains the limitation before sign-in, blocks Google
+authorization in both normal and popup navigation, and offers return/cancel
+without saving a credential. HTTP 403 now remains an authorization denial,
+rather than being accepted as a transient billing failure during connection.
+Saved sessions, account isolation, review history and compact renewal display
+retain their existing behavior. Missing billing data stays unavailable;
+previously observed dates stay last known after a failed refresh.
+
+Local fixtures cover navigation blocking, cancellation, expiry, account
+mismatch and billing rejection separately from identity success. The existing
+manual iPhone/iPad reconnect journey also exercises fresh and saved attempts,
+return to sign-in, popup rejection and cancellation back to account settings.
+Its temporary HTML is isolated test content, not a provider page or proof of
+working Google authorization. No test needs another machine or account.
+
+A supported Google billing login and live renewal comparison remain pending
+the provider contract. This docs/UI-honesty change does not claim to implement
+them. No live account check is required from Franz for this delivery, and no
+App Store action is part of it.

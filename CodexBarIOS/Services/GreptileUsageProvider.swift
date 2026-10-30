@@ -171,7 +171,7 @@ public final class GreptileUsageProvider: UsageProvider {
             renewal = GreptileAllowanceRenewal(
                 renewsAt: nil, observedAt: Date(),
                 unavailableReason: (error as? GreptileSignInError ?? .unavailable).localizedDescription,
-                requiresAuthentication: (error as? GreptileSignInError) == .expired,
+                requiresAuthentication: (error as? GreptileSignInError)?.requiresAuthentication == true,
                 lookupFailed: (error as? GreptileSignInError) != .invalidBillingResponse, isApplicable: nil
             )
         }

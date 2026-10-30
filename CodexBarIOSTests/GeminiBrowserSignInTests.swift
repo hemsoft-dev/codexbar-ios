@@ -7,6 +7,34 @@ import Combine
 /// Explicit local-only coverage. Automatic CI does not enable this compilation condition.
 final class GreptileBrowserCookieRegressionTests: XCTestCase {
     @MainActor
+    func testGoogleNavigationAndPopupStopBeforeConnectionAndCanCancel() async throws {
+        for target in ["_self", "_blank"] {
+            var result: Result<GreptileSessionCredentials, Error>?
+            let session = GreptileBrowserSignInSession { result = $0 }
+            defer { session.invalidate() }
+            let blocked = expectation(description: "Google authorization is stopped for \(target)")
+            let observer = session.$isGoogleSignInUnavailable.dropFirst().filter { $0 }.prefix(1).sink { _ in blocked.fulfill() }
+            defer { observer.cancel() }
+            session.webView.loadHTMLString("""
+                <html><body><a target="\(target)" href="https://accounts.google.com/o/oauth2/v2/auth">Google</a></body></html>
+                """, baseURL: URL(string: "https://app.greptile.com/"))
+            for _ in 0..<100 {
+                if (try? await session.webView.evaluateJavaScript("document.querySelector('a') != null")) as? Bool == true { break }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            _ = try await session.webView.evaluateJavaScript("document.querySelector('a').click()")
+            await fulfillment(of: [blocked], timeout: 5)
+            XCTAssertTrue(session.organizations.isEmpty)
+            XCTAssertFalse(session.isVerifying)
+            XCTAssertNil(result, "Blocked Google sign-in must never complete or save a credential.")
+            XCTAssertNotEqual(session.webView.url?.host, "accounts.google.com")
+            session.cancel()
+            guard case .failure(let error)? = result else { return XCTFail("Cancellation must finish the attempt.") }
+            XCTAssertEqual(error as? GreptileSignInError, .canceled)
+        }
+    }
+
+    @MainActor
     func testSameTokenExpiryExtensionWhileVerifyingIsSaved() async throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ConfigurationAndAuthMockURLProtocol.self]

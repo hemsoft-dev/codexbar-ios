@@ -20,6 +20,12 @@ building, testing, or releasing the app.
 
 ### Fixed
 
+- Explain that Google sign-in cannot connect Greptile billing yet. Block the
+  unsupported sign-in with return and cancel actions, preserve saved connections
+  when canceled, and reject denied billing access before connecting an account.
+  Existing saved sessions can still refresh their actual renewal dates.
+  ([#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409))
+
 - Read Gemini Models and Argon weekly coding quotas from Google's main quota
   service, which reports these pools when the backup service leaves them out.
   The backup service is used only when the main one is unreachable.

@@ -62,7 +62,39 @@ final class GreptileAllowanceUITests: XCTestCase {
         reveal(accountSignIn, in: app)
         XCTAssertTrue(accountSignIn.isHittable)
         keep("greptile-renewal-reconnect-verified-settings", app: app)
+        checkGoogleSignInRecovery(in: app, reconnect: true)
+        tap(app.buttons["Disconnect Greptile"], in: app)
+        XCTAssertEqual(accountSignIn.label, "Sign in to Greptile")
+        checkGoogleSignInRecovery(in: app, reconnect: false)
         app.terminate()
+    }
+
+    private func checkGoogleSignInRecovery(in app: XCUIApplication, reconnect: Bool) {
+        let name = reconnect ? "reconnect" : "fresh"
+        let notice = app.staticTexts["greptile-google-sign-in-notice"]
+        reveal(notice, in: app)
+        XCTAssertTrue(notice.label.contains("Google sign-in can't connect Greptile billing"))
+        tap(app.buttons["greptile-account-sign-in"], in: app)
+        let google = app.webViews.links["Continue with Google"]
+        XCTAssertTrue(google.waitForExistence(timeout: 10), app.debugDescription)
+        keep("greptile-google-\(name)-sign-in", app: app)
+        google.tap()
+        let unavailable = app.staticTexts["Google sign-in unavailable"]
+        XCTAssertTrue(unavailable.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.buttons["Connect Synthetic organization"].exists)
+        keep("greptile-google-\(name)-unavailable", app: app)
+        app.buttons["greptile-return-to-sign-in"].tap()
+        XCTAssertTrue(google.waitForExistence(timeout: 5), app.debugDescription)
+        app.webViews.links["Google popup"].tap()
+        XCTAssertTrue(unavailable.waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.navigationBars["Greptile Free Fixture"].waitForExistence(timeout: 5))
+        let signIn = app.buttons["greptile-account-sign-in"]
+        reveal(signIn, in: app)
+        XCTAssertEqual(signIn.label, reconnect ? "Reconnect Greptile" : "Sign in to Greptile")
+        XCTAssertEqual(app.buttons["Disconnect Greptile"].exists, reconnect)
+        XCTAssertTrue(app.staticTexts["Greptile sign-in canceled. Your saved account was not changed."].exists)
+        keep("greptile-google-\(name)-canceled", app: app)
     }
 
     private func checkRenewalScreens() {
