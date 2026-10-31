@@ -4985,11 +4985,16 @@ extension ProviderParsingTests {
             XCTAssertEqual(result.plan?.accessibilityLabel, "Ultra")
             let hasSession = session.contains("42") || session.contains(":0")
             XCTAssertEqual(result.bars.count, hasSession ? 3 : 2)
-            XCTAssertEqual(result.bars.suffix(2).map(\.used), [64, 21])
-            XCTAssertTrue(result.bars.suffix(2).allSatisfy { $0.resetsAt != nil })
+            for (key, used) in [("weekly-all", 64.0), ("weekly-scoped-fable", 21.0)] {
+                let bar = try XCTUnwrap(result.bars.first { $0.stableKey == key })
+                XCTAssertEqual(bar.used, used)
+                XCTAssertEqual(bar.resetsAt, Date(timeIntervalSince1970: 1_894_060_800))
+            }
+            let sessionBar = result.bars.first { $0.stableKey == "session" }
+            XCTAssertEqual(sessionBar != nil, hasSession)
             if hasSession {
-                XCTAssertEqual(result.bars.first?.label, "5-hour")
-                XCTAssertEqual(result.bars.first?.used, session.contains("42") ? 42 : 0)
+                XCTAssertEqual(sessionBar?.label, "5-hour")
+                XCTAssertEqual(sessionBar?.used, session.contains("42") ? 42 : 0)
             }
         }
     }
