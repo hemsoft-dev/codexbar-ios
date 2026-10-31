@@ -1707,6 +1707,9 @@ private final class UITestClaudeProfileProtocol: URLProtocol, @unchecked Sendabl
             let scenario = ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"] ?? ""
             switch scenario {
             case "claude-plan-pro": body = #"{"organization":{"organization_type":"claude_pro"}}"#
+            // Synthetic Ultra migration scenarios; these are not captured provider payloads.
+            case "claude-plan-ultra-absent", "claude-plan-ultra-pending":
+                body = Self.maxProfile(multiplier: 20)
             case "claude-plan-max20":
                 body = Self.maxProfile(multiplier: 20)
             case "claude-plan-change": body = Self.maxProfile(multiplier: count == 1 ? 5 : 20)
@@ -1714,7 +1717,16 @@ private final class UITestClaudeProfileProtocol: URLProtocol, @unchecked Sendabl
             }
         } else {
             let reset = ISO8601DateFormatter().string(from: Date().addingTimeInterval(7_200))
-            body = #"{"five_hour":{"utilization":42,"resets_at":"\#(reset)"}}"#
+            let scenario = ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"] ?? ""
+            if scenario.hasPrefix("claude-plan-ultra-") {
+                let session = scenario.hasSuffix("pending")
+                    ? #""five_hour":{"utilization":42,"resets_at":"\#(reset)"},"# : ""
+                body = "{\(session)\"limits\":[{\"kind\":\"weekly_all\",\"percent\":64,\"resets_at\":\"\(reset)\"},"
+                    + "{\"kind\":\"weekly_scoped\",\"percent\":21,\"resets_at\":\"\(reset)\","
+                    + "\"scope\":{\"model\":{\"display_name\":\"Fable\"}}}]}"
+            } else {
+                body = #"{"five_hour":{"utilization":42,"resets_at":"\#(reset)"}}"#
+            }
         }
         let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)

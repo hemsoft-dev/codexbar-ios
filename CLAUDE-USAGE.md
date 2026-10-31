@@ -35,13 +35,14 @@ labels. Scoped limits retain their model names, and a shared session alongside
 scoped sessions keeps its "Other models" qualifier. Metric keys and legacy
 widget tile IDs do not depend on these new display labels.
 
-Anthropic's [Max plan documentation](https://support.claude.com/en/articles/11049741-what-is-the-max-plan)
-states that both Max tiers have a five-hour session reset and an all-model
-weekly limit. The $200 tier increases the per-session allowance, not its
-window length. Parsing follows the returned window kind rather than price or
-plan name. Local synthetic Pro and Max 20x fixtures verify the labels and
-unchanged percentages, resets, and saved identities. Live same-account Pro
-and Max quota comparisons remain pending for Franz.
+Anthropic's [Ultra plan documentation](https://support.claude.com/en/articles/17728952-what-is-the-ultra-plan)
+and [pricing](https://claude.com/pricing) rename Max 20x to Ultra. Max has 5x Pro
+usage. Verified Ultra accounts have no five-hour limit; pending verification can
+retain that limit. Weekly all-model and Fable limits remain. CodexBar displays
+only returned windows, independent of the plan label. Missing or malformed
+session data never establishes verification. The existing reported zero-percent
+idle session remains visible, including its "Starts when a message is sent" text.
+No verification badge, quota multiplier calculation or new usage field is added.
 
 ## Subscription-name source and refresh policy
 
@@ -71,8 +72,9 @@ Source research for [#431](https://github.com/hemsoft-dev/codexbar-ios/issues/43
 | Explicit profile metadata | Pill |
 | --- | --- |
 | Organization type `claude_pro` | Pro |
-| Organization type `claude_max` and exact tier `default_claude_max_5x` / `max_5x` | Max 5x |
-| Organization type `claude_max` and exact tier `default_claude_max_20x` / `max_20x` | Max 20x |
+| Organization type `claude_ultra` | Ultra, defensive compatibility only; no captured provider payload |
+| Organization type `claude_max` and exact tier `default_claude_max_5x` / `max_5x` | Max |
+| Organization type `claude_max` and exact tier `default_claude_max_20x` / `max_20x` | Ultra |
 | Organization type `claude_max` without a recognized multiplier | Max |
 | Organization type `claude_team` / `claude_enterprise` | Team / Enterprise family only |
 | No organization type, exactly one true JSON boolean `account.has_claude_pro` / `account.has_claude_max` | Pro / Max family, with an explicit Max tier when present |
@@ -229,3 +231,33 @@ Saved Fable widget selections match the allowance by identity, never by a former
 bar position. If that allowance is absent, the tile stays unavailable instead of
 showing the session or all-model weekly quota. Future model names can still match
 their own provider-returned identity without becoming aliases of the known cap.
+
+## Ultra compatibility evidence and validation
+
+The legacy `default_claude_max_20x` and `max_20x` values now display Ultra;
+`default_claude_max_5x` and `max_5x` display Max. Legacy descriptor IDs stay stable.
+Login metadata accepts explicit `ultra` in the existing subscription-type input.
+Profile parsing accepts `claude_ultra` in the existing organization-type field as
+defensive compatibility. These current-name values are synthetic test inputs,
+not verified provider contracts. No `has_claude_ultra`, verification field or new
+endpoint is assumed. Unknown family and contradictory known tier metadata do not
+produce a plan. Existing credential-bound caching and error handling remain.
+
+Ultra fixtures reuse existing window fields and the legacy Max 20x profile.
+The absent-session scenario resembles documented verified behavior and the
+present-session scenario resembles pending verification. Neither establishes an
+account's actual verification status. No first-party Ultra account payload has
+been captured for this change. The original announcement media was unavailable.
+
+On an authorized Mac, run focused native tests with the repository's Xcode
+prefix, a suitable installed iPhone simulator and `-only-testing` selections for
+`CodexBarIOSTests/ProviderParsingTests`, `CodexBarIOSTests/ProviderNetworkTests`,
+`CodexBarIOSTests/ClaudePlanProfileTests` and
+`CodexBarIOSTests/ClaudeFableWeeklyTests`. The last suite covers saved metrics,
+widgets and weekly consumers. Then run
+`CodexBarIOSUITests/CodexCreditsPoolUITests/testClaudeUltraReportedWindowsEvidence`
+on iPhone and iPad for synthetic pending-like and absent-session card captures.
+Exercise widget previews for both states and attach current-head evidence to the
+PR. Native execution and rendered evidence remain required before merge; Linux
+source checks cannot substitute for them. Do not dispatch the full release UI
+workflow for this routine change.

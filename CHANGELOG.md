@@ -15,6 +15,10 @@ building, testing, or releasing the app.
 
 ### Changed
 
+- Show Claude Ultra and Max names from supported account metadata while keeping
+  only the session and weekly limits Claude reports.
+  ([#540](https://github.com/hemsoft-dev/codexbar-ios/issues/540))
+
 - Simplify the dashboard and weekly quota details to show usage and reset
   information without subscription scores.
   ([#537](https://github.com/hemsoft-dev/codexbar-ios/issues/537))

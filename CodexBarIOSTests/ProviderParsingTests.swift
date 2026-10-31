@@ -3646,6 +3646,30 @@ final class ProviderParsingTests: XCTestCase {
         XCTAssertEqual(onePercentResult.bars.first?.used, 1)
     }
 
+    // Synthetic verified-like and pending-like windows. No fixture establishes account verification.
+    func testClaudeUltraKeepsOnlyReportedWindows() throws {
+        let weekly = #"{"kind":"weekly_all","percent":64,"resets_at":"2030-01-08T00:00:00Z"}"#
+        let fable = #"{"kind":"weekly_scoped","percent":21,"resets_at":"2030-01-08T00:00:00Z","scope":{"model":{"display_name":"Fable"}}}"#
+        let sessions = [
+            "", #""five_hour":null,"#, #""five_hour":{"utilization":"bad"},"#,
+            #""five_hour":{"utilization":42,"resets_at":"2030-01-01T02:00:00Z"},"#,
+            #""five_hour":{"utilization":0},"#,
+        ]
+        for session in sessions {
+            let payload = "{\(session)\"limits\":[\(weekly),\(fable)]}"
+            let result = try XCTUnwrap(ClaudeUsageParser.parse(Data(payload.utf8), subscriptionType: "ultra"))
+            XCTAssertEqual(result.plan?.accessibilityLabel, "Ultra")
+            let hasSession = session.contains("42") || session.contains(":0")
+            XCTAssertEqual(result.bars.count, hasSession ? 3 : 2)
+            XCTAssertEqual(result.bars.suffix(2).map(\.used), [64, 21])
+            XCTAssertTrue(result.bars.suffix(2).allSatisfy { $0.resetsAt != nil })
+            if hasSession {
+                XCTAssertEqual(result.bars.first?.label, "5-hour")
+                XCTAssertEqual(result.bars.first?.used, session.contains("42") ? 42 : 0)
+            }
+        }
+    }
+
     func testClaudeUsageParserRepresentsIdleAndActiveCurrentSessions() throws {
         let idle = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"limits":[{"kind":"session","percent":0,"resets_at":null,"is_active":false}]}"#.utf8),
@@ -3937,12 +3961,19 @@ final class ProviderParsingTests: XCTestCase {
         ] = [
             ("free", nil, "claude.free", "FREE"),
             ("pro", "standard", "claude.pro", "PRO"),
-            ("max", "max_20x", "claude.max20", "MAX 20×"),
-            ("max_20x", nil, "claude.max20", "MAX 20×"),
+            ("max", "max_20x", "claude.max20", "ULTRA"),
+            ("max_20x", nil, "claude.max20", "ULTRA"),
             ("team", nil, "claude.team", "TEAM"),
             ("team_premium", nil, "claude.team-premium", "TEAM PREMIUM"),
             ("enterprise", nil, "claude.enterprise", "ENTERPRISE"),
             ("max", nil, "claude.max", "MAX"),
+            ("ultra", nil, "claude.max20", "ULTRA"),
+            ("max", "max_5x", "claude.max5", "MAX"),
+            ("ultra", "max_5x", nil, nil),
+            ("pro", "max_20x", nil, nil),
+            ("unknown", "max_20x", nil, nil),
+            (nil, "max_20x", nil, nil),
+            ("max_5x", "max_20x", nil, nil),
             ("subscription", nil, nil, nil),
             ("unknown_value", "unknown_tier", nil, nil),
             ("", "", nil, nil),
