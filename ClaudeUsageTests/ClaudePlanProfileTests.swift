@@ -23,6 +23,20 @@ final class ClaudePlanProfileTests: XCTestCase {
         }
     }
 
+    func testMalformedCapacityTierDoesNotHideIndependentPlanFamilies() {
+        let tiers: [Any] = [NSNull(), "", 7]
+        for tier in tiers {
+            for (type, name) in [("claude_pro", "Pro"), ("claude_team", "Team"), ("claude_enterprise", "Enterprise")] {
+                let root: [String: Any] = ["organization": ["organization_type": type, "rate_limit_tier": tier]]
+                XCTAssertEqual(ClaudeProfilePlanParser.parse(root)?.accessibilityLabel, name)
+            }
+            for type in ["claude_max", "claude_ultra"] {
+                let root: [String: Any] = ["organization": ["organization_type": type, "rate_limit_tier": tier]]
+                XCTAssertNil(ClaudeProfilePlanParser.parse(root))
+            }
+        }
+    }
+
     func testUnknownConflictingAndMalformedMetadataDoesNotGuess() throws {
         for json in [
             #"{}"#,

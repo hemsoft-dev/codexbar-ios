@@ -128,7 +128,6 @@ enum ClaudeProfilePlanParser {
         let rawType = ProviderPlanDescriptor.normalizedPlanValue(organization["organization_type"] as? String)
         if organization["organization_type"] != nil, rawType == nil { return nil }
         let tier = ProviderPlanDescriptor.normalizedPlanValue(organization["rate_limit_tier"] as? String)
-        if organization["rate_limit_tier"] != nil, tier == nil { return nil }
         let types = ["claude_pro": "pro", "claude_max": "max", "claude_ultra": "ultra", "claude_team": "team", "claude_enterprise": "enterprise"]
         if boolean(account["has_claude_max"]) == true, boolean(account["has_claude_pro"]) == true { return nil }
         let type: String?
@@ -141,6 +140,7 @@ enum ClaudeProfilePlanParser {
             guard maxPlan != proPlan else { return nil }
             type = maxPlan ? "max" : "pro"
         }
+        if ["max", "ultra"].contains(type), organization["rate_limit_tier"] != nil, tier == nil { return nil }
         // Personal Pro/Max flags conflict; organization capacity tiers do not rename Team or Enterprise.
         if tier?.contains("max") == true, type == "pro" { return nil }
         if ["max", "ultra"].contains(type), tier == "default_claude_pro" { return nil }

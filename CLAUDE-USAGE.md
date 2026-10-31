@@ -261,3 +261,8 @@ Exercise widget previews for both states and attach current-head evidence to the
 PR. Native execution and rendered evidence remain required before merge; Linux
 source checks cannot substitute for them. Do not dispatch the full release UI
 workflow for this routine change.
+
+The local SwiftPM card-label regression can also be run with
+`swift test --filter ProviderCardPlanTests`. Profile capacity-tier validation applies
+to Max and Ultra; absent or malformed capacity tiers do not hide a known Pro,
+Team, or Enterprise family.
