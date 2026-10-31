@@ -3864,7 +3864,6 @@ final class ProviderParsingTests: XCTestCase {
         )
         XCTAssertEqual(result.usageMessages, ["Usage credits are enabled."])
     }
-
     func testClaudeUsageParserHonorsFallbackDisabledSpendState() throws {
         let result = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"spend":{"used":{"amount_minor":500,"currency":"USD","exponent":2}},"extra_usage":{"is_enabled":false,"disabled_reason":"Not funded"}}"#.utf8),
@@ -3874,7 +3873,6 @@ final class ProviderParsingTests: XCTestCase {
         XCTAssertTrue(result.monetaryMetrics.isEmpty)
         XCTAssertEqual(result.usageMessages, ["Usage credits are disabled: Not funded."])
     }
-
     func testClaudeUsageParserHonorsFallbackEnabledSpendState() throws {
         let result = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"spend":{"used":{"amount_minor":500,"currency":"USD","exponent":2},"limit":{"amount_minor":4000,"currency":"USD","exponent":2}},"extra_usage":{"is_enabled":true,"used_credits":500,"monthly_limit":4000,"currency":"USD","decimal_places":2}}"#.utf8),
@@ -3887,7 +3885,6 @@ final class ProviderParsingTests: XCTestCase {
         )
         XCTAssertEqual(result.usageMessages, ["Usage credits are enabled."])
     }
-
     func testClaudeUsageParserValidatesAndClampsProviderMoney() throws {
         let invalidExponent = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"spend":{"enabled":true,"used":{"amount_minor":500,"currency":"USD","exponent":20},"limit":{"amount_minor":4000,"currency":"USD","exponent":20}}}"#.utf8),
@@ -3914,7 +3911,6 @@ final class ProviderParsingTests: XCTestCase {
         ))
         XCTAssertEqual(hugePercent.monetaryMetrics.first?.detail, "Month to date")
     }
-
     func testClaudeUsageParserUsesOnlyExplicitVerifiedPlanCombinations() throws {
         let payload = Data(#"{"five_hour":{"utilization":0.1,"resets_at":"2030-01-01T00:00:00Z"}}"#.utf8)
         let mappings: [
@@ -3955,7 +3951,6 @@ final class ProviderParsingTests: XCTestCase {
             XCTAssertEqual(result.plan?.displayLabel, mapping.displayLabel, mapping.subscription ?? "nil")
         }
     }
-
     func testClaudeUsageParserPreservesScopedFiveHourLimits() throws {
         let fetchedAt = Date(timeIntervalSince1970: 1_893_369_600)
         let payload = """
@@ -4038,7 +4033,6 @@ final class ProviderParsingTests: XCTestCase {
         XCTAssertEqual(inactiveScoped.bars.map(\.label), ["5-hour"])
         XCTAssertEqual(inactiveScoped.bars.map(\.used), [25])
     }
-
     func testClaudeUsageParserShowsObservedInactiveFableWeeklyLimit() throws {
         let payload = """
         {
@@ -4077,7 +4071,6 @@ final class ProviderParsingTests: XCTestCase {
             ]
         )
     }
-
     func testClaudeUsageParserPrefersActiveDuplicateWeeklyLimit() throws {
         let payload = """
         {
@@ -4370,7 +4363,6 @@ final class ProviderParsingTests: XCTestCase {
             resolvingSavedID: "bar.\(configuration.id).1.fable-5-hour-usage-limit"
         ))
     }
-
     func testClaudeScopedMetricsProduceSingleSeverityAlert() throws {
         let payload = """
         {
@@ -4401,7 +4393,6 @@ final class ProviderParsingTests: XCTestCase {
         XCTAssertEqual(evaluation.notifications.count, 1)
         XCTAssertEqual(evaluation.activeAlertIDs, ["severity.warning.claude"])
     }
-
     func testClaudeUnscopedIdentitySurvivesScopedLabelChange() throws {
         let unscopedPayload = """
         {"limits":[{"kind":"session","percent":42,"is_active":true}]}
@@ -4457,7 +4448,6 @@ final class ProviderParsingTests: XCTestCase {
             XCTAssertEqual(evaluation.activeAlertIDs, ["severity.warning.claude"])
         }
     }
-
     func testClaudeUsageParserReadsStructuredAndScopedLimitsWithoutDuplicates() throws {
         let payload = """
         {
@@ -4531,7 +4521,6 @@ final class ProviderParsingTests: XCTestCase {
         ))
         XCTAssertEqual(incompleteStructured.bars.first?.used, 42)
     }
-
     func testClaudeUsageParserReadsCurrencyAwareUsageCredits() throws {
         let payload = """
         {
@@ -4559,7 +4548,6 @@ final class ProviderParsingTests: XCTestCase {
         XCTAssertEqual(result.monetaryMetrics.last?.detail, "Not a prepaid balance")
         XCTAssertNil(result.creditsRemaining)
     }
-
     func testClaudeUsageParserRepresentsDisabledUnlimitedAndMalformedExtraUsage() throws {
         let disabled = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"extra_usage":{"is_enabled":false,"disabled_reason":"Not funded"}}"#.utf8),
@@ -4634,7 +4622,6 @@ final class ProviderParsingTests: XCTestCase {
             unreportedEnabledState.usageMessages
         )
     }
-
     func testClaudeUsageParserReadsRateLimitHeaders() throws {
         let fetchedAt = Date(timeIntervalSince1970: 1_893_369_600)
         let result = try XCTUnwrap(ClaudeUsageParser.parseRateLimitHeaders(
