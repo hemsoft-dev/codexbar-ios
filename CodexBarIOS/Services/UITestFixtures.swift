@@ -320,6 +320,9 @@ final class UITestFixtures {
         )
         .safeAreaInset(edge: .bottom) {
             if showsPlanTransitions { PlanTransitionFixtureControls(fixture: planFixture) }
+            if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"]?.hasPrefix("claude-plan-ultra-") == true {
+                UITestWidgetPreviewControl(fixture: self)
+            }
         }
         .dynamicTypeSize(dynamicTypeSize)
     }
@@ -2202,6 +2205,26 @@ actor UITestClaudeResetProvider: UsageProvider, ClaudeUsageResetConsuming {
                                    bars: parsed.bars, claudeUsageResetInventory: inventory,
                                    failureMessage: scenario == "claude-resets-failed" ? "Synthetic Claude usage unavailable" : nil,
                                    recoveryAction: .retryRefresh, fetchedAt: now)
+    }
+}
+/// Renders the real builder from the parser's current fixture results in the isolated suite.
+@MainActor
+private struct UITestWidgetPreviewControl: View {
+    let fixture: UITestFixtures
+    @State private var showsPreview = false
+
+    var body: some View {
+        Button("Preview synthetic widgets") {
+            WidgetSnapshotPublisher.publish(
+                results: fixture.refreshService.results, configurationStore: fixture.configurationStore,
+                access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+                snapshotDefaults: fixture.defaults, accessGuard: WidgetAccessGuard(directory: nil)
+            )
+            showsPreview = true
+        }
+        .sheet(isPresented: $showsPreview) {
+            NavigationStack { WidgetBuilderView(defaults: fixture.defaults) }
+        }
     }
 }
 #endif
