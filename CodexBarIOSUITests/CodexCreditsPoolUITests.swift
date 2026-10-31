@@ -514,6 +514,12 @@ final class CodexCreditsPoolUITests: XCTestCase {
             keep("\(scenario)-dashboard", app: app)
             reveal(fable, in: app)
             keep("\(scenario)-weekly", app: app)
+            tap(app.buttons["Open settings"].firstMatch, in: app)
+            let widgets = app.descendants(matching: .any).matching(identifier: "settings-widgets").firstMatch
+            tap(widgets, in: app)
+            tap(app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Widget Builder")).firstMatch, in: app)
+            XCTAssertTrue(app.navigationBars["Widget Builder"].waitForExistence(timeout: 5))
+            keep("\(scenario)-widget-preview", app: app)
             app.terminate()
         }
     }

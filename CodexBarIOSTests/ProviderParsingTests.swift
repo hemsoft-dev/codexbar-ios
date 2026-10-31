@@ -3584,7 +3584,6 @@ final class ProviderParsingTests: XCTestCase {
         )
         XCTAssertTrue(outsideTolerance.usageMessages.isEmpty)
     }
-
     func testClaudeUsageParserReadsOAuthUsageWindows() throws {
         let fetchedAt = Date(timeIntervalSince1970: 1_893_369_600)
         let formatter = UserFacingDateTimeFormatter(
@@ -3645,31 +3644,6 @@ final class ProviderParsingTests: XCTestCase {
         ))
         XCTAssertEqual(onePercentResult.bars.first?.used, 1)
     }
-
-    // Synthetic verified-like and pending-like windows. No fixture establishes account verification.
-    func testClaudeUltraKeepsOnlyReportedWindows() throws {
-        let weekly = #"{"kind":"weekly_all","percent":64,"resets_at":"2030-01-08T00:00:00Z"}"#
-        let fable = #"{"kind":"weekly_scoped","percent":21,"resets_at":"2030-01-08T00:00:00Z","scope":{"model":{"display_name":"Fable"}}}"#
-        let sessions = [
-            "", #""five_hour":null,"#, #""five_hour":{"utilization":"bad"},"#,
-            #""five_hour":{"utilization":42,"resets_at":"2030-01-01T02:00:00Z"},"#,
-            #""five_hour":{"utilization":0},"#,
-        ]
-        for session in sessions {
-            let payload = "{\(session)\"limits\":[\(weekly),\(fable)]}"
-            let result = try XCTUnwrap(ClaudeUsageParser.parse(Data(payload.utf8), subscriptionType: "ultra"))
-            XCTAssertEqual(result.plan?.accessibilityLabel, "Ultra")
-            let hasSession = session.contains("42") || session.contains(":0")
-            XCTAssertEqual(result.bars.count, hasSession ? 3 : 2)
-            XCTAssertEqual(result.bars.suffix(2).map(\.used), [64, 21])
-            XCTAssertTrue(result.bars.suffix(2).allSatisfy { $0.resetsAt != nil })
-            if hasSession {
-                XCTAssertEqual(result.bars.first?.label, "5-hour")
-                XCTAssertEqual(result.bars.first?.used, session.contains("42") ? 42 : 0)
-            }
-        }
-    }
-
     func testClaudeUsageParserRepresentsIdleAndActiveCurrentSessions() throws {
         let idle = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"limits":[{"kind":"session","percent":0,"resets_at":null,"is_active":false}]}"#.utf8),
@@ -3692,7 +3666,6 @@ final class ProviderParsingTests: XCTestCase {
         XCTAssertNotNil(active.bars.first?.resetsAt)
         XCTAssertNil(active.bars.first?.projectionDescriptionOverride)
     }
-
     func testClaudeUsageParserPrefersProviderSpendAndKeepsBalanceDistinctFromHeadroom() throws {
         let payload = """
         {
@@ -3778,7 +3751,6 @@ final class ProviderParsingTests: XCTestCase {
             ]
         )
     }
-
     func testClaudeUsageParserOmitsUnreportedSpendFieldsAndPreservesAutoReloadObjectState() throws {
         let partial = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"spend":{"enabled":true,"used":{"amount_minor":250,"currency":"GBP","exponent":2},"auto_reload":{"enabled":true}}}"#.utf8),
@@ -3803,7 +3775,6 @@ final class ProviderParsingTests: XCTestCase {
         )
         XCTAssertTrue(missingOptionalFields.dashboardUsageMessages.isEmpty)
     }
-
     func testClaudeUsageParserLossilyOmitsMalformedSpendFields() throws {
         let result = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"five_hour":{"utilization":13,"resets_at":"2030-01-01T02:00:00Z"},"spend":{"enabled":true,"percent":"unknown","used":{"amount_minor":250,"currency":"USD"},"limit":{"amount_minor":4000,"currency":"USD","exponent":2},"balance":[],"auto_reload":[]}}"#.utf8),
@@ -3819,7 +3790,6 @@ final class ProviderParsingTests: XCTestCase {
             ["Usage credits are enabled."]
         )
     }
-
     func testClaudeUsageParserLossilyOmitsMalformedSpendContainer() throws {
         let result = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"five_hour":{"utilization":13,"resets_at":"2030-01-01T02:00:00Z"},"spend":[]}"#.utf8),
@@ -3830,7 +3800,6 @@ final class ProviderParsingTests: XCTestCase {
         XCTAssertEqual(result.bars.map(\.used), [13])
         XCTAssertTrue(result.monetaryMetrics.isEmpty)
     }
-
     func testClaudeUsageParserLossilyOmitsMalformedLimitsContainer() throws {
         let result = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"limits":[{"kind":"session","percent":13,"resets_at":"2030-01-01T02:00:00Z"},{"kind":"weekly_all","percent":"unknown"},"unexpected",{"kind":"weekly_all","percent":36,"resets_at":"2030-01-08T02:00:00Z"}],"spend":{"enabled":true,"balance":{"amount_minor":1000,"currency":"USD","exponent":2}}}"#.utf8),
@@ -3843,7 +3812,6 @@ final class ProviderParsingTests: XCTestCase {
         XCTAssertEqual(result.monetaryMetrics.map(\.amount), [Decimal(10)])
         XCTAssertEqual(result.usageMessages, ["Usage credits are enabled."])
     }
-
     func testClaudeUsageParserLossilyOmitsMalformedWindowFields() throws {
         let result = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"five_hour":{"utilization":13,"resets_at":[]},"seven_day":{"utilization":36,"resets_at":{}}}"#.utf8),
@@ -3854,7 +3822,6 @@ final class ProviderParsingTests: XCTestCase {
         XCTAssertEqual(result.bars.map(\.used), [13, 36])
         XCTAssertEqual(result.bars.map(\.resetsAt), [nil, nil])
     }
-
     func testClaudeUsageParserLossilyOmitsMalformedLegacyExtraUsage() throws {
         let preferredSpend = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"five_hour":{"utilization":13,"resets_at":"2030-01-01T02:00:00Z"},"spend":{"enabled":true,"used":{"amount_minor":500,"currency":"USD","exponent":2},"limit":{"amount_minor":4000,"currency":"USD","exponent":2},"balance":{"amount_minor":1000,"currency":"USD","exponent":2}},"extra_usage":{"is_enabled":true,"used_credits":"unknown"}}"#.utf8),
@@ -3881,7 +3848,6 @@ final class ProviderParsingTests: XCTestCase {
             ["Usage credits are enabled with no monthly spend limit reported."]
         )
     }
-
     func testClaudeUsageParserFillsPartialSpendFromLegacyExtraUsage() throws {
         let result = try XCTUnwrap(ClaudeUsageParser.parse(
             Data(#"{"spend":{"enabled":true,"used":{"amount_minor":500,"currency":"USD","exponent":2},"balance":{"amount_minor":1000,"currency":"USD","exponent":2}},"extra_usage":{"is_enabled":true,"used_credits":250,"monthly_limit":4000,"currency":"USD","decimal_places":2}}"#.utf8),
@@ -4998,6 +4964,32 @@ extension ProviderParsingTests {
         for body in malformed {
             XCTAssertThrowsError(try GreptileDashboardClient.parseBillingState(Data(body.utf8)), body) { error in
                 XCTAssertEqual(error as? GreptileSignInError, .invalidBillingResponse, body)
+            }
+        }
+    }
+}
+
+extension ProviderParsingTests {
+    // Synthetic verified-like and pending-like windows. No fixture establishes account verification.
+    func testClaudeUltraKeepsOnlyReportedWindows() throws {
+        let weekly = #"{"kind":"weekly_all","percent":64,"resets_at":"2030-01-08T00:00:00Z"}"#
+        let fable = #"{"kind":"weekly_scoped","percent":21,"resets_at":"2030-01-08T00:00:00Z","scope":{"model":{"display_name":"Fable"}}}"#
+        let sessions = [
+            "", #""five_hour":null,"#, #""five_hour":{"utilization":"bad"},"#,
+            #""five_hour":{"utilization":42,"resets_at":"2030-01-01T02:00:00Z"},"#,
+            #""five_hour":{"utilization":0},"#,
+        ]
+        for session in sessions {
+            let payload = "{\(session)\"limits\":[\(weekly),\(fable)]}"
+            let result = try XCTUnwrap(ClaudeUsageParser.parse(Data(payload.utf8), subscriptionType: "ultra"))
+            XCTAssertEqual(result.plan?.accessibilityLabel, "Ultra")
+            let hasSession = session.contains("42") || session.contains(":0")
+            XCTAssertEqual(result.bars.count, hasSession ? 3 : 2)
+            XCTAssertEqual(result.bars.suffix(2).map(\.used), [64, 21])
+            XCTAssertTrue(result.bars.suffix(2).allSatisfy { $0.resetsAt != nil })
+            if hasSession {
+                XCTAssertEqual(result.bars.first?.label, "5-hour")
+                XCTAssertEqual(result.bars.first?.used, session.contains("42") ? 42 : 0)
             }
         }
     }
