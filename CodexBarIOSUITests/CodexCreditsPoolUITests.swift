@@ -153,7 +153,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
                     ("Codex Pro highest tier fixture", "ChatGPT Pro 500"),
                     ("Codex Pro lower tier fixture", "ChatGPT Pro 100"),
                     ("Codex unavailable fixture", "Plan unavailable"),
-                    ("Claude Max fixture", "Max 5x"),
+                    ("Claude Max fixture", "Max"),
                     ("Long Google AI Ultra account name is not proof of a subscription", "Plan unavailable"),
                     ("Grok", "SuperGrok Lite"),
                     ("OpenRouter fixture", "API credits"),
@@ -298,7 +298,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
             let header = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Claude, ")).firstMatch
             reveal(header, in: app)
             XCTAssertFalse(header.label.contains("Renews in"))
-            XCTAssertTrue(header.label.contains("Max 20x"), header.label)
+            XCTAssertTrue(header.label.contains("Ultra"), header.label)
             tap(app.buttons["More options for Personal Claude"], in: app)
             tap(app.buttons["More information for Personal Claude"], in: app)
             XCTAssertTrue(app.staticTexts[state == "unknown" ? "Renewal date unavailable" : "Does not renew"].waitForExistence(timeout: 5))
@@ -496,12 +496,40 @@ final class CodexCreditsPoolUITests: XCTestCase {
         stale.terminate()
     }
 
+    /// Focused manual capture on both device families. Networking is blocked by fixture protocol.
+    func testClaudeUltraReportedWindowsEvidence() {
+        continueAfterFailure = false
+        for scenario in ["claude-plan-ultra-absent", "claude-plan-ultra-pending"] {
+            let app = launchSpacingFixture(defaultText: true, dark: false, scenario: scenario)
+            let header = claudeProfileHeader(plan: "Ultra", in: app)
+            XCTAssertTrue(header.waitForExistence(timeout: 10), app.debugDescription)
+            let weekly = app.buttons["dashboard-metric-claude.weekly-all"]
+            XCTAssertTrue(weekly.waitForExistence(timeout: 5), app.debugDescription)
+            XCTAssertTrue(weekly.label.contains("64%"), weekly.label)
+            let fable = app.buttons["dashboard-metric-claude.weekly-scoped-fable"]
+            XCTAssertTrue(fable.exists, app.debugDescription)
+            XCTAssertTrue(fable.label.contains("21%"), fable.label)
+            XCTAssertEqual(app.buttons["dashboard-metric-claude.session"].exists, scenario.hasSuffix("pending"))
+            reveal(header, in: app)
+            keep("\(scenario)-dashboard", app: app)
+            reveal(fable, in: app)
+            keep("\(scenario)-weekly", app: app)
+            tap(app.buttons["Preview synthetic widgets"], in: app)
+            XCTAssertTrue(app.navigationBars["Widget Builder"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.staticTexts["64%"].firstMatch.waitForExistence(timeout: 5), app.debugDescription)
+            XCTAssertTrue(app.staticTexts["21%"].firstMatch.exists, app.debugDescription)
+            XCTAssertEqual(app.staticTexts["42%"].firstMatch.exists, scenario.hasSuffix("pending"))
+            keep("\(scenario)-widget-preview", app: app)
+            app.terminate()
+        }
+    }
+
     private func exerciseClaudeProfilePills() {
         for (scenario, plan, defaultText, dark) in [
             ("claude-plan-pro", "Pro", true, false),
-            ("claude-plan-max20", "Max 20x", true, false),
+            ("claude-plan-max20", "Ultra", true, false),
             ("claude-plan-unknown", "Plan unavailable", true, false),
-            ("claude-plan-change", "Max 5x", false, true),
+            ("claude-plan-change", "Max", false, true),
         ] {
             let app = launchSpacingFixture(defaultText: defaultText, dark: dark, scenario: scenario)
             let header = claudeProfileHeader(plan: plan, in: app)
@@ -515,7 +543,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
             keep("\(scenario)-collapsed", app: app)
             if scenario == "claude-plan-change" {
                 tap(app.buttons["Refresh usage"], in: app)
-                let changed = claudeProfileHeader(plan: "Max 20x", in: app)
+                let changed = claudeProfileHeader(plan: "Ultra", in: app)
                 XCTAssertTrue(changed.waitForExistence(timeout: 10), app.debugDescription)
                 reveal(changed, in: app)
                 XCTAssertEqual(changed.value as? String, "Collapsed")

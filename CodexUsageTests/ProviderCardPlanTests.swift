@@ -19,8 +19,8 @@ final class ProviderCardPlanTests: XCTestCase {
 
     func testClaudeMaxVariantsAndUnknownTier() throws {
         for (subscription, tier, label) in [
-            ("max", "default_claude_max_5x", "MAX 5×"),
-            ("max", "default_claude_max_20x", "MAX 20×"),
+            ("max", "default_claude_max_5x", "MAX"),
+            ("max", "default_claude_max_20x", "ULTRA"),
             ("max", "unknown", "MAX"),
             ("unknown", "unknown", "Plan unavailable"),
         ] {

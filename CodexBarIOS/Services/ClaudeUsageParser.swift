@@ -1215,21 +1215,33 @@ public enum ClaudeUsageParser {
     ) -> ProviderPlanDescriptor? {
         let subscription = ProviderPlanDescriptor.normalizedPlanValue(subscriptionType)
         let tier = ProviderPlanDescriptor.normalizedPlanValue(rateLimitTier)
-        let maxTiers = [
-            "max_20x": "20", "default_claude_max_20x": "20",
-            "max_5x": "5", "default_claude_max_5x": "5",
+        // Existing metadata only. Plan names never establish a verification state or quota.
+        let legacyTiers = [
+            "max_20x": "ultra", "default_claude_max_20x": "ultra",
+            "max_5x": "max", "default_claude_max_5x": "max",
         ]
-        if let multiplier = maxTiers[subscription ?? ""] ?? maxTiers[tier ?? ""] {
-            return .make(
-                providerPrefix: "claude", identifier: "max\(multiplier)",
-                label: "Max \(multiplier)x", displayLabel: "MAX \(multiplier)×"
-            )
+        guard let subscription else { return nil }
+        let family = legacyTiers[subscription] ?? subscription
+        let tierFamily = legacyTiers[tier ?? ""]
+        if let tierFamily {
+            guard ["max", "ultra"].contains(family) else { return nil }
+            if family == "ultra", tierFamily != "ultra" { return nil }
+            if let legacyFamily = legacyTiers[subscription], legacyFamily != tierFamily { return nil }
+        }
+        if ["max", "ultra"].contains(family), tier == "default_claude_pro" { return nil }
+        let resolved = tierFamily ?? family
+        // Retain legacy descriptor IDs for existing consumers while updating public names.
+        let hasLegacyTier = tierFamily != nil || legacyTiers[subscription] != nil
+        if resolved == "ultra" || resolved == "max" && hasLegacyTier {
+            let ultra = resolved == "ultra"
+            return .make(providerPrefix: "claude", identifier: ultra ? "max20" : "max5",
+                         label: ultra ? "Ultra" : "Max")
         }
         let labels = [
             "free": "Free", "pro": "Pro", "max": "Max", "team": "Team",
             "team_premium": "Team Premium", "enterprise": "Enterprise",
         ]
-        guard let subscription, let label = labels[subscription] else { return nil }
+        guard let label = labels[subscription] else { return nil }
         return .make(
             providerPrefix: "claude", identifier: subscription.replacingOccurrences(of: "_", with: "-"), label: label
         )

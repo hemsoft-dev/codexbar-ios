@@ -4,11 +4,13 @@ import XCTest
 
 @MainActor
 final class ClaudePlanProfileTests: XCTestCase {
+    // Synthetic compatibility values, not captured Ultra profile responses.
     func testExplicitProfilePlansAndMaxMultipliers() throws {
         for (type, tier, name) in [
             ("claude_pro", "default_claude_pro", "Pro"),
-            ("claude_max", "default_claude_max_5x", "Max 5x"),
-            ("claude_max", "default_claude_max_20x", "Max 20x"),
+            ("claude_ultra", "default_claude_max_20x", "Ultra"),
+            ("claude_max", "default_claude_max_5x", "Max"),
+            ("claude_max", "default_claude_max_20x", "Ultra"),
             ("claude_max", "future_tier", "Max"),
             ("claude_team", "team_standard", "Team"),
             ("claude_enterprise", "enterprise", "Enterprise"),
@@ -21,9 +23,26 @@ final class ClaudePlanProfileTests: XCTestCase {
         }
     }
 
+    func testMalformedCapacityTierDoesNotHideIndependentPlanFamilies() {
+        let tiers: [Any] = [NSNull(), "", 7]
+        for tier in tiers {
+            for (type, name) in [("claude_pro", "Pro"), ("claude_team", "Team"), ("claude_enterprise", "Enterprise")] {
+                let root: [String: Any] = ["organization": ["organization_type": type, "rate_limit_tier": tier]]
+                XCTAssertEqual(ClaudeProfilePlanParser.parse(root)?.accessibilityLabel, name)
+            }
+            for type in ["claude_max", "claude_ultra"] {
+                let root: [String: Any] = ["organization": ["organization_type": type, "rate_limit_tier": tier]]
+                XCTAssertNil(ClaudeProfilePlanParser.parse(root))
+            }
+        }
+    }
+
     func testUnknownConflictingAndMalformedMetadataDoesNotGuess() throws {
         for json in [
             #"{}"#,
+            #"{"organization":{"organization_type":"claude_ultra","rate_limit_tier":"max_5x"}}"#,
+            #"{"organization":{"organization_type":"claude_ultra"},"account":{"has_claude_pro":true}}"#,
+            #"{"organization":{"organization_type":"claude_ultra","rate_limit_tier":7}}"#,
             #"{"organization":{"organization_type":"future_plan","rate_limit_tier":"default_claude_max_20x"}}"#,
             #"{"organization":{"organization_type":"claude_pro","rate_limit_tier":"default_claude_max_20x"}}"#,
             #"{"organization":{"organization_type":"claude_max","rate_limit_tier":"default_claude_pro"}}"#,
@@ -41,6 +60,9 @@ final class ClaudePlanProfileTests: XCTestCase {
             let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
             XCTAssertNil(ClaudeProfilePlanParser.parse(root), json)
         }
+        XCTAssertEqual(ClaudeProfilePlanParser.parse([
+            "organization": ["organization_type": "claude_ultra"],
+        ])?.accessibilityLabel, "Ultra")
         let flags = Data(#"{"account":{"has_claude_pro":true,"has_claude_max":false}}"#.utf8)
         let root = try XCTUnwrap(JSONSerialization.jsonObject(with: flags) as? [String: Any])
         XCTAssertEqual(ClaudeProfilePlanParser.parse(root)?.accessibilityLabel, "Pro")
@@ -50,7 +72,7 @@ final class ClaudePlanProfileTests: XCTestCase {
         let harness = ProfileHarness()
         PlanProfileProtocol.configure(profile: Self.max20)
         let result = try await harness.provider.fetchUsage(for: harness.account)
-        XCTAssertEqual(result.plan?.accessibilityLabel, "Max 20x")
+        XCTAssertEqual(result.plan?.accessibilityLabel, "Ultra")
         XCTAssertFalse(result.bars.isEmpty)
         XCTAssertNil(result.failureMessage)
         let request = try XCTUnwrap(PlanProfileProtocol.requests.first { $0.url?.path == "/api/oauth/profile" })
@@ -68,15 +90,15 @@ final class ClaudePlanProfileTests: XCTestCase {
         let harness = ProfileHarness()
         PlanProfileProtocol.configure(profile: Self.max5)
         let first = try await harness.provider.fetchUsage(for: harness.account)
-        XCTAssertEqual(first.plan?.accessibilityLabel, "Max 5x")
+        XCTAssertEqual(first.plan?.accessibilityLabel, "Max")
         PlanProfileProtocol.setProfile(Self.max20)
         harness.clock.advance(299)
         let cached = try await harness.provider.fetchUsage(for: harness.account)
-        XCTAssertEqual(cached.plan?.accessibilityLabel, "Max 5x")
+        XCTAssertEqual(cached.plan?.accessibilityLabel, "Max")
         XCTAssertEqual(PlanProfileProtocol.profileCount, 1)
         harness.clock.advance(2)
         let updated = try await harness.provider.fetchUsage(for: harness.account)
-        XCTAssertEqual(updated.plan?.accessibilityLabel, "Max 20x")
+        XCTAssertEqual(updated.plan?.accessibilityLabel, "Ultra")
         XCTAssertEqual(PlanProfileProtocol.profileCount, 2)
     }
 
@@ -100,7 +122,7 @@ final class ClaudePlanProfileTests: XCTestCase {
         harness.clock.advance(301)
         PlanProfileProtocol.setProfile("", status: 503)
         let failed = try await harness.provider.fetchUsage(for: harness.account)
-        XCTAssertEqual(failed.plan?.accessibilityLabel, "Max 5x")
+        XCTAssertEqual(failed.plan?.accessibilityLabel, "Max")
         harness.clock.advance(301)
         PlanProfileProtocol.setProfile("{}")
         let unknown = try await harness.provider.fetchUsage(for: harness.account)
@@ -118,7 +140,7 @@ final class ClaudePlanProfileTests: XCTestCase {
         harness.clock.advance(900)
         PlanProfileProtocol.setProfile(Self.max20)
         let afterRetry = try await harness.provider.fetchUsage(for: harness.account)
-        XCTAssertEqual(afterRetry.plan?.accessibilityLabel, "Max 20x")
+        XCTAssertEqual(afterRetry.plan?.accessibilityLabel, "Ultra")
         XCTAssertEqual(PlanProfileProtocol.profileCount, 2)
         harness.secrets.token = "replacement-token"
         PlanProfileProtocol.setProfile(Self.pro)
@@ -172,7 +194,7 @@ final class ClaudePlanProfileTests: XCTestCase {
         await Task.yield()
         PlanProfileProtocol.releaseHeld()
         let plans = await [first.value, second.value]
-        XCTAssertEqual(plans.map { $0.plan(fallback: nil)?.accessibilityLabel }, ["Max 20x", "Max 20x"])
+        XCTAssertEqual(plans.map { $0.plan(fallback: nil)?.accessibilityLabel }, ["Ultra", "Ultra"])
         XCTAssertEqual(PlanProfileProtocol.profileCount, 1)
     }
 
@@ -240,9 +262,9 @@ final class ClaudePlanProfileTests: XCTestCase {
         PlanProfileProtocol.setProfile(Self.pro)
         let second = await client.resolve(accountID: "two", accessToken: "token-two", at: date)
         let cached = await client.resolve(accountID: "one", accessToken: "token-one", at: date)
-        XCTAssertEqual(first.plan(fallback: nil)?.accessibilityLabel, "Max 20x")
+        XCTAssertEqual(first.plan(fallback: nil)?.accessibilityLabel, "Ultra")
         XCTAssertEqual(second.plan(fallback: nil)?.accessibilityLabel, "Pro")
-        XCTAssertEqual(cached.plan(fallback: nil)?.accessibilityLabel, "Max 20x")
+        XCTAssertEqual(cached.plan(fallback: nil)?.accessibilityLabel, "Ultra")
         XCTAssertEqual(PlanProfileProtocol.profileCount, 2)
         for request in PlanProfileProtocol.requests {
             XCTAssertFalse(request.httpShouldHandleCookies)

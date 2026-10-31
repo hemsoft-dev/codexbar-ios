@@ -320,6 +320,9 @@ final class UITestFixtures {
         )
         .safeAreaInset(edge: .bottom) {
             if showsPlanTransitions { PlanTransitionFixtureControls(fixture: planFixture) }
+            if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"]?.hasPrefix("claude-plan-ultra-") == true {
+                UITestWidgetPreviewControl(fixture: self)
+            }
         }
         .dynamicTypeSize(dynamicTypeSize)
     }
@@ -1707,6 +1710,9 @@ private final class UITestClaudeProfileProtocol: URLProtocol, @unchecked Sendabl
             let scenario = ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"] ?? ""
             switch scenario {
             case "claude-plan-pro": body = #"{"organization":{"organization_type":"claude_pro"}}"#
+            // Synthetic Ultra migration scenarios; these are not captured provider payloads.
+            case "claude-plan-ultra-absent", "claude-plan-ultra-pending":
+                body = Self.maxProfile(multiplier: 20)
             case "claude-plan-max20":
                 body = Self.maxProfile(multiplier: 20)
             case "claude-plan-change": body = Self.maxProfile(multiplier: count == 1 ? 5 : 20)
@@ -1714,7 +1720,16 @@ private final class UITestClaudeProfileProtocol: URLProtocol, @unchecked Sendabl
             }
         } else {
             let reset = ISO8601DateFormatter().string(from: Date().addingTimeInterval(7_200))
-            body = #"{"five_hour":{"utilization":42,"resets_at":"\#(reset)"}}"#
+            let scenario = ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"] ?? ""
+            if scenario.hasPrefix("claude-plan-ultra-") {
+                let session = scenario.hasSuffix("pending")
+                    ? #""five_hour":{"utilization":42,"resets_at":"\#(reset)"},"# : ""
+                body = "{\(session)\"limits\":[{\"kind\":\"weekly_all\",\"percent\":64,\"resets_at\":\"\(reset)\"},"
+                    + "{\"kind\":\"weekly_scoped\",\"percent\":21,\"resets_at\":\"\(reset)\","
+                    + "\"scope\":{\"model\":{\"display_name\":\"Fable\"}}}]}"
+            } else {
+                body = #"{"five_hour":{"utilization":42,"resets_at":"\#(reset)"}}"#
+            }
         }
         let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -2190,6 +2205,26 @@ actor UITestClaudeResetProvider: UsageProvider, ClaudeUsageResetConsuming {
                                    bars: parsed.bars, claudeUsageResetInventory: inventory,
                                    failureMessage: scenario == "claude-resets-failed" ? "Synthetic Claude usage unavailable" : nil,
                                    recoveryAction: .retryRefresh, fetchedAt: now)
+    }
+}
+/// Renders the real builder from the parser's current fixture results in the isolated suite.
+@MainActor
+private struct UITestWidgetPreviewControl: View {
+    let fixture: UITestFixtures
+    @State private var showsPreview = false
+
+    var body: some View {
+        Button("Preview synthetic widgets") {
+            WidgetSnapshotPublisher.publish(
+                results: fixture.refreshService.results, configurationStore: fixture.configurationStore,
+                access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
+                snapshotDefaults: fixture.defaults, accessGuard: WidgetAccessGuard(directory: nil)
+            )
+            showsPreview = true
+        }
+        .sheet(isPresented: $showsPreview) {
+            NavigationStack { WidgetBuilderView(defaults: fixture.defaults) }
+        }
     }
 }
 #endif

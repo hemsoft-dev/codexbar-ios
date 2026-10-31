@@ -128,7 +128,7 @@ enum ClaudeProfilePlanParser {
         let rawType = ProviderPlanDescriptor.normalizedPlanValue(organization["organization_type"] as? String)
         if organization["organization_type"] != nil, rawType == nil { return nil }
         let tier = ProviderPlanDescriptor.normalizedPlanValue(organization["rate_limit_tier"] as? String)
-        let types = ["claude_pro": "pro", "claude_max": "max", "claude_team": "team", "claude_enterprise": "enterprise"]
+        let types = ["claude_pro": "pro", "claude_max": "max", "claude_ultra": "ultra", "claude_team": "team", "claude_enterprise": "enterprise"]
         if boolean(account["has_claude_max"]) == true, boolean(account["has_claude_pro"]) == true { return nil }
         let type: String?
         if let rawType {
@@ -140,14 +140,15 @@ enum ClaudeProfilePlanParser {
             guard maxPlan != proPlan else { return nil }
             type = maxPlan ? "max" : "pro"
         }
+        if ["max", "ultra"].contains(type), organization["rate_limit_tier"] != nil, tier == nil { return nil }
         // Personal Pro/Max flags conflict; organization capacity tiers do not rename Team or Enterprise.
         if tier?.contains("max") == true, type == "pro" { return nil }
-        if type == "max", tier == "default_claude_pro" { return nil }
-        if let maxFlag = boolean(account["has_claude_max"]), type == "max", !maxFlag { return nil }
+        if ["max", "ultra"].contains(type), tier == "default_claude_pro" { return nil }
+        if let maxFlag = boolean(account["has_claude_max"]), ["max", "ultra"].contains(type), !maxFlag { return nil }
         if let proFlag = boolean(account["has_claude_pro"]), type == "pro", !proFlag { return nil }
         if type == "pro", boolean(account["has_claude_max"]) == true { return nil }
-        if type == "max", boolean(account["has_claude_pro"]) == true { return nil }
-        return ClaudeUsageParser.planDescriptor(subscriptionType: type, rateLimitTier: type == "max" ? tier : nil)
+        if ["max", "ultra"].contains(type), boolean(account["has_claude_pro"]) == true { return nil }
+        return ClaudeUsageParser.planDescriptor(subscriptionType: type, rateLimitTier: ["max", "ultra"].contains(type) ? tier : nil)
     }
 
     private static func boolean(_ value: Any?) -> Bool? {
