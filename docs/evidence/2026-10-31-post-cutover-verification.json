@@ -1,0 +1,71 @@
+{
+  "issue": "https://github.com/hemsoft-dev/codexbar-ios/issues/470",
+  "baseSHA": "6571be9a5177f683d0857e97e076f2efd081d7a5",
+  "sourceSHA256": {
+    "CodexBarIOSUITests/ProCommerceJourneyTests.swift": "dddb580bdd365ec702d3f90530f60f9fc6790a06c1809847eb6bb8523c60c2a5",
+    "StoreKit/CodexBarPro.storekit": "93cc6ae14f075f1badf2b0766663a68c3d1c80a40641d7789cab399bdefb29a9",
+    "CodexBarIOS/Services/ProOriginalPurchaserPolicy.swift": "10ca823eb19fedf15e5e5c96719e6a10b7055a801fcfd581d26c8bfe6323d536"
+  },
+  "developmentVersion": "2.0.1 (6)",
+  "distributedVersionNotExecuted": "2.0.0 (5)",
+  "toolchain": "Xcode 26.6 / 17F113",
+  "platform": "iPhone 17 simulator, iOS 26.2 / 23C54",
+  "configuration": "USA / en_US / local Xcode StoreKit",
+  "nativeCapture": {
+    "selector": "CodexBarIOSUITests/ProCommerceNativeJourneyTests/testPurchaseAndRestore",
+    "runnerEnvironment": {
+      "CODEXBAR_POST_CUTOVER_CAPTURE": "1"
+    },
+    "started": "2026-10-31 20:40:13 EDT",
+    "finished": "2026-10-31 20:41:02 EDT",
+    "result": "Passed",
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "assertions": [
+      "Launch after T without a Pro interstitial",
+      "Free plan with no original-purchaser grant",
+      "Empty Restore returns No Pro purchase found and remains Free",
+      "Eligible yearly trial says 7 days free, then $14.99 per year",
+      "Native yearly purchase activates Pro free trial",
+      "Relaunch and Restore return Purchases restored and retain trial"
+    ],
+    "cacheEnvironment": "xcode",
+    "cacheReason": "trial"
+  },
+  "additionalChecks": {
+    "syntheticTrialAndRestoreTests": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "scenarios": "eligible, ineligible, no offer, unknown eligibility; empty, canceled and failed Restore",
+      "sourceNote": "Executed before final test-only tightening. Production code and the two selected synthetic test bodies are unchanged."
+    },
+    "originalPurchaserPolicyTests": {
+      "passed": 7,
+      "failed": 0
+    },
+    "pinnedSwiftLint": "0 violations in 284 files",
+    "ciPolicyTests": {
+      "passed": 4,
+      "failed": 0
+    },
+    "releaseManifestSelfTests": {
+      "passed": 34,
+      "failed": 1,
+      "preexistingFailure": "Claude evidence method exists in base source but is absent from the release manifest"
+    }
+  },
+  "retainedInitialFailure": "The first capture expected No Pro purchase found but received Restore canceled after Apple sandbox sign-in. Fresh storekitd and separate preparation recovered the test setup. The strict final run accepts no cancellation alternative.",
+  "productionChecks": "Pending for Franz on his own device; original-purchaser and Family Sharing are not established by local StoreKit.",
+  "mutations": "No ASC, price or availability changes. No consumer infrastructure dependencies.",
+  "mediaSHA256": {
+    "01-free-launch.png": "a288ef7a36b45c597f4d8506a75bdb4e67d83fa8ab8b62c7ca1e3aa6373036b6",
+    "02-free-plan.png": "6461acf21fa8a09b27f75620284d2f7c7b714bc9f9c79ffd68d71a57dc404ffe",
+    "03-empty-restore.png": "3204e1e6da54235b38f16f15acd8be65fe87259331cbc4b66230a24c0288d9a4",
+    "04-eligible-yearly-trial.png": "3204e1e6da54235b38f16f15acd8be65fe87259331cbc4b66230a24c0288d9a4",
+    "05-active-trial.png": "7574ea6379e9cfd48813d021794575b676725e21ea8766ce12ab44bee28c189e",
+    "06-restored-trial-after-relaunch.png": "399b7f51b4c5273c59bada4b8c4c01eefb112c2bc4a292c365569ae1c11965c4",
+    "post-cutover-flow.mp4": "c1b8855892f5f2618eb6ee815969daa0a0b11a78a4b7e6a44903113111e27197"
+  }
+}

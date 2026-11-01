@@ -2,7 +2,7 @@
 
 This document tracks the work required to ship CodexBar for iOS and iPadOS through TestFlight and App Store review.
 
-Status last reviewed: October 29, 2026
+Status last reviewed: October 31, 2026
 
 ## CodexBar 2.0 policy and preparation
 
@@ -20,14 +20,112 @@ Sharing is off for all three new products. Eligible original purchasers keep
 lifetime Pro after Apple verifies their purchase.
 
 Free is configured for all 175 territories in the October 29, 2:55 PM EDT
-App Store Connect readback below. Public lookup still shows paid prices in the
-six sampled storefronts during propagation. The earlier US$3.99 rollout remains
-recorded as history. This documentation update makes no App Store Connect write. [Issue #469](https://github.com/hemsoft-dev/codexbar-ios/issues/469)
+App Store Connect readback below. Live App Store pages showed Free in six
+sampled storefronts by October 30, 9:0x AM EDT, while the lookup API lagged.
+The October 31, 8:30 PM EDT live-page check still showed Free after cutover T.
+The earlier US$3.99 rollout remains recorded as history. This documentation update makes no App Store Connect write. [Issue #469](https://github.com/hemsoft-dev/codexbar-ios/issues/469)
 owns the disclosures and draft products;
 [issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) owns final
 qualification, submission, release and the timed price change.
 Keep both issues open until their actual acceptance criteria are complete;
 merged preparation code and saved draft settings do not qualify a release.
+
+### Post-cutover storefront record, October 31
+
+The compiled cutoff **T was Saturday, October 31, 2026 at 8:00 PM EDT**.
+The observed public release time was **October 23, 11:56:39 AM EDT**, more than
+six full days before T. That is Apple's reported public release time, not a
+verified manual-release action timestamp. The distributed app is **2.0.0 build
+5**, source `62f6d8e392360b91cb704c2503e9796f8ddc285c`.
+
+Franz set Free on October 29, reporting his action at 2:54 PM EDT. The ASC
+schedule readback at **2:55:54 PM EDT** confirmed current zero-price records in
+all 175 territories. Every start and end date was null, so the exact regional
+effective times remain unavailable. This was later than the October 28,
+8:00 PM EDT target. Free was visible on the six sampled live pages before T;
+no removal contingency was triggered in the recorded follow-up. The app must
+remain Free and T must remain fixed.
+
+The checks below cover US, CA, GB, DE, JP and AU. Paid lookup amounts were
+USD 3.99, CAD 4.99, GBP 3.99, EUR 3.99, JPY 600 and AUD 5.99, respectively.
+A cached lookup result and a live-page offer are separate observations.
+
+| Observation, all times EDT | Source | Result across the six sampled storefronts |
+| --- | --- | --- |
+| October 29, 2:48 PM | [Pre-change lookup receipt](docs/evidence/2026-10-29-store-checkpoint.json) | All 2.0.0, all paid at the amounts above. |
+| October 29, batch began 2:55:54 PM | [Post-schedule lookup receipt](docs/evidence/2026-10-29-storefronts-after-schedule.json) | All 2.0.0, all still paid after ASC confirmed Free. |
+| October 29, 8:00:19 PM | [Evening lookup check](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6511426972) | All 2.0.0, all still paid at the amounts above. |
+| October 30, 9:00:28 AM | [Morning lookup check](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6523439029) | All 2.0.0, all still paid at the amounts above. This API result did not establish the current live-page price. |
+| October 30, 9:0x AM | [Live-page correction and ASC readback](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6523449987) | All six live pages had schema.org offers with numeric price 0 in their local currencies. Lookup still showed paid. USA ASC manual price was 0.0 with no start/end date. |
+| October 31, 8:30 PM, after T | [Chief's live-page check](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6551194058) | All six live pages had numeric offer price 0. US, CA, GB, DE and AU printed 2.0.0; JP did not print a version. |
+
+The first recorded live-page Free observation for each of
+[US](https://apps.apple.com/us/app/id6787769891),
+[CA](https://apps.apple.com/ca/app/id6787769891),
+[GB](https://apps.apple.com/gb/app/id6787769891),
+[DE](https://apps.apple.com/de/app/id6787769891),
+[JP](https://apps.apple.com/jp/app/id6787769891) and
+[AU](https://apps.apple.com/au/app/id6787769891) is October 30, **9:0x AM EDT**.
+The exact minute and actual public price-change instant are unknown. The
+9:01:04 AM comment timestamp is a posting time, not an exact observation time.
+The six-country sample does not prove public visibility in all 175 territories.
+The October 31 result records the Chief's check, not a new check by this agent.
+No ASC, price or availability changes were made for this verification.
+
+### Post-cutover simulator verification
+
+On October 31, **20:40:13 EDT to 20:41:02 EDT**, the strict native capture
+passed on an owned iPhone 17 simulator with iOS 26.2 / 23C54 and Xcode
+26.6 / 17F113. This was development source **2.0.1 build 6**, based on
+`6571be9`, not an execution of the distributed 2.0.0 build 5 binary.
+The [sanitized verification receipt](docs/evidence/2026-10-31-post-cutover-verification.json)
+records source-file hashes, exact selectors and results. Screenshots and the
+interaction recording accompany the issue's record-keeping PR.
+
+- A fresh isolated app namespace launched after T without a Pro interstitial.
+  Settings opened the Pro screen showing **Free plan**, one account and seven
+  days of history, with monthly, yearly and lifetime purchase choices.
+- Empty Restore returned **No Pro purchase found** and kept the Free plan.
+- The native eligible yearly offer showed **7 days free, then $14.99 per year**
+  and **Start 7-day free trial**. Purchase activated **Pro free trial**.
+- After relaunch without resetting storage, Restore returned **Purchases
+  restored** and retained the trial. The saved entitlement environment was
+  `xcode`, with reason `trial`.
+- Two focused synthetic UI tests passed eligibility variants and distinct empty,
+  canceled and failed Restore states. Seven original-purchaser policy tests
+  passed the compiled cutoff, strict at/after-T production date boundary and
+  sandbox/Xcode exclusion. Pinned lint and all four CI-policy tests passed.
+
+The first capture failed when empty Restore presented Apple's sandbox sign-in
+prompt and cancellation returned **Restore canceled**. That failure is retained.
+After stopping only the owned simulator's storekitd and rerunning separate
+empty-store preparation, the strict final capture passed without accepting
+cancellation as an alternative. A separate release-manifest self-check remains
+34/35 because base `6571be9` already contains a Claude evidence method missing
+from its manifest. This work does not claim full release qualification.
+
+The opt-in capture in [ProCommerceNativeJourneyTests](CodexBarIOSUITests/ProCommerceJourneyTests.swift)
+uses the production StoreKit adapter and entitlement service with UUID-isolated
+storage and the checked-in [local StoreKit configuration](StoreKit/CodexBarPro.storekit).
+Provider data is synthetic and provider networking is blocked. This adds no
+consumer infrastructure dependency or automatic CI workload.
+
+Build the native scheme and run its empty-store preparation in a separate
+process, following the [local validation procedure](docs/2026-10-18-pro-commerce-validation.md).
+For this capture only, copy the generated `.xctestrun` beside the original and
+set `CodexBarIOSUITests.EnvironmentVariables.CODEXBAR_POST_CUTOVER_CAPTURE`
+to `1`. Execute that copy with the exact selector
+`CodexBarIOSUITests/ProCommerceNativeJourneyTests/testPurchaseAndRestore`.
+The ordinary release-manifest selector keeps its existing lifetime journey
+when the flag is absent. Reset local transactions with the separate preparation
+test after capture.
+
+Franz's own production-device check of a new Free download, Pro, eligible trial
+and Restore remains pending. Local Xcode StoreKit cannot establish production
+purchase eligibility, original-purchaser recognition or Family Sharing. Franz's
+[October 25 original-purchaser pass](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6401351346)
+remains a separate historical result; a fresh post-T check on his own device
+and the family-device check remain pending.
 
 ### October 29 confirmed Free configuration
 
@@ -54,14 +152,14 @@ No ASC state was changed by this agent.
 The [six-country public lookup receipt](docs/evidence/2026-10-29-storefronts-after-schedule.json)
 still reports paid 2.0.0 in US, CA, GB, DE, JP and AU at this checkpoint. The
 lookup batch began at 2:55:54 PM EDT after the schedule readback. A correct ASC
-schedule does not prove public display propagation has completed. The requested
-follow-ups are October 29 at 8 PM EDT and October 30 at 9 AM EDT. Report the
-first observed Free timestamp per sampled country; the exact display-change
-time and all-territory public visibility remain unverified.
+schedule does not prove public display propagation has completed. The completed
+October 29 evening and October 30 morning follow-ups are recorded above, including the later live-page correction. The exact
+display-change time and all-territory public visibility remain unverified.
 
 The earlier hold for an ASC Free readback is satisfied. The Chief owns guarded
-merge after clean final-head review and required SwiftLint. Public Free
-verification and all post-cutoff production checks remain open under
+merge after clean final-head review and required SwiftLint. The six-country
+public Free sample is complete. All-territory public visibility and post-cutoff
+production checks remain unverified under
 [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
 
 ### October 29 pre-change checkpoint, retained history
@@ -292,8 +390,8 @@ configuration uses this after-price-change branch. T remains fixed.
 | Manual submission | App 2.0 plus all first products; paid price; no phased release | Submitted October 22, 2026 at 8:20 AM EDT (`2026-10-22T12:20:11Z`); review submission `af75f0db`, Waiting for Review | US$3.99 retained | `62f6d8e` / 2.0.0 (5) / `2026-11-01T00:00:00Z` | Small Business enrollment (optional) |
 | Manual release | No later than October 25, 8 PM EDT | Observed public October 23, 11:56:39 AM EDT, `2026-10-23T15:56:39Z`; actor/action timestamp unverified | 2.0.0 in six countries October 29 | Same build | None |
 | Propagation | Wait full 48 hours after release | October 29 readback exceeds 48 hours | US, CA, GB, DE, JP, AU all 2.0.0; not proof of every territory | Same build/T | None |
-| Free schedule | Franz reports completed October 29, 2:54 PM EDT; target October 28 was missed | GET confirms 175/175 current zero-price records at 2:55:54 PM EDT; all start/end dates null | Six-country lookup still paid; public Free propagation pending | Same build/T; per-territory receipt above | None |
-| Post-cutoff | After T | Pending launch | Production download, Pro, trial and Restore | Record source/build/T | Original 1.x purchase and family device |
+| Free schedule | Franz reports completed October 29, 2:54 PM EDT; target October 28 was missed | GET confirms 175/175 current zero-price records at 2:55:54 PM EDT; all start/end dates null | Six live pages Free by October 30, 9:0x AM EDT while lookup lagged; still Free October 31, 8:30 PM EDT | Same build/T; per-territory receipt above | All-territory public visibility unverified |
+| Post-cutoff | After October 31, 8 PM EDT | T passed; no ASC mutation in this verification | Six live pages Free at 8:30 PM EDT; simulator evidence above is separate | Distributed 2.0.0 (5), same T; simulator source recorded above | Own-device new Free download, Pro, trial, Restore, fresh original-purchaser and family-device checks |
 
 The release ledger stays open through the price transition and post-cutoff
 checks. Completed and remaining actions follow:
@@ -318,8 +416,9 @@ checks. Completed and remaining actions follow:
   [October 23 receipt](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6376812259);
   the agent did not release the app.
 - [x] Wait 48 hours and record six storefront observations serving 2.0.
-- [ ] Schedule Free, record requested and actual regional times, and verify
-  every storefront is Free before T.
+- [x] Record the Free configuration in all 175 territories and the six-country
+  live-page Free sample before T. Exact regional effective times and pre-T
+  public visibility in every territory remain unverified.
 - [ ] Record post-cutoff production checks and Franz's original-purchase and
   Family Sharing results without treating pending checks as passes.
 

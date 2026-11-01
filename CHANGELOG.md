@@ -44,6 +44,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Record the Free cutover and storefront checks, with an opt-in local StoreKit
+  capture of the post-cutover Free, trial and Restore flow.
+  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
+
 - Align source version and draft App Store release notes with 2.0.1, retaining
   build 6 for the next candidate after the read-only upload inventory check.
   ([#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469))
