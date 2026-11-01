@@ -323,6 +323,56 @@ final class ProCommerceJourneyTests: XCTestCase {
 final class ProCommerceNativeJourneyTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
+    /// Manual #470 capture only, after separate empty-store preparation. Not in the release manifest.
+    private func capturePostCutoverFreeTrialAndRestore() {
+        XCTAssertGreaterThanOrEqual(Date().timeIntervalSince1970, 1_793_491_200)
+        let journey = ProCommerceJourneyDriver(scenario: "commerce-native-storekit", entry: nil)
+        defer { journey.app.terminate() }
+        XCTAssertTrue(journey.app.buttons["Open settings"].waitForExistence(timeout: 15))
+        XCTAssertFalse(journey.app.navigationBars["CodexBar Pro"].exists)
+        capturePostCutover("01-free-launch", journey: journey)
+        journey.openSettings()
+        journey.tap("settings-codexbar-pro")
+        journey.ready(timeout: 30)
+        journey.plan("Free plan")
+        capturePostCutover("02-free-plan", journey: journey)
+
+        journey.tap("pro-restore-purchases")
+        journey.feedback(containing: "No Pro purchase found", timeout: 30)
+        journey.plan("Free plan")
+        capturePostCutover("03-empty-restore", journey: journey)
+
+        journey.reveal(journey.element("pro-yearly-trial"))
+        XCTAssertEqual(journey.element("pro-yearly-trial").label, "7 days free, then $14.99 per year")
+        XCTAssertEqual(journey.app.buttons["pro-purchase-yearly"].label, "Start 7-day free trial")
+        capturePostCutover("04-eligible-yearly-trial", journey: journey)
+        journey.tap("pro-purchase-yearly")
+        journey.feedback(containing: "CodexBar Pro is ready", timeout: 30)
+        journey.plan("Pro free trial")
+        journey.assertNoPurchaseControls()
+        capturePostCutover("05-active-trial", journey: journey)
+
+        journey.app.terminate()
+        journey.app.launchEnvironment["CODEXBAR_UI_TEST_RESET"] = "0"
+        journey.app.launch()
+        XCTAssertTrue(journey.app.buttons["Open settings"].waitForExistence(timeout: 15))
+        journey.openSettings()
+        journey.tap("settings-codexbar-pro")
+        journey.ready(timeout: 30)
+        journey.tap("pro-restore-purchases")
+        journey.feedback(containing: "Purchases restored", timeout: 30)
+        journey.plan("Pro free trial")
+        journey.assertNoPurchaseControls()
+        capturePostCutover("06-restored-trial-after-relaunch", journey: journey)
+    }
+
+    private func capturePostCutover(_ name: String, journey: ProCommerceJourneyDriver) {
+        let screenshot = XCTAttachment(screenshot: journey.app.screenshot())
+        screenshot.name = name
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     /// Run only after testPrepareLocalStoreKitPurchaseFailure in a separate native process.
     func testPurchaseErrorLeavesFreePlanAndUsableControls() {
         let journey = ProCommerceJourneyDriver(scenario: "commerce-native-storekit")
@@ -354,6 +404,10 @@ final class ProCommerceNativeJourneyTests: XCTestCase {
     }
 
     func testPurchaseAndRestore() {
+        if ProcessInfo.processInfo.environment["CODEXBAR_POST_CUTOVER_CAPTURE"] == "1" {
+            capturePostCutoverFreeTrialAndRestore()
+            return
+        }
         let journey = ProCommerceJourneyDriver(scenario: "commerce-native-storekit")
         defer { journey.app.terminate() }
         journey.ready(timeout: 30)
