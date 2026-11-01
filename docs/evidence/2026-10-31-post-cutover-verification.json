@@ -63,9 +63,36 @@
     "01-free-launch.png": "a288ef7a36b45c597f4d8506a75bdb4e67d83fa8ab8b62c7ca1e3aa6373036b6",
     "02-free-plan.png": "6461acf21fa8a09b27f75620284d2f7c7b714bc9f9c79ffd68d71a57dc404ffe",
     "03-empty-restore.png": "3204e1e6da54235b38f16f15acd8be65fe87259331cbc4b66230a24c0288d9a4",
-    "04-eligible-yearly-trial.png": "3204e1e6da54235b38f16f15acd8be65fe87259331cbc4b66230a24c0288d9a4",
+    "04-eligible-yearly-trial.png": "1e4fd3609833ca934e43caa47e5bee84b3dbe8074141295878bbce18e092e23f",
     "05-active-trial.png": "7574ea6379e9cfd48813d021794575b676725e21ea8766ce12ab44bee28c189e",
     "06-restored-trial-after-relaunch.png": "399b7f51b4c5273c59bada4b8c4c01eefb112c2bc4a292c365569ae1c11965c4",
     "post-cutover-flow.mp4": "c1b8855892f5f2618eb6ee815969daa0a0b11a78a4b7e6a44903113111e27197"
+  },
+  "yearlyOfferRecapture": {
+    "reason": "Replace the earlier byte-identical 03/04 frame with a dedicated, fully visible yearly-offer capture.",
+    "captured": "2026-10-31 23:33:48 EDT",
+    "attachmentURL": "https://github.com/user-attachments/assets/c5f9e19a-2b48-46bf-8226-919b18865cb6",
+    "supersededSHA256": "3204e1e6da54235b38f16f15acd8be65fe87259331cbc4b66230a24c0288d9a4",
+    "sha256": "1e4fd3609833ca934e43caa47e5bee84b3dbe8074141295878bbce18e092e23f",
+    "selector": "CodexBarIOSUITests/StorefrontReviewCaptureTests/testCaptureThreeLocalStoreKitProducts",
+    "sourceRevision": "5bf3d78ec91c1ca1e6c4a57568d3faf1146406c5",
+    "equivalentMergedMain": "f4b93de7b6715d1ce95b8964c90723184e66e43e",
+    "captureSourceSHA256": "408266adf2e44d5943a2fc022d0fe0405e5bc7db940f2911851945660b905c03",
+    "result": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    },
+    "readiness": "Waited for codexbar-pro-presentation value ready, then required the entire pro-product-yearly row within the visible viewport before capture.",
+    "visibleTextConfirmed": [
+      "Free plan",
+      "CodexBar Pro Yearly",
+      "$14.99 per year",
+      "7 days free, then $14.99 per year",
+      "Start 7-day free trial"
+    ],
+    "inspection": "Screenshot visually inspected; exported yearly accessibility attachment confirms trial terms and CTA. Re-downloaded GitHub attachment is byte-identical to the local capture.",
+    "purchaseAttempted": false,
+    "scope": "Documentation and evidence only; no app, test or CI code changes."
   }
 }

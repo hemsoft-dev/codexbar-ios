@@ -96,6 +96,17 @@ interaction recording accompany the issue's record-keeping PR.
   passed the compiled cutoff, strict at/after-T production date boundary and
   sandbox/Xcode exclusion. Pinned lint and all four CI-policy tests passed.
 
+Image 04 was recaptured on October 31 at **11:33:48 PM EDT** using the
+existing manual native StoreKit product capture. The earlier images 03 and 04
+were byte-identical. The replacement [yearly-offer screenshot](https://github.com/user-attachments/assets/c5f9e19a-2b48-46bf-8226-919b18865cb6)
+shows the full yearly row, **7 days free, then $14.99 per year**, and
+**Start 7-day free trial**. Capture waited for the resolved Pro screen and the
+entire product row to fit inside the viewport. The screenshot and exported
+accessibility text were inspected; the capture passed 1/1 with no failures or
+skips and attempted no purchase. The receipt records the replacement hash,
+attachment URL and provenance separately from the original 8:40 PM run. App,
+test and CI code are unchanged. Franz's production-device check stays pending.
+
 The first capture failed when empty Restore presented Apple's sandbox sign-in
 prompt and cancellation returned **Restore canceled**. That failure is retained.
 After stopping only the owned simulator's storekitd and rerunning separate
