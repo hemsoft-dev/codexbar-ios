@@ -13,7 +13,7 @@ specific to the product and authentication method already connected in this app.
 | Provider | Current evidence | Billing renewal support |
 | --- | --- | --- |
 | ChatGPT / Codex | `GET chatgpt.com/backend-api/subscriptions`, `active_until` plus Boolean `will_renew` | For verified individual Go, Plus and Pro plans, an optional request uses the existing account-bound OAuth grant, account query/header and Codex client identity headers. Business, Enterprise and unknown workspace plans lack a verified workspace billing contract and receive no lookup. A recognized 200 response supplies the date; rejected access or missing fields means unavailable. The inspected Codex Switch implementation reports successful OAuth reads with this request contract; native iOS transport/grant compatibility remains pending Franz's account check. |
-| Claude | OAuth profile identity plus an optional, separate Claude web session | Implemented for personal Pro/Max: **Connect Billing** in account settings opens a private phone sign-in, verifies the web account UUID and organization against the current OAuth profile, then reads `GET /api/organizations/<uuid>/subscription_details`. `status` is required; timestamp and legacy date aliases are optional alternatives, with at least one recognized date key. Malformed present fields and paused payments are rejected. An access-end date overrides a residual next charge. Store/marketplace-managed organization types are excluded; null Stripe status is unsupported. There is no cross-app StoreKit lookup. Live account compatibility is pending Franz. |
+| Claude | OAuth profile identity plus an optional, separate Claude web session | Implemented for personal Pro/Max/Ultra: **Connect Billing** in account settings opens a private phone sign-in, verifies the web account UUID and organization against the current OAuth profile, then reads `GET /api/organizations/<uuid>/subscription_details`. `status` is required; timestamp and legacy date aliases are optional alternatives, with at least one recognized date key. Malformed present fields and paused payments are rejected. An access-end date overrides a residual next charge. Store/marketplace-managed organization types are excluded; null Stripe status is unsupported. There is no cross-app StoreKit lookup. Live account compatibility is pending Franz. |
 | Cursor | Existing phone sign-in, authenticated web profile and customer-bound Stripe portal subscription | Personal Stripe subscriptions supply an actual paid period end and explicit cancellation flags. Monthly/yearly observations require matching owner, customer, product and interval with no recovery or pending changes. Canceled access ends in details. Team, trial, unsupported or rejected billing stays unavailable. `billingCycleEnd` remains only a quota boundary. See [acquisition evidence and safety rules](CURSOR-BILLING.md). |
 | Copilot | Copilot quota windows | No per-subscription billing renewal and auto-renewal state in the connected quota response. |
 | GitHub billing | Account or organization metered usage | Product usage and invoice periods do not identify an individual renewing subscription. No renewal pill. |
@@ -120,7 +120,7 @@ only `sessionKey`. OAuth requests never carry web cookies, and provider web
 requests never carry usage OAuth tokens. Neither flow purchases or cancels a plan.
 
 Claude checks `GET api.anthropic.com/api/oauth/profile` with the existing bearer
-and `anthropic-beta: oauth-2025-04-20`. Personal `claude_pro`/`claude_max` profiles
+and `anthropic-beta: oauth-2025-04-20`. Personal `claude_pro`/`claude_max`/`claude_ultra` profiles
 must identify `account.uuid` and `organization.uuid`. The web session's
 `GET claude.ai/api/account` must identify the same UUID and exactly one matching
 membership organization. Web ownership and OAuth ownership are checked again
@@ -191,6 +191,29 @@ Partial-refresh preservation keeps only the fresh account-bound observation; an
 old renewal is never reused when the new Go billing state is unavailable.
 
 ## Claude renewal acquisition follow-up
+
+The November 2 recurrence of [#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454)
+remains reported, not reproduced on Franz's live account. A production-provider
+regression identified a separate compatibility gap: plan resolution accepted
+explicit `claude_ultra`, while the billing client's personal-plan allowlist
+rejected it before reading subscription details. Billing now accepts the same
+explicit personal family. It still requires the saved same-account session,
+matching OAuth/web account and organization before and after acquisition, and
+an actual provider charge date. No date is inferred from the Ultra name.
+
+`xcrun swift test --filter ClaudeSubscriptionRenewalTests` exercises the real
+Claude provider, isolated billing transport, parser and bound presentation data.
+The pre-fix explicit-Ultra case returned `unsupportedSubscription` with no
+countdown; the Pro/Max controls succeeded. The fixture is synthetic compatibility
+coverage, not proof that a live account returns `claude_ultra` or that this was
+Franz's cause. Legacy Max 20x metadata remains supported. The existing personal
+session, stale-state, ownership, cancellation and transport rules remain intact.
+
+The focused manual `testClaudeUltraReportedWindowsEvidence` capture also loads
+an explicit-Ultra billing response through the production provider and real
+dashboard before capturing the renewal pill and exact date in both appearances.
+Live acquisition and comparison on Franz's account remain unverified; the issue
+must retain that gate independently of synthetic success and phone installation.
 
 [#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454) corrects an app-side
 schema rejection. The old parser required all four date aliases, including null

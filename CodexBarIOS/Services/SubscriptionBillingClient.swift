@@ -132,7 +132,7 @@ final class SubscriptionBillingClient: @unchecked Sendable {
         guard let account = (root?["account"] as? [String: Any])?["uuid"] as? String, UUID(uuidString: account) != nil,
               let organization = root?["organization"] as? [String: Any],
               let organizationID = organization["uuid"] as? String, UUID(uuidString: organizationID) != nil else { throw SubscriptionBillingError.unavailable }
-        guard ["claude_pro", "claude_max"].contains(organization["organization_type"] as? String ?? "") else {
+        guard ["claude_pro", "claude_max", "claude_ultra"].contains(organization["organization_type"] as? String ?? "") else {
             throw SubscriptionBillingError.unsupportedSubscription
         }
         return ClaudeOwner(account: account, organization: organizationID)

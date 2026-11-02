@@ -165,7 +165,7 @@ final class UITestFixtures {
         )
         UITestMuseCodeFixture.presentFailures(of: results, in: refreshService, scenario: scenario)
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
-            || scenario?.hasPrefix("subscription-renewals") == true
+            || scenario?.hasPrefix("subscription-renewals") == true || scenario == "claude-renewal-ultra"
             || (greptile && environment["CODEXBAR_UI_TEST_MORE_INFORMATION"] == "1")
             || scenario?.hasPrefix("grok-cursor-parity") == true
             || Self.isCursorSessionScenario(scenario) {
@@ -202,7 +202,12 @@ final class UITestFixtures {
         _ = store.saveSecret("ui-test-credential", for: second)
     }
 
-    private static func claudeProviders(scenario: String?, suiteName: String) -> [any UsageProvider] {
+    static func claudeProviders(scenario: String?, suiteName: String) -> [any UsageProvider] {
+        if scenario == "claude-renewal-ultra" {
+            return [ClaudeUsageProvider(secretStore: UITestSecretStore(suite: suiteName),
+                                        session: UITestSubscriptionBillingProtocol.session(claudePlanType: "claude_ultra")),
+            ]
+        }
         if scenario?.hasPrefix("claude-plan-") == true {
             return [UITestClaudeProfileProvider(suiteName: suiteName)]
         }
@@ -271,7 +276,7 @@ final class UITestFixtures {
             )
         }
         if scenario?.hasPrefix("codex-") == true { return codexResult(for: configuration, scenario: scenario) }
-        if scenario?.hasPrefix("claude-plan-") == true {
+        if scenario?.hasPrefix("claude-plan-") == true || scenario == "claude-renewal-ultra" {
             return ProviderUsageResult(accountID: configuration.id, providerID: .claude, title: configuration.displayName,
                                        subtitle: "Loading synthetic Claude profile", bars: [], fetchedAt: Date())
         }
@@ -616,7 +621,7 @@ final class UITestFixtures {
         ClaudeCredentialsParser.storedCredential(from: ClaudeCredentials(subscriptionType: "subscription", accessToken: "ui-claude-profile"))
     }
 
-    private static func seedClaudeAccount(in store: ProviderConfigurationStore, scenario: String?) {
+    static func seedClaudeAccount(in store: ProviderConfigurationStore, scenario: String?) {
         let account = ProviderAccountConfiguration(
             id: "ui-claude", providerID: .claude,
             accountLabel: "Synthetic Claude", authMethod: .browserSession
@@ -624,6 +629,12 @@ final class UITestFixtures {
         precondition(store.update(account))
         let credential = scenario?.hasPrefix("claude-plan-") == true ? claudeProfileCredential : "ui-test-credential"
         _ = store.saveSecret(credential, for: account)
+        if scenario == "claude-renewal-ultra" {
+            let billing = SubscriptionBillingSession(providerID: .claude, ownerID: UITestSubscriptionBillingProtocol.claudeOwner,
+                                                    organizationID: UITestSubscriptionBillingProtocol.claudeOrganization,
+                                                    cookies: [.init(name: "sessionKey", value: "matching", expiresAt: nil)])
+            precondition(store.saveSubscriptionBillingSession(billing, for: account, expectedUsageSecret: credential))
+        }
     }
 
     nonisolated static func claudeResult(
@@ -1586,7 +1597,7 @@ final class UITestFixtures {
     }
 }
 
-private struct UITestSecretStore: SecretStore {
+struct UITestSecretStore: SecretStore {
     let suite: String
 
     func readSecret(account: String) throws -> String? {

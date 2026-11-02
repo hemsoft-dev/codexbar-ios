@@ -88,7 +88,7 @@ enum SubscriptionBillingError: Equatable, LocalizedError {
         case .accountMismatch: "Choose the same account you connected for usage. This billing session belongs to a different account."
         case .unsupportedSubscription:
             "This subscription does not provide supported personal billing details. "
-                + "Claude Pro/Max and personal SuperGrok commerce subscriptions are supported. Organization, X and API billing are separate."
+                + "Claude Pro/Max/Ultra and personal SuperGrok commerce subscriptions are supported. Organization, X and API billing are separate."
         case .canceled: "Billing sign-in canceled."
         }
     }

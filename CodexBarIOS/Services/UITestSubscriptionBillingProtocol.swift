@@ -2,21 +2,21 @@
 import Foundation
 
 /// Simulator-only transport exercises the real billing client and owner checks without a live account.
-final class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable {
+class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable {
     static let claudeOwner = "11111111-1111-4111-8111-111111111111"
     static let claudeOrganization = "22222222-2222-4222-8222-222222222222"
+    class var claudePlanType: String { "claude_max" }
 
-    static func session() -> URLSession {
+    static func session(claudePlanType: String = "claude_max") -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
-        configuration.protocolClasses = [UITestSubscriptionBillingProtocol.self]
+        // Both production clients copy protocolClasses into their isolated sessions.
+        // Select the response contract there; never forward credential or arbitrary headers.
+        configuration.protocolClasses = claudePlanType == "claude_ultra"
+            ? [UITestClaudeUltraBillingProtocol.self] : [UITestSubscriptionBillingProtocol.self]
         return URLSession(configuration: configuration)
     }
 
-    // URLProtocol requires overridable class methods.
-    // swiftlint:disable:next static_over_final_class
     override class func canInit(with request: URLRequest) -> Bool { true }
-    // URLProtocol requires overridable class methods.
-    // swiftlint:disable:next static_over_final_class
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
@@ -25,8 +25,11 @@ final class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable 
         let date = ISO8601DateFormatter().string(from: Date().addingTimeInterval(259_200))
         let body: String
         switch url.path {
+        case "/api/oauth/usage":
+            body = "{\"seven_day\":{\"utilization\":12,\"resets_at\":\"\(date)\"}}"
         case "/api/oauth/profile":
-            body = "{\"account\":{\"uuid\":\"\(Self.claudeOwner)\"},\"organization\":{\"uuid\":\"\(Self.claudeOrganization)\",\"organization_type\":\"claude_max\"}}"
+            let type = Self.claudePlanType
+            body = "{\"account\":{\"uuid\":\"\(Self.claudeOwner)\"},\"organization\":{\"uuid\":\"\(Self.claudeOrganization)\",\"organization_type\":\"\(type)\"}}"
         case "/api/account":
             body = "{\"uuid\":\"\(wrong ? "other-account" : Self.claudeOwner)\",\"memberships\":[{\"organization\":{\"uuid\":\"\(Self.claudeOrganization)\"}}]}"
         case "/rest/subscriptions":
@@ -45,6 +48,12 @@ final class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable 
     }
 
     override func stopLoading() {}
+}
+
+private final class UITestClaudeUltraBillingProtocol: UITestSubscriptionBillingProtocol, @unchecked Sendable {
+    // The inherited response contract requires a class-property override.
+    // swiftlint:disable:next static_over_final_class
+    override class var claudePlanType: String { "claude_ultra" }
 }
 
 /// Sanitized shapes from the October 15 Cursor/Stripe read probe, never a live credential or date.

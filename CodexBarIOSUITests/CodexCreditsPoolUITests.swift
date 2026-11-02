@@ -522,6 +522,32 @@ final class CodexCreditsPoolUITests: XCTestCase {
             keep("\(scenario)-widget-preview", app: app)
             app.terminate()
         }
+        exerciseClaudeRenewalAcquisition()
+    }
+
+    private func exerciseClaudeRenewalAcquisition() {
+        for dark in [false, true] {
+            let app = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "claude-renewal-ultra")
+            let header = claudeProfileHeader(plan: "Ultra", in: app)
+            XCTAssertTrue(header.waitForExistence(timeout: 10), app.debugDescription)
+            XCTAssertTrue(header.label.contains("Renews in"), header.label)
+            XCTAssertTrue(app.buttons["dashboard-metric-claude.weekly-all"].label.contains("12%"))
+            let appearance = dark ? "dark-large" : "light-default"
+            keep("claude-renewal-acquired-\(appearance)-dashboard", app: app)
+            tap(app.buttons["More options for Synthetic Claude"], in: app)
+            tap(app.buttons["More information for Synthetic Claude"], in: app)
+            XCTAssertTrue(app.staticTexts["Next subscription renewal"].waitForExistence(timeout: 5), app.debugDescription)
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US")
+            formatter.dateStyle = .long
+            let expected = formatter.string(from: Date().addingTimeInterval(259_200))
+            let exactDate = app.descendants(matching: .any).matching(NSPredicate(
+                format: "label BEGINSWITH %@ AND label CONTAINS %@", "Next subscription renewal,", expected
+            )).firstMatch
+            XCTAssertTrue(exactDate.waitForExistence(timeout: 5), app.debugDescription)
+            keep("claude-renewal-acquired-\(appearance)-exact-date", app: app)
+            app.terminate()
+        }
     }
 
     private func exerciseClaudeProfilePills() {

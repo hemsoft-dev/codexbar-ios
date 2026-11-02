@@ -9,6 +9,36 @@ final class SubscriptionBillingTests: XCTestCase {
     private let organization = "22222222-2222-4222-8222-222222222222"
     private let cookie = SubscriptionBillingSession.Cookie(name: "sessionKey", value: "synthetic", expiresAt: nil)
 
+    @MainActor
+    func testUltraCaptureUsesRealFixtureStoreAndConsistentProfile() async throws {
+        let suite = "com.hemsoft.CodexBarIOS.ui-tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let secrets = UITestSecretStore(suite: suite)
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults,
+                                               secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let scenario = "claude-renewal-ultra"
+        UITestFixtures.seedClaudeAccount(in: store, scenario: scenario)
+        let account = try XCTUnwrap(store.configuration(accountID: "ui-claude"))
+        XCTAssertTrue(store.hasSubscriptionBillingSession(for: account))
+        let saved = try secrets.readSecret(account: SubscriptionBillingSession.keychainAccount(account))
+        XCTAssertEqual(SubscriptionBillingSession.parse(saved)?.cookies.first?.value, "matching")
+
+        // Keep the restrictive fixture-store contract. The old seed was rejected here.
+        let invalid = SubscriptionBillingSession(providerID: .claude, ownerID: UITestSubscriptionBillingProtocol.claudeOwner,
+                                                organizationID: UITestSubscriptionBillingProtocol.claudeOrganization, cookies: [cookie])
+        XCTAssertThrowsError(try secrets.saveSecret(invalid.encoded(), account: SubscriptionBillingSession.keychainAccount(account)))
+        let providers = UITestFixtures.claudeProviders(scenario: scenario, suiteName: suite)
+        let result = try await XCTUnwrap(providers.first).fetchUsage(for: account)
+        XCTAssertEqual(result.plan?.accessibilityLabel, "Ultra")
+        XCTAssertNil(result.failureMessage)
+        XCTAssertFalse(result.bars.isEmpty)
+        let renewal = try XCTUnwrap(result.boundSubscriptionRenewal)
+        XCTAssertNotNil(renewal.compactLabel(at: Date()))
+        XCTAssertEqual(result.subscriptionBillingInformation(at: Date())?.items.first?.label, "Next subscription renewal")
+        XCTAssertNotNil(renewal.dateText())
+    }
+
     func testClaudeChargeCancellationAndCivilDates() throws {
         let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
         let renewal = try XCTUnwrap(SubscriptionBillingParser.claude(claudeBilling(), configuration: account, at: now))

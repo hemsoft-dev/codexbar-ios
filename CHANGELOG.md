@@ -25,6 +25,10 @@ building, testing, or releasing the app.
 
 ### Fixed
 
+- Read verified personal Claude billing when the account profile explicitly
+  identifies Ultra, so its returned charge date can reach the renewal pill and
+  exact-date details. ([#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454))
+
 - Explain that Google sign-in cannot connect Greptile billing yet. Block the
   unsupported sign-in with return and cancel actions, preserve saved connections
   when canceled, and reject denied billing access before connecting an account.
