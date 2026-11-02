@@ -75,7 +75,8 @@ private class RenewalProtocol: URLProtocol, @unchecked Sendable {
             XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer synthetic-token")
             root = ["account": ["uuid": Self.owner],
-                    "organization": ["uuid": Self.organization, "organization_type": type]]
+                    "organization": ["uuid": Self.organization, "organization_type": type],
+            ]
         case ("claude.ai", "/api/account"):
             XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
             XCTAssertEqual(request.value(forHTTPHeaderField: "Cookie"), "sessionKey=synthetic")
