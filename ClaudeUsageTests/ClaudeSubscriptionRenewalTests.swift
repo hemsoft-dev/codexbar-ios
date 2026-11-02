@@ -50,6 +50,18 @@ final class ClaudeSubscriptionRenewalTests: XCTestCase {
             XCTAssertEqual(RenewalProtocol.billingRequests, 0, type)
         }
     }
+
+    func testUltraFixtureProtocolReachesBothIsolatedProductionClients() async throws {
+        let fixture = try RenewalFixture(type: "claude_ultra")
+        let session = UITestSubscriptionBillingProtocol.session(claudePlanType: "claude_ultra")
+        defer { session.invalidateAndCancel(); fixture.session.invalidateAndCancel() }
+        let result = try await ClaudeUsageProvider(secretStore: fixture.secrets, session: session).fetchUsage(for: fixture.account)
+        XCTAssertEqual(result.plan?.accessibilityLabel, "Ultra")
+        XCTAssertNil(result.subscriptionBillingProblem)
+        let renewal = try XCTUnwrap(result.boundSubscriptionRenewal)
+        XCTAssertNotNil(renewal.compactLabel(at: Date()))
+        XCTAssertEqual(result.subscriptionBillingInformation(at: Date())?.items.first?.label, "Next subscription renewal")
+    }
 }
 
 private struct RenewalFixture {

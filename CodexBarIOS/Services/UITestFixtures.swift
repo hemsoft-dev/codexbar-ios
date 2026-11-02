@@ -202,7 +202,7 @@ final class UITestFixtures {
         _ = store.saveSecret("ui-test-credential", for: second)
     }
 
-    private static func claudeProviders(scenario: String?, suiteName: String) -> [any UsageProvider] {
+    static func claudeProviders(scenario: String?, suiteName: String) -> [any UsageProvider] {
         if scenario == "claude-renewal-ultra" {
             return [ClaudeUsageProvider(secretStore: UITestSecretStore(suite: suiteName),
                                         session: UITestSubscriptionBillingProtocol.session(claudePlanType: "claude_ultra")),
@@ -621,7 +621,7 @@ final class UITestFixtures {
         ClaudeCredentialsParser.storedCredential(from: ClaudeCredentials(subscriptionType: "subscription", accessToken: "ui-claude-profile"))
     }
 
-    private static func seedClaudeAccount(in store: ProviderConfigurationStore, scenario: String?) {
+    static func seedClaudeAccount(in store: ProviderConfigurationStore, scenario: String?) {
         let account = ProviderAccountConfiguration(
             id: "ui-claude", providerID: .claude,
             accountLabel: "Synthetic Claude", authMethod: .browserSession
@@ -632,7 +632,7 @@ final class UITestFixtures {
         if scenario == "claude-renewal-ultra" {
             let billing = SubscriptionBillingSession(providerID: .claude, ownerID: UITestSubscriptionBillingProtocol.claudeOwner,
                                                     organizationID: UITestSubscriptionBillingProtocol.claudeOrganization,
-                                                    cookies: [.init(name: "sessionKey", value: "synthetic", expiresAt: nil)])
+                                                    cookies: [.init(name: "sessionKey", value: "matching", expiresAt: nil)])
             precondition(store.saveSubscriptionBillingSession(billing, for: account, expectedUsageSecret: credential))
         }
     }
@@ -1597,7 +1597,7 @@ final class UITestFixtures {
     }
 }
 
-private struct UITestSecretStore: SecretStore {
+struct UITestSecretStore: SecretStore {
     let suite: String
 
     func readSecret(account: String) throws -> String? {

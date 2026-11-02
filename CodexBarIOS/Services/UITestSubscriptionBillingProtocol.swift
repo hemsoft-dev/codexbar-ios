@@ -2,14 +2,17 @@
 import Foundation
 
 /// Simulator-only transport exercises the real billing client and owner checks without a live account.
-final class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable {
+class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable {
     static let claudeOwner = "11111111-1111-4111-8111-111111111111"
     static let claudeOrganization = "22222222-2222-4222-8222-222222222222"
+    class var claudePlanType: String { "claude_max" }
 
     static func session(claudePlanType: String = "claude_max") -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
-        configuration.protocolClasses = [UITestSubscriptionBillingProtocol.self]
-        configuration.httpAdditionalHeaders = ["X-CodexBar-Test-Claude-Plan-Type": claudePlanType]
+        // Both production clients copy protocolClasses into their isolated sessions.
+        // Select the response contract there; never forward credential or arbitrary headers.
+        configuration.protocolClasses = claudePlanType == "claude_ultra"
+            ? [UITestClaudeUltraBillingProtocol.self] : [UITestSubscriptionBillingProtocol.self]
         return URLSession(configuration: configuration)
     }
 
@@ -29,7 +32,7 @@ final class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable 
         case "/api/oauth/usage":
             body = "{\"seven_day\":{\"utilization\":12,\"resets_at\":\"\(date)\"}}"
         case "/api/oauth/profile":
-            let type = request.value(forHTTPHeaderField: "X-CodexBar-Test-Claude-Plan-Type") == "claude_ultra" ? "claude_ultra" : "claude_max"
+            let type = Self.claudePlanType
             body = "{\"account\":{\"uuid\":\"\(Self.claudeOwner)\"},\"organization\":{\"uuid\":\"\(Self.claudeOrganization)\",\"organization_type\":\"\(type)\"}}"
         case "/api/account":
             body = "{\"uuid\":\"\(wrong ? "other-account" : Self.claudeOwner)\",\"memberships\":[{\"organization\":{\"uuid\":\"\(Self.claudeOrganization)\"}}]}"
@@ -49,6 +52,10 @@ final class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable 
     }
 
     override func stopLoading() {}
+}
+
+private final class UITestClaudeUltraBillingProtocol: UITestSubscriptionBillingProtocol, @unchecked Sendable {
+    override class var claudePlanType: String { "claude_ultra" }
 }
 
 /// Sanitized shapes from the October 15 Cursor/Stripe read probe, never a live credential or date.
