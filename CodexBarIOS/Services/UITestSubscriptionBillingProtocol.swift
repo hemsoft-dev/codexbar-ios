@@ -16,11 +16,7 @@ class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable {
         return URLSession(configuration: configuration)
     }
 
-    // URLProtocol requires overridable class methods.
-    // swiftlint:disable:next static_over_final_class
     override class func canInit(with request: URLRequest) -> Bool { true }
-    // URLProtocol requires overridable class methods.
-    // swiftlint:disable:next static_over_final_class
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
@@ -55,6 +51,8 @@ class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable {
 }
 
 private final class UITestClaudeUltraBillingProtocol: UITestSubscriptionBillingProtocol, @unchecked Sendable {
+    // The inherited response contract requires a class-property override.
+    // swiftlint:disable:next static_over_final_class
     override class var claudePlanType: String { "claude_ultra" }
 }
 
