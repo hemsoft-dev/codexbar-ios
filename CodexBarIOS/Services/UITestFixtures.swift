@@ -205,7 +205,8 @@ final class UITestFixtures {
     private static func claudeProviders(scenario: String?, suiteName: String) -> [any UsageProvider] {
         if scenario == "claude-renewal-ultra" {
             return [ClaudeUsageProvider(secretStore: UITestSecretStore(suite: suiteName),
-                                        session: UITestSubscriptionBillingProtocol.session(claudePlanType: "claude_ultra"))]
+                                        session: UITestSubscriptionBillingProtocol.session(claudePlanType: "claude_ultra")),
+            ]
         }
         if scenario?.hasPrefix("claude-plan-") == true {
             return [UITestClaudeProfileProvider(suiteName: suiteName)]
