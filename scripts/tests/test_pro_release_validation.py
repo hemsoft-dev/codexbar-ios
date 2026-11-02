@@ -122,7 +122,7 @@ class PhaseManifestTests(unittest.TestCase):
         for name in manifest['ui_journeys']:
             declared.update(manifest['phases'][name]['tests'])
         self.assertEqual(discovered, declared)
-        self.assertEqual(len(discovered), 54)
+        self.assertEqual(len(discovered), 55)
         self.assertEqual(len(manifest['shared_pro_tests']), 197)
         self.assertEqual(len(manifest['shared_pro_sources']), 22)
 
@@ -136,11 +136,12 @@ class PhaseManifestTests(unittest.TestCase):
                 EVIDENCE.load_manifest()
 
     def test_marketing_is_never_a_release_journey(self):
-        manifest = EVIDENCE.load_manifest()
-        phase = manifest['phases']['ui-native']
-        phase['tests'] = manifest['excluded_marketing']
-        with patch.object(EVIDENCE, 'read', return_value=manifest), self.assertRaisesRegex(ValueError, 'Marketing'):
-            EVIDENCE.load_manifest()
+        for capture in EVIDENCE.load_manifest()['excluded_marketing']:
+            manifest = EVIDENCE.load_manifest()
+            manifest['phases']['ui-native']['tests'] = [capture]
+            with self.subTest(capture=capture), patch.object(EVIDENCE, 'read', return_value=manifest), \
+                    self.assertRaisesRegex(ValueError, 'Marketing'):
+                EVIDENCE.load_manifest()
 
     def test_execution_schedule_cannot_omit_duplicate_or_reorder_phases(self):
         for key in ('ui_phases', 'native_phases', 'coverage_phases'):

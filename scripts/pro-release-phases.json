@@ -200,6 +200,7 @@
     "native-germany"
   ],
   "excluded_marketing": [
+    "CodexBarIOSUITests/CodexCreditsPoolUITests/testClaudeUltraReportedWindowsEvidence",
     "CodexBarIOSUITests/StorefrontReviewCaptureTests/testCaptureThreeLocalStoreKitProducts"
   ],
   "shared_pro_tests": [

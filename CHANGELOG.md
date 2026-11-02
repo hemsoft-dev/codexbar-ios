@@ -44,6 +44,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Reconcile the UI test inventory with the focused Claude Ultra manual capture,
+  preserving all 53 regression journeys and the manifest completeness checks.
+  ([#544](https://github.com/hemsoft-dev/codexbar-ios/issues/544))
+
 - Record the Free cutover and storefront checks, with an opt-in local StoreKit
   capture of the post-cutover Free, trial and Restore flow.
   ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
