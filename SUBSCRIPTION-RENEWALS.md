@@ -192,6 +192,29 @@ old renewal is never reused when the new Go billing state is unavailable.
 
 ## Claude renewal acquisition follow-up
 
+The November 2 recurrence of [#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454)
+remains reported, not reproduced on Franz's live account. A production-provider
+regression identified a separate compatibility gap: plan resolution accepted
+explicit `claude_ultra`, while the billing client's personal-plan allowlist
+rejected it before reading subscription details. Billing now accepts the same
+explicit personal family. It still requires the saved same-account session,
+matching OAuth/web account and organization before and after acquisition, and
+an actual provider charge date. No date is inferred from the Ultra name.
+
+`xcrun swift test --filter ClaudeSubscriptionRenewalTests` exercises the real
+Claude provider, isolated billing transport, parser and bound presentation data.
+The pre-fix explicit-Ultra case returned `unsupportedSubscription` with no
+countdown; the Pro/Max controls succeeded. The fixture is synthetic compatibility
+coverage, not proof that a live account returns `claude_ultra` or that this was
+Franz's cause. Legacy Max 20x metadata remains supported. The existing personal
+session, stale-state, ownership, cancellation and transport rules remain intact.
+
+The focused manual `testClaudeUltraReportedWindowsEvidence` capture also loads
+an explicit-Ultra billing response through the production provider and real
+dashboard before capturing the renewal pill and exact date in both appearances.
+Live acquisition and comparison on Franz's account remain unverified; the issue
+must retain that gate independently of synthetic success and phone installation.
+
 [#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454) corrects an app-side
 schema rejection. The old parser required all four date aliases, including null
 values. The installed first-party Claude **1.49585.0** client treats timestamp

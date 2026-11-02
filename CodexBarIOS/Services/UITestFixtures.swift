@@ -165,7 +165,7 @@ final class UITestFixtures {
         )
         UITestMuseCodeFixture.presentFailures(of: results, in: refreshService, scenario: scenario)
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
-            || scenario?.hasPrefix("subscription-renewals") == true
+            || scenario?.hasPrefix("subscription-renewals") == true || scenario == "claude-renewal-ultra"
             || (greptile && environment["CODEXBAR_UI_TEST_MORE_INFORMATION"] == "1")
             || scenario?.hasPrefix("grok-cursor-parity") == true
             || Self.isCursorSessionScenario(scenario) {
@@ -203,6 +203,10 @@ final class UITestFixtures {
     }
 
     private static func claudeProviders(scenario: String?, suiteName: String) -> [any UsageProvider] {
+        if scenario == "claude-renewal-ultra" {
+            return [ClaudeUsageProvider(secretStore: UITestSecretStore(suite: suiteName),
+                                        session: UITestSubscriptionBillingProtocol.session(claudePlanType: "claude_ultra"))]
+        }
         if scenario?.hasPrefix("claude-plan-") == true {
             return [UITestClaudeProfileProvider(suiteName: suiteName)]
         }
@@ -271,7 +275,7 @@ final class UITestFixtures {
             )
         }
         if scenario?.hasPrefix("codex-") == true { return codexResult(for: configuration, scenario: scenario) }
-        if scenario?.hasPrefix("claude-plan-") == true {
+        if scenario?.hasPrefix("claude-plan-") == true || scenario == "claude-renewal-ultra" {
             return ProviderUsageResult(accountID: configuration.id, providerID: .claude, title: configuration.displayName,
                                        subtitle: "Loading synthetic Claude profile", bars: [], fetchedAt: Date())
         }
@@ -624,6 +628,12 @@ final class UITestFixtures {
         precondition(store.update(account))
         let credential = scenario?.hasPrefix("claude-plan-") == true ? claudeProfileCredential : "ui-test-credential"
         _ = store.saveSecret(credential, for: account)
+        if scenario == "claude-renewal-ultra" {
+            let billing = SubscriptionBillingSession(providerID: .claude, ownerID: UITestSubscriptionBillingProtocol.claudeOwner,
+                                                    organizationID: UITestSubscriptionBillingProtocol.claudeOrganization,
+                                                    cookies: [.init(name: "sessionKey", value: "synthetic", expiresAt: nil)])
+            precondition(store.saveSubscriptionBillingSession(billing, for: account, expectedUsageSecret: credential))
+        }
     }
 
     nonisolated static func claudeResult(

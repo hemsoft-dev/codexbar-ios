@@ -24,6 +24,32 @@ final class ClaudeSubscriptionRenewalTests: XCTestCase {
             XCTAssertEqual(RenewalProtocol.billingRequests, 1, type)
         }
     }
+
+    func testUltraCanceledSubscriptionDoesNotShowRenewalCountdown() async throws {
+        let fixture = try RenewalFixture(type: "claude_ultra", canceled: true)
+        defer { fixture.session.invalidateAndCancel() }
+        let result = try await ClaudeUsageProvider(secretStore: fixture.secrets, session: fixture.session,
+                                                 now: { [now] in now }).fetchUsage(for: fixture.account)
+        let renewal = try XCTUnwrap(result.boundSubscriptionRenewal)
+        XCTAssertEqual(renewal.state, .nonRenewing)
+        XCTAssertEqual(renewal.date, now.addingTimeInterval(259_200))
+        XCTAssertNil(renewal.compactLabel(at: now))
+        XCTAssertEqual(result.subscriptionBillingInformation(at: now)?.items.first?.label, "Does not renew")
+    }
+
+    func testOrganizationAndUnknownPlansKeepUsageWithoutPersonalBilling() async throws {
+        for type in ["claude_team", "claude_enterprise", "future_plan"] {
+            let fixture = try RenewalFixture(type: type)
+            defer { fixture.session.invalidateAndCancel() }
+            let result = try await ClaudeUsageProvider(secretStore: fixture.secrets, session: fixture.session,
+                                                     now: { [now] in now }).fetchUsage(for: fixture.account)
+            XCTAssertNil(result.failureMessage, type)
+            XCTAssertFalse(result.bars.isEmpty, type)
+            XCTAssertNil(result.boundSubscriptionRenewal, type)
+            XCTAssertEqual(result.subscriptionBillingProblem?.reason, .unsupportedSubscription, type)
+            XCTAssertEqual(RenewalProtocol.billingRequests, 0, type)
+        }
+    }
 }
 
 private struct RenewalFixture {
@@ -31,11 +57,11 @@ private struct RenewalFixture {
     let secrets = RenewalSecrets()
     let session: URLSession
 
-    init(type: String) throws {
+    init(type: String, canceled: Bool = false) throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [RenewalProtocol.self]
         session = URLSession(configuration: configuration)
-        RenewalProtocol.configure(type: type)
+        RenewalProtocol.configure(type: type, canceled: canceled)
         try secrets.saveSecret("synthetic-token", account: ProviderConfigurationStore.keychainAccount(for: account))
         let billing = SubscriptionBillingSession(providerID: .claude, ownerID: RenewalProtocol.owner,
                                                 organizationID: RenewalProtocol.organization,
@@ -58,8 +84,11 @@ private class RenewalProtocol: URLProtocol, @unchecked Sendable {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var planType = "claude_max"
     nonisolated(unsafe) private static var billingCount = 0
+    nonisolated(unsafe) private static var canceled = false
     static var billingRequests: Int { lock.withLock { billingCount } }
-    static func configure(type: String) { lock.withLock { planType = type; billingCount = 0 } }
+    static func configure(type: String, canceled: Bool) {
+        lock.withLock { planType = type; billingCount = 0; self.canceled = canceled }
+    }
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func stopLoading() {}
@@ -83,7 +112,9 @@ private class RenewalProtocol: URLProtocol, @unchecked Sendable {
             root = ["uuid": Self.owner, "memberships": [["organization": ["uuid": Self.organization]]]]
         case ("claude.ai", "/api/organizations/\(Self.organization)/subscription_details"):
             Self.lock.withLock { Self.billingCount += 1 }
-            root = ["status": "active", "next_charge_at": "2033-05-21T03:33:20Z"]
+            root = ["status": "active", "next_charge_at": "2033-05-21T03:33:20Z",
+                    "plan_ending_at": Self.lock.withLock { Self.canceled } ? "2033-05-21T03:33:20Z" : NSNull(),
+            ]
         default:
             XCTFail("Unexpected request: \(url.host ?? "") \(url.path)")
             client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))

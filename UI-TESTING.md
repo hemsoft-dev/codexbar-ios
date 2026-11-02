@@ -27,7 +27,10 @@ native purchase/restore and purchase-error journeys 1 each. The separate
 storefront capture and focused Claude Ultra evidence capture are listed in
 `excluded_marketing` as manual captures, outside the 53 regression journeys.
 The Ultra capture remains available for focused manual execution on either
-device family. Normal preparation, purchase-error
+device family. It also exercises `claude-renewal-ultra` through the real Claude
+provider and intercepted billing transport, capturing the acquired renewal pill
+and exact-date details in light/default and dark/accessibility text. These are
+synthetic compatibility responses, not a live account diagnosis. Normal preparation, purchase-error
 preparation and a final normal reset add three separate XCTest invocations;
 they are not counted as user journeys.
 

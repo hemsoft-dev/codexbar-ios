@@ -6,9 +6,10 @@ final class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable 
     static let claudeOwner = "11111111-1111-4111-8111-111111111111"
     static let claudeOrganization = "22222222-2222-4222-8222-222222222222"
 
-    static func session() -> URLSession {
+    static func session(claudePlanType: String = "claude_max") -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [UITestSubscriptionBillingProtocol.self]
+        configuration.httpAdditionalHeaders = ["X-CodexBar-Test-Claude-Plan-Type": claudePlanType]
         return URLSession(configuration: configuration)
     }
 
@@ -25,8 +26,11 @@ final class UITestSubscriptionBillingProtocol: URLProtocol, @unchecked Sendable 
         let date = ISO8601DateFormatter().string(from: Date().addingTimeInterval(259_200))
         let body: String
         switch url.path {
+        case "/api/oauth/usage":
+            body = "{\"seven_day\":{\"utilization\":12,\"resets_at\":\"\(date)\"}}"
         case "/api/oauth/profile":
-            body = "{\"account\":{\"uuid\":\"\(Self.claudeOwner)\"},\"organization\":{\"uuid\":\"\(Self.claudeOrganization)\",\"organization_type\":\"claude_max\"}}"
+            let type = request.value(forHTTPHeaderField: "X-CodexBar-Test-Claude-Plan-Type") == "claude_ultra" ? "claude_ultra" : "claude_max"
+            body = "{\"account\":{\"uuid\":\"\(Self.claudeOwner)\"},\"organization\":{\"uuid\":\"\(Self.claudeOrganization)\",\"organization_type\":\"\(type)\"}}"
         case "/api/account":
             body = "{\"uuid\":\"\(wrong ? "other-account" : Self.claudeOwner)\",\"memberships\":[{\"organization\":{\"uuid\":\"\(Self.claudeOrganization)\"}}]}"
         case "/rest/subscriptions":
