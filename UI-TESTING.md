@@ -24,7 +24,10 @@ The base command above still executes exactly 29 original journeys. The
 [phase manifest](scripts/pro-release-phases.json) requires 53 user journeys per
 family for a release: original 29, supplemental 8, synthetic commerce 14, and
 native purchase/restore and purchase-error journeys 1 each. The separate
-marketing capture method is excluded. Normal preparation, purchase-error
+storefront capture and focused Claude Ultra evidence capture are listed in
+`excluded_marketing` as manual captures, outside the 53 regression journeys.
+The Ultra capture remains available for focused manual execution on either
+device family. Normal preparation, purchase-error
 preparation and a final normal reset add three separate XCTest invocations;
 they are not counted as user journeys.
 
