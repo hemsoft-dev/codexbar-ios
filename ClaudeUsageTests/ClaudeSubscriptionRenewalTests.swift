@@ -12,7 +12,7 @@ final class ClaudeSubscriptionRenewalTests: XCTestCase {
             let fixture = try RenewalFixture(type: type)
             defer { fixture.session.invalidateAndCancel() }
             let result = try await ClaudeUsageProvider(secretStore: fixture.secrets, session: fixture.session,
-                                                     now: { self.now }).fetchUsage(for: fixture.account)
+                                                     now: { [now] in now }).fetchUsage(for: fixture.account)
             XCTAssertNil(result.failureMessage, type)
             XCTAssertFalse(result.bars.isEmpty, type)
             XCTAssertNil(result.subscriptionBillingProblem, type)
