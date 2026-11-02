@@ -537,6 +537,14 @@ final class CodexCreditsPoolUITests: XCTestCase {
             tap(app.buttons["More options for Synthetic Claude"], in: app)
             tap(app.buttons["More information for Synthetic Claude"], in: app)
             XCTAssertTrue(app.staticTexts["Next subscription renewal"].waitForExistence(timeout: 5), app.debugDescription)
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US")
+            formatter.dateStyle = .long
+            let expected = formatter.string(from: Date().addingTimeInterval(259_200))
+            let exactDate = app.descendants(matching: .any).matching(NSPredicate(
+                format: "label BEGINSWITH %@ AND label CONTAINS %@", "Next subscription renewal,", expected
+            )).firstMatch
+            XCTAssertTrue(exactDate.waitForExistence(timeout: 5), app.debugDescription)
             keep("claude-renewal-acquired-\(appearance)-exact-date", app: app)
             app.terminate()
         }
