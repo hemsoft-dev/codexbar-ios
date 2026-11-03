@@ -631,12 +631,12 @@ final class SubscriptionBillingTests: XCTestCase {
         session.verify()
         try await Task.sleep(for: .milliseconds(300))
         XCTAssertFalse(session.isVerifying, "A signed-out page has no billing cookie to verify")
-        XCTAssertNil(session.message)
+        XCTAssertTrue(session.message?.contains("No billing sign-in") == true)
 
         let cookies = session.webView.configuration.websiteDataStore.httpCookieStore
         await cookies.setCookie(try signInCookie("wrong"))
         session.verify()
-        let explained = await waitUntil { session.message != nil && !session.isVerifying }
+        let explained = await waitUntil { session.message == SubscriptionBillingError.accountMismatch.localizedDescription && !session.isVerifying }
         XCTAssertTrue(explained)
         XCTAssertEqual(session.message, SubscriptionBillingError.accountMismatch.localizedDescription)
         XCTAssertTrue(results.isEmpty, "A wrong account keeps the sign-in open")
@@ -836,6 +836,384 @@ final class SubscriptionBillingTests: XCTestCase {
     private func webAccount(owner: String? = nil) -> Data {
         Data("{\"uuid\":\"\(owner ?? self.owner)\",\"memberships\":[{\"organization\":{\"uuid\":\"\(organization)\"}}]}".utf8)
     }
+}
+
+// Records the production decision, then prevents any external fixture document from loading.
+@MainActor
+private final class BillingPolicyRecorder: NSObject, WKNavigationDelegate {
+    let session: SubscriptionBillingSignInSession
+    var googleAllowed = false
+    var blockProviderLoad = false
+    var decisions = [String: WKNavigationActionPolicy]()
+    var googleDecisions = 0
+    init(_ session: SubscriptionBillingSignInSession) { self.session = session }
+    func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
+        let policy = await session.webView(webView, decidePolicyFor: action)
+        if let url = action.request.url { decisions[url.absoluteString] = policy }
+        if SubscriptionBillingSignInSession.canonicalHost(action.request.url)?.contains("accounts.google.com") == true {
+            googleDecisions += 1
+            googleAllowed = googleAllowed || policy == .allow
+            return .cancel
+        }
+        if blockProviderLoad, action.request.url?.host == "claude.ai" { return .cancel }
+        return policy
+    }
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        (session as WKNavigationDelegate).webView?(webView, didCommit: navigation)
+    }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { session.webView(webView, didFinish: navigation) }
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        session.webView(webView, didStartProvisionalNavigation: navigation)
+    }
+}
+
+extension SubscriptionBillingTests {
+    @MainActor
+    private func recoverySession(fixture: IsolatedTestURLSession, completion: @escaping (Result<SubscriptionBillingSession, Error>) -> Void)
+        -> SubscriptionBillingSignInSession {
+        SubscriptionBillingSignInSession(
+            configuration: ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession),
+            usageSecret: "usage-token", client: SubscriptionBillingClient(session: fixture.session), completion: completion
+        )
+    }
+
+    @MainActor
+    private func loadRecoveryPage(_ session: SubscriptionBillingSignInSession) async {
+        session.webView.loadHTMLString("<html><body>Provider sign-in</body></html>", baseURL: URL(string: "https://claude.ai/"))
+        let loaded = await waitUntil { !session.webView.isLoading && session.webView.url?.host == "claude.ai" }
+        XCTAssertTrue(loaded)
+    }
+
+    @MainActor
+    func testGooglePopupIsDeniedWithoutReplacingProviderAndTerminationExplained() async throws {
+        let fixture = billingSignInFixture()
+        defer { fixture.invalidate() }
+        let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
+        let session = SubscriptionBillingSignInSession(configuration: account, usageSecret: "usage-token",
+                                                       client: SubscriptionBillingClient(session: fixture.session)) { _ in }
+        defer { session.invalidate() }
+        let recorder = BillingPolicyRecorder(session)
+        session.webView.navigationDelegate = recorder
+        session.webView.loadHTMLString("<html><body>Provider sign-in</body></html>", baseURL: URL(string: "https://claude.ai/"))
+        let loaded = await waitUntil { !session.webView.isLoading && session.webView.url?.host == "claude.ai" }
+        XCTAssertTrue(loaded)
+        _ = try await session.webView.evaluateJavaScript("window.open('https://accounts.google.com/o/oauth2/auth','auth'); void(0)")
+        try await Task.sleep(for: .milliseconds(400))
+        XCTAssertFalse(recorder.googleAllowed, "Production must deny Google authorization before its document loads")
+        XCTAssertEqual(session.host, "claude.ai", "Keep the provider page and its committed host")
+        (session as WKNavigationDelegate).webViewWebContentProcessDidTerminate?(session.webView)
+        XCTAssertNotNil(session.message, "A terminated page must explain non-wiping recovery")
+    }
+
+    @MainActor
+    func testGoogleMainRedirectSubframeAndMalformedPoliciesUseProductionCallbacks() async throws {
+        let fixture = billingSignInFixture()
+        defer { fixture.invalidate() }
+        for provider in [ProviderID.claude, .grok] {
+            let account = ProviderAccountConfiguration(id: "personal", providerID: provider, authMethod: .browserSession)
+            let session = SubscriptionBillingSignInSession(configuration: account, usageSecret: "usage-token",
+                                                           client: SubscriptionBillingClient(session: fixture.session)) { _ in }
+            defer { session.invalidate() }
+            let recorder = BillingPolicyRecorder(session)
+            session.webView.navigationDelegate = recorder
+            let providerHost = try XCTUnwrap(SubscriptionBillingSession.host(provider))
+            session.webView.loadHTMLString("<html><body>Provider</body></html>", baseURL: URL(string: "https://\(providerHost)/"))
+            let loaded = await waitUntil { !session.webView.isLoading && session.webView.url?.host == providerHost }
+            XCTAssertTrue(loaded)
+            _ = try await session.webView.evaluateJavaScript("var f=document.createElement('iframe'); f.src='https://accounts.google.com/gsi/iframe'; document.body.appendChild(f); void(0)")
+            let subframe = await waitUntil { recorder.decisions["https://accounts.google.com/gsi/iframe"] != nil }
+            XCTAssertTrue(subframe)
+            XCTAssertEqual(recorder.decisions["https://accounts.google.com/gsi/iframe"], .cancel)
+            XCTAssertNil(session.routeNotice, "Subframes must be silent and leave the provider page usable")
+            for target in ["https://accounts.google.com/o/oauth2/auth", "https://ACCOUNTS.GOOGLE.COM./o/oauth2/auth",
+                           "https://sub.accounts.google.com/auth", ] {
+                let before = recorder.googleDecisions
+                _ = try await session.webView.evaluateJavaScript("window.location.replace('\(target)'); void(0)")
+                let denied = await waitUntil { recorder.googleDecisions > before }
+                XCTAssertTrue(denied)
+                XCTAssertFalse(recorder.googleAllowed)
+                XCTAssertTrue(session.routeNotice?.contains(session.providerName) == true)
+                XCTAssertEqual(session.host, providerHost)
+            }
+            for target in ["http://claude.ai/", "https://user:pass@claude.ai/", "https://claude.ai:444/", "about:blank",
+                           "blob:https://claude.ai/id", "javascript:void(0)", "data:text/html,test", ] {
+                XCTAssertFalse(SubscriptionBillingSignInSession.isSecure(URL(string: target)))
+            }
+            XCTAssertTrue(SubscriptionBillingSignInSession.isSecure(URL(string: "https://claude.ai:443/")))
+            session.webView(session.webView, didFailProvisionalNavigation: nil, withError: NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled))
+            session.webView(session.webView, didFail: nil, withError: NSError(domain: "WebKitErrorDomain", code: 102))
+            XCTAssertNil(session.message)
+            session.webView(session.webView, didFail: nil, withError: NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut))
+            XCTAssertNotNil(session.message, "Actual network failures remain visible")
+            session.webView(session.webView, didCommit: nil)
+            XCTAssertNil(session.routeNotice)
+        }
+    }
+    @MainActor
+    func testLateCookieDiscoveryWithoutObserverOrNavigationCompletesOnce() async throws {
+        let fixture = billingSignInFixture()
+        defer { fixture.invalidate() }
+        var results = [Result<SubscriptionBillingSession, Error>]()
+        let session = recoverySession(fixture: fixture) { results.append($0) }
+        defer { session.invalidate() }
+        let store = session.webView.configuration.websiteDataStore.httpCookieStore
+        store.remove(session)
+        await loadRecoveryPage(session)
+        try await Task.sleep(for: .milliseconds(300))
+        await store.setCookie(try signInCookie("matching"))
+        let completed = await waitUntil { results.count == 1 }
+        XCTAssertTrue(completed, "The finite local discovery finds a cookie without observer/didFinish")
+        XCTAssertEqual(try XCTUnwrap(results.first).get().cookies.map(\.value), ["matching"])
+        session.verify()
+        XCTAssertEqual(results.count, 1)
+    }
+
+    @MainActor
+    func testSlowConnectSurvivesUnrelatedChurnAndDiscoveryTicks() async throws {
+        let requests = BillingRequestCount()
+        let fixture = IsolatedTestURLSession { [self] request in
+            requests.increment()
+            Thread.sleep(forTimeInterval: 0.65)
+            let body = request.url?.path == "/api/oauth/profile" ? profile()
+                : request.url?.path == "/api/account" ? webAccount() : claudeBilling()
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
+        }
+        defer { fixture.invalidate() }
+        var results = [Result<SubscriptionBillingSession, Error>]()
+        let session = recoverySession(fixture: fixture) { results.append($0) }
+        defer { session.invalidate() }
+        await loadRecoveryPage(session)
+        let store = session.webView.configuration.websiteDataStore.httpCookieStore
+        await store.setCookie(try signInCookie("matching"))
+        session.verify()
+        let began = await waitUntil { session.isVerifying }
+        XCTAssertTrue(began)
+        for _ in 0..<8 {
+            await store.setCookie(try XCTUnwrap(HTTPCookie(properties: [.name: "unrelated", .value: UUID().uuidString,
+                                                                      .domain: "claude.ai", .path: "/", .secure: "TRUE", ])))
+            session.cookiesDidChange(in: store)
+            session.verify() // Same credential in flight must be a no-op, even for manual intent.
+            try await Task.sleep(for: .milliseconds(450))
+        }
+        let completed = await waitUntil { results.count == 1 }
+        XCTAssertTrue(completed)
+        XCTAssertEqual(requests.value, 6, "One real connect makes six identity/billing requests; polling never restarts it")
+    }
+
+    @MainActor
+    func testFailedCredentialHasFiniteAutomaticBudgetAndManualRetry() async throws {
+        let requests = BillingRequestCount()
+        let fixture = IsolatedTestURLSession { [self] request in
+            requests.increment()
+            let body = request.url?.path == "/api/oauth/profile" ? profile() : webAccount(owner: "other")
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
+        }
+        defer { fixture.invalidate() }
+        let session = recoverySession(fixture: fixture) { _ in XCTFail("Wrong account must stay open") }
+        defer { session.invalidate() }
+        await loadRecoveryPage(session)
+        let store = session.webView.configuration.websiteDataStore.httpCookieStore
+        await store.setCookie(try signInCookie("wrong"))
+        session.verify()
+        let failed = await waitUntil { session.message == SubscriptionBillingError.accountMismatch.localizedDescription }
+        XCTAssertTrue(failed)
+        await store.setCookie(try signInCookie("wrong-again"))
+        session.verify()
+        let secondFailed = await waitUntil { requests.value == 6 && !session.isVerifying }
+        XCTAssertTrue(secondFailed)
+        await store.setCookie(try signInCookie("wrong"))
+        let count = requests.value
+        for _ in 0..<32 {
+            session.cookiesDidChange(in: store)
+            session.webView(session.webView, didFinish: nil)
+            try await Task.sleep(for: .milliseconds(500))
+        }
+        XCTAssertEqual(requests.value, count, "Identical failed credentials never automatically retry")
+        XCTAssertLessThanOrEqual(session.automaticCookieReadCount, 6)
+        let reads = session.automaticCookieReadCount
+        session.webView(session.webView, didCommit: nil)
+        session.cookiesDidChange(in: store)
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(session.automaticCookieReadCount, reads, "Events cannot renew an exhausted generation budget")
+        session.verify()
+        let retried = await waitUntil { requests.value == count + 3 && !session.isVerifying }
+        XCTAssertTrue(retried, "Explicit manual intent can retry the same credential")
+    }
+
+    @MainActor
+    func testUnobservedRemovalBeforeConnectReturnsCannotComplete() async throws {
+        let requests = BillingRequestCount()
+        let gate = TestRequestGate()
+        defer { gate.release() }
+        let fixture = IsolatedTestURLSession { [self] request in
+            requests.increment()
+            if requests.value == 6 { gate.blockUntilReleased() }
+            let body = request.url?.path == "/api/oauth/profile" ? profile()
+                : request.url?.path == "/api/account" ? webAccount() : claudeBilling()
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
+        }
+        defer { fixture.invalidate() }
+        var results = [Result<SubscriptionBillingSession, Error>]()
+        let session = recoverySession(fixture: fixture) { results.append($0) }
+        defer { session.invalidate() }
+        let store = session.webView.configuration.websiteDataStore.httpCookieStore
+        store.remove(session)
+        await loadRecoveryPage(session)
+        let cookie = try signInCookie("matching")
+        await store.setCookie(cookie)
+        session.verify()
+        let blocked = await waitUntil { requests.value == 6 }
+        XCTAssertTrue(blocked)
+        await store.deleteCookie(cookie)
+        gate.release()
+        let rejected = await waitUntil { !session.isVerifying && session.message?.contains("changed during verification") == true }
+        XCTAssertTrue(rejected)
+        XCTAssertTrue(results.isEmpty, "No stale success even when no observer fired")
+    }
+
+    @MainActor
+    func testNewCredentialSupersedesSlowAttemptAndCancelIsExactlyOnce() async throws {
+        for cancel in [false, true] {
+            let requests = BillingRequestCount()
+            let gate = TestRequestGate()
+            defer { gate.release() }
+            let fixture = IsolatedTestURLSession { [self] request in
+                requests.increment()
+                if requests.value == 1 { gate.blockUntilReleased() }
+                let wrong = request.value(forHTTPHeaderField: "Cookie")?.contains("=wrong") == true
+                let body = request.url?.path == "/api/oauth/profile" ? profile()
+                    : request.url?.path == "/api/account" ? webAccount(owner: wrong ? "other" : nil) : claudeBilling()
+                return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
+            }
+            defer { fixture.invalidate() }
+            var results = [Result<SubscriptionBillingSession, Error>]()
+            let session = recoverySession(fixture: fixture) { results.append($0) }
+            defer { session.invalidate() }
+            await loadRecoveryPage(session)
+            let store = session.webView.configuration.websiteDataStore.httpCookieStore
+            await store.setCookie(try signInCookie("wrong"))
+            session.verify()
+            let blocked = await waitUntil { requests.value == 1 }
+            XCTAssertTrue(blocked)
+            await store.setCookie(try signInCookie("matching"))
+            session.verify()
+            if cancel { session.cancel() }
+            gate.release()
+            let completed = await waitUntil { results.count == 1 }
+            XCTAssertTrue(completed)
+            if cancel {
+                XCTAssertThrowsError(try results.first?.get())
+            } else {
+                XCTAssertEqual(try XCTUnwrap(results.first).get().cookies.map(\.value), ["matching"])
+            }
+            session.cancel()
+            session.cookiesDidChange(in: store)
+            try await Task.sleep(for: .milliseconds(250))
+            XCTAssertEqual(results.count, 1, "Canceled/superseded callbacks cannot report a second outcome")
+        }
+    }
+
+    @MainActor
+    func testStartOverInvalidatesSlowSuccessWithoutReportingOrSaving() async throws {
+        let requests = BillingRequestCount()
+        let gate = TestRequestGate()
+        defer { gate.release() }
+        let fixture = IsolatedTestURLSession { [self] request in
+            requests.increment()
+            if requests.value == 6 { gate.blockUntilReleased() }
+            let body = request.url?.path == "/api/oauth/profile" ? profile()
+                : request.url?.path == "/api/account" ? webAccount() : claudeBilling()
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
+        }
+        defer { fixture.invalidate() }
+        var results = [Result<SubscriptionBillingSession, Error>]()
+        let session = recoverySession(fixture: fixture) { results.append($0) }
+        defer { session.invalidate() }
+        await loadRecoveryPage(session)
+        let store = session.webView.configuration.websiteDataStore.httpCookieStore
+        await store.setCookie(try signInCookie("matching"))
+        session.verify()
+        let blocked = await waitUntil { requests.value == 6 }
+        XCTAssertTrue(blocked)
+        session.retrySignIn()
+        gate.release()
+        let reset = await waitUntil { !session.isVerifying && !session.webView.isLoading }
+        XCTAssertTrue(reset)
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertTrue(results.isEmpty, "Generation change prevents the old successful connect from completing")
+    }
+
+    @MainActor
+    func testTerminationReloadPreservesCookiesAndExplicitStartOverWipesThem() async throws {
+        let fixture = billingSignInFixture()
+        defer { fixture.invalidate() }
+        let session = recoverySession(fixture: fixture) { _ in XCTFail("Recovery must not save an unverified session") }
+        defer { session.invalidate() }
+        let recorder = BillingPolicyRecorder(session)
+        session.webView.navigationDelegate = recorder
+        let store = session.webView.configuration.websiteDataStore.httpCookieStore
+        store.remove(session)
+        await loadRecoveryPage(session)
+        await store.setCookie(try signInCookie("wrong"))
+        recorder.blockProviderLoad = true // Recovery request goes through production policy but never reaches a provider.
+        session.webViewWebContentProcessDidTerminate(session.webView)
+        XCTAssertNotNil(session.message)
+        session.reloadSignIn()
+        var cookies = await withCheckedContinuation { continuation in store.getAllCookies { continuation.resume(returning: $0) } }
+        XCTAssertEqual(SubscriptionBillingSession.capture(cookies, provider: .claude).map(\.value), ["wrong"])
+        XCTAssertNil(session.message)
+        session.retrySignIn()
+        let reset = await waitUntil { !session.isVerifying }
+        XCTAssertTrue(reset)
+        cookies = await withCheckedContinuation { continuation in store.getAllCookies { continuation.resume(returning: $0) } }
+        XCTAssertTrue(SubscriptionBillingSession.capture(cookies, provider: .claude).isEmpty)
+        XCTAssertEqual(session.automaticCookieReadCount, 0)
+    }
+
+    @MainActor
+    func testGrokUsesItsCapturedCookieSetRatherThanClaudeSessionKey() async throws {
+        let account = ProviderAccountConfiguration(id: "grok-personal", providerID: .grok, authMethod: .browserSession)
+        let usage = try GrokCredential(kind: "grok-oauth-v1", accessToken: "usage-token", refreshToken: "refresh",
+                                       expiresAt: Date().addingTimeInterval(3600), subject: owner, email: nil).encoded()
+        let requests = BillingRequestCount()
+        let fixture = IsolatedTestURLSession { [self] request in
+            requests.increment()
+            Thread.sleep(forTimeInterval: 1.7)
+            XCTAssertEqual(Set((request.value(forHTTPHeaderField: "Cookie") ?? "").components(separatedBy: "; ")),
+                           ["billing-fixture=matching", "commerce=second"])
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, grokBilling())
+        }
+        defer { fixture.invalidate() }
+        var results = [Result<SubscriptionBillingSession, Error>]()
+        let session = SubscriptionBillingSignInSession(configuration: account, usageSecret: usage,
+                                                       client: SubscriptionBillingClient(session: fixture.session)) { results.append($0) }
+        defer { session.invalidate() }
+        let store = session.webView.configuration.websiteDataStore.httpCookieStore
+        store.remove(session)
+        session.webView.loadHTMLString("<html><body>Grok billing fixture</body></html>", baseURL: URL(string: "https://grok.com/"))
+        let loaded = await waitUntil { !session.webView.isLoading && session.webView.url?.host == "grok.com" }
+        XCTAssertTrue(loaded)
+        for (name, value) in [("billing-fixture", "matching"), ("commerce", "second")] {
+            await store.setCookie(try XCTUnwrap(HTTPCookie(properties: [.name: name, .value: value, .domain: "grok.com", .path: "/", .secure: "TRUE"])))
+        }
+        session.verify()
+        for _ in 0..<7 {
+            session.cookiesDidChange(in: store)
+            session.webView(session.webView, didFinish: nil)
+            try await Task.sleep(for: .milliseconds(450))
+        }
+        let completed = await waitUntil { results.count == 1 }
+        XCTAssertTrue(completed)
+        XCTAssertEqual(Set(try XCTUnwrap(results.first).get().cookies.map(\.name)), ["billing-fixture", "commerce"])
+        XCTAssertEqual(requests.value, 2)
+    }
+}
+
+private final class BillingRequestCount: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+    var value: Int { lock.withLock { count } }
+    func increment() { lock.withLock { count += 1 } }
 }
 
 private final class BillingMutationSecretStore: SecretStore, @unchecked Sendable {

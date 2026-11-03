@@ -20,6 +20,15 @@ attachments and the accessibility hierarchy from the result bundle. Open the
 
 ## Complete release phases
 
+Focused billing recovery capture (outside the release phase count):
+`CodexBarIOSUITests/CodexCreditsPoolUITests/testBillingSignInRecoveryEvidence`.
+Run this selector through the project XCTest runner on iPhone and iPad. It
+exercises synthetic Google denial, non-wiping interruption recovery, wrong
+account/Start Over, then real Claude provider/store acquisition through an
+intercepted transport and asserts the header countdown and exact-date row.
+It also checks Grok denial and Cancel. Light/default and dark/accessibility
+states are synthetic, not a live Google login or Franz account verification.
+
 The base command above still executes exactly 29 original journeys. The
 [phase manifest](scripts/pro-release-phases.json) requires 53 user journeys per
 family for a release: original 29, supplemental 8, synthetic commerce 14, and

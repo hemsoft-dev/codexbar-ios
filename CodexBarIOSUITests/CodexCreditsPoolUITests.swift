@@ -385,7 +385,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
             XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "different account")).firstMatch
                 .waitForExistence(timeout: 10), app.debugDescription)
             keep("billing-\(title)-wrong-account", app: app)
-            tap(app.buttons["Reload Sign-In"], in: app)
+            tap(app.buttons["Start Over"], in: app)
             XCTAssertTrue(app.buttons["subscription-billing-synthetic-match"].waitForExistence(timeout: 5))
             let mismatch = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "different account")).firstMatch
             XCTAssertTrue(mismatch.waitForNonExistence(timeout: 5), app.debugDescription)
@@ -548,6 +548,83 @@ final class CodexCreditsPoolUITests: XCTestCase {
             keep("claude-renewal-acquired-\(appearance)-exact-date", app: app)
             app.terminate()
         }
+    }
+
+    /// Manual, isolated capture of production billing callbacks and provider-fed header state.
+    func testBillingSignInRecoveryEvidence() {
+        continueAfterFailure = false
+        for dark in [false, true] {
+            let appearance = dark ? "dark-large" : "light-default"
+            let app = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "claude-renewal-ultra")
+            let header = claudeProfileHeader(plan: "Ultra", in: app)
+            XCTAssertTrue(header.waitForExistence(timeout: 10))
+            tap(app.buttons["More options for Synthetic Claude"], in: app)
+            tap(app.buttons["Configure account Synthetic Claude"], in: app)
+            XCTAssertTrue(app.buttons["subscription-billing-disconnect"].waitForExistence(timeout: 5))
+            tap(app.buttons["subscription-billing-disconnect"], in: app)
+            tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
+            let withoutRenewal = NSPredicate(format: "NOT (label CONTAINS %@)", "Renews in")
+            expectation(for: withoutRenewal, evaluatedWith: header)
+            waitForExpectations(timeout: 10)
+            keep("billing-recovery-claude-\(appearance)-disconnected-header", app: app)
+            tap(app.buttons["More options for Synthetic Claude"], in: app)
+            tap(app.buttons["Configure account Synthetic Claude"], in: app)
+            tap(app.buttons["subscription-billing-connect"], in: app)
+            let check = app.buttons["subscription-billing-verify"]
+            XCTAssertTrue(check.waitForExistence(timeout: 5))
+            let google = app.webViews.links["Continue with Google (synthetic)"]
+            XCTAssertTrue(google.waitForExistence(timeout: 5), app.debugDescription)
+            tap(check, in: app)
+            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "No billing sign-in")).firstMatch
+                .waitForExistence(timeout: 5))
+            tap(google, in: app)
+            XCTAssertTrue(app.staticTexts["subscription-billing-route-notice"].waitForExistence(timeout: 5), app.debugDescription)
+            XCTAssertTrue(app.staticTexts["claude.ai"].exists)
+            keep("billing-recovery-claude-\(appearance)-google-denied", app: app)
+            tap(app.buttons["Reload Sign-In"], in: app)
+            XCTAssertTrue(app.staticTexts["subscription-billing-route-notice"].waitForNonExistence(timeout: 5))
+            tap(app.buttons["subscription-billing-synthetic-termination"], in: app)
+            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "closed unexpectedly")).firstMatch
+                .waitForExistence(timeout: 5))
+            keep("billing-recovery-claude-\(appearance)-interrupted", app: app)
+            tap(app.buttons["Reload Sign-In"], in: app)
+            tap(app.buttons["subscription-billing-synthetic-wrong"], in: app)
+            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "different account")).firstMatch
+                .waitForExistence(timeout: 10))
+            tap(app.buttons["Start Over"], in: app)
+            tap(app.buttons["subscription-billing-synthetic-match"], in: app)
+            XCTAssertTrue(app.buttons["subscription-billing-disconnect"].waitForExistence(timeout: 10))
+            tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
+            XCTAssertTrue(header.waitForExistence(timeout: 10))
+            let renewed = NSPredicate(format: "label CONTAINS %@", "Renews in")
+            expectation(for: renewed, evaluatedWith: header)
+            waitForExpectations(timeout: 10)
+            keep("billing-recovery-claude-\(appearance)-verified-header", app: app)
+            tap(app.buttons["More options for Synthetic Claude"], in: app)
+            tap(app.buttons["More information for Synthetic Claude"], in: app)
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US")
+            formatter.dateStyle = .long
+            let expected = formatter.string(from: Date().addingTimeInterval(259_200))
+            let exactDate = app.descendants(matching: .any).matching(NSPredicate(
+                format: "label BEGINSWITH %@ AND label CONTAINS %@", "Next subscription renewal,", expected
+            )).firstMatch
+            XCTAssertTrue(exactDate.waitForExistence(timeout: 5))
+            keep("billing-recovery-claude-\(appearance)-verified-date", app: app)
+            app.terminate()
+        }
+        let grok = launchSpacingFixture(defaultText: true, dark: false, scenario: "subscription-renewals-unknown")
+        tap(grok.buttons["More options for Personal Grok"], in: grok)
+        tap(grok.buttons["Configure account Personal Grok"], in: grok)
+        tap(grok.buttons["subscription-billing-connect"], in: grok)
+        tap(grok.webViews.links["Continue with Google (synthetic)"], in: grok)
+        XCTAssertTrue(grok.staticTexts["subscription-billing-route-notice"].waitForExistence(timeout: 5))
+        XCTAssertTrue(grok.staticTexts["grok.com"].exists)
+        keep("billing-recovery-grok-google-denied", app: grok)
+        tap(grok.navigationBars.buttons["Cancel"].firstMatch, in: grok)
+        XCTAssertTrue(grok.collectionViews["provider-account-settings-form"].waitForExistence(timeout: 5))
+        XCTAssertFalse(grok.buttons["subscription-billing-disconnect"].exists)
+        grok.terminate()
     }
 
     private func exerciseClaudeProfilePills() {

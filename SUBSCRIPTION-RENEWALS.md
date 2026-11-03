@@ -113,11 +113,43 @@ isolation and failure handling, not access to a real subscription.
 
 Claude and Grok use a nonpersistent WKWebView for **Connect Billing** in their
 account settings. The user signs in and selects the same provider account;
-verification returns to the app automatically. Canceling leaves the usage
+successful verification returns to the app automatically. Canceling leaves the usage
 connection intact. The session stores only secure, root-path cookies for the
 exact provider host in a separate account-specific Keychain entry. Claude keeps
 only `sessionKey`. OAuth requests never carry web cookies, and provider web
 requests never carry usage OAuth tokens. Neither flow purchases or cancels a plan.
+
+Google authorization documents are denied in this shared Claude/Grok embedded
+flow, including popups and redirects. A top-level request shows a separate
+explanation while retaining the provider page; a Google subframe is canceled
+silently without interrupting verification. This does not block Google script
+resources or establish a supported Google-only account route. Another method
+is appropriate only if it already exists for that same provider account; the
+app does not create/link accounts or transfer browser sessions.
+
+**Check Billing** is always available and explains when no sign-in cookie was
+found. Automatic discovery performs at most six local cookie reads within one
+15-second generation budget. Events coalesce within that budget and cannot
+renew it forever. Each new allowed credential set starts at most one automatic
+verification; identical in-flight or failed values are not automatically retried.
+An explicit Check can retry a failure. Unrelated cookies do not restart a slow
+connect, and a final local credential reread prevents saving an unobserved
+removed/replaced sign-in. Values remain in memory and are never logged.
+
+**Reload Sign-In** retains this sheet's private cookies, including after a web
+content process interruption. **Start Over** explicitly clears only this private
+sign-in to choose the correct account. Cancel remains available and swipe
+dismissal is disabled while the sheet owns the attempt.
+
+The November 2 bounded anonymous probe clicked Claude Apple and visible Grok
+choices without submitting an address or loading an external authentication
+document. It demonstrated no non-Google nil-target popup consumer; Grok Apple
+requested a main-frame `appleid.apple.com` document, which was canceled. Claude
+Apple produced no external document request. No child browser was added. Refused
+`about:` subframes were not proven necessary for captcha rendering, so the
+non-HTTPS policy remains unchanged. These observations do not prove captcha,
+email-link handoff or an existing same-account method can complete in this store.
+Live billing acquisition and the missing header pill in #454 remain pending.
 
 Claude checks `GET api.anthropic.com/api/oauth/profile` with the existing bearer
 and `anthropic-beta: oauth-2025-04-20`. Personal `claude_pro`/`claude_max`/`claude_ultra` profiles
