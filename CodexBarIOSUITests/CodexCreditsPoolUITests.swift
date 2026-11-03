@@ -577,7 +577,8 @@ final class CodexCreditsPoolUITests: XCTestCase {
             tap(check, in: app)
             XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "No billing sign-in")).firstMatch
                 .waitForExistence(timeout: 5))
-            tap(google, in: app)
+            XCTAssertTrue(google.wait(for: \.isHittable, toEqual: true, timeout: 5), app.debugDescription)
+            google.tap()
             XCTAssertTrue(app.staticTexts["subscription-billing-route-notice"].waitForExistence(timeout: 5), app.debugDescription)
             XCTAssertTrue(app.staticTexts["claude.ai"].exists)
             keep("billing-recovery-claude-\(appearance)-google-denied", app: app)
@@ -617,7 +618,9 @@ final class CodexCreditsPoolUITests: XCTestCase {
         tap(grok.buttons["More options for Personal Grok"], in: grok)
         tap(grok.buttons["Configure account Personal Grok"], in: grok)
         tap(grok.buttons["subscription-billing-connect"], in: grok)
-        tap(grok.webViews.links["Continue with Google (synthetic)"], in: grok)
+        let grokGoogle = grok.webViews.links["Continue with Google (synthetic)"]
+        XCTAssertTrue(grokGoogle.wait(for: \.isHittable, toEqual: true, timeout: 5), grok.debugDescription)
+        grokGoogle.tap()
         XCTAssertTrue(grok.staticTexts["subscription-billing-route-notice"].waitForExistence(timeout: 5))
         XCTAssertTrue(grok.staticTexts["grok.com"].exists)
         keep("billing-recovery-grok-google-denied", app: grok)
