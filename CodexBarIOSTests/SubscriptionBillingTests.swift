@@ -914,8 +914,14 @@ extension SubscriptionBillingTests {
             try await captureProductionHost(window, name: "billing-native-host-\(appearance)-google-denied")
             if dark {
                 let guidance = try XCTUnwrap(billingScrollViews(in: controller.view).first {
-                    $0 !== session.webView.scrollView
+                    $0 !== session.webView.scrollView && $0.bounds.height > window.bounds.height * 0.25
+                        && $0.bounds.height < window.bounds.height * 0.6
                 }, "Long accessibility guidance needs a scroll container instead of truncation")
+                let geometry = XCTAttachment(string: "Guidance scroll frame \(guidance.convert(guidance.bounds, to: window)); "
+                    + "content \(guidance.contentSize); window \(window.bounds); identifier \(guidance.accessibilityIdentifier ?? "none")")
+                geometry.name = "billing-guidance-scroll-geometry"
+                geometry.lifetime = .keepAlways
+                add(geometry)
                 if guidance.contentSize.height > guidance.bounds.height + 1 {
                     guidance.setContentOffset(CGPoint(x: 0, y: guidance.contentSize.height - guidance.bounds.height), animated: false)
                     XCTAssertGreaterThan(guidance.contentOffset.y, 0)
