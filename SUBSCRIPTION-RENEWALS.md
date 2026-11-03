@@ -136,8 +136,9 @@ An explicit Check can retry a failure. Unrelated cookies do not restart a slow
 connect, and a final local credential reread prevents saving an unobserved
 removed/replaced sign-in. Values remain in memory and are never logged.
 
-**Reload Sign-In** retains this sheet's private cookies, including after a web
-content process interruption. **Start Over** explicitly clears only this private
+**Reload Sign-In** retains this sheet's private cookies and automatic-attempt
+history, including after a web content process interruption. A previously
+rejected credential requires an explicit Check Billing retry. **Start Over** explicitly clears only this private
 sign-in to choose the correct account. Cancel remains available and swipe
 dismissal is disabled while the sheet owns the attempt.
 

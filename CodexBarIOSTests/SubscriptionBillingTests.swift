@@ -1187,6 +1187,40 @@ extension SubscriptionBillingTests {
     }
 
     @MainActor
+    func testFailedCredentialSuppressionSurvivesNonWipingRecovery() async throws {
+        for interrupted in [false, true] {
+            let requests = BillingRequestCount()
+            let fixture = IsolatedTestURLSession { [self] request in
+                requests.increment()
+                let body = request.url?.path == "/api/oauth/profile" ? profile() : webAccount(owner: "other")
+                return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
+            }
+            defer { fixture.invalidate() }
+            let session = recoverySession(fixture: fixture) { _ in XCTFail("Wrong-account recovery cannot succeed") }
+            defer { session.invalidate() }
+            let store = session.webView.configuration.websiteDataStore.httpCookieStore
+            store.remove(session)
+            await loadRecoveryPage(session)
+            await store.setCookie(try signInCookie("wrong"))
+            session.verify()
+            let failed = await waitUntil { requests.value == 3 && !session.isVerifying }
+            XCTAssertTrue(failed)
+            XCTAssertEqual(session.message, SubscriptionBillingError.accountMismatch.localizedDescription)
+
+            if interrupted { session.webViewWebContentProcessDidTerminate(session.webView) }
+            session.reloadSignIn()
+            let reloaded = await waitUntil { !session.webView.isLoading && session.automaticCookieReadCount > 0 }
+            XCTAssertTrue(reloaded)
+            try await Task.sleep(for: .milliseconds(800))
+            XCTAssertEqual(requests.value, 3, "Non-wiping recovery must not automatically retry a rejected credential")
+
+            session.verify()
+            let retried = await waitUntil { requests.value == 6 && !session.isVerifying }
+            XCTAssertTrue(retried, "Explicit Check Billing can still retry the retained credential")
+        }
+    }
+
+    @MainActor
     func testUnobservedRemovalBeforeConnectReturnsCannotComplete() async throws {
         let requests = BillingRequestCount()
         let gate = TestRequestGate()

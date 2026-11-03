@@ -82,7 +82,7 @@ final class SubscriptionBillingSignInSession: NSObject, ObservableObject, Identi
 
     func invalidate() {
         completion = nil
-        resetWork()
+        resetWork(clearCredentialHistory: true)
         webView.stopLoading()
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
@@ -145,7 +145,7 @@ final class SubscriptionBillingSignInSession: NSObject, ObservableObject, Identi
 
     func retrySignIn() {
         guard completion != nil, !isResetting else { return }
-        resetWork()
+        resetWork(clearCredentialHistory: true)
         let attempt = revision
         isResetting = true
         isVerifying = true
@@ -273,7 +273,7 @@ final class SubscriptionBillingSignInSession: NSObject, ObservableObject, Identi
         isVerifying = false
     }
 
-    private func resetWork() {
+    private func resetWork(clearCredentialHistory: Bool = false) {
         revision = UUID()
         cancelVerification()
         discoveryTask?.cancel()
@@ -283,7 +283,7 @@ final class SubscriptionBillingSignInSession: NSObject, ObservableObject, Identi
         automaticCookieReadCount = 0
         inspectionPending = false
         manualInspectionRequested = false
-        attemptedCredentials.removeAll()
+        if clearCredentialHistory { attemptedCredentials.removeAll() }
     }
 
     static func canonicalHost(_ url: URL?) -> String? {
