@@ -1,8 +1,34 @@
 import XCTest
+import SwiftUI
 @testable import CodexBarIOS
 
 final class SubscriptionRenewalTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @MainActor
+    func testClaudeBillingActionUsesFixedURLAndExcludesOrganizationPlans() {
+        var opened = [URL]()
+        ClaudeBillingAccess.open(using: OpenURLAction { url in opened.append(url); return .handled })
+        XCTAssertEqual(opened, [URL(string: "https://claude.ai/settings/billing")!])
+        XCTAssertTrue(ClaudeBillingAccess.purchasePlatformGuidance.contains("store where you purchased"))
+        for tier in ["pro", "max", "max5", "max20", "ultra", "team", "team-premium", "enterprise", "free", "future"] {
+            let result = ProviderUsageResult(accountID: "personal", providerID: .claude, title: "Claude",
+                                            plan: .make(providerPrefix: "claude", identifier: tier, label: tier),
+                                            subtitle: "", bars: [], fetchedAt: now)
+            let eligible = ["pro", "max", "max5", "max20", "ultra"].contains(tier)
+            XCTAssertEqual(result.canOpenClaudeBillingSettings, eligible)
+            let failed = ProviderUsageResult(accountID: "personal", providerID: .claude, title: "Claude", plan: result.plan,
+                                             subtitle: "", bars: [], failureMessage: "Synthetic usage error", fetchedAt: now)
+            XCTAssertEqual(failed.canOpenClaudeBillingSettings, eligible, "Billing viewing stays useful during a usage error")
+            XCTAssertFalse(result.subscriptionBillingInformation(at: now)?.items.first?.detail.lowercased().contains("connect billing") == true)
+        }
+        for reason in [SubscriptionBillingProblem.Reason.notConnected, .expiredSession, .accountMismatch, .accessDenied,
+                       .unsupportedSubscription, .transportFailure, .rejectedResponse, .credentialsUnavailable, .automaticAccessUnavailable,
+        ] {
+            XCTAssertFalse(reason.message.lowercased().contains("connect billing"))
+            XCTAssertFalse(reason.message.lowercased().contains("reconnect"))
+        }
+    }
 
     private func renewal(offset: Double, state: SubscriptionRenewal.State = .renewing,
                          observedOffset: Double = 0, accountID: String = "personal") -> SubscriptionRenewal {

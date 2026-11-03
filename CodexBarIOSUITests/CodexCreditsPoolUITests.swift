@@ -372,12 +372,20 @@ final class CodexCreditsPoolUITests: XCTestCase {
                 tap(app.buttons["More options for \(title)"], in: app)
                 tap(app.buttons["More information for \(title)"], in: app)
                 XCTAssertTrue(app.staticTexts["Renewal date unavailable"].waitForExistence(timeout: 5))
-                keep("billing-Claude-recovery", app: app)
-                tap(app.buttons["subscription-billing-settings"], in: app)
-            } else {
+                tap(app.buttons["subscription-billing-view"], in: app)
+                XCTAssertTrue(app.navigationBars["More Information"].exists)
+                tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
                 tap(app.buttons["More options for \(title)"], in: app)
                 tap(app.buttons["Configure account \(title)"], in: app)
+                XCTAssertFalse(app.buttons["subscription-billing-connect"].exists)
+                tap(app.buttons["subscription-billing-view"], in: app)
+                XCTAssertEqual(app.webViews.count, 0)
+                keep("billing-Claude-provider-view", app: app)
+                tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
+                continue
             }
+            tap(app.buttons["More options for \(title)"], in: app)
+            tap(app.buttons["Configure account \(title)"], in: app)
             XCTAssertTrue(app.collectionViews["provider-account-settings-form"].waitForExistence(timeout: 5), app.debugDescription)
             keep("billing-\(title)-disconnected", app: app)
             tap(app.buttons["subscription-billing-connect"], in: app)
@@ -555,78 +563,48 @@ final class CodexCreditsPoolUITests: XCTestCase {
         continueAfterFailure = false
         for dark in [false, true] {
             let appearance = dark ? "dark-large" : "light-default"
-            let app = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "claude-renewal-ultra")
-            let header = claudeProfileHeader(plan: "Ultra", in: app)
-            XCTAssertTrue(header.waitForExistence(timeout: 10))
-            tap(app.buttons["More options for Synthetic Claude"], in: app)
-            tap(app.buttons["Configure account Synthetic Claude"], in: app)
-            XCTAssertTrue(app.buttons["subscription-billing-disconnect"].waitForExistence(timeout: 5))
-            tap(app.buttons["subscription-billing-disconnect"], in: app)
-            tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
-            let withoutRenewal = NSPredicate(format: "NOT (label CONTAINS %@)", "Renews in")
-            expectation(for: withoutRenewal, evaluatedWith: header)
-            waitForExpectations(timeout: 10)
-            keep("billing-recovery-claude-\(appearance)-disconnected-header", app: app)
-            tap(app.buttons["More options for Synthetic Claude"], in: app)
-            tap(app.buttons["Configure account Synthetic Claude"], in: app)
-            tap(app.buttons["subscription-billing-connect"], in: app)
-            let check = app.buttons["subscription-billing-verify"]
-            XCTAssertTrue(check.waitForExistence(timeout: 5))
-            let google = app.webViews.links["Continue with Google (synthetic)"]
-            XCTAssertTrue(google.waitForExistence(timeout: 5), app.debugDescription)
-            tap(check, in: app)
-            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "No billing sign-in")).firstMatch
-                .waitForExistence(timeout: 5))
-            XCTAssertTrue(google.wait(for: \.isHittable, toEqual: true, timeout: 5), app.debugDescription)
-            google.tap()
-            XCTAssertTrue(app.staticTexts["subscription-billing-route-notice"].waitForExistence(timeout: 5), app.debugDescription)
-            XCTAssertTrue(app.staticTexts["claude.ai"].exists)
-            keep("billing-recovery-claude-\(appearance)-google-denied", app: app)
-            tap(app.buttons["Reload Sign-In"], in: app)
-            XCTAssertTrue(app.staticTexts["subscription-billing-route-notice"].waitForNonExistence(timeout: 5))
-            tap(app.buttons["subscription-billing-synthetic-termination"], in: app)
-            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "closed unexpectedly")).firstMatch
-                .waitForExistence(timeout: 5))
-            keep("billing-recovery-claude-\(appearance)-interrupted", app: app)
-            tap(app.buttons["Reload Sign-In"], in: app)
-            tap(app.buttons["subscription-billing-synthetic-wrong"], in: app)
-            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "different account")).firstMatch
-                .waitForExistence(timeout: 10))
-            tap(app.buttons["Start Over"], in: app)
-            tap(app.buttons["subscription-billing-synthetic-match"], in: app)
-            XCTAssertTrue(app.buttons["subscription-billing-disconnect"].waitForExistence(timeout: 10))
-            tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
-            XCTAssertTrue(header.waitForExistence(timeout: 10))
-            let renewed = NSPredicate(format: "label CONTAINS %@", "Renews in")
-            expectation(for: renewed, evaluatedWith: header)
-            waitForExpectations(timeout: 10)
-            keep("billing-recovery-claude-\(appearance)-verified-header", app: app)
+            let app = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "claude-provider-billing")
+            let header = app.descendants(matching: .any).matching(NSPredicate(
+                format: "label BEGINSWITH %@", "Synthetic Claude, Ultra"
+            )).firstMatch
+            XCTAssertTrue(header.waitForExistence(timeout: 15), app.debugDescription)
+            XCTAssertFalse(header.label.contains("Renews in"))
+            keep("claude-provider-billing-\(appearance)-header", app: app)
             tap(app.buttons["More options for Synthetic Claude"], in: app)
             tap(app.buttons["More information for Synthetic Claude"], in: app)
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "en_US")
-            formatter.dateStyle = .long
-            let expected = formatter.string(from: Date().addingTimeInterval(259_200))
-            let exactDate = app.descendants(matching: .any).matching(NSPredicate(
-                format: "label BEGINSWITH %@ AND label CONTAINS %@", "Next subscription renewal,", expected
-            )).firstMatch
-            XCTAssertTrue(exactDate.waitForExistence(timeout: 5))
-            keep("billing-recovery-claude-\(appearance)-verified-date", app: app)
+            XCTAssertTrue(app.staticTexts["Renewal date unavailable"].waitForExistence(timeout: 5))
+            tap(app.buttons["subscription-billing-view"], in: app)
+            XCTAssertTrue(app.navigationBars["More Information"].exists)
+            XCTAssertFalse(app.buttons["subscription-billing-connect"].exists)
+            XCTAssertEqual(app.webViews.count, 0)
+            keep("claude-provider-billing-\(appearance)-information-after-link", app: app)
+            tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
+            let recorded = app.staticTexts["billing-provider-open-count"]
+            XCTAssertTrue(recorded.waitForExistence(timeout: 5))
+            XCTAssertTrue(recorded.label.contains(": 1"), recorded.label)
+            tap(app.buttons["More options for Synthetic Claude"], in: app)
+            tap(app.buttons["Configure account Synthetic Claude"], in: app)
+            XCTAssertFalse(app.buttons["subscription-billing-connect"].exists)
+            XCTAssertFalse(app.buttons["Reconnect Billing"].exists)
+            tap(app.buttons["subscription-billing-view"], in: app)
+            XCTAssertTrue(app.collectionViews["provider-account-settings-form"].exists)
+            XCTAssertEqual(app.webViews.count, 0)
+            keep("claude-provider-billing-\(appearance)-settings-after-link", app: app)
+            tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
+            XCTAssertTrue(recorded.label.contains(": 2"), recorded.label)
+            XCTAssertFalse(header.label.contains("Renews in"), "Provider viewing cannot verify a renewal")
+            tap(app.buttons["Refresh usage"], in: app)
+            XCTAssertFalse(header.label.contains("Renews in"))
+            keep("claude-provider-billing-\(appearance)-returned-header", app: app)
             app.terminate()
         }
         let grok = launchSpacingFixture(defaultText: true, dark: false, scenario: "subscription-renewals-unknown")
         tap(grok.buttons["More options for Personal Grok"], in: grok)
         tap(grok.buttons["Configure account Personal Grok"], in: grok)
         tap(grok.buttons["subscription-billing-connect"], in: grok)
-        let grokGoogle = grok.webViews.links["Continue with Google (synthetic)"]
-        XCTAssertTrue(grokGoogle.wait(for: \.isHittable, toEqual: true, timeout: 5), grok.debugDescription)
-        grokGoogle.tap()
-        XCTAssertTrue(grok.staticTexts["subscription-billing-route-notice"].waitForExistence(timeout: 5))
-        XCTAssertTrue(grok.staticTexts["grok.com"].exists)
-        keep("billing-recovery-grok-google-denied", app: grok)
+        XCTAssertTrue(grok.buttons["subscription-billing-verify"].waitForExistence(timeout: 5), "Grok keeps its existing connection")
+        keep("claude-provider-billing-grok-control", app: grok)
         tap(grok.navigationBars.buttons["Cancel"].firstMatch, in: grok)
-        XCTAssertTrue(grok.collectionViews["provider-account-settings-form"].waitForExistence(timeout: 5))
-        XCTAssertFalse(grok.buttons["subscription-billing-disconnect"].exists)
         grok.terminate()
     }
 
@@ -781,7 +759,8 @@ final class CodexCreditsPoolUITests: XCTestCase {
         ).firstMatch.exists { return }
         let customizer = app.scrollViews["metric-customization-scroll"]
         let settings = app.collectionViews["provider-account-settings-form"]
-        var container = customizer.exists ? customizer : (settings.exists ? settings : app.scrollViews.firstMatch)
+        let information = app.collectionViews["provider-information-list"]
+        var container = customizer.exists ? customizer : (settings.exists ? settings : (information.exists ? information : app.scrollViews.firstMatch))
         if element.exists && element.identifier.hasPrefix("subscription-billing-synthetic") {
             container = app.scrollViews["subscription-billing-information"]
         }

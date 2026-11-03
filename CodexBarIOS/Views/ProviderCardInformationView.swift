@@ -30,12 +30,13 @@ struct ProviderCardInformationView: View {
                             .accessibilityLabel("\(item.label), \(item.detail)")
                         }
                         if section.id == "subscription-renewal", showsBillingSettings {
-                            Button("Open Billing Settings") { onConnect?() }
-                                .accessibilityIdentifier("subscription-billing-settings")
+                            ClaudeBillingAccessView()
+                            Text(ClaudeBillingAccess.purchasePlatformGuidance).font(.footnote)
                         }
                     }
                 }
             }
+            .accessibilityIdentifier("provider-information-list")
             .navigationTitle("More Information")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -48,5 +49,25 @@ struct ProviderCardInformationView: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+}
+
+enum ClaudeBillingAccess {
+    static let url = URL(string: "https://claude.ai/settings/billing")!
+    static let purchasePlatformGuidance = "If you subscribed through Claude for iOS or Android, "
+        + "manage the subscription through the store where you purchased it. "
+        + "In Claude for iOS, open your profile, then Billing."
+
+    @MainActor
+    static func open(using action: OpenURLAction) { action(url) }
+}
+
+struct ClaudeBillingAccessView: View {
+    @Environment(\.openURL) private var openURL
+    var body: some View {
+        Button("View billing in Claude") { ClaudeBillingAccess.open(using: openURL) }
+            .accessibilityIdentifier("subscription-billing-view")
+        Text("Open Claude to see your plan and billing. CodexBar cannot currently verify this renewal date.")
+            .font(.footnote).foregroundStyle(.secondary)
     }
 }

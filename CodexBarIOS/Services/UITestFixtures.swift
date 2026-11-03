@@ -165,7 +165,7 @@ final class UITestFixtures {
         )
         UITestMuseCodeFixture.presentFailures(of: results, in: refreshService, scenario: scenario)
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
-            || scenario?.hasPrefix("subscription-renewals") == true || scenario == "claude-renewal-ultra"
+            || scenario?.hasPrefix("subscription-renewals") == true || scenario == "claude-renewal-ultra" || scenario == "claude-provider-billing"
             || (greptile && environment["CODEXBAR_UI_TEST_MORE_INFORMATION"] == "1")
             || scenario?.hasPrefix("grok-cursor-parity") == true
             || Self.isCursorSessionScenario(scenario) {
@@ -203,9 +203,15 @@ final class UITestFixtures {
     }
 
     static func claudeProviders(scenario: String?, suiteName: String) -> [any UsageProvider] {
-        if scenario == "claude-renewal-ultra" {
+        if scenario == "claude-provider-billing" {
             return [ClaudeUsageProvider(secretStore: UITestSecretStore(suite: suiteName),
                                         session: UITestSubscriptionBillingProtocol.session(claudePlanType: "claude_ultra")),
+            ]
+        }
+        if scenario == "claude-renewal-ultra" {
+            let transport = UITestSubscriptionBillingProtocol.session(claudePlanType: "claude_ultra")
+            return [ClaudeUsageProvider(secretStore: UITestSecretStore(suite: suiteName),
+                                        session: transport, billingClient: .syntheticClaudeContract(session: transport)),
             ]
         }
         if scenario?.hasPrefix("claude-plan-") == true {
@@ -323,7 +329,15 @@ final class UITestFixtures {
             widgetSnapshotCoordinator: widgetSnapshotCoordinator,
             watchSnapshotCoordinator: watchSnapshotCoordinator
         )
+        .environment(\.openURL, OpenURLAction { url in
+            guard url == ClaudeBillingAccess.url else { return .systemAction }
+            self.defaults.set(self.defaults.integer(forKey: "billing-provider-open-count") + 1, forKey: "billing-provider-open-count")
+            return .handled
+        })
         .safeAreaInset(edge: .bottom) {
+            if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"] == "claude-provider-billing" {
+                UITestBillingOpenRecorder(defaults: defaults)
+            }
             if showsPlanTransitions { PlanTransitionFixtureControls(fixture: planFixture) }
             if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"]?.hasPrefix("claude-plan-ultra-") == true {
                 UITestWidgetPreviewControl(fixture: self)
@@ -629,7 +643,7 @@ final class UITestFixtures {
         precondition(store.update(account))
         let credential = scenario?.hasPrefix("claude-plan-") == true ? claudeProfileCredential : "ui-test-credential"
         _ = store.saveSecret(credential, for: account)
-        if scenario == "claude-renewal-ultra" {
+        if ["claude-renewal-ultra", "claude-provider-billing"].contains(scenario ?? "") {
             let billing = SubscriptionBillingSession(providerID: .claude, ownerID: UITestSubscriptionBillingProtocol.claudeOwner,
                                                     organizationID: UITestSubscriptionBillingProtocol.claudeOrganization,
                                                     cookies: [.init(name: "sessionKey", value: "matching", expiresAt: nil)])
@@ -2220,6 +2234,17 @@ actor UITestClaudeResetProvider: UsageProvider, ClaudeUsageResetConsuming {
 }
 /// Renders the real builder from the parser's current fixture results in the isolated suite.
 @MainActor
+private struct UITestBillingOpenRecorder: View {
+    @AppStorage private var count: Int
+    init(defaults: UserDefaults) {
+        _count = AppStorage(wrappedValue: 0, "billing-provider-open-count", store: defaults)
+    }
+    var body: some View {
+        Text("Synthetic provider link opens: \(count)")
+            .font(.caption).accessibilityIdentifier("billing-provider-open-count")
+    }
+}
+
 private struct UITestWidgetPreviewControl: View {
     let fixture: UITestFixtures
     @State private var showsPreview = false

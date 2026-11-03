@@ -61,26 +61,29 @@ struct ProviderSettingsView: View {
         Form {
             if [.claude, .grok].contains(providerID), configurationStore.hasSecret(for: configuration) {
                 Section("Subscription billing") {
+                    if providerID == .claude {
+                        if viewModel.usageResult?.canOpenClaudeBillingSettings == true {
+                            ClaudeBillingAccessView()
+                        } else if viewModel.isClaudeOrganizationBilling {
+                            Text("Claude Team and Enterprise billing is managed by your organization. Contact your administrator.")
+                        } else {
+                            Text("Personal Claude billing access is available when the connected account identifies a supported personal plan.")
+                        }
+                        Text(ClaudeBillingAccess.purchasePlatformGuidance).font(.footnote).foregroundStyle(.secondary)
+                        Button("Disconnect saved billing", role: .destructive) { viewModel.disconnectSubscriptionBilling() }
+                            .accessibilityIdentifier("subscription-billing-disconnect")
+                    } else {
                     Button(configurationStore.hasSubscriptionBillingSession(for: configuration) ? "Reconnect Billing" : "Connect Billing") {
                         viewModel.startSubscriptionBillingSignIn()
                     }
                     .accessibilityIdentifier("subscription-billing-connect")
                     .disabled(viewModel.isClaudeOrganizationBilling)
-                    Text(providerID == .claude
-                         ? "Personal Claude Pro and Max web billing is supported. Store purchases and Team/Enterprise billing are unavailable. "
-                            + "Connect the same account; billing sign-in is separate from usage."
-                         : "Connect the same personal SuperGrok commerce account to show its renewal date. X and API billing are separate.")
+                    Text("Connect the same personal SuperGrok commerce account to show its renewal date. X and API billing are separate.")
                         .font(.footnote).foregroundStyle(.secondary)
                     if configurationStore.hasSubscriptionBillingSession(for: configuration) {
                         Button("Disconnect Billing", role: .destructive) { viewModel.disconnectSubscriptionBilling() }
                             .accessibilityIdentifier("subscription-billing-disconnect")
                     }
-                    if providerID == .claude, let problem = viewModel.usageResult?.subscriptionBillingProblem,
-                       problem.accountID == configuration.id {
-                        Text(problem.reason.message).font(.footnote)
-                    }
-                    if providerID == .claude {
-                        Link("View Claude Billing", destination: URL(string: "https://claude.ai/settings/billing")!)
                     }
                     if let message = viewModel.subscriptionBillingMessage {
                         Text(message).font(.footnote).accessibilityIdentifier("subscription-billing-message")

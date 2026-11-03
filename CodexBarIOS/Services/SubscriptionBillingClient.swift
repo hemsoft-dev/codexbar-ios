@@ -3,8 +3,22 @@ import Foundation
 /// Optional, bounded reads with an explicit cookie on provider web requests only.
 final class SubscriptionBillingClient: @unchecked Sendable {
     private let session: URLSession
+    private let allowsClaudeContract: Bool
 
-    init(session: URLSession = .shared) {
+    convenience init(session: URLSession = .shared) {
+        self.init(session: session, allowsClaudeContract: false)
+    }
+
+    #if DEBUG
+    /// Explicit isolated contract coverage only. No production caller or environment toggle enables Claude web access.
+    static func syntheticClaudeContract(session: URLSession) -> SubscriptionBillingClient {
+        precondition(session.configuration.protocolClasses?.isEmpty == false, "Synthetic billing requires an injected URLProtocol")
+        return SubscriptionBillingClient(session: session, allowsClaudeContract: true)
+    }
+    #endif
+
+    private init(session: URLSession, allowsClaudeContract: Bool) {
+        self.allowsClaudeContract = allowsClaudeContract
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = session.configuration.protocolClasses
         #if DEBUG
@@ -28,6 +42,7 @@ final class SubscriptionBillingClient: @unchecked Sendable {
                  cookies: [SubscriptionBillingSession.Cookie]) async throws -> SubscriptionBillingSession {
         switch configuration.providerID {
         case .claude:
+            guard allowsClaudeContract else { throw SubscriptionBillingError.automaticClaudeAccessUnavailable }
             let owner = try await claudeOwner(usageSecret)
             let session = SubscriptionBillingSession(providerID: .claude, ownerID: owner.account, organizationID: owner.organization, cookies: cookies)
             _ = try await claude(session, configuration: configuration, usageSecret: usageSecret, at: Date())
@@ -46,6 +61,7 @@ final class SubscriptionBillingClient: @unchecked Sendable {
     func fetch(configuration: ProviderAccountConfiguration, usageSecret: String,
                secretStore: SecretStore, at now: Date) async throws -> SubscriptionRenewal? {
         try Task.checkCancellation()
+        guard configuration.providerID != .claude || allowsClaudeContract else { return nil }
         let key = SubscriptionBillingSession.keychainAccount(configuration)
         guard let saved = try? secretStore.readSecret(account: key), let billing = SubscriptionBillingSession.parse(saved),
               billing.providerID == configuration.providerID,
@@ -81,6 +97,7 @@ final class SubscriptionBillingClient: @unchecked Sendable {
             ClaudeObservation(renewal: nil, problem: SubscriptionBillingProblem(accountID: configuration.id, reason: reason))
         }
         guard configuration.providerID == .claude else { return unavailable(.unsupportedSubscription) }
+        guard allowsClaudeContract else { return unavailable(.automaticAccessUnavailable) }
         let key = SubscriptionBillingSession.keychainAccount(configuration)
         let usageKey = ProviderConfigurationStore.keychainAccount(for: configuration)
         let saved: String

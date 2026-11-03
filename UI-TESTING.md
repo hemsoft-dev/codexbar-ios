@@ -567,22 +567,13 @@ billing-only More Information menu item. The release runner does not set this
 selector and still requires all 29 original journeys on both families, followed
 by the required supplemental and commerce phases. Billing
 fixtures are synthetic; real-account billing comparisons remain Franz-owned.
-The same focused journey covers Claude and Grok renewal pills and unknown,
-canceled, stale and passed details. Its billing connection sheet uses the real
-account-verifying client against a simulator-only URLProtocol: another sample
-account is rejected, the matching sample account returns automatically, and
-Disconnect Billing and Cancel preserve the usage connection. No live sign-in or
-provider endpoint is accessed by that fixture.
-See [subscription source coverage](SUBSCRIPTION-RENEWALS.md).
+The renewal journey retains synthetic date/cancellation/freshness presentation coverage. Grok retains the guided billing mismatch, Start Over, matching return, Disconnect and Cancel checks. Claude instead opens the fixed provider billing URL directly from settings and More Information, with no embedded Connect/Reconnect or false connection on return.
 
-The renewal subjourney also opens Claude billing settings directly from unavailable
-More Information before exercising account mismatch, reload, matching return,
-disconnect and cancellation. Claude fixtures omit the unused legacy aliases.
+The manual excluded capture selector `testBillingSignInRecoveryEvidence` now uses scenario `claude-provider-billing`: the real ClaudeUsageProvider defaults to the paused billing boundary with a seeded isolated saved session. A DEBUG SwiftUI openURL recorder handles only the fixed Claude billing URL; no external app or login opens. It records both settings and More Information actions while usage stays useful and no renewal appears. Grok's existing sheet remains a control. The recorder is available only inside the isolated simulator fixture root and cannot enable Claude billing network access.
 
-Set `CODEXBAR_UI_TEST_SUBJOURNEY` to `billing` in the copied xctestrun file to
-run only the guided billing recovery checks while diagnosing a connection flow.
-Use `renewals` for complete renewal-focused validation on both device families.
+Native `SubscriptionBillingTests/testBillingRecoveryProductionViewHostEvidence` hosts the actual settings, More Information and provider card on the simulator UIWindowScene, light/default and dark/accessibility text, including organization exclusion and stale date states. These are production view-host captures, not XCUITest gesture or physical-phone proof. Contract tests that need the historical Claude parser/owner path explicitly inject `SubscriptionBillingClient.syntheticClaudeContract` with isolated URLProtocol transport; ordinary provider construction never enables it. Legacy Ultra contract fixtures remain synthetic and are not delivered acquisition evidence.
 
+Use the existing project XCTest runner with a scoped compatible Xcode, owned fixture destination and unique result bundle. No device UI workaround or global service/reset/setup is authorized by this guide. A prior iPhone preflight Busy failure remains unproved; do not blindly repeat it. No automatic CI workload or release-journey count is added.
 
 ## Manual automatic-CI cost controls
 

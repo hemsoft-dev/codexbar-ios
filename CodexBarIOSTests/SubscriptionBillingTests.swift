@@ -12,6 +12,86 @@ final class SubscriptionBillingTests: XCTestCase {
     private let cookie = SubscriptionBillingSession.Cookie(name: "sessionKey", value: "synthetic", expiresAt: nil)
 
     @MainActor
+    func testProductionClaudeBillingEntryPointsDoNotReadOrReuseSavedSessions() async throws {
+        let account = ProviderAccountConfiguration(id: "claude-boundary", providerID: .claude, authMethod: .browserSession)
+        let secrets = BillingBoundarySecrets()
+        let saved = try SubscriptionBillingSession(providerID: .claude, ownerID: owner, organizationID: organization, cookies: [cookie]).encoded()
+        try secrets.saveSecret("usage-token", account: ProviderConfigurationStore.keychainAccount(for: account))
+        try secrets.saveSecret(saved, account: SubscriptionBillingSession.keychainAccount(account))
+        let requests = BillingRequestCount()
+        let fixture = IsolatedTestURLSession { [self] request in
+            requests.increment()
+            let data = request.url?.path == "/api/oauth/profile" ? profile()
+                : request.url?.path == "/api/account" ? webAccount() : claudeBilling()
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
+        }
+        defer { fixture.invalidate() }
+        let client = SubscriptionBillingClient(session: fixture.session)
+        let observed = try await client.fetchClaudeObservation(configuration: account, usageSecret: "usage-token", secretStore: secrets, at: now)
+        XCTAssertNil(observed.renewal)
+        XCTAssertNotNil(observed.problem)
+        let fetched = try await client.fetch(configuration: account, usageSecret: "usage-token", secretStore: secrets, at: now)
+        XCTAssertNil(fetched)
+        do {
+            _ = try await client.connect(configuration: account, usageSecret: "usage-token", cookies: [cookie])
+            XCTFail("Production cannot start a new Claude billing connection")
+        } catch { XCTAssertTrue(error is SubscriptionBillingError) }
+        XCTAssertEqual(requests.value, 0, "Every production billing entry point stops before network/profile reads")
+        XCTAssertEqual(secrets.billingReads, 0, "The production boundary does not inspect the saved billing bytes")
+        XCTAssertEqual(secrets.billingValue, saved)
+        XCTAssertEqual(secrets.mutations, 2, "Only the synthetic setup wrote secrets")
+    }
+
+    @MainActor
+    func testProductionClaudeUsageKeepsUsageAndSavedBytesWithoutBillingNetwork() async throws {
+        let account = ProviderAccountConfiguration(id: "claude-boundary", providerID: .claude, authMethod: .browserSession)
+        let secrets = BillingBoundarySecrets()
+        let saved = try SubscriptionBillingSession(providerID: .claude, ownerID: owner, organizationID: organization, cookies: [cookie]).encoded()
+        try secrets.saveSecret("usage-token", account: ProviderConfigurationStore.keychainAccount(for: account))
+        try secrets.saveSecret(saved, account: SubscriptionBillingSession.keychainAccount(account))
+        BillingBoundaryProtocol.profiles.reset()
+        BillingBoundaryProtocol.web.reset()
+        let transport = URLSessionConfiguration.ephemeral
+        transport.protocolClasses = [BillingBoundaryProtocol.self]
+        let session = URLSession(configuration: transport)
+        defer { session.invalidateAndCancel() }
+        let provider = ClaudeUsageProvider(secretStore: secrets, session: session)
+        for _ in 0..<2 {
+            let result = try await provider.fetchUsage(for: account)
+            XCTAssertNil(result.failureMessage)
+            XCTAssertFalse(result.bars.isEmpty)
+            XCTAssertNotNil(result.plan)
+            XCTAssertNil(result.boundSubscriptionRenewal, "Refresh/browser return cannot freshly verify cached billing")
+            XCTAssertNotNil(result.subscriptionBillingProblem)
+        }
+        XCTAssertEqual(BillingBoundaryProtocol.web.value, 0)
+        XCTAssertEqual(BillingBoundaryProtocol.profiles.value, 1, "Only the existing cached plan lookup reads profile, never a billing owner lookup")
+        XCTAssertEqual(secrets.billingReads, 0)
+        XCTAssertEqual(secrets.billingValue, saved)
+        XCTAssertEqual(secrets.mutations, 2)
+    }
+
+    @MainActor
+    func testClaudeBillingViewModelIsClosedWithGrokControl() throws {
+        let suite = "BillingBoundary.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let secrets = MemorySecretStore()
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        for provider in [ProviderID.claude, .grok] {
+            let account = ProviderAccountConfiguration(id: provider.rawValue, providerID: provider, authMethod: .browserSession)
+            XCTAssertTrue(store.update(account))
+            XCTAssertTrue(store.saveSecret("usage-token", for: account))
+            let model = ProviderSettingsViewModel(configurationStore: store, accountID: account.id)
+            defer { model.cancelSubscriptionBillingSignIn() }
+            model.startSubscriptionBillingSignIn()
+            if provider == .claude { XCTAssertNil(model.subscriptionBillingSession) } else {
+                XCTAssertNotNil(model.subscriptionBillingSession, "Grok remains available")
+            }
+        }
+    }
+
+    @MainActor
     func testUltraCaptureUsesRealFixtureStoreAndConsistentProfile() async throws {
         let suite = "com.hemsoft.CodexBarIOS.ui-tests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -39,6 +119,26 @@ final class SubscriptionBillingTests: XCTestCase {
         XCTAssertNotNil(renewal.compactLabel(at: Date()))
         XCTAssertEqual(result.subscriptionBillingInformation(at: Date())?.items.first?.label, "Next subscription renewal")
         XCTAssertNotNil(renewal.dateText())
+    }
+
+    @MainActor
+    func testExplicitClaudeDisconnectRemovesOnlyItsSavedBillingKey() throws {
+        let suite = "BillingDisconnect.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let secrets = MemorySecretStore()
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
+        let account = ProviderAccountConfiguration(id: "claude-disconnect", providerID: .claude, authMethod: .browserSession)
+        XCTAssertTrue(store.update(account))
+        XCTAssertTrue(store.saveSecret("usage-token", for: account))
+        let billingKey = SubscriptionBillingSession.keychainAccount(account)
+        try secrets.saveSecret("synthetic-saved-billing", account: billingKey)
+        try secrets.saveSecret("other-billing", account: "other.subscription-billing")
+        let model = ProviderSettingsViewModel(configurationStore: store, accountID: account.id)
+        model.disconnectSubscriptionBilling()
+        XCTAssertNil(try secrets.readSecret(account: billingKey))
+        XCTAssertEqual(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: account)), "usage-token")
+        XCTAssertEqual(try secrets.readSecret(account: "other.subscription-billing"), "other-billing")
     }
 
     func testClaudeChargeCancellationAndCivilDates() throws {
@@ -118,7 +218,7 @@ final class SubscriptionBillingTests: XCTestCase {
                 return (HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!, data)
             }
             defer { fixture.invalidate() }
-            let result = try await ClaudeUsageProvider(secretStore: secrets, session: fixture.session, now: { self.now }).fetchUsage(for: account)
+            let result = try await ClaudeUsageProvider(secretStore: secrets, session: fixture.session, now: { self.now }, billingClient: .syntheticClaudeContract(session: fixture.session)).fetchUsage(for: account)
             XCTAssertNil(result.failureMessage, scenario)
             XCTAssertFalse(result.bars.isEmpty, scenario)
             XCTAssertEqual(result.subscriptionBillingProblem?.reason, reason, scenario)
@@ -141,7 +241,7 @@ final class SubscriptionBillingTests: XCTestCase {
             return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
         }
         defer { fixture.invalidate() }
-        let result = try await ClaudeUsageProvider(secretStore: secrets, session: fixture.session, now: { self.now }).fetchUsage(for: account)
+        let result = try await ClaudeUsageProvider(secretStore: secrets, session: fixture.session, now: { self.now }, billingClient: .syntheticClaudeContract(session: fixture.session)).fetchUsage(for: account)
         XCTAssertNil(result.failureMessage)
         XCTAssertFalse(result.bars.isEmpty)
         XCTAssertNil(result.boundSubscriptionRenewal)
@@ -171,7 +271,7 @@ final class SubscriptionBillingTests: XCTestCase {
                 return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
             }
             defer { fixture.invalidate() }
-            let result = try await SubscriptionBillingClient(session: fixture.session).fetchClaudeObservation(
+            let result = try await SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session).fetchClaudeObservation(
                 configuration: account, usageSecret: "usage-token", secretStore: secrets, at: now)
             XCTAssertNil(result.renewal)
             XCTAssertEqual(result.problem?.reason, .credentialsUnavailable, phase)
@@ -203,7 +303,7 @@ final class SubscriptionBillingTests: XCTestCase {
             }
             defer { fixture.invalidate() }
             let task = Task {
-                try await SubscriptionBillingClient(session: fixture.session).fetchClaudeObservation(
+                try await SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session).fetchClaudeObservation(
                     configuration: account, usageSecret: "usage-token", secretStore: secrets, at: now)
             }
             if mutation == "cancel" { task.cancel() }
@@ -261,7 +361,7 @@ final class SubscriptionBillingTests: XCTestCase {
             return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
         }
         defer { fixture.invalidate() }
-        let client = SubscriptionBillingClient(session: fixture.session)
+        let client = SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session)
         let secret = "usage-token"
         let billing = try await client.connect(configuration: account, usageSecret: secret, cookies: [cookie])
         XCTAssertEqual(billing.ownerID, owner)
@@ -283,7 +383,7 @@ final class SubscriptionBillingTests: XCTestCase {
         }
         defer { fixture.invalidate() }
         do {
-            _ = try await SubscriptionBillingClient(session: fixture.session).connect(configuration: account, usageSecret: "usage-token", cookies: [cookie])
+            _ = try await SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session).connect(configuration: account, usageSecret: "usage-token", cookies: [cookie])
             XCTFail("Foreign web account must not connect")
         } catch { XCTAssertEqual(error as? SubscriptionBillingError, .accountMismatch) }
     }
@@ -306,7 +406,7 @@ final class SubscriptionBillingTests: XCTestCase {
                     return (HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!, grokBilling())
                 }
                 defer { fixture.invalidate() }
-                let result = try await SubscriptionBillingClient(session: fixture.session).fetch(
+                let result = try await SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session).fetch(
                     configuration: account, usageSecret: secret, secretStore: store, at: now)
                 XCTAssertEqual(result != nil, status == 200 && !disconnect)
             }
@@ -323,7 +423,7 @@ final class SubscriptionBillingTests: XCTestCase {
             }
             defer { fixture.invalidate() }
             do {
-                _ = try await SubscriptionBillingClient(session: fixture.session).connect(
+                _ = try await SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session).connect(
                     configuration: account, usageSecret: credential.encoded(), cookies: [cookie])
                 XCTFail("An owned but unsupported subscription must not be reported connected")
             } catch {
@@ -362,7 +462,7 @@ final class SubscriptionBillingTests: XCTestCase {
             return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
         }
         defer { fixture.invalidate() }
-        let result = try await SubscriptionBillingClient(session: fixture.session).fetch(
+        let result = try await SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session).fetch(
             configuration: account, usageSecret: secret, secretStore: secrets, at: now)
         XCTAssertNil(result)
     }
@@ -585,7 +685,7 @@ final class SubscriptionBillingTests: XCTestCase {
         defer { fixture.invalidate() }
         var results = [Result<SubscriptionBillingSession, Error>]()
         let session = SubscriptionBillingSignInSession(configuration: account, usageSecret: "usage-token",
-                                                       client: SubscriptionBillingClient(session: fixture.session)) { results.append($0) }
+                                                       client: SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session)) { results.append($0) }
         defer { session.invalidate() }
         let cookies = session.webView.configuration.websiteDataStore.httpCookieStore
         await cookies.setCookie(try signInCookie("matching"))
@@ -625,7 +725,7 @@ final class SubscriptionBillingTests: XCTestCase {
         defer { fixture.invalidate() }
         var results = [Result<SubscriptionBillingSession, Error>]()
         let session = SubscriptionBillingSignInSession(configuration: account, usageSecret: "usage-token",
-                                                       client: SubscriptionBillingClient(session: fixture.session)) { results.append($0) }
+                                                       client: SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session)) { results.append($0) }
         defer { session.invalidate() }
         session.webView.loadHTMLString("<html><body>Sign in</body></html>", baseURL: URL(string: "https://claude.ai/"))
         let loaded = await waitUntil { !session.webView.isLoading && session.webView.url?.host == "claude.ai" }
@@ -683,7 +783,7 @@ final class SubscriptionBillingTests: XCTestCase {
         organization.startSubscriptionBillingSignIn()
         XCTAssertNil(organization.subscriptionBillingSession, "Organization billing is not personal billing")
 
-        for (account, name, host) in [(claude, "Claude", "claude.ai"), (grok, "Grok", "grok.com")] {
+        for (account, name, host) in [(grok, "Grok", "grok.com")] {
             let viewModel = ProviderSettingsViewModel(configurationStore: store, accountID: account.id)
             viewModel.startSubscriptionBillingSignIn()
             let session = try XCTUnwrap(viewModel.subscriptionBillingSession, name)
@@ -701,9 +801,9 @@ final class SubscriptionBillingTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let secrets = MemorySecretStore()
         let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secrets, widgetSnapshotDefaults: defaults)
-        let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
+        let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .grok, authMethod: .browserSession)
         XCTAssertTrue(store.update(account))
-        XCTAssertTrue(store.saveSecret("usage-token", for: account))
+        XCTAssertTrue(store.saveSecret(try GrokCredential(kind: "grok-oauth-v1", accessToken: "usage", refreshToken: "refresh", expiresAt: Date().addingTimeInterval(3600), subject: "synthetic-user", email: nil).encoded(), for: account))
         var credentialChanges = 0
         let viewModel = ProviderSettingsViewModel(configurationStore: store, accountID: account.id, onCredentialsChanged: { credentialChanges += 1 })
 
@@ -741,9 +841,9 @@ final class SubscriptionBillingTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let store = ProviderConfigurationStore(
             initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore(), widgetSnapshotDefaults: defaults)
-        let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
+        let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .grok, authMethod: .browserSession)
         XCTAssertTrue(store.update(account))
-        XCTAssertTrue(store.saveSecret("usage-token", for: account))
+        XCTAssertTrue(store.saveSecret(try GrokCredential(kind: "grok-oauth-v1", accessToken: "usage", refreshToken: "refresh", expiresAt: Date().addingTimeInterval(3600), subject: "synthetic-user", email: nil).encoded(), for: account))
         var credentialChanges = 0
         let viewModel = ProviderSettingsViewModel(configurationStore: store, accountID: account.id, onCredentialsChanged: { credentialChanges += 1 })
         defer { viewModel.cancelSubscriptionBillingSignIn() }
@@ -876,117 +976,80 @@ extension SubscriptionBillingTests {
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         XCTAssertTrue([UIUserInterfaceIdiom.phone, .pad].contains(scene.traitCollection.userInterfaceIdiom))
         for dark in [false, true] {
-            let appearance = dark ? "dark-accessibility2" : "light-default"
-            let suite = "com.hemsoft.CodexBarIOS.ui-tests.\(UUID().uuidString)"
+            let appearance = dark ? "dark-large" : "light-default"
+            let suite = "BillingViewHost.\(UUID().uuidString)"
             let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
             defer { defaults.removePersistentDomain(forName: suite) }
-            let secrets = UITestSecretStore(suite: suite)
+            let secrets = BillingBoundarySecrets()
             let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults,
                                                    secretStore: secrets, widgetSnapshotDefaults: defaults)
-            UITestFixtures.seedClaudeAccount(in: store, scenario: "claude-renewal-ultra")
-            let account = try XCTUnwrap(store.configuration(accountID: "ui-claude"))
-            XCTAssertTrue(store.removeSubscriptionBillingSession(for: account))
-            let provider = try XCTUnwrap(UITestFixtures.claudeProviders(scenario: "claude-renewal-ultra", suiteName: suite).first)
-            let disconnected = try await provider.fetchUsage(for: account)
-            XCTAssertNil(disconnected.boundSubscriptionRenewal)
-            let model = ProviderSettingsViewModel(configurationStore: store, accountID: account.id, initialUsageResult: disconnected)
+            let account = ProviderAccountConfiguration(id: "claude-boundary", providerID: .claude,
+                                                       accountLabel: "Synthetic Claude", authMethod: .browserSession)
+            XCTAssertTrue(store.update(account))
+            XCTAssertTrue(store.saveSecret("usage-token", for: account))
+            let saved = try SubscriptionBillingSession(providerID: .claude, ownerID: owner, organizationID: organization,
+                                                       cookies: [cookie]).encoded()
+            try secrets.saveSecret(saved, account: SubscriptionBillingSession.keychainAccount(account))
+            let transport = UITestSubscriptionBillingProtocol.session(claudePlanType: "claude_ultra")
+            defer { transport.invalidateAndCancel() }
+            let result = try await ClaudeUsageProvider(secretStore: secrets, session: transport).fetchUsage(for: account)
+            XCTAssertEqual(result.plan?.accessibilityLabel, "Ultra")
+            XCTAssertFalse(result.bars.isEmpty)
+            XCTAssertNil(result.boundSubscriptionRenewal)
+            XCTAssertEqual(result.subscriptionBillingProblem?.reason, .automaticAccessUnavailable)
+            var opened = [URL]()
+            let action = OpenURLAction { url in opened.append(url); return .handled }
+            let model = ProviderSettingsViewModel(configurationStore: store, accountID: account.id, initialUsageResult: result)
             model.startSubscriptionBillingSignIn()
-            let session = try XCTUnwrap(model.subscriptionBillingSession)
-            defer { session.invalidate() }
-            let controller = UIHostingController(rootView: AnyView(EmptyView()))
+            XCTAssertNil(model.subscriptionBillingSession)
+            ClaudeBillingAccess.open(using: action)
+            XCTAssertEqual(opened, [URL(string: "https://claude.ai/settings/billing")!])
+            XCTAssertNil(model.subscriptionBillingSession, "Opening/returning cannot create a connection")
+            XCTAssertNil(result.boundSubscriptionRenewal)
+
             let window = UIWindow(windowScene: scene)
             window.frame = scene.coordinateSpace.bounds
             window.overrideUserInterfaceStyle = dark ? .dark : .light
+            let controller = UIHostingController(rootView: AnyView(EmptyView()))
             window.rootViewController = controller
             window.makeKeyAndVisible()
             defer { window.isHidden = true }
             func show<Content: View>(_ content: Content) {
                 controller.rootView = AnyView(content.environment(\.dynamicTypeSize, dark ? .accessibility2 : .large)
-                    .environment(\.colorScheme, dark ? .dark : .light))
+                    .environment(\.colorScheme, dark ? .dark : .light).environment(\.openURL, action))
             }
-            show(SubscriptionBillingSignInView(session: session))
-            let loaded = await waitUntil { !session.webView.isLoading && session.webView.url?.host == "claude.ai" }
-            XCTAssertTrue(loaded)
-            _ = try await session.webView.evaluateJavaScript("window.open('https://accounts.google.com/o/oauth2/auth','auth'); void(0)")
-            let denied = await waitUntil { session.routeNotice != nil }
-            XCTAssertTrue(denied)
-            XCTAssertEqual(session.host, "claude.ai")
-            try await captureProductionHost(window, name: "billing-native-host-\(appearance)-google-denied")
+            show(ScrollView {
+                ProviderUsageCard(result: result, statusText: "Synthetic provider transport",
+                                  showsSubscriptionRenewals: true,
+                                  history: UsageHistorySeries(accountID: account.id, points: [], isBalance: false), isHistoryEnabled: false)
+                    .padding(20)
+            })
+            try await captureProductionHost(window, name: "claude-provider-billing-\(appearance)-header")
+            show(NavigationStack { ProviderSettingsView(configurationStore: store, accountID: account.id, initialUsageResult: result) })
+            try await captureProductionHost(window, name: "claude-provider-billing-\(appearance)-settings")
+            show(ProviderCardInformationView(sections: ProviderUsageCard.informationSections(for: result), greptileRenewal: nil,
+                                             showsBillingSettings: result.canOpenClaudeBillingSettings))
+            try await captureProductionHost(window, name: "claude-provider-billing-\(appearance)-information")
+            XCTAssertEqual(secrets.billingReads, 0, "Rendering does not inspect the saved billing payload")
+            XCTAssertEqual(secrets.billingValue, saved)
+            XCTAssertEqual(opened.count, 1, "Rendering and foreground return do not launch or refresh billing")
+            var variant = result
             if dark {
-                let guidance = try XCTUnwrap(billingScrollViews(in: controller.view).first {
-                    $0 !== session.webView.scrollView && $0.bounds.height > window.bounds.height * 0.25
-                        && $0.bounds.height < window.bounds.height * 0.6
-                }, "Long accessibility guidance needs a scroll container instead of truncation")
-                let originalOffset = guidance.contentOffset
-                let geometry = XCTAttachment(string: "Guidance scroll frame \(guidance.convert(guidance.bounds, to: window)); "
-                    + "content \(guidance.contentSize); offset \(originalOffset); insets \(guidance.adjustedContentInset); "
-                    + "window \(window.bounds); identifier \(guidance.accessibilityIdentifier ?? "none")")
-                geometry.name = "billing-guidance-scroll-geometry"
-                geometry.lifetime = .keepAlways
-                add(geometry)
-                if guidance.contentSize.height > guidance.bounds.height + 1 {
-                    guidance.setContentOffset(CGPoint(x: 0, y: guidance.contentSize.height - guidance.bounds.height), animated: false)
-                    XCTAssertGreaterThan(guidance.contentOffset.y, 0)
-                    try await captureProductionHost(window, name: "billing-native-host-\(appearance)-guidance-scrolled")
-                    guidance.setContentOffset(originalOffset, animated: false)
-                }
+                variant.subscriptionRenewal = SubscriptionRenewal(accountID: account.id, providerID: .claude, state: .renewing,
+                                                                   date: Date().addingTimeInterval(86400), observedAt: Date().addingTimeInterval(-90000))
+                XCTAssertNil(variant.boundSubscriptionRenewal?.compactLabel(at: Date()))
+                show(ProviderCardInformationView(sections: ProviderUsageCard.informationSections(for: variant), greptileRenewal: nil,
+                                                 showsBillingSettings: variant.canOpenClaudeBillingSettings))
+                try await captureProductionHost(window, name: "claude-provider-billing-dark-large-stale-information")
+            } else {
+                variant = ProviderUsageResult(accountID: account.id, providerID: .claude, title: "Synthetic Claude",
+                                              plan: .make(providerPrefix: "claude", identifier: "team", label: "Team"),
+                                              subtitle: "Synthetic organization usage", bars: result.bars, fetchedAt: Date())
+                XCTAssertFalse(variant.canOpenClaudeBillingSettings)
+                show(NavigationStack { ProviderSettingsView(configurationStore: store, accountID: account.id, initialUsageResult: variant) })
+                try await captureProductionHost(window, name: "claude-provider-billing-light-default-team-settings")
             }
-            session.webViewWebContentProcessDidTerminate(session.webView)
-            XCTAssertNil(session.routeNotice, "A terminated page clears the previous route notice")
-            XCTAssertTrue(session.message?.contains("closed unexpectedly") == true)
-            try await captureProductionHost(window, name: "billing-native-host-\(appearance)-interrupted")
-            session.reloadSignIn()
-            let reloaded = await waitUntil { !session.webView.isLoading && session.routeNotice == nil }
-            XCTAssertTrue(reloaded)
-            session.chooseSyntheticAccount(matching: false)
-            let wrong = await waitUntil { session.message == SubscriptionBillingError.accountMismatch.localizedDescription }
-            XCTAssertTrue(wrong)
-            XCTAssertFalse(store.hasSubscriptionBillingSession(for: account))
-            session.retrySignIn()
-            let reset = await waitUntil { !session.isVerifying && !session.webView.isLoading }
-            XCTAssertTrue(reset)
-            session.chooseSyntheticAccount(matching: true)
-            let connected = await waitUntil { model.subscriptionBillingSession == nil && store.hasSubscriptionBillingSession(for: account) }
-            XCTAssertTrue(connected)
-            let acquired = try await provider.fetchUsage(for: account)
-            XCTAssertNil(acquired.failureMessage)
-            XCTAssertEqual(acquired.plan?.accessibilityLabel, "Ultra")
-            let renewal = try XCTUnwrap(acquired.boundSubscriptionRenewal)
-            XCTAssertNotNil(renewal.compactLabel(at: Date()))
-            let header = ProviderUsageCard.disclosureAccessibilityLabel(for: acquired, statusText: "", isRefreshing: false,
-                                                                       isPerformingRecovery: false, severity: .normal)
-            XCTAssertTrue(header.contains("Renews in"))
-            let card = ProviderUsageCard(result: acquired, statusText: "Synthetic provider transport",
-                                         showsSubscriptionRenewals: store.showsSubscriptionRenewals,
-                                         history: UsageHistorySeries(accountID: account.id, points: [], isBalance: false), isHistoryEnabled: false)
-            show(ScrollView { card.padding(20) })
-            try await captureProductionHost(window, name: "billing-native-host-\(appearance)-verified-header")
-            let sections = ProviderUsageCard.informationSections(for: acquired)
-            let billing = try XCTUnwrap(sections.first { $0.id == "subscription-renewal" })
-            XCTAssertEqual(billing.items.first?.label, "Next subscription renewal")
-            XCTAssertEqual(billing.items.first?.detail, renewal.dateText())
-            show(ProviderCardInformationView(sections: sections, greptileRenewal: nil))
-            try await captureProductionHost(window, name: "billing-native-host-\(appearance)-verified-date")
         }
-        let grok = SubscriptionBillingSignInSession(
-            configuration: ProviderAccountConfiguration(id: "synthetic-grok", providerID: .grok, authMethod: .browserSession),
-            usageSecret: "synthetic-unused"
-        ) { _ in }
-        defer { grok.invalidate() }
-        let grokWindow = UIWindow(windowScene: scene)
-        grokWindow.frame = scene.coordinateSpace.bounds
-        grokWindow.overrideUserInterfaceStyle = .light
-        grokWindow.rootViewController = UIHostingController(rootView: SubscriptionBillingSignInView(session: grok)
-            .environment(\.dynamicTypeSize, .large).environment(\.colorScheme, .light))
-        grokWindow.makeKeyAndVisible()
-        defer { grokWindow.isHidden = true }
-        let loadedGrok = await waitUntil { !grok.webView.isLoading && grok.webView.url?.host == "grok.com" }
-        XCTAssertTrue(loadedGrok)
-        _ = try await grok.webView.evaluateJavaScript("window.open('https://accounts.google.com/o/oauth2/auth','auth'); void(0)")
-        let deniedGrok = await waitUntil { grok.routeNotice?.contains("Grok") == true }
-        XCTAssertTrue(deniedGrok)
-        try await captureProductionHost(grokWindow, name: "billing-native-host-grok-google-denied")
-        grok.cancel()
     }
 
     @MainActor
@@ -1019,7 +1082,7 @@ extension SubscriptionBillingTests {
         -> SubscriptionBillingSignInSession {
         SubscriptionBillingSignInSession(
             configuration: ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession),
-            usageSecret: "usage-token", client: SubscriptionBillingClient(session: fixture.session), completion: completion
+            usageSecret: "usage-token", client: SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session), completion: completion
         )
     }
 
@@ -1036,7 +1099,7 @@ extension SubscriptionBillingTests {
         defer { fixture.invalidate() }
         let account = ProviderAccountConfiguration(id: "claude-personal", providerID: .claude, authMethod: .browserSession)
         let session = SubscriptionBillingSignInSession(configuration: account, usageSecret: "usage-token",
-                                                       client: SubscriptionBillingClient(session: fixture.session)) { _ in }
+                                                       client: SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session)) { _ in }
         defer { session.invalidate() }
         let recorder = BillingPolicyRecorder(session)
         session.webView.navigationDelegate = recorder
@@ -1058,7 +1121,7 @@ extension SubscriptionBillingTests {
         for provider in [ProviderID.claude, .grok] {
             let account = ProviderAccountConfiguration(id: "personal", providerID: provider, authMethod: .browserSession)
             let session = SubscriptionBillingSignInSession(configuration: account, usageSecret: "usage-token",
-                                                           client: SubscriptionBillingClient(session: fixture.session)) { _ in }
+                                                           client: SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session)) { _ in }
             defer { session.invalidate() }
             let recorder = BillingPolicyRecorder(session)
             session.webView.navigationDelegate = recorder
@@ -1366,7 +1429,7 @@ extension SubscriptionBillingTests {
         defer { fixture.invalidate() }
         var results = [Result<SubscriptionBillingSession, Error>]()
         let session = SubscriptionBillingSignInSession(configuration: account, usageSecret: usage,
-                                                       client: SubscriptionBillingClient(session: fixture.session)) { results.append($0) }
+                                                       client: SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session)) { results.append($0) }
         defer { session.invalidate() }
         let store = session.webView.configuration.websiteDataStore.httpCookieStore
         store.remove(session)
@@ -1389,11 +1452,40 @@ extension SubscriptionBillingTests {
     }
 }
 
+private final class BillingBoundarySecrets: SecretStore, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String: String] = [:]
+    private var reads = 0
+    private var writes = 0
+    var billingReads: Int { lock.withLock { reads } }
+    var mutations: Int { lock.withLock { writes } }
+    var billingValue: String? { lock.withLock { values.first { $0.key.hasSuffix(".subscription-billing") }?.value } }
+    func readSecret(account: String) throws -> String? {
+        lock.withLock {
+            if account.hasSuffix(".subscription-billing") { reads += 1 }
+            return values[account]
+        }
+    }
+    func saveSecret(_ secret: String, account: String) throws { lock.withLock { values[account] = secret; writes += 1 } }
+    func deleteSecret(account: String) throws { lock.withLock { values.removeValue(forKey: account); writes += 1 } }
+}
+
 private final class BillingRequestCount: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0
     var value: Int { lock.withLock { count } }
     func increment() { lock.withLock { count += 1 } }
+    func reset() { lock.withLock { count = 0 } }
+}
+
+private final class BillingBoundaryProtocol: UITestSubscriptionBillingProtocol, @unchecked Sendable {
+    static let profiles = BillingRequestCount()
+    static let web = BillingRequestCount()
+    override func startLoading() {
+        if request.url?.path == "/api/oauth/profile" { Self.profiles.increment() }
+        if request.url?.host == "claude.ai" || request.value(forHTTPHeaderField: "Cookie") != nil { Self.web.increment() }
+        super.startLoading()
+    }
 }
 
 private final class BillingMutationSecretStore: SecretStore, @unchecked Sendable {

@@ -69,6 +69,7 @@ struct SubscriptionBillingSession: Codable, Equatable, Sendable {
 }
 
 enum SubscriptionBillingError: Equatable, LocalizedError {
+    case automaticClaudeAccessUnavailable
     case unavailable
     case expiredSession
     case accessDenied
@@ -80,6 +81,7 @@ enum SubscriptionBillingError: Equatable, LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case .automaticClaudeAccessUnavailable: "View your plan and billing in Claude. Automatic Claude billing access is unavailable in CodexBar."
         case .unavailable: "Billing could not be verified. Finish signing in, then try again. Your usage connection is unchanged."
         case .expiredSession: "Billing sign-in expired. Reconnect billing with the same account. Your usage connection is unchanged."
         case .accessDenied: "The provider denied billing access. Reconnect billing or check your subscription with the provider."

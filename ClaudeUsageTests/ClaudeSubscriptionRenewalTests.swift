@@ -12,7 +12,8 @@ final class ClaudeSubscriptionRenewalTests: XCTestCase {
             let fixture = try RenewalFixture(type: type)
             defer { fixture.session.invalidateAndCancel() }
             let result = try await ClaudeUsageProvider(secretStore: fixture.secrets, session: fixture.session,
-                                                     now: { [now] in now }).fetchUsage(for: fixture.account)
+                                                     now: { [now] in now }, billingClient: .syntheticClaudeContract(session: fixture.session))
+                .fetchUsage(for: fixture.account)
             XCTAssertNil(result.failureMessage, type)
             XCTAssertFalse(result.bars.isEmpty, type)
             XCTAssertNil(result.subscriptionBillingProblem, type)
@@ -29,7 +30,8 @@ final class ClaudeSubscriptionRenewalTests: XCTestCase {
         let fixture = try RenewalFixture(type: "claude_ultra", canceled: true)
         defer { fixture.session.invalidateAndCancel() }
         let result = try await ClaudeUsageProvider(secretStore: fixture.secrets, session: fixture.session,
-                                                 now: { [now] in now }).fetchUsage(for: fixture.account)
+                                                 now: { [now] in now }, billingClient: .syntheticClaudeContract(session: fixture.session))
+            .fetchUsage(for: fixture.account)
         let renewal = try XCTUnwrap(result.boundSubscriptionRenewal)
         XCTAssertEqual(renewal.state, .nonRenewing)
         XCTAssertEqual(renewal.date, now.addingTimeInterval(259_200))
@@ -42,7 +44,8 @@ final class ClaudeSubscriptionRenewalTests: XCTestCase {
             let fixture = try RenewalFixture(type: type)
             defer { fixture.session.invalidateAndCancel() }
             let result = try await ClaudeUsageProvider(secretStore: fixture.secrets, session: fixture.session,
-                                                     now: { [now] in now }).fetchUsage(for: fixture.account)
+                                                     now: { [now] in now }, billingClient: .syntheticClaudeContract(session: fixture.session))
+                .fetchUsage(for: fixture.account)
             XCTAssertNil(result.failureMessage, type)
             XCTAssertFalse(result.bars.isEmpty, type)
             XCTAssertNil(result.boundSubscriptionRenewal, type)
@@ -55,7 +58,8 @@ final class ClaudeSubscriptionRenewalTests: XCTestCase {
         let fixture = try RenewalFixture(type: "claude_ultra")
         let session = UITestSubscriptionBillingProtocol.session(claudePlanType: "claude_ultra")
         defer { session.invalidateAndCancel(); fixture.session.invalidateAndCancel() }
-        let result = try await ClaudeUsageProvider(secretStore: fixture.secrets, session: session).fetchUsage(for: fixture.account)
+        let result = try await ClaudeUsageProvider(secretStore: fixture.secrets, session: session,
+                                                 billingClient: .syntheticClaudeContract(session: session)).fetchUsage(for: fixture.account)
         XCTAssertEqual(result.plan?.accessibilityLabel, "Ultra")
         XCTAssertNil(result.subscriptionBillingProblem)
         let renewal = try XCTUnwrap(result.boundSubscriptionRenewal)
