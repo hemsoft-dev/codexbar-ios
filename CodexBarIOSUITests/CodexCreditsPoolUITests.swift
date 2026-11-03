@@ -787,7 +787,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
             if containingCollection.exists { container = containingCollection }
         }
         for _ in 0..<12 {
-            let bars = app.navigationBars.allElementsBoundByIndex.map(\.frame).filter {
+            let bars = app.navigationBars.allElementsBoundByIndex.filter(\.isHittable).map(\.frame).filter {
                 $0.width <= container.frame.width + 1 && $0.intersects(container.frame)
             }
             let top = max(container.frame.minY, bars.map(\.maxY).max() ?? container.frame.minY)
