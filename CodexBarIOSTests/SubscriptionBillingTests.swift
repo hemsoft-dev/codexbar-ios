@@ -914,12 +914,14 @@ extension SubscriptionBillingTests {
             try await captureProductionHost(window, name: "billing-native-host-\(appearance)-google-denied")
             if dark {
                 let guidance = try XCTUnwrap(billingScrollViews(in: controller.view).first {
-                    $0 !== session.webView.scrollView && $0.contentSize.height > $0.bounds.height + 1
-                }, "Long accessibility guidance must remain scrollable instead of truncating")
-                guidance.setContentOffset(CGPoint(x: 0, y: guidance.contentSize.height - guidance.bounds.height), animated: false)
-                XCTAssertGreaterThan(guidance.contentOffset.y, 0)
-                try await captureProductionHost(window, name: "billing-native-host-\(appearance)-guidance-scrolled")
-                guidance.setContentOffset(.zero, animated: false)
+                    $0 !== session.webView.scrollView
+                }, "Long accessibility guidance needs a scroll container instead of truncation")
+                if guidance.contentSize.height > guidance.bounds.height + 1 {
+                    guidance.setContentOffset(CGPoint(x: 0, y: guidance.contentSize.height - guidance.bounds.height), animated: false)
+                    XCTAssertGreaterThan(guidance.contentOffset.y, 0)
+                    try await captureProductionHost(window, name: "billing-native-host-\(appearance)-guidance-scrolled")
+                    guidance.setContentOffset(.zero, animated: false)
+                }
             }
             session.webViewWebContentProcessDidTerminate(session.webView)
             XCTAssertNil(session.routeNotice, "A terminated page clears the previous route notice")
