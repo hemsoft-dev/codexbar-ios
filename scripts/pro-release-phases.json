@@ -200,6 +200,7 @@
     "native-germany"
   ],
   "excluded_marketing": [
+    "CodexBarIOSUITests/CodexCreditsPoolUITests/testBillingSignInRecoveryEvidence",
     "CodexBarIOSUITests/CodexCreditsPoolUITests/testClaudeUltraReportedWindowsEvidence",
     "CodexBarIOSUITests/StorefrontReviewCaptureTests/testCaptureThreeLocalStoreKitProducts"
   ],
