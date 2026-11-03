@@ -20,11 +20,29 @@ attachments and the accessibility hierarchy from the result bundle. Open the
 
 ## Complete release phases
 
+Focused billing recovery capture (outside the release phase count):
+`CodexBarIOSUITests/CodexCreditsPoolUITests/testBillingSignInRecoveryEvidence`.
+Run this selector through the project XCTest runner on iPhone and iPad. It
+exercises synthetic Google denial, non-wiping interruption recovery, wrong
+account/Start Over, then real Claude provider/store acquisition through an
+intercepted transport and asserts the header countdown and exact-date row.
+It also checks Grok denial and Cancel. Light/default and dark/accessibility
+states are synthetic, not a live Google login or Franz account verification.
+
+Supplemental native view-host rendering is available through
+`CodexBarIOSTests/SubscriptionBillingTests/testBillingRecoveryProductionViewHostEvidence`.
+It mounts the compiled production sign-in, provider-card and information views
+on the actual test device's window scene, with light/default and
+dark/accessibility2 traits. It exercises the production session callbacks,
+account store and intercepted provider transport before attaching images.
+Label these captures **native view-host**, not XCUITest navigation, gesture or
+physical-phone verification; retain any separate UI-runner failure explicitly.
+
 The base command above still executes exactly 29 original journeys. The
 [phase manifest](scripts/pro-release-phases.json) requires 53 user journeys per
 family for a release: original 29, supplemental 8, synthetic commerce 14, and
 native purchase/restore and purchase-error journeys 1 each. The separate
-storefront capture and focused Claude Ultra evidence capture are listed in
+storefront, Claude Ultra and billing recovery evidence captures are listed in
 `excluded_marketing` as manual captures, outside the 53 regression journeys.
 The Ultra capture remains available for focused manual execution on either
 device family. It also exercises `claude-renewal-ultra` through the real Claude

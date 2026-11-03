@@ -25,6 +25,14 @@ building, testing, or releasing the app.
 
 ### Fixed
 
+- Keep Claude and Grok billing sign-in usable when Google authorization cannot
+  run in the embedded page. Explain the limitation, retain the provider page,
+  and offer Check Billing, non-wiping Reload and explicit Start Over recovery.
+  Reload also retains failed-attempt history, so a rejected account is checked
+  again only after an explicit Check Billing action or changed credentials.
+  This does not establish support for Google-only accounts or their renewal
+  dates. ([#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454))
+
 - Read verified personal Claude billing when the account profile explicitly
   identifies Ultra, so its returned charge date can reach the renewal pill and
   exact-date details. ([#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454))
