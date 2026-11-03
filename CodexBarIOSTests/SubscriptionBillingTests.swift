@@ -917,8 +917,10 @@ extension SubscriptionBillingTests {
                     $0 !== session.webView.scrollView && $0.bounds.height > window.bounds.height * 0.25
                         && $0.bounds.height < window.bounds.height * 0.6
                 }, "Long accessibility guidance needs a scroll container instead of truncation")
+                let originalOffset = guidance.contentOffset
                 let geometry = XCTAttachment(string: "Guidance scroll frame \(guidance.convert(guidance.bounds, to: window)); "
-                    + "content \(guidance.contentSize); window \(window.bounds); identifier \(guidance.accessibilityIdentifier ?? "none")")
+                    + "content \(guidance.contentSize); offset \(originalOffset); insets \(guidance.adjustedContentInset); "
+                    + "window \(window.bounds); identifier \(guidance.accessibilityIdentifier ?? "none")")
                 geometry.name = "billing-guidance-scroll-geometry"
                 geometry.lifetime = .keepAlways
                 add(geometry)
@@ -926,7 +928,7 @@ extension SubscriptionBillingTests {
                     guidance.setContentOffset(CGPoint(x: 0, y: guidance.contentSize.height - guidance.bounds.height), animated: false)
                     XCTAssertGreaterThan(guidance.contentOffset.y, 0)
                     try await captureProductionHost(window, name: "billing-native-host-\(appearance)-guidance-scrolled")
-                    guidance.setContentOffset(.zero, animated: false)
+                    guidance.setContentOffset(originalOffset, animated: false)
                 }
             }
             session.webViewWebContentProcessDidTerminate(session.webView)
