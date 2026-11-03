@@ -246,7 +246,7 @@ final class SubscriptionBillingTests: XCTestCase {
         XCTAssertFalse(result.bars.isEmpty)
         XCTAssertNil(result.boundSubscriptionRenewal)
         XCTAssertEqual(result.subscriptionBillingProblem?.reason, .credentialsUnavailable)
-        XCTAssertTrue(result.subscriptionBillingInformation(at: now)?.items.first?.detail.contains("Retry refresh") == true)
+        XCTAssertTrue(result.subscriptionBillingInformation(at: now)?.items.first?.detail.contains("View your plan and billing in Claude") == true)
         XCTAssertEqual(try secrets.readSecret(account: ProviderConfigurationStore.keychainAccount(for: account)), "usage-token")
     }
 
