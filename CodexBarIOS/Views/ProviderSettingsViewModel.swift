@@ -493,7 +493,11 @@ final class ProviderSettingsViewModel: ObservableObject {
 
     func startSubscriptionBillingSignIn() {
         cancelSubscriptionBillingSignIn()
-        guard [.claude, .grok].contains(configuration.providerID), !isClaudeOrganizationBilling,
+        if configuration.providerID == .claude {
+            subscriptionBillingMessage = SubscriptionBillingProblem.Reason.automaticAccessUnavailable.message
+            return
+        }
+        guard configuration.providerID == .grok,
               let usageSecret = configurationStore.billingUsageSecret(for: configuration) else { return }
         let account = configuration
         subscriptionBillingMessage = nil

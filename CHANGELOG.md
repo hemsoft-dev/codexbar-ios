@@ -25,17 +25,13 @@ building, testing, or releasing the app.
 
 ### Fixed
 
-- Keep Claude and Grok billing sign-in usable when Google authorization cannot
-  run in the embedded page. Explain the limitation, retain the provider page,
-  and offer Check Billing, non-wiping Reload and explicit Start Over recovery.
-  Reload also retains failed-attempt history, so a rejected account is checked
-  again only after an explicit Check Billing action or changed credentials.
-  This does not establish support for Google-only accounts or their renewal
-  dates. ([#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454))
-
-- Read verified personal Claude billing when the account profile explicitly
-  identifies Ultra, so its returned charge date can reach the renewal pill and
-  exact-date details. ([#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454))
+- Replace Claude's embedded billing login with **View billing in Claude** in
+  personal account settings and More Information. Automatic use of saved Claude
+  billing sessions is paused; saved data remains until explicit Disconnect.
+  Usage retrieval is unchanged. This improves access to the provider's billing
+  page but does not supply an automatic renewal date or verify Google sign-in.
+  Grok's existing billing connection is unchanged.
+  ([#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454))
 
 - Explain that Google sign-in cannot connect Greptile billing yet. Block the
   unsupported sign-in with return and cancel actions, preserve saved connections

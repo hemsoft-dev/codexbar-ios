@@ -13,7 +13,7 @@ specific to the product and authentication method already connected in this app.
 | Provider | Current evidence | Billing renewal support |
 | --- | --- | --- |
 | ChatGPT / Codex | `GET chatgpt.com/backend-api/subscriptions`, `active_until` plus Boolean `will_renew` | For verified individual Go, Plus and Pro plans, an optional request uses the existing account-bound OAuth grant, account query/header and Codex client identity headers. Business, Enterprise and unknown workspace plans lack a verified workspace billing contract and receive no lookup. A recognized 200 response supplies the date; rejected access or missing fields means unavailable. The inspected Codex Switch implementation reports successful OAuth reads with this request contract; native iOS transport/grant compatibility remains pending Franz's account check. |
-| Claude | OAuth profile identity plus an optional, separate Claude web session | Implemented for personal Pro/Max/Ultra: **Connect Billing** in account settings opens a private phone sign-in, verifies the web account UUID and organization against the current OAuth profile, then reads `GET /api/organizations/<uuid>/subscription_details`. `status` is required; timestamp and legacy date aliases are optional alternatives, with at least one recognized date key. Malformed present fields and paused payments are rejected. An access-end date overrides a residual next charge. Store/marketplace-managed organization types are excluded; null Stripe status is unsupported. There is no cross-app StoreKit lookup. Live account compatibility is pending Franz. |
+| Claude | Provider-owned billing access; automatic web-session acquisition paused | Personal Pro/Max/Ultra settings and More Information offer **View billing in Claude** at the fixed provider billing URL. It may open a browser or provider app; neither the destination nor date availability is promised. New embedded Connect/Reconnect and automatic reuse of saved Claude billing cookies are disabled. Saved bytes remain until explicit Disconnect. Quota/plan retrieval is unchanged, which does not establish provider permission. No new renewal observation is produced. Team/Enterprise have no personal shortcut. Store guidance is unconditional. |
 | Cursor | Existing phone sign-in, authenticated web profile and customer-bound Stripe portal subscription | Personal Stripe subscriptions supply an actual paid period end and explicit cancellation flags. Monthly/yearly observations require matching owner, customer, product and interval with no recovery or pending changes. Canceled access ends in details. Team, trial, unsupported or rejected billing stays unavailable. `billingCycleEnd` remains only a quota boundary. See [acquisition evidence and safety rules](CURSOR-BILLING.md). |
 | Copilot | Copilot quota windows | No per-subscription billing renewal and auto-renewal state in the connected quota response. |
 | GitHub billing | Account or organization metered usage | Product usage and invoice periods do not identify an individual renewing subscription. No renewal pill. |
@@ -103,7 +103,7 @@ claim of equivalent live transport behavior is used. Rejected native requests
 remain unavailable. Live iOS access must still be checked before calling this
 provider supported on Franz's account. If it rejects subscription access, a
 public transport solution or guided, account-verified phone billing authorization
-flow is still needed. Claude and Grok now have guided, account-verified phone billing connections.
+flow is still needed. Grok retains its guided billing connection. Claude uses provider-owned billing access as described below.
 Do not substitute Safari's inaccessible cookies, desktop imports, guessed dates
 or a second account's billing session. Live date comparisons and OAuth billing
 access verification remain pending for Franz; synthetic tests verify display,
@@ -111,54 +111,15 @@ isolation and failure handling, not access to a real subscription.
 
 ## Non-Codex acquisition and account isolation (#446)
 
-Claude and Grok use a nonpersistent WKWebView for **Connect Billing** in their
-account settings. The user signs in and selects the same provider account;
-successful verification returns to the app automatically. Canceling leaves the usage
-connection intact. The session stores only secure, root-path cookies for the
-exact provider host in a separate account-specific Keychain entry. Claude keeps
-only `sessionKey`. OAuth requests never carry web cookies, and provider web
-requests never carry usage OAuth tokens. Neither flow purchases or cancels a plan.
+Claude's new and reconnecting embedded billing flows are unavailable. **View billing in Claude** is primary in eligible personal account settings and More Information. It opens the fixed https://claude.ai/settings/billing URL without creating a session or treating return as successful authentication. Team/Enterprise and unrecognized/free plans receive no personal shortcut. Guidance always explains that purchases through Claude for iOS or Android are managed through the purchase store, without inferring the account's payment platform. Claude for iOS also exposes profile > Billing.
 
-Google authorization documents are denied in this shared Claude/Grok embedded
-flow, including popups and redirects. A top-level request shows a separate
-explanation while retaining the provider page; a Google subframe is canceled
-silently without interrupting verification. This does not block Google script
-resources or establish a supported Google-only account route. Another method
-is appropriate only if it already exists for that same provider account; the
-app does not create/link accounts or transfer browser sessions.
+The default SubscriptionBillingClient stops Claude connect, fetch and fetchClaudeObservation before reading saved billing bytes, checking billing-profile ownership or issuing web requests. This is a reversible capability reduction: users with previously functioning saved sessions no longer receive automatically refreshed Claude billing observations. The bytes are preserved. **Disconnect saved billing** remains explicit and deletes only that account's billing key. Usage authorization and retrieval are unchanged, not approved by this decision. Existing bound date, cancellation, freshness and account rules remain; cached observations are not stamped as newly verified on browser return.
 
-**Check Billing** is always available and explains when no sign-in cookie was
-found. Automatic discovery performs at most six local cookie reads within one
-15-second generation budget. Events coalesce within that budget and cannot
-renew it forever. Each new allowed credential set starts at most one automatic
-verification; identical in-flight or failed values are not automatically retried.
-An explicit Check can retry a failure. Unrelated cookies do not restart a slow
-connect, and a final local credential reread prevents saving an unobserved
-removed/replaced sign-in. Values remain in memory and are never logged.
+[Current provider guidance](https://code.claude.com/docs/en/legal-and-compliance#authentication-and-credential-use) describes restrictions; no applicable exception or permitted consumer billing handoff was established. Council supplies no provider permission and this is not a breach/compromise/legal finding. [The usage-auth qualification follow-up](https://github.com/hemsoft-dev/codexbar-ios/issues/548) separately tracks client identity and permission before a future release. The absolute release hold remains. No outreach, key creation, account probe or silent usage quarantine is part of this change.
 
-**Reload Sign-In** retains this sheet's private cookies and automatic-attempt
-history, including after a web content process interruption. A previously
-rejected credential requires an explicit Check Billing retry. **Start Over** explicitly clears only this private
-sign-in to choose the correct account. Cancel remains available and swipe
-dismissal is disabled while the sheet owns the attempt.
+The old Claude parser and pre/post account/organization checks remain available only through explicitly injected DEBUG synthetic URLProtocol contract clients. There is no production environment switch that enables saved Claude web-session reuse. Those tests establish contract handling, not live access or a supported Google connection.
 
-The November 2 bounded anonymous probe clicked Claude Apple and visible Grok
-choices without submitting an address or loading an external authentication
-document. It demonstrated no non-Google nil-target popup consumer; Grok Apple
-requested a main-frame `appleid.apple.com` document, which was canceled. Claude
-Apple produced no external document request. No child browser was added. Refused
-`about:` subframes were not proven necessary for captcha rendering, so the
-non-HTTPS policy remains unchanged. These observations do not prove captcha,
-email-link handoff or an existing same-account method can complete in this store.
-Live billing acquisition and the missing header pill in #454 remain pending.
-
-Claude checks `GET api.anthropic.com/api/oauth/profile` with the existing bearer
-and `anthropic-beta: oauth-2025-04-20`. Personal `claude_pro`/`claude_max`/`claude_ultra` profiles
-must identify `account.uuid` and `organization.uuid`. The web session's
-`GET claude.ai/api/account` must identify the same UUID and exactly one matching
-membership organization. Web ownership and OAuth ownership are checked again
-after subscription details. Organization IDs must be valid UUIDs, never arbitrary
-URL paths. Team/enterprise contracts remain unverified.
+Grok keeps its existing private WebKit connection, secure root-host cookie capture, six-local-read/15-second discovery budget, credential equality, account verification, non-wiping Reload, explicit wiping Start Over and Cancel. Its Google destination policy and other provider flows are unchanged. No cookie export, external callback bridge or personal service is introduced.
 
 Grok's read-only first-party client exposes `GET /rest/subscriptions` with browser
 credentials. Each returned subscription must identify the current OAuth subject
@@ -182,8 +143,8 @@ and [cancellation guidance](https://support.claude.com/en/articles/8325617-cance
 likewise distinguish provider-managed and store-managed subscriptions.
 
 All reads reject redirects, shared credential storage, caches and inherited
-credential headers. Each request has a three-second transport limit. A Claude
-refresh performs five reads (at most 15 seconds of transport waits); Grok performs
+credential headers. Each request has a three-second transport limit. The historical Claude
+contract performs five reads only under explicit synthetic injection; Grok performs
 two (at most six). Reads are optional and performed only after a successful usage
 snapshot. Missing/expired billing sessions, access denial, malformed responses,
 account changes and optional Keychain read failures return no observation and
@@ -280,24 +241,6 @@ they do not establish OAuth access to personal billing. Anonymous web acquisitio
 returned a Cloudflare challenge during this research. That does not establish
 whether the guided authenticated phone flow works for Franz.
 
-Claude uses the saved, separately verified billing session on each successful
-usage refresh. Missing authorization, expired cookies or HTTP 401, HTTP 403,
-identity mismatch, unsupported purchase source, transport failure and rejected
-response shape now have distinct account-bound messages. Keychain read failures
-produce a retry message instead of claiming that credentials are absent or
-belong to a different account. Known Team/Enterprise plans retain the unsupported
-explanation and do not offer the personal billing shortcut. More Information offers
-**Open Billing Settings** when no date is verified. Settings retain guided
-Connect/Reconnect Billing and link to the provider's billing page. The existing
-account/organization checks run before and after acquisition. Credential or
-session changes discard the observation. Optional billing errors retain usage;
-caller cancellation still propagates. No diagnostic contains response bodies,
-account identifiers, tokens or cookies. Team/Enterprise and store-managed billing
-remain unsupported; the provider's null status cannot become renewal evidence.
+The historical Claude web contract is paused at every production billing entry point. Its parser and identity tests retain synthetic coverage for alternate fields, cancellation, malformed/paused data, denied/store responses, account/organization mismatch and stale credentials. The new production-path regressions verify no saved billing read, no Cookie/claude.ai or billing-profile request, unchanged synthetic saved bytes and useful usage. Native settings/More Information captures and the isolated URL-opening journey prove the fixed provider action, no embedded sign-in and no false connection/date after return. They do not prove where iOS resolves the link, the provider page content or the actual account's billing result.
 
-Native URLProtocol tests intercept the production Claude provider and billing
-client for alternative fields, cancellation, malformed/paused responses, missing
-or expired access, denial, store ownership, transport failure, account mismatch,
-credential changes and caller cancellation. UI fixtures remain synthetic. Franz's
-Max 20X sign-in and comparison with [Claude Billing](https://claude.ai/settings/billing)
-are pending owner checks, not an agent delivery prerequisite or claimed pass.
+All seven live renewal/blank-page outcomes under #454 remain pending. This provider-owned viewing fallback only partly answers the request; it does not acquire the missing in-app renewal pill or exact date. The prior phone-install clarification remains complete.

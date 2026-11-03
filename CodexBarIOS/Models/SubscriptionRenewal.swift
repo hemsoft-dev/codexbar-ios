@@ -109,20 +109,22 @@ public struct SubscriptionRenewal: Equatable, Sendable {
 public struct SubscriptionBillingProblem: Equatable, Sendable {
     public enum Reason: Equatable, Sendable {
         case notConnected, expiredSession, accountMismatch, accessDenied, unsupportedSubscription, transportFailure, rejectedResponse
-        case credentialsUnavailable
+        case credentialsUnavailable, automaticAccessUnavailable
 
         public var message: String {
             switch self {
+            case .automaticAccessUnavailable:
+                "View your plan and billing in Claude. CodexBar cannot currently verify this renewal date. Usage resets are separate."
             case .credentialsUnavailable:
-                "Saved billing credentials could not be read. Retry refresh. Your usage connection is unchanged."
-            case .notConnected: "Connect Billing in this Claude account's settings to verify its renewal date. Usage resets are separate."
-            case .expiredSession: "Billing sign-in expired. Reconnect billing with the same Claude account. Your usage connection is unchanged."
-            case .accountMismatch: "Billing does not match this Claude account. Reconnect billing with the account used for usage."
-            case .accessDenied: "Claude denied billing access. Reconnect billing or check Claude Billing for your subscription date."
+                "Saved billing information is unavailable. View your plan and billing in Claude. Your usage connection is unchanged."
+            case .notConnected: "View your plan and billing in Claude. Usage resets are separate from billing."
+            case .expiredSession: "The saved billing observation has expired. View your plan and billing in Claude."
+            case .accountMismatch: "Billing does not match this Claude account. View your plan and billing in Claude."
+            case .accessDenied: "Claude denied billing access. View your plan and billing in Claude."
             case .unsupportedSubscription:
                 "This Claude purchase does not expose supported personal web billing. Check the store where you subscribed or your administrator."
-            case .transportFailure: "Claude Billing could not be reached. Refresh when your connection is available. Your usage connection is unchanged."
-            case .rejectedResponse: "Claude returned billing details that CodexBar could not verify. Check Claude Billing for the date."
+            case .transportFailure: "Claude Billing could not be reached. View your plan and billing in Claude. Your usage connection is unchanged."
+            case .rejectedResponse: "Saved billing details could not be verified. View your plan and billing in Claude."
             }
         }
     }
@@ -142,7 +144,15 @@ extension ProviderUsageResult {
     }
 
     public func subscriptionBillingInformation(at now: Date) -> ProviderCardInformationSection? {
-        if let renewal = boundSubscriptionRenewal { return renewal.information(at: now) }
+        if let renewal = boundSubscriptionRenewal {
+            if providerID == .claude, !renewal.isFresh(at: now) {
+                return ProviderCardInformationSection(id: "subscription-renewal", title: "Subscription billing", items: [
+                    ProviderCardInformationItem(id: "subscription-renewal.date", label: "Last known billing date",
+                                               detail: "\(renewal.dateText() ?? "Unavailable"). View your plan and billing in Claude."),
+                ])
+            }
+            return renewal.information(at: now)
+        }
         guard let reason = subscriptionBillingUnavailableReason else { return nil }
         return ProviderCardInformationSection(id: "subscription-renewal", title: "Subscription billing", items: [
             ProviderCardInformationItem(id: "subscription-renewal.unavailable", label: "Renewal date unavailable", detail: reason)
@@ -150,8 +160,7 @@ extension ProviderUsageResult {
     }
 
     public var canOpenClaudeBillingSettings: Bool {
-        providerID == .claude && !isClaudeOrganizationSubscription && !subscriptionBillingIsNotApplicable
-            && failureMessage == nil && boundSubscriptionRenewal == nil
+        providerID == .claude && ["claude.pro", "claude.max", "claude.max5", "claude.max20", "claude.ultra"].contains(plan?.identifier.lowercased() ?? "")
     }
 
     private var isClaudeOrganizationSubscription: Bool {
@@ -178,8 +187,7 @@ extension ProviderUsageResult {
                     + "Usage resets are separate."
             }
             if failureMessage == nil, let problem = subscriptionBillingProblem, problem.accountID == accountID { return problem.reason.message }
-            return "Connect Billing in this Claude account's settings to verify its renewal date. If already connected, reconnect "
-                + "billing and refresh. Usage resets are separate."
+            return SubscriptionBillingProblem.Reason.automaticAccessUnavailable.message
         case .grok:
             return "Connect Billing in this Grok account's settings to verify its subscription date. If already connected, reconnect "
                 + "billing and refresh. X and API billing remain separate."

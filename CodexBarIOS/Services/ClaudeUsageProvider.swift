@@ -10,20 +10,27 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
     private let now: @Sendable () -> Date
     private let resetClient: ClaudeUsageResetClient
     private let planClient: ClaudePlanProfileClient
+    private let billingClient: SubscriptionBillingClient
     private let snapshotCache = ClaudeUsageSnapshotCache()
 
     public let providerID = ProviderID.claude
 
-    public init(
+    public convenience init(
         secretStore: SecretStore = KeychainService(),
         session: URLSession = .shared,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
+        self.init(secretStore: secretStore, session: session, now: now, billingClient: SubscriptionBillingClient(session: session))
+    }
+
+    init(secretStore: SecretStore, session: URLSession, now: @escaping @Sendable () -> Date = { Date() },
+         billingClient: SubscriptionBillingClient) {
         self.secretStore = secretStore
         self.session = session
         self.now = now
         self.resetClient = ClaudeUsageResetClient(session: session, secretStore: secretStore, now: now)
         self.planClient = ClaudePlanProfileClient(session: session)
+        self.billingClient = billingClient
     }
 
     public func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
@@ -93,7 +100,7 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
                 resolved.subscriptionBillingProblem = SubscriptionBillingProblem(accountID: configuration.id, reason: .credentialsUnavailable)
             }
             if let usageSecret, ClaudeCredentialsParser.parse(usageSecret)?.accessToken == token {
-                let billing = try await SubscriptionBillingClient(session: session).fetchClaudeObservation(
+                let billing = try await billingClient.fetchClaudeObservation(
                     configuration: configuration, usageSecret: usageSecret, secretStore: secretStore, at: now()
                 )
                 resolved.subscriptionRenewal = billing.renewal
