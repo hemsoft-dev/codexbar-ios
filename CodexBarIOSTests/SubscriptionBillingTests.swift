@@ -948,6 +948,25 @@ extension SubscriptionBillingTests {
             show(ProviderCardInformationView(sections: sections, greptileRenewal: nil))
             try await captureProductionHost(window, name: "billing-native-host-\(appearance)-verified-date")
         }
+        let grok = SubscriptionBillingSignInSession(
+            configuration: ProviderAccountConfiguration(id: "synthetic-grok", providerID: .grok, authMethod: .browserSession),
+            usageSecret: "synthetic-unused"
+        ) { _ in }
+        defer { grok.invalidate() }
+        let grokWindow = UIWindow(windowScene: scene)
+        grokWindow.frame = scene.coordinateSpace.bounds
+        grokWindow.overrideUserInterfaceStyle = .light
+        grokWindow.rootViewController = UIHostingController(rootView: SubscriptionBillingSignInView(session: grok)
+            .environment(\.dynamicTypeSize, .large).environment(\.colorScheme, .light))
+        grokWindow.makeKeyAndVisible()
+        defer { grokWindow.isHidden = true }
+        let loadedGrok = await waitUntil { !grok.webView.isLoading && grok.webView.url?.host == "grok.com" }
+        XCTAssertTrue(loadedGrok)
+        _ = try await grok.webView.evaluateJavaScript("window.open('https://accounts.google.com/o/oauth2/auth','auth'); void(0)")
+        let deniedGrok = await waitUntil { grok.routeNotice?.contains("Grok") == true }
+        XCTAssertTrue(deniedGrok)
+        try await captureProductionHost(grokWindow, name: "billing-native-host-grok-google-denied")
+        grok.cancel()
     }
 
     @MainActor
