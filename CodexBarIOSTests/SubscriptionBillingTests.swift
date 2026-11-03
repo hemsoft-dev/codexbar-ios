@@ -912,6 +912,15 @@ extension SubscriptionBillingTests {
             XCTAssertTrue(denied)
             XCTAssertEqual(session.host, "claude.ai")
             try await captureProductionHost(window, name: "billing-native-host-\(appearance)-google-denied")
+            if dark {
+                let guidance = try XCTUnwrap(billingScrollViews(in: controller.view).first {
+                    $0 !== session.webView.scrollView && $0.contentSize.height > $0.bounds.height + 1
+                }, "Long accessibility guidance must remain scrollable instead of truncating")
+                guidance.setContentOffset(CGPoint(x: 0, y: guidance.contentSize.height - guidance.bounds.height), animated: false)
+                XCTAssertGreaterThan(guidance.contentOffset.y, 0)
+                try await captureProductionHost(window, name: "billing-native-host-\(appearance)-guidance-scrolled")
+                guidance.setContentOffset(.zero, animated: false)
+            }
             session.webViewWebContentProcessDidTerminate(session.webView)
             XCTAssertNil(session.routeNotice, "A terminated page clears the previous route notice")
             XCTAssertTrue(session.message?.contains("closed unexpectedly") == true)
@@ -968,6 +977,12 @@ extension SubscriptionBillingTests {
         XCTAssertTrue(deniedGrok)
         try await captureProductionHost(grokWindow, name: "billing-native-host-grok-google-denied")
         grok.cancel()
+    }
+
+    @MainActor
+    private func billingScrollViews(in view: UIView) -> [UIScrollView] {
+        let current = (view as? UIScrollView).map { [$0] } ?? []
+        return current + view.subviews.flatMap { billingScrollViews(in: $0) }
     }
 
     @MainActor
