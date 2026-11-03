@@ -1,4 +1,6 @@
 import Foundation
+import SwiftUI
+import UIKit
 import WebKit
 import XCTest
 @testable import CodexBarIOS
@@ -868,6 +870,105 @@ private final class BillingPolicyRecorder: NSObject, WKNavigationDelegate {
 }
 
 extension SubscriptionBillingTests {
+    /// Supplemental rendering through the native app test host, never an XCUITest or live-account claim.
+    @MainActor
+    func testBillingRecoveryProductionViewHostEvidence() async throws {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        XCTAssertTrue([UIUserInterfaceIdiom.phone, .pad].contains(scene.traitCollection.userInterfaceIdiom))
+        for dark in [false, true] {
+            let appearance = dark ? "dark-accessibility2" : "light-default"
+            let suite = "com.hemsoft.CodexBarIOS.ui-tests.\(UUID().uuidString)"
+            let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let secrets = UITestSecretStore(suite: suite)
+            let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults,
+                                                   secretStore: secrets, widgetSnapshotDefaults: defaults)
+            UITestFixtures.seedClaudeAccount(in: store, scenario: "claude-renewal-ultra")
+            let account = try XCTUnwrap(store.configuration(accountID: "ui-claude"))
+            XCTAssertTrue(store.removeSubscriptionBillingSession(for: account))
+            let provider = try XCTUnwrap(UITestFixtures.claudeProviders(scenario: "claude-renewal-ultra", suiteName: suite).first)
+            let disconnected = try await provider.fetchUsage(for: account)
+            XCTAssertNil(disconnected.boundSubscriptionRenewal)
+            let model = ProviderSettingsViewModel(configurationStore: store, accountID: account.id, initialUsageResult: disconnected)
+            model.startSubscriptionBillingSignIn()
+            let session = try XCTUnwrap(model.subscriptionBillingSession)
+            defer { session.invalidate() }
+            let controller = UIHostingController(rootView: AnyView(EmptyView()))
+            let window = UIWindow(windowScene: scene)
+            window.frame = scene.coordinateSpace.bounds
+            window.overrideUserInterfaceStyle = dark ? .dark : .light
+            window.rootViewController = controller
+            window.makeKeyAndVisible()
+            defer { window.isHidden = true }
+            func show<Content: View>(_ content: Content) {
+                controller.rootView = AnyView(content.environment(\.dynamicTypeSize, dark ? .accessibility2 : .large)
+                    .environment(\.colorScheme, dark ? .dark : .light))
+            }
+            show(SubscriptionBillingSignInView(session: session))
+            let loaded = await waitUntil { !session.webView.isLoading && session.webView.url?.host == "claude.ai" }
+            XCTAssertTrue(loaded)
+            _ = try await session.webView.evaluateJavaScript("window.open('https://accounts.google.com/o/oauth2/auth','auth'); void(0)")
+            let denied = await waitUntil { session.routeNotice != nil }
+            XCTAssertTrue(denied)
+            XCTAssertEqual(session.host, "claude.ai")
+            try await captureProductionHost(window, name: "billing-native-host-\(appearance)-google-denied")
+            session.webViewWebContentProcessDidTerminate(session.webView)
+            XCTAssertTrue(session.message?.contains("closed unexpectedly") == true)
+            try await captureProductionHost(window, name: "billing-native-host-\(appearance)-interrupted")
+            session.reloadSignIn()
+            let reloaded = await waitUntil { !session.webView.isLoading && session.routeNotice == nil }
+            XCTAssertTrue(reloaded)
+            session.chooseSyntheticAccount(matching: false)
+            let wrong = await waitUntil { session.message == SubscriptionBillingError.accountMismatch.localizedDescription }
+            XCTAssertTrue(wrong)
+            XCTAssertFalse(store.hasSubscriptionBillingSession(for: account))
+            session.retrySignIn()
+            let reset = await waitUntil { !session.isVerifying && !session.webView.isLoading }
+            XCTAssertTrue(reset)
+            session.chooseSyntheticAccount(matching: true)
+            let connected = await waitUntil { model.subscriptionBillingSession == nil && store.hasSubscriptionBillingSession(for: account) }
+            XCTAssertTrue(connected)
+            let acquired = try await provider.fetchUsage(for: account)
+            XCTAssertNil(acquired.failureMessage)
+            XCTAssertEqual(acquired.plan?.accessibilityLabel, "Ultra")
+            let renewal = try XCTUnwrap(acquired.boundSubscriptionRenewal)
+            XCTAssertNotNil(renewal.compactLabel(at: Date()))
+            let header = ProviderUsageCard.disclosureAccessibilityLabel(for: acquired, statusText: "", isRefreshing: false,
+                                                                       isPerformingRecovery: false, severity: .normal)
+            XCTAssertTrue(header.contains("Renews in"))
+            let card = ProviderUsageCard(result: acquired, statusText: "Synthetic provider transport",
+                                         showsSubscriptionRenewals: store.showsSubscriptionRenewals,
+                                         history: UsageHistorySeries(accountID: account.id, points: [], isBalance: false), isHistoryEnabled: false)
+            show(ScrollView { card.padding(20) })
+            try await captureProductionHost(window, name: "billing-native-host-\(appearance)-verified-header")
+            let sections = ProviderUsageCard.informationSections(for: acquired)
+            let billing = try XCTUnwrap(sections.first { $0.id == "subscription-renewal" })
+            XCTAssertEqual(billing.items.first?.label, "Next subscription renewal")
+            XCTAssertEqual(billing.items.first?.detail, renewal.dateText())
+            show(ProviderCardInformationView(sections: sections, greptileRenewal: nil))
+            try await captureProductionHost(window, name: "billing-native-host-\(appearance)-verified-date")
+        }
+    }
+
+    @MainActor
+    private func captureProductionHost(_ window: UIWindow, name: String) async throws {
+        window.layoutIfNeeded()
+        try await Task.sleep(for: .milliseconds(400))
+        let scene = try XCTUnwrap(window.windowScene)
+        XCTAssertEqual(window.bounds.size, scene.coordinateSpace.bounds.size)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scene.screen.scale
+        var rendered = false
+        let image = UIGraphicsImageRenderer(bounds: window.bounds, format: format).image { _ in
+            rendered = window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+        }
+        XCTAssertTrue(rendered, "Capture the mounted UIKit/SwiftUI hierarchy, never a recreated image")
+        let attachment = XCTAttachment(image: image)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     @MainActor
     private func recoverySession(fixture: IsolatedTestURLSession, completion: @escaping (Result<SubscriptionBillingSession, Error>) -> Void)
         -> SubscriptionBillingSignInSession {

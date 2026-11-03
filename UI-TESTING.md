@@ -29,6 +29,15 @@ intercepted transport and asserts the header countdown and exact-date row.
 It also checks Grok denial and Cancel. Light/default and dark/accessibility
 states are synthetic, not a live Google login or Franz account verification.
 
+Supplemental native view-host rendering is available through
+`CodexBarIOSTests/SubscriptionBillingTests/testBillingRecoveryProductionViewHostEvidence`.
+It mounts the compiled production sign-in, provider-card and information views
+on the actual test device's window scene, with light/default and
+dark/accessibility2 traits. It exercises the production session callbacks,
+account store and intercepted provider transport before attaching images.
+Label these captures **native view-host**, not XCUITest navigation, gesture or
+physical-phone verification; retain any separate UI-runner failure explicitly.
+
 The base command above still executes exactly 29 original journeys. The
 [phase manifest](scripts/pro-release-phases.json) requires 53 user journeys per
 family for a release: original 29, supplemental 8, synthetic commerce 14, and
