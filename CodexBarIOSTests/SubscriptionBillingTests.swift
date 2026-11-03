@@ -913,6 +913,7 @@ extension SubscriptionBillingTests {
             XCTAssertEqual(session.host, "claude.ai")
             try await captureProductionHost(window, name: "billing-native-host-\(appearance)-google-denied")
             session.webViewWebContentProcessDidTerminate(session.webView)
+            XCTAssertNil(session.routeNotice, "A terminated page clears the previous route notice")
             XCTAssertTrue(session.message?.contains("closed unexpectedly") == true)
             try await captureProductionHost(window, name: "billing-native-host-\(appearance)-interrupted")
             session.reloadSignIn()

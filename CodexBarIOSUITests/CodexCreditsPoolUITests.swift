@@ -782,6 +782,9 @@ final class CodexCreditsPoolUITests: XCTestCase {
         let customizer = app.scrollViews["metric-customization-scroll"]
         let settings = app.collectionViews["provider-account-settings-form"]
         var container = customizer.exists ? customizer : (settings.exists ? settings : app.scrollViews.firstMatch)
+        if element.identifier.hasPrefix("subscription-billing-synthetic") {
+            container = app.scrollViews["subscription-billing-information"]
+        }
         if element.exists && element.identifier.hasPrefix("settings-") {
             let containingCollection = app.collectionViews.containing(.button, identifier: element.identifier).firstMatch
             if containingCollection.exists { container = containingCollection }

@@ -128,6 +128,7 @@ final class SubscriptionBillingSignInSession: NSObject, ObservableObject, Identi
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         guard webView === self.webView, completion != nil, !isResetting else { return }
         resetWork()
+        routeNotice = nil
         message = "The sign-in page closed unexpectedly. Reload Sign-In to continue; your private sign-in session is retained."
     }
 
@@ -328,33 +329,38 @@ struct SubscriptionBillingSignInView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 8) {
-                Text("Sign in with the same \(session.providerName) account you connected for usage. CodexBar checks briefly for sign-in, then returns after verifying billing. If it stays open, choose Check Billing.")
-                    .font(.footnote)
-                    .padding(.horizontal)
-                Text(session.host).font(.caption).foregroundStyle(.secondary)
-                if let notice = session.routeNotice {
-                    Text(notice).font(.footnote).padding(.horizontal)
-                        .accessibilityIdentifier("subscription-billing-route-notice")
+            GeometryReader { geometry in
+                VStack(spacing: 8) {
+                    Text(session.host).font(.caption).foregroundStyle(.secondary)
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            if let notice = session.routeNotice {
+                                Text(notice).font(.footnote).fixedSize(horizontal: false, vertical: true)
+                                    .accessibilityIdentifier("subscription-billing-route-notice")
+                            } else {
+                                Text("Sign in with the same \(session.providerName) account you connected for usage. CodexBar checks briefly for sign-in, then returns after verifying billing. If it stays open, choose Check Billing.")
+                                    .font(.footnote).fixedSize(horizontal: false, vertical: true)
+                            }
+                            if let message = session.message {
+                                Text(message).font(.footnote).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            if session.isSynthetic { syntheticActions }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal)
+                    }
+                    .accessibilityIdentifier("subscription-billing-information")
+                    .frame(maxHeight: geometry.size.height * 0.5)
+                    if session.isVerifying { ProgressView("Verifying billing account…") }
+                    ViewThatFits(in: .horizontal) {
+                        HStack { recoveryActions }
+                        VStack { recoveryActions }
+                    }
+                    Text("Start Over clears only this private billing sign-in.").font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    BillingWebView(webView: session.webView).frame(minHeight: 120)
                 }
-                if session.isSynthetic {
-                    Button("Use another sample account") { session.chooseSyntheticAccount(matching: false) }
-                        .accessibilityIdentifier("subscription-billing-synthetic-wrong")
-                    Button("Use matching sample account") { session.chooseSyntheticAccount(matching: true) }
-                        .accessibilityIdentifier("subscription-billing-synthetic-match")
-                    Button("Simulate page interruption") { session.webViewWebContentProcessDidTerminate(session.webView) }
-                        .accessibilityIdentifier("subscription-billing-synthetic-termination")
-                }
-                if session.isVerifying { ProgressView("Verifying billing account…") }
-                if let message = session.message {
-                    Text(message).font(.footnote).foregroundStyle(.secondary).padding(.horizontal)
-                }
-                ViewThatFits(in: .horizontal) {
-                    HStack { recoveryActions }
-                    VStack { recoveryActions }
-                }
-                Text("Start Over clears only this private billing sign-in.").font(.caption).foregroundStyle(.secondary)
-                BillingWebView(webView: session.webView)
             }
             .navigationTitle("\(session.providerName) billing")
             .navigationBarTitleDisplayMode(.inline)
@@ -365,6 +371,16 @@ struct SubscriptionBillingSignInView: View {
             .onDisappear { session.invalidate() }
         }
         .interactiveDismissDisabled()
+    }
+
+    @ViewBuilder
+    private var syntheticActions: some View {
+        Button("Use another sample account") { session.chooseSyntheticAccount(matching: false) }
+            .accessibilityIdentifier("subscription-billing-synthetic-wrong")
+        Button("Use matching sample account") { session.chooseSyntheticAccount(matching: true) }
+            .accessibilityIdentifier("subscription-billing-synthetic-match")
+        Button("Simulate page interruption") { session.webViewWebContentProcessDidTerminate(session.webView) }
+            .accessibilityIdentifier("subscription-billing-synthetic-termination")
     }
 
     @ViewBuilder
