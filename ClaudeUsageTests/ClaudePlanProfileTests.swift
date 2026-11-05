@@ -41,21 +41,18 @@ final class ClaudePlanProfileTests: XCTestCase {
         for json in [
             #"{}"#,
             #"{"organization":{"organization_type":"claude_ultra","rate_limit_tier":"max_5x"}}"#,
-            #"{"organization":{"organization_type":"claude_ultra"},"account":{"has_claude_pro":true}}"#,
             #"{"organization":{"organization_type":"claude_ultra","rate_limit_tier":7}}"#,
             #"{"organization":{"organization_type":"future_plan","rate_limit_tier":"default_claude_max_20x"}}"#,
             #"{"organization":{"organization_type":"claude_pro","rate_limit_tier":"default_claude_max_20x"}}"#,
             #"{"organization":{"organization_type":"claude_max","rate_limit_tier":"default_claude_pro"}}"#,
             #"{"account":{"has_claude_max":true,"has_claude_pro":true}}"#,
-            #"{"organization":{"organization_type":"claude_max"},"account":{"has_claude_max":true,"has_claude_pro":true}}"#,
             #"{"account":{"has_claude_max":1,"has_claude_pro":0}}"#,
             #"{"account":{"has_claude_pro":true,"has_claude_max":1}}"#,
             #"{"account":{"has_claude_max":true,"has_claude_pro":"false"}}"#,
             #"{"organization":false,"account":{"has_claude_pro":true}}"#,
             #"{"organization":{"organization_type":"claude_pro"},"account":[]}"#,
             #"{"organization":{"organization_type":7},"account":{"has_claude_pro":true}}"#,
-            #"{"organization":{"organization_type":"claude_max"},"account":{"has_claude_max":false}}"#,
-            #"{"organization":{"organization_type":"claude_max"},"account":{"has_claude_pro":true}}"#,
+            #"{"organization":{"organization_type":"future_plan"},"account":{"has_claude_max":true}}"#,
         ] {
             let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
             XCTAssertNil(ClaudeProfilePlanParser.parse(root), json)
@@ -66,6 +63,33 @@ final class ClaudePlanProfileTests: XCTestCase {
         let flags = Data(#"{"account":{"has_claude_pro":true,"has_claude_max":false}}"#.utf8)
         let root = try XCTUnwrap(JSONSerialization.jsonObject(with: flags) as? [String: Any])
         XCTAssertEqual(ClaudeProfilePlanParser.parse(root)?.accessibilityLabel, "Pro")
+    }
+
+    // Shaped like the profile Claude Code 2.1.318 reads: it names the plan from the organization only (#551).
+    func testOrganizationPlanWinsOverDisagreeingAccountFlags() throws {
+        for (type, tier, name) in [
+            ("claude_max", "default_claude_max_20x", "Ultra"),
+            ("claude_max", "default_claude_max_5x", "Max"),
+            ("claude_pro", "default_claude_pro", "Pro"),
+            ("claude_team", "default_claude_max_20x", "Team"),
+        ] {
+            for flags in [
+                #"{"has_claude_max":true,"has_claude_pro":true}"#,
+                #"{"has_claude_max":false,"has_claude_pro":false}"#,
+                #"{"has_claude_max":false,"has_claude_pro":true}"#,
+                #"{"has_claude_max":true,"has_claude_pro":false}"#,
+                #"{"has_claude_max":"yes","has_claude_pro":0}"#,
+                #"{}"#,
+            ] {
+                let json = #"{"organization":{"organization_type":"\#(type)","rate_limit_tier":"\#(tier)","#
+                    + #""plan_display_name":"Synthetic","billing_type":"stripe_subscription"},"account":\#(flags)}"#
+                let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+                XCTAssertEqual(ClaudeProfilePlanParser.parse(root)?.accessibilityLabel, name, json)
+            }
+        }
+        let bare = #"{"organization":{"organization_type":"claude_max"},"account":{"has_claude_max":false}}"#
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(bare.utf8)) as? [String: Any])
+        XCTAssertEqual(ClaudeProfilePlanParser.parse(root)?.accessibilityLabel, "Max")
     }
 
     func testProviderResolvesMissingLoginMetadataAndUsesReadOnlyProfile() async throws {

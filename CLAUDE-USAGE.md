@@ -85,8 +85,12 @@ against live accounts; only an explicit supported organization family is
 accepted. Seat-specific labels, free-plan detection and future tier identifiers
 remain unsupported. Quotas, model availability, prices and custom account names
 never determine the plan. Team/Enterprise capacity tiers never rename the
-explicit organization family. Both present personal-plan flags must be actual
-JSON booleans before they can establish or contradict a family. Specific login-time names remain a fallback only
+explicit organization family. A supported organization type names the plan by
+itself: personal `account.has_claude_*` flags never contradict it, as in Claude
+Code 2.1.318 (organization type and tier only) and CodexBar for Windows
+([#551](https://github.com/hemsoft-dev/codexbar-ios/issues/551)). Without an
+organization type, both present personal-plan flags must be actual JSON
+booleans and exactly one must be true. Specific login-time names remain a fallback only
 until the profile establishes a plan or explicitly establishes no known plan.
 
 Profile requests run alongside usage reads, with a ten-second timeout, refused
