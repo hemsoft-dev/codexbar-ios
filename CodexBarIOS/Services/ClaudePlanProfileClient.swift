@@ -141,7 +141,7 @@ enum ClaudeProfilePlanParser {
         let maxPlan = boolean(account["has_claude_max"]) == true
         let proPlan = boolean(account["has_claude_pro"]) == true
         guard maxPlan != proPlan else { return nil }
-        return ClaudeUsageParser.planDescriptor(subscriptionType: maxPlan ? "max" : "pro", rateLimitTier: nil)
+        return organizationPlan(type: maxPlan ? "max" : "pro", organization: organization)
     }
 
     private static func organizationPlan(type: String, organization: [String: Any]) -> ProviderPlanDescriptor? {

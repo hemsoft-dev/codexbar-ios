@@ -92,6 +92,26 @@ final class ClaudePlanProfileTests: XCTestCase {
         XCTAssertEqual(ClaudeProfilePlanParser.parse(root)?.accessibilityLabel, "Max")
     }
 
+    // Without an organization type, flag-derived plans keep the organization's tier rules.
+    func testAccountFlagFallbackKeepsTierHandling() throws {
+        for (json, name) in [
+            (#"{"organization":{"rate_limit_tier":"default_claude_max_20x"},"account":{"has_claude_max":true}}"#, "Ultra"),
+            (#"{"organization":{"rate_limit_tier":"default_claude_max_5x"},"account":{"has_claude_max":true}}"#, "Max"),
+            (#"{"organization":{"rate_limit_tier":"default_claude_pro"},"account":{"has_claude_pro":true}}"#, "Pro"),
+        ] {
+            let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+            XCTAssertEqual(ClaudeProfilePlanParser.parse(root)?.accessibilityLabel, name, json)
+        }
+        for json in [
+            #"{"organization":{"rate_limit_tier":"default_claude_max_20x"},"account":{"has_claude_pro":true}}"#,
+            #"{"organization":{"rate_limit_tier":"default_claude_pro"},"account":{"has_claude_max":true}}"#,
+            #"{"organization":{"rate_limit_tier":7},"account":{"has_claude_max":true}}"#,
+        ] {
+            let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+            XCTAssertNil(ClaudeProfilePlanParser.parse(root), json)
+        }
+    }
+
     func testProviderResolvesMissingLoginMetadataAndUsesReadOnlyProfile() async throws {
         let harness = ProfileHarness()
         PlanProfileProtocol.configure(profile: Self.max20)
