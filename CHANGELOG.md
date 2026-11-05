@@ -25,6 +25,10 @@ building, testing, or releasing the app.
 
 ### Fixed
 
+- Claude cards show the plan Claude reports for your organization, such as
+  Ultra, even when older account flags disagree. Previously they could show
+  "Plan unavailable" instead.
+  ([#551](https://github.com/hemsoft-dev/codexbar-ios/issues/551))
 - Replace Claude's embedded billing login with **View billing in Claude** in
   personal account settings and More Information. Automatic use of saved Claude
   billing sessions is paused; saved data remains until explicit Disconnect.

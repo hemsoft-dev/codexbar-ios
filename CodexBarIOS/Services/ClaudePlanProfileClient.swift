@@ -122,33 +122,36 @@ enum ClaudeProfilePlanParser {
         if root["account"] != nil, !(root["account"] is [String: Any]) { return nil }
         let organization = root["organization"] as? [String: Any] ?? [:]
         let account = root["account"] as? [String: Any] ?? [:]
+        let rawType = ProviderPlanDescriptor.normalizedPlanValue(organization["organization_type"] as? String)
+        if organization["organization_type"] != nil, rawType == nil { return nil }
+        if let rawType {
+            // Claude Code and CodexBar for Windows name the plan from the organization alone.
+            // Personal account flags can disagree with it, so they never veto an organization plan.
+            let types = [
+                "claude_pro": "pro", "claude_max": "max", "claude_ultra": "ultra",
+                "claude_team": "team", "claude_enterprise": "enterprise",
+            ]
+            guard let type = types[rawType] else { return nil }
+            return organizationPlan(type: type, organization: organization)
+        }
+        // Without an organization type, only consistent personal flags name a plan.
         for key in ["has_claude_max", "has_claude_pro"] where account[key] != nil {
             guard boolean(account[key]) != nil else { return nil }
         }
-        let rawType = ProviderPlanDescriptor.normalizedPlanValue(organization["organization_type"] as? String)
-        if organization["organization_type"] != nil, rawType == nil { return nil }
+        let maxPlan = boolean(account["has_claude_max"]) == true
+        let proPlan = boolean(account["has_claude_pro"]) == true
+        guard maxPlan != proPlan else { return nil }
+        return organizationPlan(type: maxPlan ? "max" : "pro", organization: organization)
+    }
+
+    private static func organizationPlan(type: String, organization: [String: Any]) -> ProviderPlanDescriptor? {
         let tier = ProviderPlanDescriptor.normalizedPlanValue(organization["rate_limit_tier"] as? String)
-        let types = ["claude_pro": "pro", "claude_max": "max", "claude_ultra": "ultra", "claude_team": "team", "claude_enterprise": "enterprise"]
-        if boolean(account["has_claude_max"]) == true, boolean(account["has_claude_pro"]) == true { return nil }
-        let type: String?
-        if let rawType {
-            guard let known = types[rawType] else { return nil }
-            type = known
-        } else {
-            let maxPlan = boolean(account["has_claude_max"]) == true
-            let proPlan = boolean(account["has_claude_pro"]) == true
-            guard maxPlan != proPlan else { return nil }
-            type = maxPlan ? "max" : "pro"
-        }
-        if ["max", "ultra"].contains(type), organization["rate_limit_tier"] != nil, tier == nil { return nil }
-        // Personal Pro/Max flags conflict; organization capacity tiers do not rename Team or Enterprise.
+        let capacityPlan = ["max", "ultra"].contains(type)
+        if capacityPlan, organization["rate_limit_tier"] != nil, tier == nil { return nil }
+        // Pro with a Max tier conflicts; organization capacity tiers do not rename Team or Enterprise.
         if tier?.contains("max") == true, type == "pro" { return nil }
-        if ["max", "ultra"].contains(type), tier == "default_claude_pro" { return nil }
-        if let maxFlag = boolean(account["has_claude_max"]), ["max", "ultra"].contains(type), !maxFlag { return nil }
-        if let proFlag = boolean(account["has_claude_pro"]), type == "pro", !proFlag { return nil }
-        if type == "pro", boolean(account["has_claude_max"]) == true { return nil }
-        if ["max", "ultra"].contains(type), boolean(account["has_claude_pro"]) == true { return nil }
-        return ClaudeUsageParser.planDescriptor(subscriptionType: type, rateLimitTier: ["max", "ultra"].contains(type) ? tier : nil)
+        if capacityPlan, tier == "default_claude_pro" { return nil }
+        return ClaudeUsageParser.planDescriptor(subscriptionType: type, rateLimitTier: capacityPlan ? tier : nil)
     }
 
     private static func boolean(_ value: Any?) -> Bool? {
