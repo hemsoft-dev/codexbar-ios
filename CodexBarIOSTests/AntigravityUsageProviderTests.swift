@@ -287,11 +287,92 @@ final class AntigravityUsageProviderTests: XCTestCase {
         for data in [Data("{}".utf8), Data("not JSON".utf8)] {
             XCTAssertThrowsError(try Self.result(data))
         }
-        let nonNumbers: [Any] = [true, "0.69"]
-        for invalid in nonNumbers {
+        let wrongTypes: [(String, Any)] = [
+            ("remainingFraction", true), ("remainingFraction", "0.69"), ("disabled", "false"),
+            ("window", 5), ("resetTime", 1_788_640_000),
+        ]
+        for (field, invalid) in wrongTypes {
             var buckets = Self.buckets()
-            buckets[0]["remainingFraction"] = invalid
-            XCTAssertThrowsError(try Self.result(Self.payload(buckets)))
+            buckets[0][field] = invalid
+            let result = try Self.result(Self.payload(buckets))
+            XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-weekly", "gemini-argon-wtu-weekly", "3p-5h", "3p-weekly"], field)
+            XCTAssertEqual(result.unavailableUsageMetrics["antigravity.gemini-5h"], "Unavailable", field)
+        }
+    }
+
+    /// Production groups can carry entries CodexBar doesn't use. Before #519's November fix, one of these
+    /// voided the whole production summary, so the daily backend answered without Gemini Models or Argon.
+    func testUnrelatedOrMalformedProductionEntriesDoNotHideGeminiPools() async throws {
+        let secrets = MemorySecretStore()
+        try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+        let hosts = LockedHosts()
+        var malformedOther = Self.buckets()
+        malformedOther[3]["remainingFraction"] = "0.8"
+        let production = try JSONSerialization.data(withJSONObject: ["groups": [
+            ["displayName": "Gemini Models", "buckets": Array(malformedOther.prefix(2))],
+            ["displayName": "Gemini 4 Argon", "buckets": [malformedOther[2]]],
+            ["displayName": "Claude and GPT models", "buckets": Array(malformedOther.suffix(2))],
+            ["displayName": "Image models"],
+            ["buckets": [["displayName": "Session", "window": "5h", "remainingFraction": 0.2], 42, NSNull()]],
+        ]])
+        let fixture = IsolatedTestURLSession { request in
+            hosts.append(request.url?.host)
+            let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
+            let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
+            return (try Self.response(request, status: 200), isDaily ? try Self.payload(otherModelsOnly) : production)
+        }
+        defer { fixture.invalidate() }
+        let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+        let result = try await provider.fetchUsage(for: Self.configuration)
+        XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com"])
+        XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly", "3p-weekly"])
+        XCTAssertEqual(result.unavailableUsageMetrics, ["antigravity.3p-5h": "Unavailable"])
+        XCTAssertEqual(result.usageMessages, ["Unavailable: Other models five-hour."])
+    }
+
+    func testDailyAnswerSaysWhyProductionWasNotUsedWhenGeminiPoolsAreMissing() async throws {
+        let full = Self.buckets().map { bucket -> [String: Any] in
+            var copy = bucket
+            copy["remainingFraction"] = 1
+            return copy
+        }
+        let unrelated = try Self.payload([["bucketId": "unrelated", "window": "weekly", "remainingFraction": 0.5]])
+        let cases: [(String, Int?, Data, String)] = [
+            ("503", 503, Data(), "returned HTTP 503"),
+            ("404", 404, Data(), "returned HTTP 404"),
+            ("transport", nil, Data(), "couldn't be reached"),
+            ("unreadable", 200, Data("not json".utf8), "sent a response CodexBar couldn't read"),
+            ("no pool", 200, unrelated, "reported no current pool"),
+            ("placeholder", 200, try Self.payload(full), "reported every pool full, which CodexBar ignores"),
+        ]
+        for (label, status, body, reason) in cases {
+            for dailyHasGemini in [false, true] {
+                let secrets = MemorySecretStore()
+                try secrets.saveSecret(
+                    #"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration)
+                )
+                let fixture = IsolatedTestURLSession { request in
+                    if request.url == AntigravityUsageProvider.dailyQuotaURL {
+                        let daily = Self.buckets().filter { dailyHasGemini || ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
+                        return (try Self.response(request, status: 200), try Self.payload(daily))
+                    }
+                    guard let status else { throw URLError(.notConnectedToInternet) }
+                    return (try Self.response(request, status: status), body)
+                }
+                defer { fixture.invalidate() }
+                let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+                let result = try await provider.fetchUsage(for: Self.configuration)
+                let note = "Google's main quota service \(reason). These quotas come from its backup service, "
+                    + "which can leave out Gemini Models and Argon."
+                if dailyHasGemini {
+                    XCTAssertEqual(result.bars.count, 5, label)
+                    XCTAssertTrue(result.usageMessages.isEmpty, label)
+                } else {
+                    XCTAssertEqual(result.bars.map(\.stableKey), ["3p-5h", "3p-weekly"], label)
+                    XCTAssertEqual(result.usageMessages.last, note, label)
+                    XCTAssertFalse(result.usageMessages.joined().contains("not json"), label)
+                }
+            }
         }
     }
 

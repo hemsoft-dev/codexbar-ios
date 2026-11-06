@@ -97,6 +97,12 @@ below. The daily response is then parsed as before. Sign-in rejections never mov
 daily backend. A usable production response is never filled in with daily
 pools, so omitted pools stay unavailable for that refresh.
 
+When the daily backend answers and Gemini Models or Argon is missing, the card
+adds one fixed sentence naming why production wasn't used: an HTTP status, no
+connection, an unreadable response, no current pool, or the all-full
+placeholder. It never includes response content. This tells a missing pool on
+the daily backend apart from a production problem without raw logging.
+
 A production response is treated as a placeholder when every supplied,
 enabled canonical pool reports `remainingFraction` 1. That is the September 5
 shape, which still included reset times. Such a response is never shown. If
@@ -118,7 +124,9 @@ windows, not translated display names or model lists:
 Percent used is `100 * (1 - remainingFraction)`. Thus `0` remaining is 100%
 used and `0.69` remaining is 31% used. Reset timestamps come only from supplied
 `resetTime` fields. Missing, disabled, duplicate, out-of-range, or expired
-buckets stay unavailable. Partial responses retain only proven current metrics
+buckets stay unavailable. So does a bucket with a wrongly typed field. Groups
+without buckets, buckets without an ID and other unrecognized entries are
+skipped; they no longer make the whole response unreadable. Partial responses retain only proven current metrics
 and identify the missing ones. A wholly unavailable response follows the app's
 existing failure and stale-data presentation.
 
