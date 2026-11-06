@@ -26,8 +26,9 @@ building, testing, or releasing the app.
 ### Fixed
 
 - Gemini Models and Argon quotas no longer disappear when Google's quota
-  response includes an entry CodexBar doesn't use. When they are still missing,
-  the Gemini card now says why Google's main quota service wasn't used.
+  response includes an entry CodexBar doesn't use. When Google's backup quota
+  service answers without them, the Gemini card now says why the main service
+  wasn't used.
   ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
 
 - Claude cards show the plan Claude reports for your organization, such as
