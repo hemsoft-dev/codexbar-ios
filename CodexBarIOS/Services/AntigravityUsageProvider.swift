@@ -24,6 +24,13 @@ final class AntigravityUsageProvider: UsageProvider {
     private enum FetchError: Error {
         case credential, response, changedCredential
         case http(Int)
+        case unusableProduction(AntigravityQuotaParser.ProductionIssue)
+    }
+
+    /// A summary and, when the daily backend answered, the fixed reason production was not used.
+    private struct Summary {
+        let data: Data
+        let productionNote: String?
     }
 
     private struct TokenResponse: Decodable {
@@ -66,9 +73,11 @@ final class AntigravityUsageProvider: UsageProvider {
         do {
             guard let stored = try secretStore.readSecret(account: keychainAccount) else { throw FetchError.credential }
             let credentials = try AntigravityCredentials.parse(stored)
-            let data = try await quotaData(credentials, account: keychainAccount, original: stored)
+            let summary = try await quotaData(credentials, account: keychainAccount, original: stored)
             try Task.checkCancellation()
-            return try AntigravityQuotaParser.result(from: data, configuration: configuration)
+            return try AntigravityQuotaParser.result(
+                from: summary.data, configuration: configuration, productionNote: summary.productionNote
+            )
         } catch {
             if error is CancellationError || (error as? URLError)?.code == .cancelled { throw CancellationError() }
             return failure(error, configuration: configuration)
@@ -103,13 +112,13 @@ final class AntigravityUsageProvider: UsageProvider {
         _ credentials: AntigravityCredentials,
         for configuration: ProviderAccountConfiguration
     ) async throws {
-        let data = try await summaryData(token: credentials.accessToken)
+        let data = try await summaryData(token: credentials.accessToken).data
         try Task.checkCancellation()
         let result = try AntigravityQuotaParser.result(from: data, configuration: configuration)
         guard result.failureMessage == nil, !result.bars.isEmpty else { throw FetchError.response }
     }
 
-    private func quotaData(_ credentials: AntigravityCredentials, account: String, original: String) async throws -> Data {
+    private func quotaData(_ credentials: AntigravityCredentials, account: String, original: String) async throws -> Summary {
         if credentials.expiry.map({ $0 <= Date().addingTimeInterval(60) }) == true {
             let renewed = try await refresh(credentials, account: account, original: original)
             return try await summaryData(token: renewed.accessToken)
@@ -125,24 +134,39 @@ final class AntigravityUsageProvider: UsageProvider {
     /// Ask the daily backend only when production is unreachable, errors for a reason other than sign-in,
     /// or answers without a usable metric or with the all-full placeholder.
     /// A usable production response is never mixed with daily pools.
-    private func summaryData(token: String) async throws -> Data {
+    private func summaryData(token: String) async throws -> Summary {
         do {
             let data = try await responseData(for: quotaRequest(token: token))
-            guard AntigravityQuotaParser.isUsableProductionSummary(data) else { throw FetchError.response }
-            return data
+            if let issue = AntigravityQuotaParser.productionIssue(data) { throw FetchError.unusableProduction(issue) }
+            return Summary(data: data, productionNote: nil)
         } catch let error where Self.allowsDailyFallback(after: error) {
             try Task.checkCancellation()
-            return try await responseData(for: quotaRequest(token: token, url: Self.dailyQuotaURL))
+            let data = try await responseData(for: quotaRequest(token: token, url: Self.dailyQuotaURL))
+            return Summary(data: data, productionNote: Self.productionNote(after: error))
         }
     }
 
     private static func allowsDailyFallback(after error: Error) -> Bool {
         switch error {
         case FetchError.http(let status): return ![400, 401, 403].contains(status)
-        case FetchError.response: return true
+        case FetchError.response, FetchError.unusableProduction: return true
         case let error as URLError: return error.code != .cancelled
         default: return false
         }
+    }
+
+    /// Fixed, content-free wording that tells which production branch sent the request to the daily backend.
+    static func productionNote(after error: Error) -> String {
+        let reason: String
+        switch error {
+        case FetchError.http(let status): reason = "returned HTTP \(status)"
+        case FetchError.unusableProduction(.noCurrentPool): reason = "reported no current pool"
+        case FetchError.unusableProduction(.allFullPlaceholder): reason = "reported every pool full, which CodexBar ignores"
+        case is URLError: reason = "couldn't be reached"
+        default: reason = "sent a response CodexBar couldn't read"
+        }
+        return "Google's main quota service \(reason). These quotas come from its backup service, "
+            + "which can leave out Gemini Models and Argon."
     }
 
     func quotaRequest(token: String, url: URL = quotaURL) -> URLRequest {
