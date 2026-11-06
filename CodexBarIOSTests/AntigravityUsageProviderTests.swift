@@ -308,13 +308,14 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let hosts = LockedHosts()
         var malformedOther = Self.buckets()
         malformedOther[3]["remainingFraction"] = "0.8"
-        let production = try JSONSerialization.data(withJSONObject: ["groups": [
+        let groups: [[String: Any]] = [
             ["displayName": "Gemini Models", "buckets": Array(malformedOther.prefix(2))],
             ["displayName": "Gemini 4 Argon", "buckets": [malformedOther[2]]],
             ["displayName": "Claude and GPT models", "buckets": Array(malformedOther.suffix(2))],
             ["displayName": "Image models"],
             ["buckets": [["displayName": "Session", "window": "5h", "remainingFraction": 0.2], 42, NSNull()]],
-        ]])
+        ]
+        let production = try JSONSerialization.data(withJSONObject: ["groups": groups])
         let fixture = IsolatedTestURLSession { request in
             hosts.append(request.url?.host)
             let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
