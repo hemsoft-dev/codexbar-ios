@@ -32,6 +32,7 @@ final class AntigravityUsageProvider: UsageProvider {
         case credential, response, changedCredential
         case http(Int)
         case unusablePrimary(AntigravityQuotaParser.PrimaryIssue)
+        case fallbackPlaceholder
     }
 
     /// A summary and, when the fallback backend answered, the fixed reason the primary one was not used.
@@ -208,6 +209,11 @@ final class AntigravityUsageProvider: UsageProvider {
         } catch let error where Self.allowsFallback(after: error) {
             try Task.checkCancellation()
             let data = try await responseData(for: quotaRequest(token: token, url: Self.fallbackQuotaURL, project: project))
+            // An all-full fallback is shown only when the primary backend also reported every pool full, so
+            // both agree the account is unused. After any other primary failure it is the placeholder shape
+            // production sent on September 5 and November 9, and full bars would claim usage nobody measured.
+            if AntigravityQuotaParser.isAllFullPlaceholder(data),
+               !Self.isPrimaryPlaceholder(error) { throw FetchError.fallbackPlaceholder }
             return Summary(data: data, fallbackNote: Self.fallbackNote(after: error, namedProject: project != nil))
         }
     }
@@ -220,6 +226,11 @@ final class AntigravityUsageProvider: UsageProvider {
             if error is CancellationError || (error as? URLError)?.code == .cancelled { throw error }
             return nil
         }
+    }
+
+    private static func isPrimaryPlaceholder(_ error: Error) -> Bool {
+        if case FetchError.unusablePrimary(.allFullPlaceholder) = error { return true }
+        return false
     }
 
     private static func allowsFallback(after error: Error) -> Bool {

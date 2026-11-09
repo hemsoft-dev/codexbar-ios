@@ -26,22 +26,19 @@ building, testing, or releasing the app.
 ### Fixed
 
 - Gemini Models and Argon quotas no longer disappear when Google's quota
-  response includes an entry CodexBar doesn't use. When Google's backup quota
-  service answers without them, the Gemini card now says why the main service
-  wasn't used.
+  response includes an entry CodexBar doesn't use.
   ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
 
 - The Gemini card now asks Google for coding quotas for your account's own
   project, the way other quota tools do, instead of a request without a
-  project. When Google's backup quota service still answers, its note says
-  whether the request named your project.
+  project.
   ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
 
-- The Gemini card now shows Gemini Models and Argon coding quotas with the
-  same numbers as the Antigravity CLI. Google returns those pools only to
-  Antigravity's own client, so CodexBar now identifies itself the way the CLI
-  does and reads the same quota service. If that service is unavailable, the
-  card says its numbers come from Google's other quota service.
+- The Gemini card now requests coding quotas the way the Antigravity CLI does,
+  from the same quota service, so Google can return the Gemini Models and Argon
+  pools it previously left out. When that service is unavailable and Google's
+  other quota service answers instead, the card says so and why, because those
+  numbers can differ from the CLI's.
   ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
 
 - Claude cards show the plan Claude reports for your organization, such as

@@ -762,6 +762,51 @@ final class AntigravityUsageProviderTests: XCTestCase {
         }
     }
 
+    /// SFL round 1 on #555: production, now the fallback, is the backend seen sending the all-full placeholder.
+    /// Its all-full answer is shown only when the primary backend also reported every pool full.
+    func testAllFullFallbackIsShownOnlyWhenThePrimaryAlsoReportedFull() async throws {
+        let full = try Self.payload(Self.buckets().map { bucket -> [String: Any] in
+            var copy = bucket
+            copy["remainingFraction"] = 1
+            return copy
+        })
+        let primaries: [(String, Int?, Data, Bool)] = [
+            ("placeholder", 200, full, true),
+            ("503", 503, Data(), false),
+            ("transport", nil, Data(), false),
+            ("no pool", 200, try Self.payload([["bucketId": "unrelated", "window": "weekly", "remainingFraction": 0.5]]), false),
+        ]
+        for (label, status, body, shown) in primaries {
+            let secrets = MemorySecretStore()
+            try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+            let hosts = LockedHosts()
+            let fixture = IsolatedTestURLSession { request in
+                hosts.append(request.url)
+                if request.url == AntigravityUsageProvider.fallbackQuotaURL {
+                    return (try Self.response(request, status: 200), full)
+                }
+                if request.url == AntigravityUsageProvider.planURL {
+                    return (try Self.response(request, status: 200), Data("{}".utf8))
+                }
+                guard let status else { throw URLError(.cannotConnectToHost) }
+                return (try Self.response(request, status: status), body)
+            }
+            defer { fixture.invalidate() }
+            let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+            let result = try await provider.fetchUsage(for: Self.configuration)
+            XCTAssertEqual(hosts.values, ["daily-cloudcode-pa.googleapis.com", "cloudcode-pa.googleapis.com"], label)
+            if shown {
+                XCTAssertEqual(result.bars.count, 5, label)
+                XCTAssertTrue(result.bars.allSatisfy { $0.used == 0 }, label)
+                XCTAssertNil(result.failureMessage, label)
+            } else {
+                XCTAssertTrue(result.bars.isEmpty, label)
+                XCTAssertNotNil(result.failureMessage, label)
+                XCTAssertEqual(result.recoveryAction, .retryRefresh, label)
+            }
+        }
+    }
+
     func testUnusablePrimarySuccessUsesFallbackBackend() async throws {
         let expired = Self.buckets().map { bucket -> [String: Any] in
             var stale = bucket

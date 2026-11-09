@@ -125,8 +125,11 @@ A daily response is treated as a placeholder when every supplied, enabled
 canonical pool reports `remainingFraction` 1. That is the September 5 shape,
 which still included reset times. Such a response is never shown. If the
 fallback request then fails, the account shows the normal unavailable state
-rather than full bars. A genuinely unused account therefore reads from the
-production backend.
+rather than full bars. An all-full fallback answer is shown only when the
+daily backend also reported every pool full, so both backends agree the
+account is unused. After any other daily failure, an all-full production answer
+is treated as the placeholder and the account shows the normal unavailable
+state.
 
 The response contains `groups[].buckets[]`. The parser uses bucket IDs and
 windows, not translated display names or model lists:
