@@ -6,12 +6,19 @@ combined cards omit plan pills, including unavailable-plan placeholders.
 
 ## Source and mapping
 
-After the existing Gemini Apps and coding quota refresh, CodexBar makes an
-optional `loadCodeAssist` request to
-`https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist` using that
-Gemini account's saved coding OAuth grant. The request has an eight-second
-request timeout and never sends the Gemini browser cookies. Rejected or
-unavailable metadata does not turn valid usage into a failure.
+Before each coding quota request, CodexBar makes a `loadCodeAssist` request
+to `https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist` using that
+Gemini account's saved coding OAuth grant, renewed first when it has expired.
+The same answer names the account's Cloud Code project for the quota request
+(see [ANTIGRAVITY-SETUP.md](ANTIGRAVITY-SETUP.md#quota-contract)) and supplies
+the subscription read below, so there is no separate plan lookup. A refresh
+normally makes one lookup; when Google rejects the saved token (HTTP 401) and
+CodexBar renews it, the lookup runs again with the renewed token, and the plan
+comes from that latest answer. The request has an
+eight-second request timeout and never sends the Gemini browser cookies.
+Rejected or unavailable metadata does not turn valid usage into a failure, and
+a failed quota read does not hide a plan the lookup did return. The plan is
+dropped when the account's saved coding credential changed during the refresh.
 
 Google's [LoadCodeAssistResponse definition](https://github.com/google-gemini/gemini-cli/blob/9b6e0265d16bbd29ca51e33c9e0c01dc4cec5e83/packages/core/src/code_assist/types.ts)
 exposes `paidTier.name` separately from `currentTier` and `allowedTiers`.

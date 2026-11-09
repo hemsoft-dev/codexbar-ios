@@ -31,6 +31,12 @@ building, testing, or releasing the app.
   wasn't used.
   ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
 
+- The Gemini card now asks Google for coding quotas for your account's own
+  project, the way other quota tools do, instead of a request without a
+  project. When Google's backup quota service still answers, its note says
+  whether the request named your project.
+  ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
+
 - Claude cards show the plan Claude reports for your organization, such as
   Ultra, even when older account flags disagree. Previously they could show
   "Plan unavailable" instead.
