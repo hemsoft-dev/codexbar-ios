@@ -82,12 +82,21 @@ this remains pending and is not an implementation prerequisite.
 
 ## Quota contract
 
-The request is an authenticated JSON `POST` with body `{}` to the production
-backend first:
+Each refresh first sends one authenticated `loadCodeAssist` request
+(`https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist`, eight-second
+timeout) with the same coding token. Its `cloudaicompanionProject` names the
+account's Cloud Code project; the same answer also supplies the optional Google
+AI plan described in [GOOGLE-PLANS.md](GOOGLE-PLANS.md). The quota request is an
+authenticated JSON `POST` with body `{"project": "<that project>"}`, or `{}`
+when the lookup fails or names no usable project, to the production backend
+first:
 
 ```text
 https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary
 ```
+
+The daily backend gets the same body. A failed lookup never fails the refresh
+and never changes which backend answers.
 
 The daily backend, `daily-cloudcode-pa.googleapis.com`, is used only when the
 production request fails with a transport error or an HTTP status other than
@@ -100,8 +109,11 @@ pools, so omitted pools stay unavailable for that refresh.
 When the daily backend answers and Gemini Models or Argon is missing, the card
 adds one fixed sentence naming why production wasn't used: an HTTP status, no
 connection, an unreadable response, no current pool, or the all-full
-placeholder. It never includes response content. This tells a missing pool on
-the daily backend apart from a production problem without raw logging.
+placeholder. It starts with "When asked for this account's project" or "When
+asked without a project", so a phone check shows whether the request named
+the project. It never includes response content or the project ID. This tells
+a missing pool on the daily backend apart from a production problem without
+raw logging.
 
 A production response is treated as a placeholder when every supplied,
 enabled canonical pool reports `remainingFraction` 1. That is the September 5
@@ -155,9 +167,21 @@ command page](https://www.antigravity.google/docs/cli/commands/usage) still
 documents only the interactive panel. Live comparison of production values
 against the CLI on a real account remains pending.
 
+On November 9, 2026 a phone build with that order still showed Gemini Models
+and Argon unavailable: production answered every pool full for the app's
+project-less `{}` request while the CLI read Gemini weekly 76% left
+([#519 comment](https://github.com/hemsoft-dev/codexbar-ios/issues/519#issuecomment-6747637956)).
+OpenUsage reads the account's project from `loadCodeAssist` and names it in
+the quota request (robinebers/openusage commit `61333460`,
+`AntigravityProjectQuotaTests`), so CodexBar now does the same. That the
+project-less request is the cause is a hypothesis until a phone check
+confirms it. If it doesn't, the next lever is OpenUsage's Antigravity client
+User-Agent and `ideType: ANTIGRAVITY` metadata, which CodexBar does not send.
+
 Requests reject redirects, disable automatic cookies and caching, and never
 include raw server errors in user-facing messages. Quota requests go only to
-the two Cloud Code backends above; renewal credentials go only to
+the two Cloud Code backends above; the project lookup goes only to production's
+`loadCodeAssist`; renewal credentials go only to
 `oauth2.googleapis.com/token`.
 
 ## Live verification follow-up for issue #319

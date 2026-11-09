@@ -1096,14 +1096,20 @@ final class GoogleAIPlanTests: XCTestCase {
     func testOptionalLookupUsesOnlyAccountCodingGrantAndRejectsReplacement() async throws {
         let secrets = MemorySecretStore()
         let key = ProviderConfigurationStore.geminiCodingKeychainAccount(accountID: "personal")
+        let personal = ProviderAccountConfiguration(id: "personal", providerID: .gemini, authMethod: .browserSession)
         try secrets.saveSecret(#"{"access_token":"personal"}"#, account: key)
         try secrets.saveSecret(#"{"access_token":"other"}"#,
                                account: ProviderConfigurationStore.geminiCodingKeychainAccount(accountID: "other"))
+        let lookups = LockedCounter()
         let fixture = IsolatedTestURLSession { request in
-            XCTAssertEqual(request.url, AntigravityUsageProvider.planURL)
             XCTAssertEqual(request.httpMethod, "POST")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer personal")
             XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
+            guard request.url == AntigravityUsageProvider.planURL else {
+                XCTAssertEqual(request.url, AntigravityUsageProvider.quotaURL)
+                return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Self.codingQuota)
+            }
+            lookups.increment()
             XCTAssertEqual(request.timeoutInterval, 8)
             let body = try XCTUnwrap(requestBodyData(from: request))
             let root = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
@@ -1118,28 +1124,72 @@ final class GoogleAIPlanTests: XCTestCase {
         }
         defer { fixture.invalidate() }
         let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
-        let plan = try await provider.googlePlan(keychainAccount: key)
-        XCTAssertEqual(plan?.displayLabel, "Google AI Pro (5 TB)")
+        let usage = try await provider.fetchCodingUsage(for: personal, keychainAccount: key)
+        XCTAssertEqual(usage.plan?.displayLabel, "Google AI Pro (5 TB)")
+        XCTAssertNil(usage.result.failureMessage)
+        XCTAssertEqual(lookups.value, 1)
         try secrets.saveSecret("yes", account: "replace")
-        let replaced = try await provider.googlePlan(keychainAccount: key)
-        XCTAssertNil(replaced)
-        let missing = try await provider.googlePlan(keychainAccount: "not-configured")
-        XCTAssertNil(missing)
+        let replaced = try await provider.fetchCodingUsage(for: personal, keychainAccount: key)
+        XCTAssertNil(replaced.plan)
+        let missing = try await provider.fetchCodingUsage(for: personal, keychainAccount: "not-configured")
+        XCTAssertNil(missing.plan)
+        XCTAssertNotNil(missing.result.failureMessage)
+        XCTAssertEqual(lookups.value, 2)
     }
 
     func testOptionalLookupFailureDoesNotBecomeFree() async throws {
+        let personal = ProviderAccountConfiguration(id: "personal", providerID: .gemini, authMethod: .browserSession)
         for status in [401, 403, 503, 200] {
             let secrets = MemorySecretStore()
             try secrets.saveSecret(#"{"access_token":"personal"}"#, account: "coding")
             let fixture = IsolatedTestURLSession { request in
-                (HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!, Data("{}".utf8))
+                let lookup = request.url == AntigravityUsageProvider.planURL
+                return (HTTPURLResponse(url: request.url!, statusCode: lookup ? status : 200, httpVersion: nil, headerFields: nil)!,
+                        lookup ? Data("{}".utf8) : Self.codingQuota)
             }
             defer { fixture.invalidate() }
             let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
-            let plan = try await provider.googlePlan(keychainAccount: "coding")
-            XCTAssertNil(plan)
+            let usage = try await provider.fetchCodingUsage(for: personal, keychainAccount: "coding")
+            XCTAssertNil(usage.plan, "\(status)")
+            XCTAssertNil(usage.result.failureMessage, "\(status)")
         }
     }
+
+    /// The Gemini card makes one `loadCodeAssist` lookup per refresh: it names the quota project and the plan.
+    func testGeminiRefreshUsesOneLookupForProjectAndPlan() async throws {
+        let secrets = MemorySecretStore()
+        let account = ProviderAccountConfiguration(id: "personal", providerID: .gemini, authMethod: .browserSession)
+        try secrets.saveSecret("__Secure-1PSID=personal", account: ProviderConfigurationStore.keychainAccount(for: account))
+        try secrets.saveSecret(#"{"access_token":"personal"}"#,
+                               account: ProviderConfigurationStore.geminiCodingKeychainAccount(accountID: account.id))
+        let lookups = LockedCounter()
+        let fixture = IsolatedTestURLSession { request in
+            let body: Data
+            if request.url == AntigravityUsageProvider.planURL {
+                lookups.increment()
+                body = Data(#"{"cloudaicompanionProject":"fake-project-123","paidTier":{"name":"Google AI Pro"}}"#.utf8)
+            } else if request.url == AntigravityUsageProvider.quotaURL {
+                let sent = try XCTUnwrap(requestBodyData(from: request))
+                XCTAssertEqual(try JSONSerialization.jsonObject(with: sent) as? [String: String], ["project": "fake-project-123"])
+                body = Self.codingQuota
+            } else if request.url?.path == "/usage" {
+                body = Data(#"<script>window.WIZ_global_data={"SNlM0e":"csrf"};</script>"#.utf8)
+            } else {
+                body = try makeGeminiBatchResponse([2, [[2_400, 0.12, 1, [[1_900_000_000, 0]]]], false])
+            }
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
+        }
+        defer { fixture.invalidate() }
+        let provider = GeminiUsageProvider(secretStore: secrets, session: fixture.session)
+        let result = try await provider.fetchUsage(for: account)
+        XCTAssertEqual(result.plan?.displayLabel, "Google AI Pro")
+        XCTAssertTrue(result.bars.contains { $0.stableKey == "gemini-weekly" })
+        XCTAssertEqual(lookups.value, 1)
+    }
+
+    private static let codingQuota = Data(
+        #"{"groups":[{"buckets":[{"bucketId":"gemini-weekly","window":"weekly","remainingFraction":0.5,"resetTime":"2030-09-11T16:22:20Z"}]}]}"#.utf8
+    )
 
     @MainActor
     func testCombinedPlansStayAccountBoundAndClearAfterFailedLookupOrReconnect() async throws {

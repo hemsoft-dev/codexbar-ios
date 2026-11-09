@@ -317,7 +317,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         ]
         let production = try JSONSerialization.data(withJSONObject: ["groups": groups])
         let fixture = IsolatedTestURLSession { request in
-            hosts.append(request.url?.host)
+            hosts.append(request.url)
             let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
             let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
             return (try Self.response(request, status: 200), isDaily ? try Self.payload(otherModelsOnly) : production)
@@ -347,12 +347,18 @@ final class AntigravityUsageProviderTests: XCTestCase {
             ("placeholder", 200, try Self.payload(full), "reported every pool full, which CodexBar ignores"),
         ]
         for (label, status, body, reason) in cases {
-            for dailyHasGemini in [false, true] {
+            for (dailyHasGemini, named) in [(false, false), (false, true), (true, false), (true, true)] {
                 let secrets = MemorySecretStore()
                 try secrets.saveSecret(
                     #"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration)
                 )
                 let fixture = IsolatedTestURLSession { request in
+                    if request.url == AntigravityUsageProvider.planURL {
+                        return named
+                            ? (try Self.response(request, status: 200), Self.codeAssist)
+                            : (try Self.response(request, status: 503), Data())
+                    }
+                    XCTAssertEqual(Self.requestedProject(request), named ? "fake-project-123" : nil, label)
                     if request.url == AntigravityUsageProvider.dailyQuotaURL {
                         let daily = Self.buckets().filter { dailyHasGemini || ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
                         return (try Self.response(request, status: 200), try Self.payload(daily))
@@ -363,7 +369,8 @@ final class AntigravityUsageProviderTests: XCTestCase {
                 defer { fixture.invalidate() }
                 let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
                 let result = try await provider.fetchUsage(for: Self.configuration)
-                let note = "Google's main quota service \(reason). These quotas come from its backup service, "
+                let scope = named ? "When asked for this account's project" : "When asked without a project"
+                let note = "\(scope), Google's main quota service \(reason). These quotas come from its backup service, "
                     + "which can leave out Gemini Models and Argon."
                 if dailyHasGemini {
                     XCTAssertEqual(result.bars.count, 5, label)
@@ -372,6 +379,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
                     XCTAssertEqual(result.bars.map(\.stableKey), ["3p-5h", "3p-weekly"], label)
                     XCTAssertEqual(result.usageMessages.last, note, label)
                     XCTAssertFalse(result.usageMessages.joined().contains("not json"), label)
+                    XCTAssertFalse(result.usageMessages.joined().contains("fake-project-123"), label)
                 }
             }
         }
@@ -448,11 +456,14 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let secrets = MemorySecretStore()
         try secrets.saveSecret(#"{"access_token":"account-one"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
         let fixture = IsolatedTestURLSession { request in
-            XCTAssertEqual(request.url, AntigravityUsageProvider.quotaURL)
             XCTAssertEqual(request.url?.host, "cloudcode-pa.googleapis.com")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer account-one")
             XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
             XCTAssertEqual(request.httpMethod, "POST")
+            if request.url == AntigravityUsageProvider.planURL {
+                return (try Self.response(request, status: 200), Data("{}".utf8))
+            }
+            XCTAssertEqual(request.url, AntigravityUsageProvider.quotaURL)
             XCTAssertEqual(requestBodyData(from: request), Data("{}".utf8))
             return (try Self.response(request, status: 200), try Self.payload())
         }
@@ -467,12 +478,97 @@ final class AntigravityUsageProviderTests: XCTestCase {
         XCTAssertTrue(missing.bars.isEmpty)
     }
 
+    /// #519, November 9: production answered every pool full for the app's project-less `{}` request while the
+    /// CLI read Gemini weekly 76% left. OpenUsage asks for the project `loadCodeAssist` names; so does CodexBar.
+    func testQuotaRequestNamesTheAccountsProjectFromCodeAssist() async throws {
+        let secrets = MemorySecretStore()
+        try secrets.saveSecret(#"{"access_token":"account-one"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+        let urls = LockedURLs()
+        let fixture = IsolatedTestURLSession { request in
+            urls.append(request.url)
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer account-one")
+            if request.url == AntigravityUsageProvider.planURL {
+                XCTAssertEqual(request.timeoutInterval, 8)
+                let body = try XCTUnwrap(requestBodyData(from: request))
+                let root = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+                XCTAssertEqual((root["metadata"] as? [String: String])?["ideType"], "IDE_UNSPECIFIED")
+                return (try Self.response(request, status: 200), Self.codeAssist)
+            }
+            let body = try XCTUnwrap(requestBodyData(from: request))
+            let root = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: String])
+            XCTAssertEqual(root, ["project": "fake-project-123"])
+            // Production answers only for the account's project, as OpenUsage's fixture does.
+            guard root["project"] == "fake-project-123" else {
+                return (try Self.response(request, status: 200), try Self.septemberFifthPlaceholder())
+            }
+            return (try Self.response(request, status: 200), try Self.payload())
+        }
+        defer { fixture.invalidate() }
+        let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+        let result = try await provider.fetchUsage(for: Self.configuration)
+        XCTAssertEqual(urls.values, [AntigravityUsageProvider.planURL, AntigravityUsageProvider.quotaURL])
+        XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly", "3p-5h", "3p-weekly"])
+        XCTAssertTrue(result.usageMessages.isEmpty)
+    }
+
+    func testMissingOrUnreadableProjectKeepsTheEmptyQuotaRequest() async throws {
+        let lookups: [(String, Int?, Data)] = [
+            ("503", 503, Data()),
+            ("401", 401, Data()),
+            ("transport", nil, Data()),
+            ("no project", 200, Data(#"{"paidTier":{"name":"Google AI Pro"}}"#.utf8)),
+            ("empty", 200, Data(#"{"cloudaicompanionProject":""}"#.utf8)),
+            ("whitespace", 200, Data(#"{"cloudaicompanionProject":"fake project"}"#.utf8)),
+            ("number", 200, Data(#"{"cloudaicompanionProject":123}"#.utf8)),
+            ("object without id", 200, Data(#"{"cloudaicompanionProject":{"name":"fake"}}"#.utf8)),
+            ("malformed", 200, Data("not json".utf8)),
+        ]
+        for (label, status, body) in lookups {
+            let secrets = MemorySecretStore()
+            try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+            let hosts = LockedHosts()
+            let fixture = IsolatedTestURLSession { request in
+                hosts.append(request.url)
+                if request.url == AntigravityUsageProvider.planURL {
+                    guard let status else { throw URLError(.cannotConnectToHost) }
+                    return (try Self.response(request, status: status), body)
+                }
+                XCTAssertEqual(requestBodyData(from: request), Data("{}".utf8), label)
+                return (try Self.response(request, status: 200), try Self.payload())
+            }
+            defer { fixture.invalidate() }
+            let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+            let result = try await provider.fetchUsage(for: Self.configuration)
+            XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com"], label)
+            XCTAssertEqual(result.bars.count, 5, label)
+            XCTAssertNil(result.failureMessage, label)
+        }
+    }
+
+    func testCompanionProjectAcceptsOnlyAnIdentifier() {
+        func project(_ json: String) -> String? { AntigravityUsageProvider.companionProject(from: Data(json.utf8)) }
+        XCTAssertEqual(project(#"{"cloudaicompanionProject":"fake-project-123"}"#), "fake-project-123")
+        XCTAssertEqual(project(#"{"cloudaicompanionProject":{"id":"fake-project-456","name":"fake"}}"#), "fake-project-456")
+        XCTAssertNil(project(#"{"cloudaicompanionProject":null}"#))
+        XCTAssertNil(project(#"{"cloudaicompanionProject":"line\nbreak"}"#))
+        XCTAssertNil(project("{\"cloudaicompanionProject\":\"\(String(repeating: "a", count: 257))\"}"))
+        XCTAssertNil(project(#"["fake-project-123"]"#))
+    }
+
+    func testProjectRequestBodyIsJSONEncoded() throws {
+        let provider = AntigravityUsageProvider(secretStore: MemorySecretStore(), sessionConfiguration: .ephemeral)
+        let named = provider.quotaRequest(token: "t", project: #"fake"project"#)
+        let root = try JSONSerialization.jsonObject(with: try XCTUnwrap(named.httpBody)) as? [String: String]
+        XCTAssertEqual(root, ["project": #"fake"project"#])
+        XCTAssertEqual(provider.quotaRequest(token: "t").httpBody, Data("{}".utf8))
+    }
+
     func testProductionGeminiPoolsAreUsedWithoutAskingDailyBackend() async throws {
         let secrets = MemorySecretStore()
         try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
         let hosts = LockedHosts()
         let fixture = IsolatedTestURLSession { request in
-            hosts.append(request.url?.host)
+            hosts.append(request.url)
             let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
             let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
             return (try Self.response(request, status: 200), try Self.payload(isDaily ? otherModelsOnly : Self.buckets()))
@@ -490,7 +586,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
         let hosts = LockedHosts()
         let fixture = IsolatedTestURLSession { request in
-            hosts.append(request.url?.host)
+            hosts.append(request.url)
             let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
             let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
             return (try Self.response(request, status: 200), try Self.payload(isDaily ? Self.buckets() : otherModelsOnly))
@@ -523,7 +619,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
         let hosts = LockedHosts()
         let fixture = IsolatedTestURLSession { request in
-            hosts.append(request.url?.host)
+            hosts.append(request.url)
             guard request.url == AntigravityUsageProvider.dailyQuotaURL else {
                 return (try Self.response(request, status: 200), try Self.septemberFifthPlaceholder())
             }
@@ -577,7 +673,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
             try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
             let hosts = LockedHosts()
             let fixture = IsolatedTestURLSession { request in
-                hosts.append(request.url?.host)
+                hosts.append(request.url)
                 let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
                 return (try Self.response(request, status: 200), isDaily ? try Self.payload() : body)
             }
@@ -617,7 +713,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
             try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
             let hosts = LockedHosts()
             let fixture = IsolatedTestURLSession { request in
-                hosts.append(request.url?.host)
+                hosts.append(request.url)
                 if request.url == AntigravityUsageProvider.dailyQuotaURL {
                     XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer test")
                     XCTAssertEqual(requestBodyData(from: request), Data("{}".utf8))
@@ -1177,6 +1273,18 @@ final class AntigravityUsageProviderTests: XCTestCase {
 
     private static let expiredCredential = #"{"access_token":"old","refresh_token":"refresh","client_id":"client","client_secret":"secret+value","expiry":"2020-01-01T00:00:00Z"}"#
 
+    /// `loadCodeAssist` shape from OpenUsage's fixture (robinebers/openusage 61333460); values are fake.
+    private static let codeAssist = Data(#"""
+    {"allowedTiers":[{"id":"free-tier","isDefault":true,"name":"Antigravity Starter Quota"}],
+     "cloudaicompanionProject":"fake-project-123","currentTier":{"id":"free-tier","name":"Antigravity Starter Quota"}}
+    """#.utf8)
+
+    private static func requestedProject(_ request: URLRequest) -> String? {
+        guard let body = requestBodyData(from: request),
+              let root = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else { return nil }
+        return root["project"] as? String
+    }
+
     private static func response(_ request: URLRequest, status: Int) throws -> HTTPURLResponse {
         try XCTUnwrap(HTTPURLResponse(url: XCTUnwrap(request.url), statusCode: status, httpVersion: nil, headerFields: nil))
     }
@@ -1196,12 +1304,27 @@ final class AntigravityUsageProviderTests: XCTestCase {
     }
 }
 
+private final class LockedURLs: @unchecked Sendable {
+    private let lock = NSLock()
+    private var urls: [URL?] = []
+
+    func append(_ url: URL?) {
+        lock.withLock { urls.append(url) }
+    }
+
+    var values: [URL?] {
+        lock.withLock { urls }
+    }
+}
+
+/// Hosts of quota requests only; the `loadCodeAssist` project lookup has its own assertions.
 private final class LockedHosts: @unchecked Sendable {
     private let lock = NSLock()
     private var hosts: [String] = []
 
-    func append(_ host: String?) {
-        lock.withLock { hosts.append(host ?? "") }
+    func append(_ url: URL?) {
+        guard url != AntigravityUsageProvider.planURL else { return }
+        lock.withLock { hosts.append(url?.host ?? "") }
     }
 
     var values: [String] {

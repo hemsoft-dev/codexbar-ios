@@ -192,19 +192,17 @@ public final class GeminiUsageProvider: UsageProvider {
     public func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
         let initialIdentity = credentialIdentity(for: configuration)
         async let apps = fetchAppsUsage(for: configuration)
-        async let coding = codingProvider.fetchUsage(
+        // One loadCodeAssist lookup names the quota project and supplies the optional subscription.
+        async let coding = codingProvider.fetchCodingUsage(
             for: configuration,
             keychainAccount: ProviderConfigurationStore.geminiCodingKeychainAccount(accountID: configuration.id)
         )
         let sources = try await (apps, coding)
         try Task.checkCancellation()
-        let plan = try await codingProvider.googlePlan(
-            keychainAccount: ProviderConfigurationStore.geminiCodingKeychainAccount(accountID: configuration.id)
-        )
         let unchanged = initialIdentity != nil && initialIdentity == credentialIdentity(for: configuration)
         return Self.combinedResult(
-            apps: sources.0, coding: sources.1, configuration: configuration,
-            plan: unchanged ? plan : nil
+            apps: sources.0, coding: sources.1.result, configuration: configuration,
+            plan: unchanged ? sources.1.plan : nil
         )
     }
 

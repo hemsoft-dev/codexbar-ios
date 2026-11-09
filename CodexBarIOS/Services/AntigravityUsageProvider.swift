@@ -33,6 +33,21 @@ final class AntigravityUsageProvider: UsageProvider {
         let productionNote: String?
     }
 
+    /// One refresh's latest `loadCodeAssist` answer and the saved credential string it was read with.
+    /// It outlives a failed quota read, so the optional subscription still shows when quotas don't.
+    private final class CodeAssistLookup {
+        var data: Data?
+        var credential: String
+
+        init(credential: String) { self.credential = credential }
+    }
+
+    /// Coding quotas plus the subscription read from the same `loadCodeAssist` answer that named the project.
+    struct CodingUsage {
+        let result: ProviderUsageResult
+        let plan: ProviderPlanDescriptor?
+    }
+
     private struct TokenResponse: Decodable {
         let accessToken: String
         let refreshToken: String?
@@ -70,41 +85,65 @@ final class AntigravityUsageProvider: UsageProvider {
         for configuration: ProviderAccountConfiguration,
         keychainAccount: String
     ) async throws -> ProviderUsageResult {
+        try await fetchCodingUsage(for: configuration, keychainAccount: keychainAccount).result
+    }
+
+    /// Coding quotas and the optional subscription from one `loadCodeAssist` lookup.
+    /// Generic Code Assist tiers do not establish a Google One subscription, and the plan is dropped
+    /// when this account's saved coding credential changed while the lookup ran.
+    func fetchCodingUsage(
+        for configuration: ProviderAccountConfiguration,
+        keychainAccount: String
+    ) async throws -> CodingUsage {
+        var lookup: CodeAssistLookup?
         do {
             guard let stored = try secretStore.readSecret(account: keychainAccount) else { throw FetchError.credential }
             let credentials = try AntigravityCredentials.parse(stored)
-            let summary = try await quotaData(credentials, account: keychainAccount, original: stored)
+            let current = CodeAssistLookup(credential: stored)
+            lookup = current
+            let summary = try await quotaData(credentials, account: keychainAccount, original: stored, lookup: current)
             try Task.checkCancellation()
-            return try AntigravityQuotaParser.result(
+            let result = try AntigravityQuotaParser.result(
                 from: summary.data, configuration: configuration, productionNote: summary.productionNote
             )
+            return CodingUsage(result: result, plan: plan(from: lookup, keychainAccount: keychainAccount))
         } catch {
             if error is CancellationError || (error as? URLError)?.code == .cancelled { throw CancellationError() }
-            return failure(error, configuration: configuration)
+            return CodingUsage(
+                result: failure(error, configuration: configuration),
+                plan: plan(from: lookup, keychainAccount: keychainAccount)
+            )
         }
+    }
+
+    private func plan(from lookup: CodeAssistLookup?, keychainAccount: String) -> ProviderPlanDescriptor? {
+        guard let lookup, let data = lookup.data,
+              (try? secretStore.readSecret(account: keychainAccount)) == lookup.credential else { return nil }
+        return GoogleAIPlanParser.parse(data)
     }
 
     static let planURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist")!
 
-    /// Optional subscription lookup using this account's existing coding OAuth grant.
-    /// Generic Code Assist tiers do not establish a Google One subscription.
-    func googlePlan(keychainAccount: String) async throws -> ProviderPlanDescriptor? {
-        do {
-            guard let stored = try secretStore.readSecret(account: keychainAccount),
-                  let credential = try? AntigravityCredentials.parse(stored),
-                  credential.expiry.map({ $0 > Date() }) ?? true else { return nil }
-            var request = quotaRequest(token: credential.accessToken)
-            request.url = Self.planURL
-            request.timeoutInterval = 8
-            request.httpBody = Data(#"{"metadata":{"ideType":"IDE_UNSPECIFIED","ideName":"CodexBar iOS","pluginType":"GEMINI"}}"#.utf8)
-            let data = try await responseData(for: request)
-            try Task.checkCancellation()
-            guard try secretStore.readSecret(account: keychainAccount) == stored else { return nil }
-            return GoogleAIPlanParser.parse(data)
-        } catch {
-            if error is CancellationError || (error as? URLError)?.code == .cancelled { throw CancellationError() }
-            return nil
-        }
+    /// `loadCodeAssist` with this account's coding grant. It names the account's Cloud Code project and,
+    /// optionally, its subscription.
+    func codeAssistRequest(token: String) -> URLRequest {
+        var request = quotaRequest(token: token, url: Self.planURL)
+        request.timeoutInterval = 8
+        request.httpBody = Data(#"{"metadata":{"ideType":"IDE_UNSPECIFIED","ideName":"CodexBar iOS","pluginType":"GEMINI"}}"#.utf8)
+        return request
+    }
+
+    /// The account's Cloud Code project from a `loadCodeAssist` answer: a string, or an object with a string `id`.
+    /// Anything else means no project, and the quota request stays `{}`.
+    static func companionProject(from data: Data) -> String? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        let value = root["cloudaicompanionProject"]
+        guard let id = (value as? String) ?? ((value as? [String: Any])?["id"] as? String),
+              (1...256).contains(id.count),
+              !id.unicodeScalars.contains(where: {
+                  CharacterSet.whitespacesAndNewlines.contains($0) || CharacterSet.controlCharacters.contains($0)
+              }) else { return nil }
+        return id
     }
 
     /// Validate a newly issued token without reading or replacing the saved session.
@@ -112,37 +151,57 @@ final class AntigravityUsageProvider: UsageProvider {
         _ credentials: AntigravityCredentials,
         for configuration: ProviderAccountConfiguration
     ) async throws {
-        let data = try await summaryData(token: credentials.accessToken).data
+        let data = try await summaryData(token: credentials.accessToken, lookup: CodeAssistLookup(credential: "")).data
         try Task.checkCancellation()
         let result = try AntigravityQuotaParser.result(from: data, configuration: configuration)
         guard result.failureMessage == nil, !result.bars.isEmpty else { throw FetchError.response }
     }
 
-    private func quotaData(_ credentials: AntigravityCredentials, account: String, original: String) async throws -> Summary {
+    private func quotaData(
+        _ credentials: AntigravityCredentials,
+        account: String,
+        original: String,
+        lookup: CodeAssistLookup
+    ) async throws -> Summary {
         if credentials.expiry.map({ $0 <= Date().addingTimeInterval(60) }) == true {
             let renewed = try await refresh(credentials, account: account, original: original)
-            return try await summaryData(token: renewed.accessToken)
+            lookup.credential = renewed.encoded
+            return try await summaryData(token: renewed.credentials.accessToken, lookup: lookup)
         }
         do {
-            return try await summaryData(token: credentials.accessToken)
+            return try await summaryData(token: credentials.accessToken, lookup: lookup)
         } catch FetchError.http(401) where credentials.canRefresh {
             let renewed = try await refresh(credentials, account: account, original: original)
-            return try await summaryData(token: renewed.accessToken)
+            lookup.credential = renewed.encoded
+            return try await summaryData(token: renewed.credentials.accessToken, lookup: lookup)
         }
     }
 
     /// Ask the daily backend only when production is unreachable, errors for a reason other than sign-in,
     /// or answers without a usable metric or with the all-full placeholder.
     /// A usable production response is never mixed with daily pools.
-    private func summaryData(token: String) async throws -> Summary {
+    /// Both backends are asked for the account's own project when `loadCodeAssist` names one.
+    private func summaryData(token: String, lookup: CodeAssistLookup) async throws -> Summary {
+        lookup.data = try await codeAssistData(token: token)
+        let project = lookup.data.flatMap(Self.companionProject)
         do {
-            let data = try await responseData(for: quotaRequest(token: token))
+            let data = try await responseData(for: quotaRequest(token: token, project: project))
             if let issue = AntigravityQuotaParser.productionIssue(data) { throw FetchError.unusableProduction(issue) }
             return Summary(data: data, productionNote: nil)
         } catch let error where Self.allowsDailyFallback(after: error) {
             try Task.checkCancellation()
-            let data = try await responseData(for: quotaRequest(token: token, url: Self.dailyQuotaURL))
-            return Summary(data: data, productionNote: Self.productionNote(after: error))
+            let data = try await responseData(for: quotaRequest(token: token, url: Self.dailyQuotaURL, project: project))
+            return Summary(data: data, productionNote: Self.productionNote(after: error, namedProject: project != nil))
+        }
+    }
+
+    /// A failed or unreadable lookup only leaves the project out; cancellation still stops the refresh.
+    private func codeAssistData(token: String) async throws -> Data? {
+        do {
+            return try await responseData(for: codeAssistRequest(token: token))
+        } catch {
+            if error is CancellationError || (error as? URLError)?.code == .cancelled { throw error }
+            return nil
         }
     }
 
@@ -155,8 +214,10 @@ final class AntigravityUsageProvider: UsageProvider {
         }
     }
 
-    /// Fixed, content-free wording that tells which production branch sent the request to the daily backend.
-    static func productionNote(after error: Error) -> String {
+    /// Fixed, content-free wording that tells which production branch sent the request to the daily backend
+    /// and whether that request named the account's project. It never includes the project ID.
+    static func productionNote(after error: Error, namedProject: Bool) -> String {
+        let scope = namedProject ? "When asked for this account's project" : "When asked without a project"
         let reason: String
         switch error {
         case FetchError.http(let status): reason = "returned HTTP \(status)"
@@ -165,11 +226,12 @@ final class AntigravityUsageProvider: UsageProvider {
         case is URLError: reason = "couldn't be reached"
         default: reason = "sent a response CodexBar couldn't read"
         }
-        return "Google's main quota service \(reason). These quotas come from its backup service, "
+        return "\(scope), Google's main quota service \(reason). These quotas come from its backup service, "
             + "which can leave out Gemini Models and Argon."
     }
 
-    func quotaRequest(token: String, url: URL = quotaURL) -> URLRequest {
+    /// `{"project": "<id>"}` when the account's project is known, otherwise `{}` as before.
+    func quotaRequest(token: String, url: URL = quotaURL, project: String? = nil) -> URLRequest {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.httpShouldHandleCookies = false
@@ -177,7 +239,8 @@ final class AntigravityUsageProvider: UsageProvider {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("antigravity", forHTTPHeaderField: "User-Agent")
-        request.httpBody = Data("{}".utf8)
+        let body = project.map { ["project": $0] } ?? [:]
+        request.httpBody = (try? JSONSerialization.data(withJSONObject: body)) ?? Data("{}".utf8)
         return request
     }
 
@@ -193,7 +256,7 @@ final class AntigravityUsageProvider: UsageProvider {
         _ credentials: AntigravityCredentials,
         account: String,
         original: String
-    ) async throws -> AntigravityCredentials {
+    ) async throws -> (credentials: AntigravityCredentials, encoded: String) {
         guard credentials.canRefresh else { throw FetchError.credential }
         let data = try await responseData(for: refreshRequest(credentials))
         let token = try JSONDecoder().decode(TokenResponse.self, from: data)
@@ -206,7 +269,7 @@ final class AntigravityUsageProvider: UsageProvider {
         _ = try AntigravityCredentials.parse(encoded)
         try Task.checkCancellation()
         try await saveRenewedCredential(encoded, account: account, original: original)
-        return updated
+        return (updated, encoded)
     }
 
     func refreshRequest(_ credentials: AntigravityCredentials) -> URLRequest {
