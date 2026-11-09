@@ -82,7 +82,7 @@ this remains pending and is not an implementation prerequisite.
 
 ## Quota contract
 
-Each refresh first sends one authenticated `loadCodeAssist` request
+Each quota attempt first sends one authenticated `loadCodeAssist` request
 (`https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist`, eight-second
 timeout) with the same coding token. Its `cloudaicompanionProject` names the
 account's Cloud Code project; the same answer also supplies the optional Google

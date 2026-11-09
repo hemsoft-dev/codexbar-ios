@@ -88,7 +88,7 @@ final class AntigravityUsageProvider: UsageProvider {
         try await fetchCodingUsage(for: configuration, keychainAccount: keychainAccount).result
     }
 
-    /// Coding quotas and the optional subscription from one `loadCodeAssist` lookup.
+    /// Coding quotas and the optional subscription from the same `loadCodeAssist` lookup (repeated only after a 401 renewal).
     /// Generic Code Assist tiers do not establish a Google One subscription, and the plan is dropped
     /// when this account's saved coding credential changed while the lookup ran.
     func fetchCodingUsage(

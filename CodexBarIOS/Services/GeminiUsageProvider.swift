@@ -192,7 +192,7 @@ public final class GeminiUsageProvider: UsageProvider {
     public func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
         let initialIdentity = credentialIdentity(for: configuration)
         async let apps = fetchAppsUsage(for: configuration)
-        // One loadCodeAssist lookup names the quota project and supplies the optional subscription.
+        // The coding fetch's loadCodeAssist lookup names the quota project and supplies the optional subscription.
         async let coding = codingProvider.fetchCodingUsage(
             for: configuration,
             keychainAccount: ProviderConfigurationStore.geminiCodingKeychainAccount(accountID: configuration.id)

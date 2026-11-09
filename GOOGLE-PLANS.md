@@ -6,12 +6,15 @@ combined cards omit plan pills, including unavailable-plan placeholders.
 
 ## Source and mapping
 
-During the coding quota refresh, CodexBar makes one `loadCodeAssist` request
+Before each coding quota request, CodexBar makes a `loadCodeAssist` request
 to `https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist` using that
 Gemini account's saved coding OAuth grant, renewed first when it has expired.
 The same answer names the account's Cloud Code project for the quota request
 (see [ANTIGRAVITY-SETUP.md](ANTIGRAVITY-SETUP.md#quota-contract)) and supplies
-the subscription read below, so there is no second lookup. The request has an
+the subscription read below, so there is no separate plan lookup. A refresh
+normally makes one lookup; when Google rejects the saved token (HTTP 401) and
+CodexBar renews it, the lookup runs again with the renewed token, and the plan
+comes from that latest answer. The request has an
 eight-second request timeout and never sends the Gemini browser cookies.
 Rejected or unavailable metadata does not turn valid usage into a failure, and
 a failed quota read does not hide a plan the lookup did return. The plan is
