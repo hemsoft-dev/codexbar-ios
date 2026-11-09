@@ -300,9 +300,9 @@ final class AntigravityUsageProviderTests: XCTestCase {
         }
     }
 
-    /// Production groups can carry entries CodexBar doesn't use. Before #519's November fix, one of these
-    /// voided the whole production summary, so the daily backend answered without Gemini Models or Argon.
-    func testUnrelatedOrMalformedProductionEntriesDoNotHideGeminiPools() async throws {
+    /// Quota groups can carry entries CodexBar doesn't use. Before #553, one of these voided the whole
+    /// summary, so the other backend answered without Gemini Models or Argon.
+    func testUnrelatedOrMalformedPrimaryEntriesDoNotHideGeminiPools() async throws {
         let secrets = MemorySecretStore()
         try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
         let hosts = LockedHosts()
@@ -315,23 +315,23 @@ final class AntigravityUsageProviderTests: XCTestCase {
             ["displayName": "Image models"],
             ["buckets": [["displayName": "Session", "window": "5h", "remainingFraction": 0.2], 42, NSNull()]],
         ]
-        let production = try JSONSerialization.data(withJSONObject: ["groups": groups])
+        let primary = try JSONSerialization.data(withJSONObject: ["groups": groups])
         let fixture = IsolatedTestURLSession { request in
             hosts.append(request.url)
             let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
-            let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
-            return (try Self.response(request, status: 200), isDaily ? try Self.payload(otherModelsOnly) : production)
+            let isFallback = request.url == AntigravityUsageProvider.fallbackQuotaURL
+            return (try Self.response(request, status: 200), isFallback ? try Self.payload(otherModelsOnly) : primary)
         }
         defer { fixture.invalidate() }
         let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
         let result = try await provider.fetchUsage(for: Self.configuration)
-        XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com"])
+        XCTAssertEqual(hosts.values, ["daily-cloudcode-pa.googleapis.com"])
         XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly", "3p-weekly"])
         XCTAssertEqual(result.unavailableUsageMetrics, ["antigravity.3p-5h": "Unavailable"])
         XCTAssertEqual(result.usageMessages, ["Unavailable: Other models five-hour."])
     }
 
-    func testDailyAnswerSaysWhyProductionWasNotUsedWhenGeminiPoolsAreMissing() async throws {
+    func testFallbackAnswerSaysWhyThePrimaryBackendWasNotUsed() async throws {
         let full = Self.buckets().map { bucket -> [String: Any] in
             var copy = bucket
             copy["remainingFraction"] = 1
@@ -347,7 +347,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
             ("placeholder", 200, try Self.payload(full), "reported every pool full, which CodexBar ignores"),
         ]
         for (label, status, body, reason) in cases {
-            for (dailyHasGemini, named) in [(false, false), (false, true), (true, false), (true, true)] {
+            for (fallbackHasGemini, named) in [(false, false), (false, true), (true, false), (true, true)] {
                 let secrets = MemorySecretStore()
                 try secrets.saveSecret(
                     #"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration)
@@ -359,9 +359,11 @@ final class AntigravityUsageProviderTests: XCTestCase {
                             : (try Self.response(request, status: 503), Data())
                     }
                     XCTAssertEqual(Self.requestedProject(request), named ? "fake-project-123" : nil, label)
-                    if request.url == AntigravityUsageProvider.dailyQuotaURL {
-                        let daily = Self.buckets().filter { dailyHasGemini || ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
-                        return (try Self.response(request, status: 200), try Self.payload(daily))
+                    if request.url == AntigravityUsageProvider.fallbackQuotaURL {
+                        let fallback = Self.buckets().filter {
+                            fallbackHasGemini || ($0["bucketId"] as? String)?.hasPrefix("3p-") == true
+                        }
+                        return (try Self.response(request, status: 200), try Self.payload(fallback))
                     }
                     guard let status else { throw URLError(.notConnectedToInternet) }
                     return (try Self.response(request, status: status), body)
@@ -370,19 +372,69 @@ final class AntigravityUsageProviderTests: XCTestCase {
                 let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
                 let result = try await provider.fetchUsage(for: Self.configuration)
                 let scope = named ? "When asked for this account's project" : "When asked without a project"
-                let note = "\(scope), Google's main quota service \(reason). These quotas come from its backup service, "
-                    + "which can leave out Gemini Models and Argon."
-                if dailyHasGemini {
+                let note = "\(scope), the quota service Antigravity reads \(reason). These quotas come from Google's "
+                    + "other quota service, which can differ from Antigravity or leave pools out."
+                // The fallback's numbers can differ from Antigravity's, so the note shows even when all pools arrive.
+                if fallbackHasGemini {
                     XCTAssertEqual(result.bars.count, 5, label)
-                    XCTAssertTrue(result.usageMessages.isEmpty, label)
+                    XCTAssertEqual(result.usageMessages, [note], label)
                 } else {
                     XCTAssertEqual(result.bars.map(\.stableKey), ["3p-5h", "3p-weekly"], label)
                     XCTAssertEqual(result.usageMessages.last, note, label)
-                    XCTAssertFalse(result.usageMessages.joined().contains("not json"), label)
-                    XCTAssertFalse(result.usageMessages.joined().contains("fake-project-123"), label)
                 }
+                XCTAssertFalse(result.usageMessages.joined().contains("not json"), label)
+                XCTAssertFalse(result.usageMessages.joined().contains("fake-project-123"), label)
             }
         }
+    }
+
+    /// #519, November 9, 2026, measured live with the Antigravity CLI's own sign-in: Google returns quota pools by
+    /// client. A bare `antigravity` User-Agent (CodexBar before this fix) got only the two other-models pools, all
+    /// full, on both backends, which is the phone's "Unavailable" card. The CLI's `antigravity/cli/<version>` got all
+    /// five. With it, the daily backend matched the CLI's `/usage` exactly, while production read Gemini weekly 0.8238
+    /// and Argon 1.0. Hosts are literal here so the same test fails on 3f72ccd.
+    func testGooglesClientGatedPoolsReachTheCardAndMatchTheCLI() async throws {
+        let secrets = MemorySecretStore()
+        try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+        let hosts = LockedHosts()
+        let agents = LockedURLs()
+        func pools(_ fractions: [String: Double]) throws -> Data {
+            try Self.payload(AntigravityQuotaParser.metrics.compactMap { metric in
+                fractions[metric.key].map { fraction -> [String: Any] in
+                    [
+                        "bucketId": metric.key, "window": metric.window, "remainingFraction": fraction,
+                        "resetTime": "2030-09-11T16:22:20Z",
+                    ]
+                }
+            })
+        }
+        let fixture = IsolatedTestURLSession { request in
+            hosts.append(request.url)
+            let agent = request.value(forHTTPHeaderField: "User-Agent") ?? ""
+            agents.append(URL(string: "ua:" + (agent.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "")))
+            if request.url?.path.hasSuffix(":loadCodeAssist") == true {
+                return (try Self.response(request, status: 200), Self.codeAssist)
+            }
+            guard agent.hasPrefix("antigravity/cli/") else {
+                return (try Self.response(request, status: 200), try pools(["3p-5h": 1, "3p-weekly": 1]))
+            }
+            let daily = request.url?.host == "daily-cloudcode-pa.googleapis.com"
+            return (try Self.response(request, status: 200), try pools([
+                "gemini-5h": 1, "gemini-weekly": daily ? 0.7615368 : 0.82383215,
+                "gemini-argon-wtu-weekly": daily ? 0.9806056 : 1, "3p-5h": 1, "3p-weekly": 1,
+            ]))
+        }
+        defer { fixture.invalidate() }
+        let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+        let result = try await provider.fetchUsage(for: Self.configuration)
+        XCTAssertEqual(hosts.values, ["daily-cloudcode-pa.googleapis.com"])
+        XCTAssertEqual(Set(agents.values.map { $0?.absoluteString }), ["ua:antigravity%2Fcli%2F1%2E5%2E3"])
+        XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly", "3p-5h", "3p-weekly"])
+        let used = Dictionary(uniqueKeysWithValues: result.bars.map { ($0.stableKey, $0.used) })
+        XCTAssertEqual(used["gemini-weekly"] ?? -1, 23.84632, accuracy: 0.000_01)
+        XCTAssertEqual(used["gemini-argon-wtu-weekly"] ?? -1, 1.93944, accuracy: 0.000_01)
+        XCTAssertTrue(result.unavailableUsageMetrics.isEmpty)
+        XCTAssertTrue(result.usageMessages.isEmpty)
     }
 
     func testResetMayBeAbsentButMalformedResetMakesBucketUnavailable() throws {
@@ -456,7 +508,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
         let secrets = MemorySecretStore()
         try secrets.saveSecret(#"{"access_token":"account-one"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
         let fixture = IsolatedTestURLSession { request in
-            XCTAssertEqual(request.url?.host, "cloudcode-pa.googleapis.com")
+            XCTAssertEqual(request.url?.host, "daily-cloudcode-pa.googleapis.com")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer account-one")
             XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
             XCTAssertEqual(request.httpMethod, "POST")
@@ -497,7 +549,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
             let body = try XCTUnwrap(requestBodyData(from: request))
             let root = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: String])
             XCTAssertEqual(root, ["project": "fake-project-123"])
-            // Production answers only for the account's project, as OpenUsage's fixture does.
+            // The primary backend answers only for the account's project, as OpenUsage's fixture does.
             guard root["project"] == "fake-project-123" else {
                 return (try Self.response(request, status: 200), try Self.septemberFifthPlaceholder())
             }
@@ -512,7 +564,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
     }
 
     /// SFL round 1 on #554: a project Google refuses must not turn a card that worked with `{}` into a reconnect.
-    func testRejectedProjectRetriesProductionOnceWithTheEmptyRequest() async throws {
+    func testRejectedProjectRetriesThePrimaryBackendOnceWithTheEmptyRequest() async throws {
         let outcomes: [(Int, String)] = [(400, "usable"), (403, "usable"), (403, "placeholder"), (403, "rejected"), (401, "unused")]
         for (status, emptyAnswer) in outcomes {
             let label = "\(status) then \(emptyAnswer)"
@@ -527,7 +579,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
                 urls.append(request.url)
                 let project = Self.requestedProject(request)
                 bodies.append(URL(string: "body:" + (project ?? "none")))
-                if request.url == AntigravityUsageProvider.dailyQuotaURL {
+                if request.url == AntigravityUsageProvider.fallbackQuotaURL {
                     let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
                     return (try Self.response(request, status: 200), try Self.payload(otherModelsOnly))
                 }
@@ -541,25 +593,25 @@ final class AntigravityUsageProviderTests: XCTestCase {
             defer { fixture.invalidate() }
             let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
             let result = try await provider.fetchUsage(for: Self.configuration)
-            let production = AntigravityUsageProvider.quotaURL, daily = AntigravityUsageProvider.dailyQuotaURL
+            let primary = AntigravityUsageProvider.quotaURL, fallback = AntigravityUsageProvider.fallbackQuotaURL
             switch emptyAnswer {
             case "usable":
-                XCTAssertEqual(urls.values, [production, production], label)
+                XCTAssertEqual(urls.values, [primary, primary], label)
                 XCTAssertEqual(bodies.values.map { $0?.absoluteString }, ["body:fake-project-123", "body:none"], label)
                 XCTAssertEqual(result.bars.count, 5, label)
                 XCTAssertNil(result.failureMessage, label)
             case "placeholder":
-                XCTAssertEqual(urls.values, [production, production, daily], label)
+                XCTAssertEqual(urls.values, [primary, primary, fallback], label)
                 XCTAssertEqual(bodies.values.map { $0?.absoluteString }, ["body:fake-project-123", "body:none", "body:none"], label)
                 XCTAssertEqual(result.bars.map(\.stableKey), ["3p-5h", "3p-weekly"], label)
                 XCTAssertTrue(result.usageMessages.last?.hasPrefix("When asked without a project,") == true, label)
             case "rejected":
-                XCTAssertEqual(urls.values, [production, production], label)
+                XCTAssertEqual(urls.values, [primary, primary], label)
                 XCTAssertTrue(result.bars.isEmpty, label)
                 XCTAssertEqual(result.recoveryAction, .reauthenticate, label)
             default:
-                // 401 is a sign-in rejection, not a project refusal: no `{}` retry and no daily fallback.
-                XCTAssertEqual(urls.values, [production], label)
+                // 401 is a sign-in rejection, not a project refusal: no `{}` retry and no fallback.
+                XCTAssertEqual(urls.values, [primary], label)
                 XCTAssertEqual(result.recoveryAction, .reauthenticate, label)
             }
         }
@@ -593,7 +645,7 @@ final class AntigravityUsageProviderTests: XCTestCase {
             defer { fixture.invalidate() }
             let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
             let result = try await provider.fetchUsage(for: Self.configuration)
-            XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com"], label)
+            XCTAssertEqual(hosts.values, ["daily-cloudcode-pa.googleapis.com"], label)
             XCTAssertEqual(result.bars.count, 5, label)
             XCTAssertNil(result.failureMessage, label)
         }
@@ -617,38 +669,38 @@ final class AntigravityUsageProviderTests: XCTestCase {
         XCTAssertEqual(provider.quotaRequest(token: "t").httpBody, Data("{}".utf8))
     }
 
-    func testProductionGeminiPoolsAreUsedWithoutAskingDailyBackend() async throws {
+    func testPrimaryGeminiPoolsAreUsedWithoutAskingFallbackBackend() async throws {
         let secrets = MemorySecretStore()
         try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
         let hosts = LockedHosts()
         let fixture = IsolatedTestURLSession { request in
             hosts.append(request.url)
             let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
-            let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
-            return (try Self.response(request, status: 200), try Self.payload(isDaily ? otherModelsOnly : Self.buckets()))
+            let isFallback = request.url == AntigravityUsageProvider.fallbackQuotaURL
+            return (try Self.response(request, status: 200), try Self.payload(isFallback ? otherModelsOnly : Self.buckets()))
         }
         defer { fixture.invalidate() }
         let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
         let result = try await provider.fetchUsage(for: Self.configuration)
-        XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com"])
+        XCTAssertEqual(hosts.values, ["daily-cloudcode-pa.googleapis.com"])
         XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly", "3p-5h", "3p-weekly"])
         XCTAssertTrue(result.unavailableUsageMetrics.isEmpty)
     }
 
-    func testPartialProductionResponseIsNotFilledFromDailyBackend() async throws {
+    func testPartialPrimaryResponseIsNotFilledFromFallbackBackend() async throws {
         let secrets = MemorySecretStore()
         try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
         let hosts = LockedHosts()
         let fixture = IsolatedTestURLSession { request in
             hosts.append(request.url)
             let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
-            let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
-            return (try Self.response(request, status: 200), try Self.payload(isDaily ? Self.buckets() : otherModelsOnly))
+            let isFallback = request.url == AntigravityUsageProvider.fallbackQuotaURL
+            return (try Self.response(request, status: 200), try Self.payload(isFallback ? Self.buckets() : otherModelsOnly))
         }
         defer { fixture.invalidate() }
         let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
         let result = try await provider.fetchUsage(for: Self.configuration)
-        XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com"])
+        XCTAssertEqual(hosts.values, ["daily-cloudcode-pa.googleapis.com"])
         XCTAssertEqual(result.bars.map(\.stableKey), ["3p-5h", "3p-weekly"])
         for key in ["gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly"] {
             XCTAssertEqual(result.unavailableUsageMetrics["antigravity.\(key)"], "Unavailable")
@@ -668,49 +720,49 @@ final class AntigravityUsageProviderTests: XCTestCase {
         })
     }
 
-    func testAllFullProductionPlaceholderUsesDailyBackend() async throws {
+    func testAllFullPrimaryPlaceholderUsesFallbackBackend() async throws {
         let secrets = MemorySecretStore()
         try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
         let hosts = LockedHosts()
         let fixture = IsolatedTestURLSession { request in
             hosts.append(request.url)
-            guard request.url == AntigravityUsageProvider.dailyQuotaURL else {
+            guard request.url == AntigravityUsageProvider.fallbackQuotaURL else {
                 return (try Self.response(request, status: 200), try Self.septemberFifthPlaceholder())
             }
-            let daily: [String: Any] = [
+            let fallback: [String: Any] = [
                 "bucketId": "gemini-weekly", "window": "weekly", "remainingFraction": 0.7202861,
                 "resetTime": "2030-09-11T16:22:20Z",
             ]
-            return (try Self.response(request, status: 200), try Self.payload([daily]))
+            return (try Self.response(request, status: 200), try Self.payload([fallback]))
         }
         defer { fixture.invalidate() }
         let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
         let result = try await provider.fetchUsage(for: Self.configuration)
-        XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com"])
+        XCTAssertEqual(hosts.values, ["daily-cloudcode-pa.googleapis.com", "cloudcode-pa.googleapis.com"])
         XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-weekly"])
         XCTAssertEqual(try XCTUnwrap(result.bars.first).used, 27.97139, accuracy: 0.000_001)
         XCTAssertEqual(result.unavailableUsageMetrics["antigravity.gemini-5h"], "Unavailable")
     }
 
-    func testAllFullProductionPlaceholderNeverShowsFullBarsWhenDailyFails() async throws {
-        for dailyStatus in [500, 401] {
+    func testAllFullPrimaryPlaceholderNeverShowsFullBarsWhenFallbackFails() async throws {
+        for fallbackStatus in [500, 401] {
             let secrets = MemorySecretStore()
             try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
             let fixture = IsolatedTestURLSession { request in
-                if request.url == AntigravityUsageProvider.dailyQuotaURL {
-                    return (try Self.response(request, status: dailyStatus), Data())
+                if request.url == AntigravityUsageProvider.fallbackQuotaURL {
+                    return (try Self.response(request, status: fallbackStatus), Data())
                 }
                 return (try Self.response(request, status: 200), try Self.septemberFifthPlaceholder())
             }
             defer { fixture.invalidate() }
             let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
             let result = try await provider.fetchUsage(for: Self.configuration)
-            XCTAssertTrue(result.bars.isEmpty, "daily \(dailyStatus)")
-            XCTAssertNotNil(result.failureMessage, "daily \(dailyStatus)")
+            XCTAssertTrue(result.bars.isEmpty, "fallback \(fallbackStatus)")
+            XCTAssertNotNil(result.failureMessage, "fallback \(fallbackStatus)")
         }
     }
 
-    func testUnusableProductionSuccessUsesDailyBackend() async throws {
+    func testUnusablePrimarySuccessUsesFallbackBackend() async throws {
         let expired = Self.buckets().map { bucket -> [String: Any] in
             var stale = bucket
             stale["resetTime"] = "2020-01-01T00:00:00Z"
@@ -728,13 +780,13 @@ final class AntigravityUsageProviderTests: XCTestCase {
             let hosts = LockedHosts()
             let fixture = IsolatedTestURLSession { request in
                 hosts.append(request.url)
-                let isDaily = request.url == AntigravityUsageProvider.dailyQuotaURL
-                return (try Self.response(request, status: 200), isDaily ? try Self.payload() : body)
+                let isFallback = request.url == AntigravityUsageProvider.fallbackQuotaURL
+                return (try Self.response(request, status: 200), isFallback ? try Self.payload() : body)
             }
             defer { fixture.invalidate() }
             let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
             let result = try await provider.fetchUsage(for: Self.configuration)
-            XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com"], label)
+            XCTAssertEqual(hosts.values, ["daily-cloudcode-pa.googleapis.com", "cloudcode-pa.googleapis.com"], label)
             XCTAssertEqual(result.bars.count, 5, label)
             XCTAssertNil(result.failureMessage, label)
         }
@@ -757,18 +809,18 @@ final class AntigravityUsageProviderTests: XCTestCase {
         XCTAssertFalse(AntigravityQuotaParser.isAllFullPlaceholder(Data("not json".utf8)))
     }
 
-    func testDailyBackendIsFallbackOnlyForProductionOutages() async throws {
+    func testFallbackBackendIsUsedOnlyForPrimaryOutages() async throws {
         let outages: [(Int?, Bool)] = [
             (500, true), (503, true), (429, true), (302, true), (nil, true),
             (400, false), (401, false), (403, false),
         ]
-        for (status, expectsDaily) in outages {
+        for (status, expectsFallback) in outages {
             let secrets = MemorySecretStore()
             try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
             let hosts = LockedHosts()
             let fixture = IsolatedTestURLSession { request in
                 hosts.append(request.url)
-                if request.url == AntigravityUsageProvider.dailyQuotaURL {
+                if request.url == AntigravityUsageProvider.fallbackQuotaURL {
                     XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer test")
                     XCTAssertEqual(requestBodyData(from: request), Data("{}".utf8))
                     return (try Self.response(request, status: 200), try Self.payload())
@@ -780,12 +832,12 @@ final class AntigravityUsageProviderTests: XCTestCase {
             let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
             let result = try await provider.fetchUsage(for: Self.configuration)
             let label = String(describing: status)
-            if expectsDaily {
-                XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com"], label)
+            if expectsFallback {
+                XCTAssertEqual(hosts.values, ["daily-cloudcode-pa.googleapis.com", "cloudcode-pa.googleapis.com"], label)
                 XCTAssertNil(result.failureMessage, label)
                 XCTAssertEqual(result.bars.count, 5, label)
             } else {
-                XCTAssertEqual(hosts.values, ["cloudcode-pa.googleapis.com"], label)
+                XCTAssertEqual(hosts.values, ["daily-cloudcode-pa.googleapis.com"], label)
                 XCTAssertTrue(result.bars.isEmpty, label)
                 XCTAssertEqual(result.recoveryAction, .reauthenticate, label)
             }

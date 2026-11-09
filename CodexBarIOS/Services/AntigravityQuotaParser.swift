@@ -3,11 +3,8 @@ import Foundation
 enum AntigravityQuotaParser {
     static let metrics = GoogleUsageMetricCatalog.definitions(for: .antigravity)
 
-    /// Pools only the production backend reports; the daily backend can omit them.
-    static let productionOnlyKeys: Set<String> = ["gemini-5h", "gemini-weekly", "gemini-argon-wtu-weekly"]
-
-    /// Why a production response was not shown. Fixed categories only; never response content.
-    enum ProductionIssue: Equatable {
+    /// Why a primary-backend response was not shown. Fixed categories only; never response content.
+    enum PrimaryIssue: Equatable {
         case unreadable, noCurrentPool, allFullPlaceholder
     }
 
@@ -61,7 +58,7 @@ enum AntigravityQuotaParser {
         from data: Data,
         configuration: ProviderAccountConfiguration,
         fetchedAt: Date = Date(),
-        productionNote: String? = nil
+        fallbackNote: String? = nil
     ) throws -> ProviderUsageResult {
         let summary = try JSONDecoder().decode(Summary.self, from: data)
         let buckets = summary.groups.flatMap(\.buckets)
@@ -79,9 +76,8 @@ enum AntigravityQuotaParser {
         })
         let message = missing.isEmpty ? nil : "Unavailable: " + missing.map(\.label).joined(separator: ", ") + "."
         var messages = message.map { [$0] } ?? []
-        if let productionNote, missing.contains(where: { productionOnlyKeys.contains($0.key) }) {
-            messages.append(productionNote)
-        }
+        // The fallback's numbers can differ from Antigravity's even when every pool is present, so say so.
+        if let fallbackNote { messages.append(fallbackNote) }
         return ProviderUsageResult(
             accountID: configuration.id,
             providerID: .antigravity,
@@ -95,12 +91,9 @@ enum AntigravityQuotaParser {
         )
     }
 
-    /// Production is shown only when it proves at least one current canonical metric and is not the all-full placeholder.
-    static func isUsableProductionSummary(_ data: Data, at date: Date = Date()) -> Bool {
-        productionIssue(data, at: date) == nil
-    }
-
-    static func productionIssue(_ data: Data, at date: Date = Date()) -> ProductionIssue? {
+    /// The primary backend is shown only when it proves at least one current canonical metric and is not the
+    /// all-full placeholder.
+    static func primaryIssue(_ data: Data, at date: Date = Date()) -> PrimaryIssue? {
         guard let summary = try? JSONDecoder().decode(Summary.self, from: data) else { return .unreadable }
         let buckets = summary.groups.flatMap(\.buckets)
         let hasMetric = metrics.contains { metric in

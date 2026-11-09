@@ -82,48 +82,51 @@ this remains pending and is not an implementation prerequisite.
 
 ## Quota contract
 
+Every Cloud Code request sends the Antigravity CLI's User-Agent,
+`antigravity/cli/1.5.3`. Google decides which quota pools to return from the
+calling client (see [Backend order history](#backend-order-history)).
+
 Each quota attempt first sends one authenticated `loadCodeAssist` request
-(`https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist`, eight-second
-timeout) with the same coding token. Its `cloudaicompanionProject` names the
-account's Cloud Code project; the same answer also supplies the optional Google
-AI plan described in [GOOGLE-PLANS.md](GOOGLE-PLANS.md). The quota request is an
-authenticated JSON `POST` with body `{"project": "<that project>"}`, or `{}`
-when the lookup fails or names no usable project, to the production backend
-first:
+(`https://daily-cloudcode-pa.googleapis.com/v1internal:loadCodeAssist`,
+eight-second timeout) with the same coding token. Its `cloudaicompanionProject`
+names the account's Cloud Code project; the same answer also supplies the
+optional Google AI plan described in [GOOGLE-PLANS.md](GOOGLE-PLANS.md). The
+quota request is an authenticated JSON `POST` with body
+`{"project": "<that project>"}`, or `{}` when the lookup fails or names no
+usable project, to the daily backend first, the one the Antigravity CLI reads:
 
 ```text
-https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary
+https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary
 ```
 
-If production rejects the named project with HTTP 400 or 403, it is asked once
-more with `{}`, so a project Google refuses can't turn a working card into a
-reconnect prompt. The daily backend gets the body of the last production
-request. A failed lookup never fails the refresh and never changes which
+If the daily backend rejects the named project with HTTP 400 or 403, it is
+asked once more with `{}`, so a project Google refuses can't turn a working
+card into a reconnect prompt. The fallback backend gets the body of the last
+daily request. A failed lookup never fails the refresh and never changes which
 backend answers.
 
-The daily backend, `daily-cloudcode-pa.googleapis.com`, is used only when the
-production request fails with a transport error or an HTTP status other than
-400, 401 or 403, or when a successful production response is malformed,
+The production backend, `cloudcode-pa.googleapis.com`, is the fallback. It is
+used only when the daily request fails with a transport error or an HTTP status
+other than 400, 401 or 403, or when a successful daily response is malformed,
 contains no current canonical pool, or is the all-full placeholder described
-below. The daily response is then parsed as before. Sign-in rejections never move to the
-daily backend. A usable production response is never filled in with daily
-pools, so omitted pools stay unavailable for that refresh.
+below. Sign-in rejections never move to the fallback. A usable daily response
+is never filled in with production pools, so omitted pools stay unavailable for
+that refresh.
 
-When the daily backend answers and Gemini Models or Argon is missing, the card
-adds one fixed sentence naming why production wasn't used: an HTTP status, no
-connection, an unreadable response, no current pool, or the all-full
-placeholder. It starts with "When asked for this account's project" or "When
-asked without a project", so a phone check shows whether the request named
-the project. It never includes response content or the project ID. This tells
-a missing pool on the daily backend apart from a production problem without
-raw logging.
+When the fallback answers, the card adds one fixed sentence naming why the
+daily backend wasn't used: an HTTP status, no connection, an unreadable
+response, no current pool, or the all-full placeholder. The sentence appears
+even when every pool arrives, because production's numbers can differ from the
+Antigravity CLI's. It starts with "When asked for this account's project" or
+"When asked without a project", so a phone check shows whether the request
+named the project. It never includes response content or the project ID.
 
-A production response is treated as a placeholder when every supplied,
-enabled canonical pool reports `remainingFraction` 1. That is the September 5
-shape, which still included reset times. Such a response is never shown. If
-the daily request then fails, the account shows the normal unavailable state
+A daily response is treated as a placeholder when every supplied, enabled
+canonical pool reports `remainingFraction` 1. That is the September 5 shape,
+which still included reset times. Such a response is never shown. If the
+fallback request then fails, the account shows the normal unavailable state
 rather than full bars. A genuinely unused account therefore reads from the
-daily backend, where omitted pools stay unavailable.
+production backend.
 
 The response contains `groups[].buckets[]`. The parser uses bucket IDs and
 windows, not translated display names or model lists:
@@ -181,10 +184,33 @@ project-less request is the cause is a hypothesis until a phone check
 confirms it. If it doesn't, the next lever is OpenUsage's Antigravity client
 User-Agent and `ideType: ANTIGRAVITY` metadata, which CodexBar does not send.
 
+The phone check that afternoon showed no change. The same day, a sanitized
+request matrix ran with the Antigravity CLI's own sign-in for the same account
+([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519)). It found that
+Google returns pools by the calling client's User-Agent, not by the project or
+the `loadCodeAssist` metadata:
+
+| User-Agent | Pools returned (both backends) |
+| --- | --- |
+| `antigravity` (CodexBar until then) | other models only, all full |
+| `antigravity/1.5.3 (aidev_client; …)` | other models and Argon |
+| `antigravity/2.24.0` to `antigravity/9.0.0` | other models and Gemini Models |
+| `antigravity/cli/1.5.3`, with or without machine details | all five |
+| A CodexBar product name | HTTP 403 |
+
+`loadCodeAssist` named the project for every metadata and User-Agent variant.
+With the CLI's User-Agent, the daily backend matched the CLI's `/usage` exactly
+(Gemini weekly 0.7615368, Argon 0.9806056), while production read Gemini
+weekly 0.82383215 and Argon 1. The CLI itself calls only the daily backend.
+CodexBar therefore sends the CLI's User-Agent and reads the daily backend
+first, with production as the error fallback. That matrix used the
+Antigravity CLI's OAuth client, not CodexBar's own; a phone check of the
+app's own client is pending for Franz.
+
 Requests reject redirects, disable automatic cookies and caching, and never
 include raw server errors in user-facing messages. Quota requests go only to
-the two Cloud Code backends above; the project lookup goes only to production's
-`loadCodeAssist`; renewal credentials go only to
+the two Cloud Code backends above; the project lookup goes only to the daily
+backend's `loadCodeAssist`; renewal credentials go only to
 `oauth2.googleapis.com/token`.
 
 ## Live verification follow-up for issue #319

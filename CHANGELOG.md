@@ -37,6 +37,13 @@ building, testing, or releasing the app.
   whether the request named your project.
   ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
 
+- The Gemini card now shows Gemini Models and Argon coding quotas with the
+  same numbers as the Antigravity CLI. Google returns those pools only to
+  Antigravity's own client, so CodexBar now identifies itself the way the CLI
+  does and reads the same quota service. If that service is unavailable, the
+  card says its numbers come from Google's other quota service.
+  ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
+
 - Claude cards show the plan Claude reports for your organization, such as
   Ultra, even when older account flags disagree. Previously they could show
   "Plan unavailable" instead.

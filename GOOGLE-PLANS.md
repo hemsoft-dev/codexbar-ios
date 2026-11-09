@@ -7,7 +7,7 @@ combined cards omit plan pills, including unavailable-plan placeholders.
 ## Source and mapping
 
 Before each coding quota request, CodexBar makes a `loadCodeAssist` request
-to `https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist` using that
+to `https://daily-cloudcode-pa.googleapis.com/v1internal:loadCodeAssist` using that
 Gemini account's saved coding OAuth grant, renewed first when it has expired.
 The same answer names the account's Cloud Code project for the quota request
 (see [ANTIGRAVITY-SETUP.md](ANTIGRAVITY-SETUP.md#quota-contract)) and supplies

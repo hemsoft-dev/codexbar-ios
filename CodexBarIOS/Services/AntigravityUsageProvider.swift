@@ -4,10 +4,17 @@ final class AntigravityUsageProvider: UsageProvider {
     let providerID = ProviderID.antigravity
     private let secretStore: SecretStore
     private let session: URLSession
-    /// Production returns the Gemini and Argon pools; the daily backend can answer with only other-model pools.
-    static let quotaURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary")!
-    static let dailyQuotaURL = URL(string: "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary")!
+    /// The backend Antigravity's own CLI reads. On November 9, 2026 it matched the CLI's `/usage` to the last digit
+    /// (Gemini weekly 0.7615, Argon 0.9806) while production, asked the same way, read 0.8238 and 1.0.
+    static let quotaURL = URL(string: "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary")!
+    /// Asked only when the primary backend fails or answers without a usable pool. Never mixed with it.
+    static let fallbackQuotaURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary")!
     static let tokenURL = URL(string: "https://oauth2.googleapis.com/token")!
+    /// Google returns quota pools by client: a bare `antigravity` gets only the other-models pools, a non-Antigravity
+    /// product name is refused with 403, and the Antigravity CLI's own product and version get all five,
+    /// Gemini Models and Argon included (#519, November 9, 2026). This is the CLI's User-Agent without
+    /// its machine details.
+    static let userAgent = "antigravity/cli/1.5.3"
 
     private final class RedirectDelegate: NSObject, URLSessionTaskDelegate, Sendable {
         func urlSession(
@@ -24,13 +31,13 @@ final class AntigravityUsageProvider: UsageProvider {
     private enum FetchError: Error {
         case credential, response, changedCredential
         case http(Int)
-        case unusableProduction(AntigravityQuotaParser.ProductionIssue)
+        case unusablePrimary(AntigravityQuotaParser.PrimaryIssue)
     }
 
-    /// A summary and, when the daily backend answered, the fixed reason production was not used.
+    /// A summary and, when the fallback backend answered, the fixed reason the primary one was not used.
     private struct Summary {
         let data: Data
-        let productionNote: String?
+        let fallbackNote: String?
     }
 
     /// One refresh's latest `loadCodeAssist` answer and the saved credential string it was read with.
@@ -104,7 +111,7 @@ final class AntigravityUsageProvider: UsageProvider {
             let summary = try await quotaData(credentials, account: keychainAccount, original: stored, lookup: current)
             try Task.checkCancellation()
             let result = try AntigravityQuotaParser.result(
-                from: summary.data, configuration: configuration, productionNote: summary.productionNote
+                from: summary.data, configuration: configuration, fallbackNote: summary.fallbackNote
             )
             return CodingUsage(result: result, plan: plan(from: lookup, keychainAccount: keychainAccount))
         } catch {
@@ -122,7 +129,8 @@ final class AntigravityUsageProvider: UsageProvider {
         return GoogleAIPlanParser.parse(data)
     }
 
-    static let planURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist")!
+    /// Same backend as `quotaURL`, as the Antigravity CLI does.
+    static let planURL = URL(string: "https://daily-cloudcode-pa.googleapis.com/v1internal:loadCodeAssist")!
 
     /// `loadCodeAssist` with this account's coding grant. It names the account's Cloud Code project and,
     /// optionally, its subscription.
@@ -177,11 +185,11 @@ final class AntigravityUsageProvider: UsageProvider {
         }
     }
 
-    /// Ask the daily backend only when production is unreachable, errors for a reason other than sign-in,
+    /// Ask the fallback backend only when the primary one is unreachable, errors for a reason other than sign-in,
     /// or answers without a usable metric or with the all-full placeholder.
-    /// A usable production response is never mixed with daily pools.
-    /// Both backends are asked for the account's own project when `loadCodeAssist` names one. If production
-    /// rejects that project with 400 or 403, it is asked once more with `{}`, the request used before #519's fix.
+    /// A usable primary response is never mixed with fallback pools.
+    /// Both backends are asked for the account's own project when `loadCodeAssist` names one. If the primary
+    /// backend rejects that project with 400 or 403, it is asked once more with `{}`.
     private func summaryData(token: String, lookup: CodeAssistLookup) async throws -> Summary {
         lookup.data = try await codeAssistData(token: token)
         var project = lookup.data.flatMap(Self.companionProject)
@@ -195,12 +203,12 @@ final class AntigravityUsageProvider: UsageProvider {
                 project = nil
                 data = try await responseData(for: quotaRequest(token: token))
             }
-            if let issue = AntigravityQuotaParser.productionIssue(data) { throw FetchError.unusableProduction(issue) }
-            return Summary(data: data, productionNote: nil)
-        } catch let error where Self.allowsDailyFallback(after: error) {
+            if let issue = AntigravityQuotaParser.primaryIssue(data) { throw FetchError.unusablePrimary(issue) }
+            return Summary(data: data, fallbackNote: nil)
+        } catch let error where Self.allowsFallback(after: error) {
             try Task.checkCancellation()
-            let data = try await responseData(for: quotaRequest(token: token, url: Self.dailyQuotaURL, project: project))
-            return Summary(data: data, productionNote: Self.productionNote(after: error, namedProject: project != nil))
+            let data = try await responseData(for: quotaRequest(token: token, url: Self.fallbackQuotaURL, project: project))
+            return Summary(data: data, fallbackNote: Self.fallbackNote(after: error, namedProject: project != nil))
         }
     }
 
@@ -214,29 +222,29 @@ final class AntigravityUsageProvider: UsageProvider {
         }
     }
 
-    private static func allowsDailyFallback(after error: Error) -> Bool {
+    private static func allowsFallback(after error: Error) -> Bool {
         switch error {
         case FetchError.http(let status): return ![400, 401, 403].contains(status)
-        case FetchError.response, FetchError.unusableProduction: return true
+        case FetchError.response, FetchError.unusablePrimary: return true
         case let error as URLError: return error.code != .cancelled
         default: return false
         }
     }
 
-    /// Fixed, content-free wording that tells which production branch sent the request to the daily backend
+    /// Fixed, content-free wording that tells which primary branch sent the request to the fallback backend
     /// and whether that request named the account's project. It never includes the project ID.
-    static func productionNote(after error: Error, namedProject: Bool) -> String {
+    static func fallbackNote(after error: Error, namedProject: Bool) -> String {
         let scope = namedProject ? "When asked for this account's project" : "When asked without a project"
         let reason: String
         switch error {
         case FetchError.http(let status): reason = "returned HTTP \(status)"
-        case FetchError.unusableProduction(.noCurrentPool): reason = "reported no current pool"
-        case FetchError.unusableProduction(.allFullPlaceholder): reason = "reported every pool full, which CodexBar ignores"
+        case FetchError.unusablePrimary(.noCurrentPool): reason = "reported no current pool"
+        case FetchError.unusablePrimary(.allFullPlaceholder): reason = "reported every pool full, which CodexBar ignores"
         case is URLError: reason = "couldn't be reached"
         default: reason = "sent a response CodexBar couldn't read"
         }
-        return "\(scope), Google's main quota service \(reason). These quotas come from its backup service, "
-            + "which can leave out Gemini Models and Argon."
+        return "\(scope), the quota service Antigravity reads \(reason). These quotas come from Google's other "
+            + "quota service, which can differ from Antigravity or leave pools out."
     }
 
     /// `{"project": "<id>"}` when the account's project is known, otherwise `{}` as before.
@@ -247,7 +255,7 @@ final class AntigravityUsageProvider: UsageProvider {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("antigravity", forHTTPHeaderField: "User-Agent")
+        request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
         let body = project.map { ["project": $0] } ?? [:]
         request.httpBody = (try? JSONSerialization.data(withJSONObject: body)) ?? Data("{}".utf8)
         return request
