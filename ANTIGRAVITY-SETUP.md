@@ -95,8 +95,11 @@ first:
 https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary
 ```
 
-The daily backend gets the same body. A failed lookup never fails the refresh
-and never changes which backend answers.
+If production rejects the named project with HTTP 400 or 403, it is asked once
+more with `{}`, so a project Google refuses can't turn a working card into a
+reconnect prompt. The daily backend gets the body of the last production
+request. A failed lookup never fails the refresh and never changes which
+backend answers.
 
 The daily backend, `daily-cloudcode-pa.googleapis.com`, is used only when the
 production request fails with a transport error or an HTTP status other than

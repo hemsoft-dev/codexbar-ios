@@ -180,12 +180,21 @@ final class AntigravityUsageProvider: UsageProvider {
     /// Ask the daily backend only when production is unreachable, errors for a reason other than sign-in,
     /// or answers without a usable metric or with the all-full placeholder.
     /// A usable production response is never mixed with daily pools.
-    /// Both backends are asked for the account's own project when `loadCodeAssist` names one.
+    /// Both backends are asked for the account's own project when `loadCodeAssist` names one. If production
+    /// rejects that project with 400 or 403, it is asked once more with `{}`, the request used before #519's fix.
     private func summaryData(token: String, lookup: CodeAssistLookup) async throws -> Summary {
         lookup.data = try await codeAssistData(token: token)
-        let project = lookup.data.flatMap(Self.companionProject)
+        var project = lookup.data.flatMap(Self.companionProject)
         do {
-            let data = try await responseData(for: quotaRequest(token: token, project: project))
+            let data: Data
+            do {
+                data = try await responseData(for: quotaRequest(token: token, project: project))
+            } catch FetchError.http(let status) where project != nil && [400, 403].contains(status) {
+                // A project Google refuses must not turn the project-less read into a reconnect prompt.
+                try Task.checkCancellation()
+                project = nil
+                data = try await responseData(for: quotaRequest(token: token))
+            }
             if let issue = AntigravityQuotaParser.productionIssue(data) { throw FetchError.unusableProduction(issue) }
             return Summary(data: data, productionNote: nil)
         } catch let error where Self.allowsDailyFallback(after: error) {

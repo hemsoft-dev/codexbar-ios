@@ -511,6 +511,60 @@ final class AntigravityUsageProviderTests: XCTestCase {
         XCTAssertTrue(result.usageMessages.isEmpty)
     }
 
+    /// SFL round 1 on #554: a project Google refuses must not turn a card that worked with `{}` into a reconnect.
+    func testRejectedProjectRetriesProductionOnceWithTheEmptyRequest() async throws {
+        let outcomes: [(Int, String)] = [(400, "usable"), (403, "usable"), (403, "placeholder"), (403, "rejected"), (401, "unused")]
+        for (status, emptyAnswer) in outcomes {
+            let label = "\(status) then \(emptyAnswer)"
+            let secrets = MemorySecretStore()
+            try secrets.saveSecret(#"{"access_token":"test"}"#, account: ProviderConfigurationStore.keychainAccount(for: Self.configuration))
+            let urls = LockedURLs()
+            let bodies = LockedURLs()
+            let fixture = IsolatedTestURLSession { request in
+                if request.url == AntigravityUsageProvider.planURL {
+                    return (try Self.response(request, status: 200), Self.codeAssist)
+                }
+                urls.append(request.url)
+                let project = Self.requestedProject(request)
+                bodies.append(URL(string: "body:" + (project ?? "none")))
+                if request.url == AntigravityUsageProvider.dailyQuotaURL {
+                    let otherModelsOnly = Self.buckets().filter { ($0["bucketId"] as? String)?.hasPrefix("3p-") == true }
+                    return (try Self.response(request, status: 200), try Self.payload(otherModelsOnly))
+                }
+                if project != nil { return (try Self.response(request, status: status), Data()) }
+                switch emptyAnswer {
+                case "usable": return (try Self.response(request, status: 200), try Self.payload())
+                case "placeholder": return (try Self.response(request, status: 200), try Self.septemberFifthPlaceholder())
+                default: return (try Self.response(request, status: 403), Data())
+                }
+            }
+            defer { fixture.invalidate() }
+            let provider = AntigravityUsageProvider(secretStore: secrets, sessionConfiguration: fixture.session.configuration)
+            let result = try await provider.fetchUsage(for: Self.configuration)
+            let production = AntigravityUsageProvider.quotaURL, daily = AntigravityUsageProvider.dailyQuotaURL
+            switch emptyAnswer {
+            case "usable":
+                XCTAssertEqual(urls.values, [production, production], label)
+                XCTAssertEqual(bodies.values.map { $0?.absoluteString }, ["body:fake-project-123", "body:none"], label)
+                XCTAssertEqual(result.bars.count, 5, label)
+                XCTAssertNil(result.failureMessage, label)
+            case "placeholder":
+                XCTAssertEqual(urls.values, [production, production, daily], label)
+                XCTAssertEqual(bodies.values.map { $0?.absoluteString }, ["body:fake-project-123", "body:none", "body:none"], label)
+                XCTAssertEqual(result.bars.map(\.stableKey), ["3p-5h", "3p-weekly"], label)
+                XCTAssertTrue(result.usageMessages.last?.hasPrefix("When asked without a project,") == true, label)
+            case "rejected":
+                XCTAssertEqual(urls.values, [production, production], label)
+                XCTAssertTrue(result.bars.isEmpty, label)
+                XCTAssertEqual(result.recoveryAction, .reauthenticate, label)
+            default:
+                // 401 is a sign-in rejection, not a project refusal: no `{}` retry and no daily fallback.
+                XCTAssertEqual(urls.values, [production], label)
+                XCTAssertEqual(result.recoveryAction, .reauthenticate, label)
+            }
+        }
+    }
+
     func testMissingOrUnreadableProjectKeepsTheEmptyQuotaRequest() async throws {
         let lookups: [(String, Int?, Data)] = [
             ("503", 503, Data()),
