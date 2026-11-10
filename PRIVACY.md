@@ -38,7 +38,7 @@ provider snapshot.
 
 ## Third-Party Provider Requests
 
-When you connect a provider, CodexBar uses the credentials you provide to request usage, balance, or review-activity data for the configured account or organization directly from that provider. Depending on what you configure, this may include services such as OpenAI/ChatGPT, Anthropic Claude, GitHub Copilot, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot AI (Kimi), Greptile, and Google Gemini.
+When you connect a provider, CodexBar uses the credentials you provide to request usage, balance, or review-activity data for the configured account or organization directly from that provider. Depending on what you configure, this may include services such as OpenAI/ChatGPT, Anthropic Claude, GitHub Copilot, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot AI (Kimi), and Greptile.
 
 Those requests are made to the provider's own APIs or web endpoints. The provider may process the request according to its own terms and privacy policy.
 
@@ -67,21 +67,6 @@ that Cursor returns. The Cursor session is never sent to Stripe, and the
 temporary portal access stays in memory and is not saved. These requests are
 read-only: CodexBar does not pay for, change or cancel a subscription. If any
 step fails, Cursor usage still refreshes without a renewal date.
-
-For Google Gemini, CodexBar opens Google's website in a new nonpersistent
-browser store for each sign-in attempt. You enter your password on Google's
-page; CodexBar does not inspect the page, password fields, or JavaScript.
-It reads only secure `.google.com` root-path `__Secure-1PSID` and optional
-`__Secure-1PSIDTS` cookies. After verifying consumer usage, it stores those
-session values in the selected account's iOS Keychain entry. Other browser data
-is discarded when the sign-in window closes. Existing manually connected
-accounts can use the same browser flow to renew their session.
-
-These session values may grant broader Google account access. CodexBar sends
-its retained values only to `gemini.google.com` for read-only consumer Gemini
-Apps usage requests. They are never written to app settings, logs, diagnostics,
-widgets, or Watch snapshots. Disconnecting one Gemini entry removes its saved
-credential without affecting other entries or your Safari session.
 
 For Greptile billing renewal, CodexBar opens a temporary nonpersistent browser
 session and retains only the secure, root-path Auth.js session cookie (or its
@@ -248,17 +233,3 @@ control to erase that retained check metadata.
 ## Contact
 
 For support or privacy questions, use the support information in [SUPPORT.md](SUPPORT.md).
-
-## Gemini coding authorization
-
-Google coding access tokens, optional refresh tokens, and OAuth client
-fields stay in the selected account's Keychain entry. Quota requests send the
-access token only to `cloudcode-pa.googleapis.com`, or to
-`daily-cloudcode-pa.googleapis.com` when the first is unavailable. If supplied, renewal
-credentials go only to `oauth2.googleapis.com/token`. These credentials may
-grant broader Google account access and are never included in History, widgets,
-or Watch snapshots. Coding sign-in opens Google in a system authentication
-session, which may reuse your existing browser login. The app exchanges the
-returned authorization code using PKCE. The configured native OAuth client
-requests cloud-platform and email scopes; it does not embed a client secret.
-Previously imported sessions remain stored until you reconnect or disconnect.

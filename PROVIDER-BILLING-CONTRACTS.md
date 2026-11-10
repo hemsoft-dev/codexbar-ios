@@ -169,13 +169,6 @@ consented APIs, not export of Google payments web cookies. A browser login alone
 also does not return an authenticated billing payload to CodexBar. No billing
 consumer OAuth scope or equivalent session transfer was verified here.
 
-The existing Gemini/coding tier identifies benefits, not the payer. A future
-contract must expose an immutable Google account identifier that can be matched
-to the connected Gemini identity, plus the billing subscription/payer identifier.
-Email hints, `authuser` indices and a family-shared plan name do not establish
-ownership. This identity requirement is an implementation constraint, not a claim
-that such identifiers were found in the protected response.
-
 ### Direct, store and partner distinctions
 
 [Google One cancellation guidance](https://support.google.com/googleone/answer/9056360?hl=en)

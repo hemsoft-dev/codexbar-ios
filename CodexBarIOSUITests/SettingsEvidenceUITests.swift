@@ -216,62 +216,6 @@ final class SettingsEvidenceUITests: XCTestCase {
 
 @MainActor
 final class WeeklyUsageEvidenceUITests: XCTestCase {
-    func testMissingGooglePoolStaysUnavailable() {
-        continueAfterFailure = false
-        let app = XCUIApplication()
-        app.launchEnvironment = [
-            "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
-            "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "google-six",
-            "CODEXBAR_UI_TEST_DEFAULT_TEXT": "1",
-        ]
-        app.launch()
-        defer { app.terminate() }
-        let argon = app.buttons["dashboard-metric-antigravity.gemini-argon-wtu-weekly"]
-        XCTAssertTrue(argon.waitForExistence(timeout: 15))
-        for _ in 0..<6 {
-            if argon.isHittable && argon.frame.maxY <= app.frame.maxY - 16 { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(argon.isHittable)
-        XCTAssertLessThanOrEqual(argon.frame.maxY, app.frame.maxY - 16)
-        XCTAssertTrue(argon.label.contains("Unavailable"))
-        capture("weekly-missing-argon-dashboard")
-        argon.tap()
-        let availability = detailRow(in: app, named: "Availability")
-        XCTAssertTrue(availability.waitForExistence(timeout: 5))
-        XCTAssertTrue(availability.label.contains("Unavailable"))
-        capture("weekly-missing-argon-detail")
-        app.buttons["Done"].tap()
-    }
-
-    func testWeeklyUsageAndResetDetails() {
-        continueAfterFailure = false
-        let app = XCUIApplication()
-        app.launchEnvironment = [
-            "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
-            "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "google-six",
-            "CODEXBAR_UI_TEST_DEFAULT_TEXT": "1",
-        ]
-        app.launch()
-        defer { app.terminate() }
-        let weekly = app.buttons["dashboard-metric-gemini.weekly"]
-        XCTAssertTrue(weekly.waitForExistence(timeout: 15))
-        for _ in 0..<6 where !weekly.isHittable { app.swipeUp() }
-        XCTAssertTrue(weekly.isHittable)
-        XCTAssertTrue(weekly.label.contains("45%"))
-        XCTAssertTrue(weekly.label.contains("fresh"))
-        capture("weekly-usage-dashboard")
-        weekly.tap()
-        let freshness = detailRow(in: app, named: "Freshness")
-        XCTAssertTrue(freshness.waitForExistence(timeout: 5))
-        XCTAssertTrue(freshness.label.contains("Current"))
-        XCTAssertTrue(detailRow(in: app, named: "Reset").exists)
-        XCTAssertTrue(detailRow(in: app, named: "Used").label.contains("45"))
-        capture("weekly-usage-detail")
-        app.buttons["Done"].tap()
-        XCTAssertTrue(weekly.waitForExistence(timeout: 5))
-    }
-
     private func detailRow(in app: XCUIApplication, named name: String) -> XCUIElement {
         app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH %@", name))
@@ -283,5 +227,35 @@ final class WeeklyUsageEvidenceUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+}
+
+@MainActor
+extension SettingsEvidenceUITests {
+    func testRetiredGoogleUpgradeEvidence() {
+        for dark in [false, true] {
+            let app = XCUIApplication()
+            app.launchEnvironment = [
+                "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
+                "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "retired-google-upgrade",
+                "CODEXBAR_UI_TEST_DEFAULT_TEXT": "1", "CODEXBAR_UI_TEST_DARK": dark ? "1" : "0",
+            ]
+            app.launch()
+            let theme = dark ? "dark" : "light"
+            XCTAssertTrue(app.buttons["More options for Personal Codex"].waitForExistence(timeout: 15))
+            XCTAssertTrue(app.buttons["More options for Team Claude"].exists)
+            capture("upgrade-dashboard-\(theme)")
+            openSettings(app)
+            select("accountsAndGroups", in: app)
+            XCTAssertFalse(app.staticTexts["Google Gemini"].exists)
+            XCTAssertFalse(app.staticTexts["Antigravity"].exists)
+            capture("upgrade-accounts-\(theme)")
+            tap(app.buttons["Add Account"].firstMatch, in: app)
+            XCTAssertTrue(app.navigationBars["Add Account"].waitForExistence(timeout: 5))
+            XCTAssertFalse(app.staticTexts["Google Gemini"].exists)
+            XCTAssertFalse(app.staticTexts["Antigravity"].exists)
+            capture("upgrade-provider-list-\(theme)")
+            app.terminate()
+        }
     }
 }

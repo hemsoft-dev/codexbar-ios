@@ -12,8 +12,6 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
     case moonshot
     case cursor
     case greptile
-    case gemini
-    case antigravity
     case museCode
 
     public var id: String {
@@ -44,10 +42,6 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
             "Cursor"
         case .greptile:
             "Greptile"
-        case .gemini:
-            "Google Gemini"
-        case .antigravity:
-            "Antigravity"
         case .museCode:
             "Muse Code"
         }
@@ -57,7 +51,7 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .codex, .copilot, .githubBilling, .claude, .grok, .xSubscription, .museCode:
             true
-        case .openRouter, .openCodeZen, .moonshot, .cursor, .greptile, .gemini, .antigravity:
+        case .openRouter, .openCodeZen, .moonshot, .cursor, .greptile:
             false
         }
     }

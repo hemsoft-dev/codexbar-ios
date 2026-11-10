@@ -664,7 +664,7 @@ struct ContentView: View {
         configurationStore: ProviderConfigurationStore
     ) -> MetricLayoutCopyDestination? {
         guard destination.id != source.accountID, destination.configuration.providerID == source.providerID else { return nil }
-        let metricIDs = GoogleUsageMetricCatalog.layoutCopyMetricIDs(
+        let metricIDs = ProviderMetricCatalog.layoutCopyMetricIDs(
             for: destination.configuration.providerID, result: destination.result
         )
         guard !metricIDs.isEmpty else { return nil }
@@ -903,11 +903,9 @@ struct ContentView: View {
     private func configureDashboardAccount(
         _ configuration: ProviderAccountConfiguration, startsCursorSignIn: Bool = false
     ) {
-        guard let saved = configurationStore.prepareDashboardAccountForSetup(configuration) else { return }
-        let needsGoogleSetup = [.gemini, .antigravity].contains(saved.providerID)
-            && !configurationStore.isConfigured(saved)
+        guard let saved = configurationStore.configuration(accountID: configuration.id) else { return }
         accountConfigurationNavigation.present(
-            accountID: saved.id, refreshOnDismiss: !needsGoogleSetup, startsCursorSignIn: startsCursorSignIn
+            accountID: saved.id, refreshOnDismiss: true, startsCursorSignIn: startsCursorSignIn
         )
     }
 

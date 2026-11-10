@@ -37,22 +37,20 @@ class ReleaseScreenshotContractTests(unittest.TestCase):
         catalog = (ROOT / "CodexBarIOS/Models/GoogleUsageMetricCatalog.swift").read_text()
         source += source_boundary(catalog, "    public static func metrics")[0] + "}\n"
         source += r'''
-public enum ProviderID: String, Sendable { case gemini, antigravity, other }
+public enum ProviderID: String, Sendable { case other }
 enum MetricTileWidthPreference { case half }
 @MainActor final class ProviderConfigurationStore {
     var orders: [[String]] = []
     var halfWidthMetrics: [String] = []
     func updateDashboardCardOrder(_ ids: [String]) { orders.append(ids) }
     func updateMetricWidth(_ width: MetricTileWidthPreference, accountID: String, metricID: String) {
-        precondition(accountID == AppStoreScreenshotFixtureID.geminiAccount)
         halfWidthMetrics.append(metricID)
     }
 }
 @main struct Contract {
     @MainActor static func main() {
         let scenes = SCENES
-        let featured = ["gemini": AppStoreScreenshotFixtureID.geminiAccount,
-                        "grok": AppStoreScreenshotFixtureID.grokAccount,
+        let featured = ["grok": AppStoreScreenshotFixtureID.grokAccount,
                         "github-billing": AppStoreScreenshotFixtureID.githubBillingAccount]
         for raw in scenes {
             let config = AppStoreScreenshotConfiguration.parse(arguments: [
@@ -64,18 +62,15 @@ enum MetricTileWidthPreference { case half }
             let store = ProviderConfigurationStore()
             AppStoreScreenshotFixtures.featureAccount(for: config.scene, in: store)
             precondition(store.orders == (featured[raw].map { [[$0]] } ?? []))
-            precondition(store.halfWidthMetrics == (raw == "gemini" ? [
-                "gemini.five-hour", "gemini.weekly", "antigravity.gemini-5h",
-                "antigravity.gemini-weekly", "antigravity.3p-5h", "antigravity.3p-weekly"
-            ] : []))
+            precondition(store.halfWidthMetrics.isEmpty)
         }
-        precondition(AppStoreScreenshotConfiguration.parse(arguments: ["--app-store-scene", "gemini"]) == nil)
+        precondition(AppStoreScreenshotConfiguration.parse(arguments: ["--app-store-scene", "retired-provider"]) == nil)
         let fallback = AppStoreScreenshotConfiguration.parse(arguments: [
             "--app-store-screenshots", "--app-store-scene", "invalid",
             "--app-store-settle-seconds", "-2"
         ])!
         precondition(fallback.scene == .dashboardOverview && fallback.settleDelay == 0)
-        print("Nine real parser/routing contracts passed; normal launch stays inactive.")
+        print("Eight real parser/routing contracts passed; normal launch stays inactive.")
     }
 }
 '''.replace("SCENES", str(scenes).replace("'", '"'))

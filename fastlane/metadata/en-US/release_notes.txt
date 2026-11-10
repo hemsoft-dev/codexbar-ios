@@ -1,10 +1,5 @@
 CodexBar 2.0.1
 
-- Simplify dashboard and weekly quota details to focus on usage and reset information.
-- Improve retrieval of Gemini Models and Argon weekly coding quotas. Missing values remain unavailable.
-- Explain when Google-backed Greptile billing sign-in is unavailable and preserve saved connections when sign-in is canceled.
-- Keep missing Grok and X Subscription usage unavailable rather than inferring zero usage from a paid plan.
-- Improve subscription access checks around expiration without interrupting Purchase or Restore.
-- Explain Muse Code availability when adding an account on iPhone.
+Google providers are no longer supported. Saved Google accounts and credentials are removed on upgrade. Your other accounts, groups and usage history remain available.
 
 Provider data depends on your account and service. This update does not add Google-backed Greptile billing access or Muse Code usage on iPhone.

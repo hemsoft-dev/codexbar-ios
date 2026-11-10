@@ -26,8 +26,6 @@ final class WidgetConfigurationTests: XCTestCase {
             (.openCodeZen, "openCodeZen"),
             (.openRouter, "openRouter"),
             (.greptile, "greptile"),
-            (.gemini, "gemini"),
-            (.antigravity, "antigravity"),
         ]
 
         for (focus, providerID) in mappings {
@@ -35,9 +33,9 @@ final class WidgetConfigurationTests: XCTestCase {
         }
         XCTAssertEqual(
             Set(CodexBarWidgetFocus.allCases),
-            Set(CodexBarWidgetFocus.caseDisplayRepresentations.keys).subtracting([.antigravity])
+            Set(CodexBarWidgetFocus.caseDisplayRepresentations.keys)
         )
-        XCTAssertEqual(Set(CodexBarWidgetFocus.allCases), Set(mappings.map(\.0)).subtracting([.antigravity]))
+        XCTAssertEqual(Set(CodexBarWidgetFocus.allCases), Set(mappings.map(\.0)))
     }
 
     @MainActor

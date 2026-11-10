@@ -108,7 +108,7 @@ public final class UsageRefreshService: ObservableObject {
         guard let cached = results.first(where: { $0.accountID == accountID }) else { return }
         replaceResult(ProviderUsageResult(
             accountID: cached.accountID, providerID: cached.providerID, title: cached.title,
-            plan: cached.providerID == .gemini ? nil : cached.plan, verifiedGrokPlanName: cached.verifiedGrokPlanName,
+            plan: cached.plan, verifiedGrokPlanName: cached.verifiedGrokPlanName,
             subtitle: "\(message) Showing last known data.",
             bars: cached.bars, barsFetchedAt: cached.barsFetchedAt,
             creditsRemaining: cached.creditsRemaining, creditsFetchedAt: cached.creditsFetchedAt,
@@ -538,7 +538,7 @@ public final class UsageRefreshService: ObservableObject {
             accountID: accountID,
             providerID: failureResult.providerID,
             title: title,
-            plan: failureResult.providerID == .gemini ? failureResult.plan : (failureResult.plan ?? cachedResult?.plan),
+            plan: failureResult.plan ?? cachedResult?.plan,
             verifiedGrokPlanName: failureResult.verifiedGrokPlanName ?? cachedResult?.verifiedGrokPlanName,
             subtitle: subtitle,
             bars: freshGreptileCredits.isEmpty ? barsResult.bars : freshGreptileCredits + cachedGreptileReviews,
@@ -626,7 +626,7 @@ public final class UsageRefreshService: ObservableObject {
 
     /// The same predicate protects batch work, individual requests and reconciliation.
     func canRefresh(_ configuration: ProviderAccountConfiguration) -> Bool {
-        configuration.isEnabled && configuration.providerID != .antigravity && configuration.providerID.isAvailableOnIPhone
+        configuration.isEnabled && configuration.providerID.isAvailableOnIPhone
             && (accountAccess?.permitsRefresh(configuration) ?? true)
     }
 
@@ -641,7 +641,7 @@ public final class UsageRefreshService: ObservableObject {
         hasCurrentConfigurationSnapshot = true
         configurationSnapshot = configurations
         let retained = Dictionary(uniqueKeysWithValues: configurations.filter {
-            $0.isEnabled && $0.providerID != .antigravity
+            $0.isEnabled
         }.map { ($0.id, $0) })
         for (accountID, validation) in claudeResetValidationsByAccountID
             where refreshInputsChanged(from: validation.configuration, to: retained[accountID]) {
@@ -806,7 +806,6 @@ public extension UsageRefreshService {
                 MoonshotUsageProvider(),
                 CursorUsageProvider(),
                 GreptileUsageProvider(),
-                GeminiUsageProvider(),
             ]
         )
     }

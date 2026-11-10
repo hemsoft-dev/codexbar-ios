@@ -464,7 +464,6 @@ public final class ProviderConfigurationStore: ObservableObject {
     let cursorSameIdentityReconnects = PassthroughSubject<String, Never>()
     let grokHistoryInvalidations = PassthroughSubject<String, Never>()
     let greptileCredentialUpdates = PassthroughSubject<(accountID: String, identityChanged: Bool), Never>()
-    @Published public private(set) var confirmedGoogleAccountLinks: [String: String]
     @Published public private(set) var configurations: [ProviderAccountConfiguration]
     @Published public private(set) var groups: [ProviderAccountGroup]
     @Published public private(set) var secretAvailability: [String: Bool]
@@ -515,6 +514,9 @@ public final class ProviderConfigurationStore: ObservableObject {
         secretStore: SecretStore = KeychainService(),
         widgetSnapshotDefaults: UserDefaults? = WidgetSnapshotStore.userDefaults()
     ) {
+        let migrationError = RetiredGoogleProviderMigration.run(
+            defaults: defaults, secretStore: secretStore, configurationKey: DefaultsKey.configurations
+        )
         let usageAlertSettingsNeedMigration = Self.usageAlertSettingsNeedMigration(
             in: defaults
         )
@@ -537,7 +539,6 @@ public final class ProviderConfigurationStore: ObservableObject {
         self.secretStore = secretStore
         self.widgetSnapshotDefaults = widgetSnapshotDefaults
         self.groups = groupLoadResult.groups
-        self.confirmedGoogleAccountLinks = defaults.dictionary(forKey: "confirmedGoogleAccountLinks") as? [String: String] ?? [:]
         self.configurations = configurationLoadResult.configurations
         self.secretAvailability = [:]
         self.showsSubscriptionRenewals = defaults.object(forKey: DefaultsKey.showsSubscriptionRenewals) as? Bool ?? true
@@ -567,7 +568,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         self.isConfigurationRecoveryRequired = configurationLoadResult.error != nil
         self.isGroupRecoveryRequired = groupLoadResult.error != nil
         self.hasIncompleteAccountReset = defaults.bool(forKey: DefaultsKey.incompleteAccountReset)
-        self.lastError = configurationLoadResult.error ?? groupLoadResult.error
+        self.lastError = configurationLoadResult.error ?? groupLoadResult.error ?? migrationError
         self.accountAccess = initialPlanAccess
         if metricLayoutLoadResult.opaqueData == nil,
            metricLayoutLoadResult.needsMigration
@@ -581,8 +582,6 @@ public final class ProviderConfigurationStore: ObservableObject {
         if usageAlertSettingsNeedMigration {
             saveUsageAlertSettings()
         }
-        migrateGoogleSetupLayouts()
-        resumePendingGoogleLinks()
         refreshSecretAvailability()
         applyPlanAccess(hasProAccess: initialPlanAccess.hasProAccess, isResolved: initialPlanAccess.isResolved)
     }
@@ -729,7 +728,6 @@ public final class ProviderConfigurationStore: ObservableObject {
             return nil
         } else {
             metricLayouts[configuration.id] = AccountMetricLayout()
-            migrateGoogleSetupLayouts()
             saveMetricLayouts()
         }
         refreshSecretAvailability()
@@ -808,7 +806,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             let data = try JSONEncoder().encode(updatedConfigurations)
             let greptileIdentityChanged = try greptileCredentialChangesIdentity(credential, for: normalized)
             try writeAccountSecret(credential, for: normalized)
-            if [ProviderID.gemini, .grok, .xSubscription, .claude, .openCodeZen].contains(normalized.providerID) {
+            if [ProviderID.grok, .xSubscription, .claude, .openCodeZen].contains(normalized.providerID) {
                 credentialChanges.send(normalized.id)
             }
             defaults.set(data, forKey: configurationsKey)
@@ -844,16 +842,8 @@ public final class ProviderConfigurationStore: ObservableObject {
         var removedAccountIDs = Set<String>()
         let knownAccountIDs = Set(configurations.map(\.id))
 
-        let linkedIDs = Set(confirmedGoogleAccountLinks.filter { link in accounts.contains { $0.id == link.value } }.keys)
-        let accountsToRemove = accounts + configurations.filter { linkedIDs.contains($0.id) }
-        for configuration in accountsToRemove {
-            if let targetID = confirmedGoogleAccountLinks[configuration.id],
-               accounts.contains(where: { $0.id == targetID }), !removedAccountIDs.contains(targetID) { continue }
+        for configuration in accounts {
             do {
-                if configuration.providerID == .gemini {
-                    try secretStore.deleteSecret(account: Self.geminiCodingKeychainAccount(accountID: configuration.id))
-                    credentialChanges.send(configuration.id)
-                }
                 try writeAccountSecret(nil, for: configuration)
                 if [ProviderID.grok, .xSubscription, .claude, .openCodeZen].contains(configuration.providerID) { credentialChanges.send(configuration.id) }
                 configurations.removeAll { $0.id == configuration.id }
@@ -868,7 +858,6 @@ public final class ProviderConfigurationStore: ObservableObject {
 
         lastError = nil
         if removedAnyAccount {
-            removeGoogleLinks(for: removedAccountIDs)
             sortConfigurations()
             saveConfigurations()
             updateDashboardCardOrder(
@@ -1573,7 +1562,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         do {
             try writeAccountSecret(secret, for: configuration)
 
-            if [ProviderID.gemini, .grok, .xSubscription, .claude, .openCodeZen].contains(configuration.providerID) {
+            if [ProviderID.grok, .xSubscription, .claude, .openCodeZen].contains(configuration.providerID) {
                 credentialChanges.send(configuration.id)
             }
             lastError = nil
@@ -1702,8 +1691,7 @@ public final class ProviderConfigurationStore: ObservableObject {
     }
 
     public func shouldDisplayOnDashboard(_ configuration: ProviderAccountConfiguration) -> Bool {
-        guard configuration.providerID != .antigravity,
-              configuration.isEnabled, configurations.contains(where: { $0.id == configuration.id }) else {
+        guard configuration.isEnabled, configurations.contains(where: { $0.id == configuration.id }) else {
             return false
         }
 
@@ -1728,10 +1716,6 @@ public final class ProviderConfigurationStore: ObservableObject {
             return false
         }
 
-        if configuration.providerID == .gemini {
-            return hasSecret(for: configuration) || hasGeminiCodingSecret(for: configuration)
-        }
-
         if configuration.providerID == .copilot {
             let organization = configuration.githubOrganization.trimmingCharacters(in: .whitespacesAndNewlines)
             return hasSecret(for: configuration)
@@ -1749,7 +1733,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         }
 
         if configuration.requiresSecret
-            || [.codex, .claude, .cursor, .gemini, .grok, .xSubscription, .greptile].contains(configuration.providerID) {
+            || [.codex, .claude, .cursor, .grok, .xSubscription, .greptile].contains(configuration.providerID) {
             return hasSecret(for: configuration)
         }
 
@@ -1853,7 +1837,7 @@ public final class ProviderConfigurationStore: ObservableObject {
 
         if isConfigurationReady(configuration) {
             let label = configuration.accountLabel.trimmingCharacters(in: .whitespacesAndNewlines)
-            if [.codex, .copilot, .githubBilling, .claude, .cursor, .gemini].contains(configuration.providerID) {
+            if [.codex, .copilot, .githubBilling, .claude, .cursor].contains(configuration.providerID) {
                 return label.isEmpty ? "Configured - live usage enabled" : "\(label) - live usage enabled"
             }
 
@@ -1881,10 +1865,9 @@ public final class ProviderConfigurationStore: ObservableObject {
             return "Not configured - sign in with Claude"
         }
 
-        if [.cursor, .gemini, .greptile].contains(configuration.providerID) {
+        if [.cursor, .greptile].contains(configuration.providerID) {
             if configuration.providerID == .greptile { return "Not configured - sign in to Greptile" }
-            return configuration.providerID == .gemini
-                ? "Not configured - sign in with Google" : "Not configured - sign in with Cursor"
+            return "Not configured - sign in with Cursor"
         }
 
         if configuration.providerID == .openCodeZen {
@@ -2415,10 +2398,8 @@ public final class ProviderConfigurationStore: ObservableObject {
         }
 
         switch configuration.providerID {
-        case .codex, .githubBilling, .cursor, .gemini, .grok, .xSubscription:
+        case .codex, .githubBilling, .cursor, .grok, .xSubscription:
             normalized.authMethod = .browserSession
-        case .antigravity:
-            normalized.authMethod = .cliToken
         case .copilot, .claude, .openRouter, .openCodeZen, .moonshot, .greptile, .museCode:
             break
         }
@@ -2467,7 +2448,7 @@ public final class ProviderConfigurationStore: ObservableObject {
     private func isAccountNameUnique(_ configuration: ProviderAccountConfiguration) -> Bool {
         let name = configuration.displayName
 
-        return !(visibleConfigurations + unlinkedGeminiCodingAccounts).contains {
+        return !(visibleConfigurations).contains {
             $0.id != configuration.id
                 && $0.displayName.localizedCaseInsensitiveCompare(name) == .orderedSame
         }
@@ -2498,7 +2479,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         var index = configurations(for: providerID).count + 1
         while true {
             let candidate = "\(base) \(index)"
-            let matchesExisting = (visibleConfigurations + unlinkedGeminiCodingAccounts).contains {
+            let matchesExisting = (visibleConfigurations).contains {
                 $0.accountLabel.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(candidate) == .orderedSame
             }
             if !matchesExisting {
@@ -2603,13 +2584,6 @@ public extension ProviderConfigurationStore {
                 groupID: usageGroup.id,
                 authMethod: .apiKey
             ),
-            ProviderAccountConfiguration(
-                id: AppStoreScreenshotFixtureID.geminiAccount,
-                providerID: .gemini,
-                accountLabel: "Google AI Pro",
-                groupID: usageGroup.id,
-                authMethod: .apiKey
-            ),
         ]
 
         let configurations = singleAccount ? Array(sampleConfigurations.prefix(1)) : sampleConfigurations
@@ -2619,9 +2593,7 @@ public extension ProviderConfigurationStore {
         defaults.set(DashboardOrderingMode.manual.rawValue, forKey: DefaultsKey.dashboardOrderingMode)
         defaults.set(configurations.map(\.id), forKey: DefaultsKey.dashboardCardOrder)
 
-        let accounts = Set(configurations.map(Self.keychainAccount(for:))).union([
-            Self.geminiCodingKeychainAccount(accountID: AppStoreScreenshotFixtureID.geminiAccount),
-        ])
+        let accounts = Set(configurations.map(Self.keychainAccount(for:)))
         return ProviderConfigurationStore(
             initialPlanAccess: .unrestricted, defaults: defaults,
             secretStore: AppStoreScreenshotSecretStore(accounts: accounts), widgetSnapshotDefaults: defaults
@@ -2665,210 +2637,13 @@ public extension ProviderConfigurationStore {
         return previousID != replacementID
     }
 
-    /// Save a missing Google source only when the user opens its setup controls.
-    func prepareDashboardAccountForSetup(
-        _ configuration: ProviderAccountConfiguration
-    ) -> ProviderAccountConfiguration? {
-        if let saved = self.configuration(accountID: configuration.id) {
-            return saved
-        }
-        guard GoogleUsageMetricCatalog.missingSourceConfigurations(in: configurations).contains(configuration) else {
-            return nil
-        }
-        var account = configuration
-        if !isAccountNameUnique(account) {
-            account.accountLabel = suggestedAccountLabel(for: account.providerID)
-        }
-        guard update(account) else { return nil }
-        return self.configuration(accountID: account.id)
-    }
 }
 
 public extension ProviderConfigurationStore {
-    /// Legacy coding records stay stored until explicitly associated, but are never separate accounts in the UI.
     var visibleConfigurations: [ProviderAccountConfiguration] {
-        configurations.filter { $0.providerID != .antigravity }
+        configurations
     }
 
-    var unlinkedGeminiCodingAccounts: [ProviderAccountConfiguration] {
-        configurations.filter { $0.providerID == .antigravity && confirmedGoogleAccountLinks[$0.id] == nil }
-    }
-
-    nonisolated static func geminiCodingKeychainAccount(accountID: String) -> String {
-        "provider.gemini.\(accountID).coding"
-    }
-
-    func hasGeminiCodingSecret(for configuration: ProviderAccountConfiguration) -> Bool {
-        secretAvailability[Self.geminiCodingKeychainAccount(accountID: configuration.id)] ?? false
-    }
-
-    func linkedGoogleAccountIDs(for accountID: String) -> [String] {
-        confirmedGoogleAccountLinks.filter { $0.value == accountID }.keys.sorted()
-    }
-
-    @discardableResult
-    func saveGeminiCodingSecret(
-        _ secret: String,
-        for configuration: ProviderAccountConfiguration,
-        confirmedSameAccount: Bool,
-        requireEmptySlot: Bool = false
-    ) -> Bool {
-        guard allowConfigurationMutation(), confirmedSameAccount,
-              configuration.providerID == .gemini,
-              self.configuration(accountID: configuration.id)?.providerID == .gemini else { return false }
-        do {
-            if requireEmptySlot,
-               try secretStore.readSecret(account: Self.geminiCodingKeychainAccount(accountID: configuration.id)) != nil {
-                return false
-            }
-            let credential = try AntigravityCredentials.parse(secret).encoded()
-            try secretStore.saveSecret(credential, account: Self.geminiCodingKeychainAccount(accountID: configuration.id))
-            credentialChanges.send(configuration.id)
-            lastError = nil
-            refreshSecretAvailability()
-            return true
-        } catch {
-            lastError = error.localizedDescription
-            return false
-        }
-    }
-
-    @discardableResult
-    func disconnectGeminiCoding(for configuration: ProviderAccountConfiguration) -> Bool {
-        guard allowConfigurationMutation(), configuration.providerID == .gemini,
-              self.configuration(accountID: configuration.id)?.providerID == .gemini else { return false }
-        do {
-            var pending = defaults.dictionary(forKey: "pendingGoogleAccountLinks") as? [String: String] ?? [:]
-            let sourceIDs = Set(linkedGoogleAccountIDs(for: configuration.id))
-                .union(pending.filter { $0.value == configuration.id }.keys)
-            for sourceID in sourceIDs {
-                if let source = self.configuration(accountID: sourceID) {
-                    try secretStore.deleteSecret(account: keychainAccount(for: source))
-                }
-                pending.removeValue(forKey: sourceID)
-            }
-            defaults.set(pending, forKey: "pendingGoogleAccountLinks")
-            try secretStore.deleteSecret(account: Self.geminiCodingKeychainAccount(accountID: configuration.id))
-            credentialChanges.send(configuration.id)
-            lastError = nil
-            refreshSecretAvailability()
-            return true
-        } catch {
-            lastError = error.localizedDescription
-            return false
-        }
-    }
-
-    @discardableResult
-    func linkGeminiCodingAccount(
-        _ legacy: ProviderAccountConfiguration,
-        to gemini: ProviderAccountConfiguration,
-        confirmedSameAccount: Bool
-    ) -> Bool {
-        guard allowConfigurationMutation(),
-              let savedLegacy = configuration(accountID: legacy.id), savedLegacy.providerID == .antigravity,
-              let savedGemini = configuration(accountID: gemini.id), savedGemini.providerID == .gemini,
-              confirmedGoogleAccountLinks[legacy.id] == nil,
-              canAssociateGoogleAccounts(savedLegacy, savedGemini, confirmedSameAccount: confirmedSameAccount) else {
-            return false
-        }
-        guard opaqueMetricLayoutData == nil,
-              unsupportedMetricLayoutData[legacy.id] == nil, unsupportedMetricLayoutData[gemini.id] == nil else {
-            lastError = "Saved metric settings need recovery before this coding session can be linked."
-            return false
-        }
-        do {
-            let destination = Self.geminiCodingKeychainAccount(accountID: gemini.id)
-            let source = try secretStore.readSecret(account: keychainAccount(for: savedLegacy))
-            let normalized = try source.map { try AntigravityCredentials.parse($0).encoded() }
-            let existing = try secretStore.readSecret(account: destination)
-            var pending = defaults.dictionary(forKey: "pendingGoogleAccountLinks") as? [String: String] ?? [:]
-            guard existing == nil || (pending[legacy.id] == gemini.id && existing == normalized) else {
-                lastError = "Disconnect this Gemini account's coding session before linking a saved session."
-                return false
-            }
-            pending[legacy.id] = gemini.id
-            defaults.set(pending, forKey: "pendingGoogleAccountLinks")
-            if let normalized {
-                try secretStore.saveSecret(normalized, account: destination)
-                credentialChanges.send(gemini.id)
-            }
-            mergeGoogleMetricLayout(from: legacy.id, into: gemini.id, prefersSource: true)
-            saveMetricLayouts()
-            var links = confirmedGoogleAccountLinks
-            links[legacy.id] = gemini.id
-            defaults.set(links, forKey: "confirmedGoogleAccountLinks")
-            // Preserve the original configuration and secret as internal migration records.
-            // History observers can retry migration safely after a crash or unreadable history file.
-            confirmedGoogleAccountLinks = links
-            pending.removeValue(forKey: legacy.id)
-            defaults.set(pending, forKey: "pendingGoogleAccountLinks")
-            lastError = nil
-            refreshSecretAvailability()
-            return true
-        } catch {
-            lastError = error.localizedDescription
-            return false
-        }
-    }
-
-    private func canAssociateGoogleAccounts(
-        _ legacy: ProviderAccountConfiguration,
-        _ gemini: ProviderAccountConfiguration,
-        confirmedSameAccount: Bool
-    ) -> Bool {
-        if let legacySubject = legacy.verifiedGoogleSubject, let geminiSubject = gemini.verifiedGoogleSubject {
-            guard legacySubject == geminiSubject, !legacySubject.isEmpty else {
-                lastError = "These sessions belong to different verified Google accounts."
-                return false
-            }
-            return true
-        }
-        guard confirmedSameAccount else {
-            lastError = "Confirm that both sessions belong to this Google account before linking."
-            return false
-        }
-        return true
-    }
-
-    private func mergeGoogleMetricLayout(from sourceID: String, into targetID: String, prefersSource: Bool = false) {
-        guard let source = metricLayouts[sourceID] else { return }
-        var target = metricLayouts[targetID] ?? AccountMetricLayout()
-        for (metricID, preference) in source.preferences where prefersSource || target.preferences[metricID] == nil {
-            target.preferences[metricID] = preference
-        }
-        let sourceIDs = Set(source.orderedMetricIDs)
-        let preservedOrder = prefersSource ? target.orderedMetricIDs.filter { !sourceIDs.contains($0) } : target.orderedMetricIDs
-        target.orderedMetricIDs = Self.uniqueNonemptyMetricIDs(preservedOrder + source.orderedMetricIDs)
-        metricLayouts[targetID] = target
-    }
-
-    private func removeGoogleLinks(for removedAccountIDs: Set<String>) {
-        let remaining = confirmedGoogleAccountLinks.filter { !removedAccountIDs.contains($0.key) && !removedAccountIDs.contains($0.value) }
-        defaults.set(remaining, forKey: "confirmedGoogleAccountLinks")
-        confirmedGoogleAccountLinks = remaining
-        let pending = defaults.dictionary(forKey: "pendingGoogleAccountLinks") as? [String: String] ?? [:]
-        defaults.set(pending.filter { !removedAccountIDs.contains($0.key) && !removedAccountIDs.contains($0.value) }, forKey: "pendingGoogleAccountLinks")
-    }
-
-    private func resumePendingGoogleLinks() {
-        let pending = defaults.dictionary(forKey: "pendingGoogleAccountLinks") as? [String: String] ?? [:]
-        for (sourceID, targetID) in pending where confirmedGoogleAccountLinks[sourceID] == nil {
-            guard let source = configuration(accountID: sourceID), let target = configuration(accountID: targetID) else { continue }
-            linkGeminiCodingAccount(source, to: target, confirmedSameAccount: true)
-        }
-    }
-
-    private func migrateGoogleSetupLayouts() {
-        guard opaqueMetricLayoutData == nil else { return }
-        for configuration in visibleConfigurations where configuration.providerID == .gemini {
-            for sourceID in ["dashboard.setup.gemini", "dashboard.setup.antigravity"]
-            where unsupportedMetricLayoutData[sourceID] == nil && unsupportedMetricLayoutData[configuration.id] == nil {
-                mergeGoogleMetricLayout(from: sourceID, into: configuration.id)
-            }
-        }
-        saveMetricLayouts()
-    }
 }
 
 extension ProviderConfigurationStore {
@@ -2876,19 +2651,12 @@ extension ProviderConfigurationStore {
         var availability: [String: Bool] = [:]
         var firstReadError: String?
         for configuration in configurations {
-            var sources = [(configuration.id, keychainAccount(for: configuration))]
-            if configuration.providerID == .gemini {
-                let codingAccount = Self.geminiCodingKeychainAccount(accountID: configuration.id)
-                sources.append((codingAccount, codingAccount))
-            }
-            for (availabilityID, account) in sources {
-                do {
-                    availability[availabilityID] = try secretStore.readSecret(account: account) != nil
-                } catch {
-                    availability[availabilityID] = false
-                    if firstReadError == nil {
-                        firstReadError = "Could not read the saved credential for \(configuration.displayName): \(error.localizedDescription)"
-                    }
+            do {
+                availability[configuration.id] = try secretStore.readSecret(account: keychainAccount(for: configuration)) != nil
+            } catch {
+                availability[configuration.id] = false
+                if firstReadError == nil {
+                    firstReadError = "Could not read the saved credential for \(configuration.displayName): \(error.localizedDescription)"
                 }
             }
         }
@@ -2901,7 +2669,6 @@ extension ProviderConfigurationStore {
             lastError = persistenceRecoveryErrorMessage
         }
     }
-
 }
 
 public extension ProviderConfigurationStore {
@@ -3061,13 +2828,10 @@ extension ProviderConfigurationStore {
         let knownAccountIDs = Set(configurations.map(\.id))
         var accountsToDelete: [String] = []
         var seenKeychainAccounts = Set<String>()
-        let codingAccounts = configurations.filter { $0.providerID == .gemini }
-            .map { Self.geminiCodingKeychainAccount(accountID: $0.id) }
         let grokAccounts = Set(configurations.filter(\.providerID.usesXAIConsumerAuth).map { keychainAccount(for: $0) })
             .union([keychainAccount(for: .grok), keychainAccount(for: .xSubscription)])
         for account in configurations.map({ keychainAccount(for: $0) })
             + ProviderID.allCases.map({ keychainAccount(for: $0) })
-            + codingAccounts
             + configurations.filter({ [.claude, .grok].contains($0.providerID) }).map({ SubscriptionBillingSession.keychainAccount($0) })
         where seenKeychainAccounts.insert(account).inserted {
             accountsToDelete.append(account)
@@ -3080,9 +2844,8 @@ extension ProviderConfigurationStore {
             do {
                 try deleteAccountSecret(account, grokAccounts: grokAccounts)
                 if let configuration = configurations.first(where: {
-                    [ProviderID.gemini, .grok, .xSubscription, .claude, .openCodeZen].contains($0.providerID)
+                    [ProviderID.grok, .xSubscription, .claude, .openCodeZen].contains($0.providerID)
                         && (keychainAccount(for: $0) == account
-                            || Self.geminiCodingKeychainAccount(accountID: $0.id) == account
                             || ([.claude, .grok].contains($0.providerID)
                                 && SubscriptionBillingSession.keychainAccount($0) == account))
                 }) {
@@ -3107,14 +2870,11 @@ extension ProviderConfigurationStore {
 
         removedAccountIDs.subtract(configurations.filter { configuration in
             failedKeychainAccounts.contains(keychainAccount(for: configuration))
-                || (configuration.providerID == .gemini
-                    && failedKeychainAccounts.contains(Self.geminiCodingKeychainAccount(accountID: configuration.id)))
                 || ([.claude, .grok].contains(configuration.providerID)
                     && failedKeychainAccounts.contains(SubscriptionBillingSession.keychainAccount(configuration)))
         }.map(\.id))
 
         if firstDeletionError == nil {
-            confirmedGoogleAccountLinks = [:]
             defaults.removeObject(forKey: "confirmedGoogleAccountLinks")
             defaults.removeObject(forKey: "pendingGoogleAccountLinks")
             configurations = []
@@ -3145,7 +2905,6 @@ extension ProviderConfigurationStore {
         }
 
         if !removedAccountIDs.isEmpty {
-            removeGoogleLinks(for: removedAccountIDs)
             configurations.removeAll { removedAccountIDs.contains($0.id) }
             sortConfigurations()
             saveConfigurations()

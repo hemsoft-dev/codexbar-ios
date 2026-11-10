@@ -80,7 +80,6 @@ enum WidgetSnapshotPublisher {
                 return CodexBarWidgetProviderSnapshot(
                     accountID: result.accountID,
                     providerID: result.providerID.rawValue,
-                    legacyAccountIDs: configurationStore.linkedGoogleAccountIDs(for: result.accountID),
                     title: result.providerID.usesXAIConsumerAuth ? (configuration?.displayName ?? result.title) : result.title,
                     subtitle: statusText(for: result, configurationStore: configurationStore),
                     planIdentifier: plan?.identifier,
@@ -98,11 +97,7 @@ enum WidgetSnapshotPublisher {
                         let projectedSeverity = barsAreFresh
                             ? bar.projectedSeverity(at: now, thresholds: severityThresholds)
                             : nil
-                        var projectionParts = barsAreFresh ? bar.projectionDescriptionParts(at: now) : nil
-                        if projectionParts?.significance == .benign,
-                           GoogleUsageMetricCatalog.codingDefinitions.contains(where: { $0.id == metricID }) {
-                            projectionParts = nil
-                        }
+                        let projectionParts = barsAreFresh ? bar.projectionDescriptionParts(at: now) : nil
                         return CodexBarWidgetUsageBarSnapshot(
                             id: stableBarID(
                                 accountID: result.accountID,

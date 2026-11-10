@@ -73,6 +73,7 @@ final class UITestFixtures {
         originalPurchaserFixture = OriginalPurchaserFixture(scenario: environment["CODEXBAR_UI_TEST_SCENARIO"], defaults: defaults)
         dynamicTypeSize = environment["CODEXBAR_UI_TEST_DEFAULT_TEXT"] == "1" ? .large : .accessibility2
         URLProtocol.registerClass(UITestNetworkBlocker.self)
+        Self.seedRetiredGoogleUpgrade(defaults: defaults, scenario: planScenario)
         configurationStore = ProviderConfigurationStore(
             initialPlanAccess: .unrestricted,
             defaults: defaults,
@@ -99,7 +100,6 @@ final class UITestFixtures {
         let grok = scenario?.hasPrefix("grok") == true
         UITestOpenCodeRenewalProvider.seed(in: configurationStore, scenario: scenario)
         Self.seedRenewalAccounts(in: configurationStore, scenario: scenario)
-        Self.seedGooglePlanAccounts(in: configurationStore, scenario: scenario)
         Self.seedPlanPillAccounts(in: configurationStore, scenario: scenario)
         let codex = scenario?.hasPrefix("codex-") == true
         let claude = scenario?.hasPrefix("claude-") == true
@@ -110,11 +110,6 @@ final class UITestFixtures {
         if claude && configurationStore.configurations.isEmpty {
             Self.seedClaudeAccount(in: configurationStore, scenario: scenario)
             Self.seedSecondClaudeAccount(in: configurationStore, scenario: scenario)
-        }
-        let googleSources = Self.googleSources(for: scenario)
-        let google = !googleSources.isEmpty
-        if google && configurationStore.configurations.isEmpty {
-            Self.seedGoogleAccounts(in: configurationStore, sources: googleSources)
         }
         if codex && configurationStore.configurations.isEmpty {
             Self.seedCodexAccounts(in: configurationStore)
@@ -135,11 +130,9 @@ final class UITestFixtures {
         UITestMuseCodeFixture.seed(in: configurationStore, scenario: scenario)
         let results = UITestMuseCodeFixture.results(in: configurationStore, scenario: scenario)
             ?? PlanTierFixture.initialResults(in: configurationStore, scenario: scenario)
-            ?? Self.initialResults(in: configurationStore, scenario: scenario, googleSources: googleSources, defaults: defaults)
+            ?? Self.initialResults(in: configurationStore, scenario: scenario, defaults: defaults)
         let providers: [any UsageProvider]
-        if google {
-            providers = [UITestGoogleProvider(sources: googleSources)]
-        } else if greptile {
+        if greptile {
             providers = [UITestGreptileProvider(secretStore: UITestSecretStore(suite: suite))]
         } else if codex {
             providers = [UITestCodexProvider(scenario: scenario)]
@@ -160,7 +153,9 @@ final class UITestFixtures {
         }
         refreshService = UsageRefreshService(
             providers: PlanTierFixture.providers(
-                overriding: Self.providersForPlanPills(providers, scenario: scenario, suiteName: suite), scenario: scenario
+                overriding: Self.providersForPlanPills(
+                    Self.upgradeEvidenceProviders(scenario: scenario, fallback: providers), scenario: scenario, suiteName: suite
+                ), scenario: scenario
             ), initialResults: results
         )
         UITestMuseCodeFixture.presentFailures(of: results, in: refreshService, scenario: scenario)
@@ -180,8 +175,50 @@ final class UITestFixtures {
         }
     }
 
+    private static func upgradeEvidenceProviders(scenario: String?, fallback: [any UsageProvider]) -> [any UsageProvider] {
+        scenario == "retired-google-upgrade" ? DemoUsageProvider.samples : fallback
+    }
+
+    // The old on-disk schema is seeded before the real store migration runs, without provider authorization.
+    private static func seedRetiredGoogleUpgrade(defaults: UserDefaults, scenario: String) {
+        guard scenario == "retired-google-upgrade", defaults.data(forKey: "providerConfigurations") == nil else { return }
+        let json = #"""
+        [
+            {
+                "id": "personal",
+                "providerID": "codex",
+                "accountLabel": "Personal Codex",
+                "groupID": "work",
+                "authMethod": "browserSession"
+            },
+            {
+                "id": "team",
+                "providerID": "claude",
+                "accountLabel": "Team Claude",
+                "groupID": "work",
+                "authMethod": "browserSession"
+            },
+            {
+                "id": "gemini.saved",
+                "providerID": "gemini",
+                "authMethod": "browserSession"
+            },
+            {
+                "id": "coding.saved",
+                "providerID": "antigravity",
+                "authMethod": "cliToken"
+            }
+        ]
+        """#
+        defaults.set(Data(json.utf8), forKey: "providerConfigurations")
+        defaults.set(try? JSONEncoder().encode([ProviderAccountGroup(id: "work", name: "Work")]), forKey: "providerAccountGroups")
+        for id in ["personal", "team", "gemini.saved", "coding.saved"] {
+            defaults.set("ui-test-credential", forKey: "fixture-secret.providerAccount.\(id).credential")
+        }
+    }
+
     private static func initialResults(
-        in store: ProviderConfigurationStore, scenario: String?, googleSources: [ProviderID], defaults: UserDefaults
+        in store: ProviderConfigurationStore, scenario: String?, defaults: UserDefaults
     ) -> [ProviderUsageResult] {
         store.configurations.filter(store.isConfigured).map { account in
             if let scenario, scenario.hasPrefix("claude-resets-") {
@@ -190,7 +227,7 @@ final class UITestFixtures {
                 return UITestClaudeResetProvider.result(for: account, scenario: scenario,
                                                        requests: requests[account.id, default: 0], remaining: remaining[account.id])
             }
-            return initialResult(for: account, scenario: scenario, googleSources: googleSources)
+            return initialResult(for: account, scenario: scenario)
         }
     }
 
@@ -243,8 +280,13 @@ final class UITestFixtures {
     }
 
     nonisolated private static func initialResult(
-        for configuration: ProviderAccountConfiguration, scenario: String?, googleSources: [ProviderID]
+        for configuration: ProviderAccountConfiguration, scenario: String?
     ) -> ProviderUsageResult {
+        if scenario == "retired-google-upgrade" {
+            return ProviderUsageResult(accountID: configuration.id, providerID: configuration.providerID,
+                                       title: configuration.displayName, subtitle: "Synthetic upgrade fixture",
+                                       bars: [UsageBar(stableKey: "five-hour", label: "Usage", used: 25, limit: 100)], fetchedAt: Date())
+        }
         if scenario?.hasPrefix("opencode-renewal-") == true {
             return ProviderUsageResult(accountID: configuration.id, providerID: .openCodeZen, title: configuration.displayName,
                                        subtitle: "Waiting for synthetic Console response", bars: [], fetchedAt: Date())
@@ -256,9 +298,6 @@ final class UITestFixtures {
             }
             return renewalResult(for: configuration, scenario: scenario)
         }
-        if scenario?.hasPrefix("google-plan-") == true {
-            return googlePlanResult(for: configuration)
-        }
         if scenario == "plan-pills" {
             if configuration.providerID == .codex {
                 return ProviderUsageResult(accountID: configuration.id, providerID: .codex, title: configuration.displayName,
@@ -268,9 +307,6 @@ final class UITestFixtures {
         }
         if scenario?.hasPrefix("metric-evidence-") == true {
             return metricEvidenceResult(for: configuration, scenario: scenario ?? "")
-        }
-        if !googleSources.isEmpty {
-            return googleResult(for: configuration, sources: googleSources, stage: 0)
         }
         if scenario?.hasPrefix("greptile-") == true {
             return ProviderUsageResult(
@@ -364,12 +400,9 @@ final class UITestFixtures {
             return [ProviderID.xSubscription, .grok, .cursor].map { UITestXSubscriptionProvider(providerID: $0, scenario: scenario) }
         }
         if scenario?.hasPrefix("subscription-renewals") == true {
-            return [ProviderID.codex, .claude, .grok, .cursor, .gemini, .openCodeZen].map {
+            return [ProviderID.codex, .claude, .grok, .cursor, .openCodeZen].map {
                 UITestRenewalProvider(providerID: $0, scenario: scenario, suiteName: suiteName)
             }
-        }
-        if scenario?.hasPrefix("google-plan-") == true {
-            return [UITestGooglePlanProvider(providerID: .gemini), UITestGooglePlanProvider(providerID: .openCodeZen)]
         }
         guard scenario == "plan-pills" else { return providers }
         let config = URLSessionConfiguration.ephemeral
@@ -380,13 +413,12 @@ final class UITestFixtures {
             usageEndpoint: URL(string: "https://codex-plan-fixture.invalid/usage")!,
             resetCreditsEndpoint: URL(string: "https://codex-plan-fixture.invalid/inventory")!
         )
-        return [codex] + [ProviderID.claude, .grok, .gemini, .openRouter].map { UITestPlanPillProvider(providerID: $0) }
+        return [codex] + [ProviderID.claude, .grok, .openRouter].map { UITestPlanPillProvider(providerID: $0) }
     }
 
     private static func seedRenewalAccounts(in store: ProviderConfigurationStore, scenario: String?) {
         guard scenario?.hasPrefix("subscription-renewals") == true, store.configurations.isEmpty else { return }
         for (id, provider, title) in [("monthly", ProviderID.codex, "Personal Codex"), ("annual", .codex, "Work Codex"),
-                                      ("google", .gemini, "Personal Google"), ("go", .openCodeZen, "OpenCode Go + Zen"),
                                       ("claude", .claude, "Personal Claude"), ("grok", .grok, "Personal Grok"),
                                       ("cursor", .cursor, "Personal Cursor"), ("cursor-annual", .cursor, "Annual Cursor"),
         ] {
@@ -402,11 +434,10 @@ final class UITestFixtures {
     nonisolated static func renewalResult(for account: ProviderAccountConfiguration, scenario: String?) -> ProviderUsageResult {
         let now = Date()
         let plan = account.providerID == .claude ? ClaudeUsageParser.planDescriptor(subscriptionType: "max", rateLimitTier: "default_claude_max_20x")
-            : account.providerID == .gemini ? GoogleAIPlanParser.parse(Data(#"{"paidTier":{"name":"Google AI Pro (5 TB)"}}"#.utf8))
             : account.providerID == .codex ? ProviderPlanDescriptor.make(providerPrefix: "codex", identifier: "pro", label: "ChatGPT Pro 200",
                                                                         displayLabel: "ChatGPT Pro 200") : nil
         let state: SubscriptionRenewal.State = scenario == "subscription-renewals-canceled" ? .nonRenewing : .renewing
-        let offset: Double = account.id == "annual" ? 31_536_000 : account.id == "google" ? 7_200 : 259_200
+        let offset: Double = account.id == "annual" ? 31_536_000 : 259_200
         var renewal = scenario == "subscription-renewals-unknown" ? nil : SubscriptionRenewal(
             accountID: account.id, providerID: account.providerID, state: state,
             date: now.addingTimeInterval(scenario == "subscription-renewals-past" ? -60 : offset),
@@ -430,28 +461,6 @@ final class UITestFixtures {
                                    subscriptionRenewal: renewal, fetchedAt: now)
     }
 
-    private static func seedGooglePlanAccounts(in store: ProviderConfigurationStore, scenario: String?) {
-        guard let scenario, scenario.hasPrefix("google-plan-"), store.configurations.isEmpty else { return }
-        let variant = String(scenario.dropFirst("google-plan-".count))
-        let google = ProviderAccountConfiguration(id: variant, providerID: .gemini, accountLabel: "Personal Google", authMethod: .browserSession)
-        precondition(store.update(google))
-        precondition(store.saveSecret("ui-test-credential", for: google))
-        var openCode = ProviderAccountConfiguration(id: "opencode", providerID: .openCodeZen, accountLabel: "OpenCode Go + Zen", authMethod: .browserSession)
-        openCode.openCodeWorkspaceId = "fixture-workspace"
-        precondition(store.update(openCode))
-        precondition(store.saveSecret("ui-test-credential", for: openCode))
-    }
-
-    nonisolated static func googlePlanResult(for account: ProviderAccountConfiguration) -> ProviderUsageResult {
-        let names = ["free": "Google AI Free", "plus": "Google AI Plus (400 GB)", "pro": "Google AI Pro (5 TB)",
-                     "ultra": "Google AI Ultra", "ultra5": "Google AI Ultra 5x", "ultra20": "Google AI Ultra 20x",
-        ]
-        let plan = names[account.id].flatMap { GoogleAIPlanParser.parse(Data("{\"paidTier\":{\"name\":\"\($0)\"}}".utf8)) }
-        return ProviderUsageResult(accountID: account.id, providerID: account.providerID, title: account.displayName,
-                                   plan: plan, subtitle: "Synthetic subscription fixture",
-                                   bars: [UsageBar(stableKey: "fixture", label: "Usage", used: 12, limit: 100)], fetchedAt: Date())
-    }
-
     private static func seedPlanPillAccounts(in store: ProviderConfigurationStore, scenario: String?) {
         guard scenario == "plan-pills", store.configurations.isEmpty else { return }
         for (id, provider, title) in [
@@ -463,7 +472,6 @@ final class UITestFixtures {
             ("free", .codex, "Codex Free fixture"),
             ("max5", .claude, "Claude Max fixture"),
             ("grok-plan", .grok, "SuperGrok Lite"),
-            ("google", .gemini, "Long Google AI Ultra account name is not proof of a subscription"),
             ("api", .openRouter, "OpenRouter fixture"),
         ] {
             let account = ProviderAccountConfiguration(
@@ -478,9 +486,6 @@ final class UITestFixtures {
                 _ = store.saveSecret((try? credential.encoded()) ?? "", for: account)
                 precondition(store.applyVerifiedGrokPlan(grokResult(for: account, scenario: "grok-default")),
                              "Synthetic verified Grok naming must normalize")
-            }
-            if provider == .gemini {
-                _ = store.saveSecret(#"{"__Secure-1PSID":"synthetic"}"#, for: account)
             }
         }
     }
@@ -1509,77 +1514,6 @@ final class UITestFixtures {
         )
     }
 
-    private static func googleSources(for scenario: String?) -> [ProviderID] {
-        switch scenario {
-        case "google-six": [.gemini, .antigravity]
-        case "google-coding-only": [.antigravity]
-        case "google-apps-only": [.gemini]
-        default: []
-        }
-    }
-
-    nonisolated static let codingCredential: String = {
-        do {
-            return try AntigravityCredentials.parse(
-                #"{"access_token":"ui-test-coding-token","expiry":"2030-01-01T00:00:00Z"}"#
-            ).encoded()
-        } catch {
-            preconditionFailure("The fixed synthetic coding credential must be valid")
-        }
-    }()
-
-    private static func seedGoogleAccounts(in store: ProviderConfigurationStore, sources: [ProviderID]) {
-        let account = ProviderAccountConfiguration(
-            id: "ui-google-gemini",
-            providerID: .gemini,
-            accountLabel: "Gemini Fixture",
-            authMethod: .browserSession
-        )
-        precondition(store.update(account))
-        if sources.contains(.gemini) {
-            _ = store.saveSecret("ui-test-credential", for: account)
-        }
-        if sources.contains(.antigravity) {
-            _ = store.saveGeminiCodingSecret(codingCredential, for: account, confirmedSameAccount: true)
-        }
-    }
-
-    nonisolated static func googleResult(
-        for account: ProviderAccountConfiguration,
-        sources: [ProviderID],
-        stage: Int
-    ) -> ProviderUsageResult {
-        let definitions = GoogleUsageMetricCatalog.definitions(for: .gemini)
-        let used: [String: Double] = [
-            "five-hour": 12, "weekly": 45,
-            "gemini-5h": stage >= 3 ? 100 : 0, "gemini-weekly": 31,
-            "3p-5h": stage >= 3 ? 20 : 0, "3p-weekly": stage >= 3 ? 60 : 0,
-        ]
-        var unavailable: [String: String] = [:]
-        for definition in definitions {
-            if !sources.contains(definition.sourceProviderID) { unavailable[definition.id] = "Setup required" } else if used[definition.key] == nil {
-                unavailable[definition.id] = "Unavailable"
-            }
-        }
-        if sources.contains(.antigravity) && stage == 1 {
-            unavailable["antigravity.gemini-weekly"] = "Unavailable"
-            unavailable["antigravity.3p-5h"] = GoogleUsageMetricCatalog.disabledReason
-        }
-        let bars = definitions.compactMap { definition -> UsageBar? in
-            guard unavailable[definition.id] == nil, let value = used[definition.key] else { return nil }
-            return UsageBar(
-                stableKey: definition.key, label: definition.label, used: value, limit: 100,
-                resetsAt: Date().addingTimeInterval(definition.window == "5h" ? 18_000 : 604_800),
-                resetDisplayStyle: .relativeWithLocalTime
-            )
-        }
-        return ProviderUsageResult(
-            accountID: account.id, providerID: .gemini, title: account.displayName,
-            subtitle: "Gemini Apps and coding usage",
-            bars: bars, unavailableUsageMetrics: unavailable, fetchedAt: Date()
-        )
-    }
-
     private func seedHistory() {
         let now = Date()
         for hoursAgo in [48.0, 1.0, 0.0] {
@@ -1619,8 +1553,6 @@ struct UITestSecretStore: SecretStore {
     }
 
     func saveSecret(_ secret: String, account: String) throws {
-        let coding = try? AntigravityCredentials.parse(secret)
-        let expectedCoding = try AntigravityCredentials.parse(UITestFixtures.codingCredential)
         let codex = ["personal", "work", "pro", "prolite", "promax", "future-plan", "plus", "free"].contains {
             secret == UITestFixtures.codexCredential(for: $0)
         }
@@ -1639,7 +1571,7 @@ struct UITestSecretStore: SecretStore {
             $0.accessToken == "synthetic-access" && $0.refreshToken == "synthetic-refresh"
                 && $0.userID == "user_synthetic" && $0.workspaceID == "org_synthetic"
         } == true
-        guard secret.hasPrefix("cursor-plan-") || secret == "ui-test-credential" || coding == expectedCoding || codex || cursor || greptile || grok || openCode
+        guard secret.hasPrefix("cursor-plan-") || secret == "ui-test-credential" || codex || cursor || greptile || grok || openCode
                 || secret == UITestFixtures.claudeProfileCredential || fixtureBilling else {
             throw UITestFixtureError.invalidCredential
         }
@@ -1949,20 +1881,6 @@ private actor UITestGitHubBillingProvider: UsageProvider {
     }
 }
 
-private actor UITestGoogleProvider: UsageProvider {
-    nonisolated let providerID = ProviderID.gemini
-    private let sources: [ProviderID]
-    private var stage = 0
-
-    init(sources: [ProviderID]) { self.sources = sources }
-
-    func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
-        stage += 1
-        if stage == 2 && sources == [.antigravity] { throw UITestFixtureError.refreshFailed }
-        return UITestFixtures.googleResult(for: configuration, sources: sources, stage: stage)
-    }
-}
-
 private enum UITestFixtureError: LocalizedError {
     case invalidCredential
     case refreshFailed
@@ -2127,14 +2045,6 @@ private struct UITestRenewalProvider: UsageProvider {
                                                             state: renewal.state, date: renewal.date, observedAt: Date().addingTimeInterval(-90_000))
         }
         return result
-    }
-}
-
-private struct UITestGooglePlanProvider: UsageProvider {
-    let providerID: ProviderID
-
-    func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
-        UITestFixtures.googlePlanResult(for: configuration)
     }
 }
 

@@ -85,6 +85,7 @@ public struct CodexBarWidgetSnapshot: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         generatedAt = try container.decode(Date.self, forKey: .generatedAt)
         results = try container.decode([CodexBarWidgetProviderSnapshot].self, forKey: .results)
+            .filter { !RetiredGoogleProviderMigration.isRetiredIdentifier($0.providerID) }
         isProLocked = try container.decodeIfPresent(Bool.self, forKey: .isProLocked) ?? true
         proAccessEndsAt = try container.decodeIfPresent(Date.self, forKey: .proAccessEndsAt)
         accessPublication = try container.decodeIfPresent(WidgetAccessPublication.self, forKey: .accessPublication)

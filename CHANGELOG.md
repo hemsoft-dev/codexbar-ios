@@ -6,6 +6,13 @@ building, testing, or releasing the app.
 
 ## 2.0.1 - Unreleased
 
+### Changed
+
+- Removed Google Gemini and Antigravity support from iOS. Saved Google accounts,
+  credentials and website sessions are removed on upgrade. Other providers,
+  account groups and their usage history remain available.
+  ([#556](https://github.com/hemsoft-dev/codexbar-ios/issues/556))
+
 ### Added
 
 - Add Account now explains that Muse Code isn't available on iPhone. Meta

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Known metric choices are independent of whether the latest fetch returned a value.
-public enum GoogleUsageMetricCatalog {
+public enum ProviderMetricCatalog {
     static let disabledReason = "Disabled"
 
     public struct Definition: Equatable, Sendable {
@@ -13,25 +13,8 @@ public enum GoogleUsageMetricCatalog {
         public var id: String { "\(sourceProviderID.rawValue).\(key)" }
     }
 
-    static let appsDefinitions = [
-        Definition(sourceProviderID: .gemini, key: "five-hour", label: "Gemini Apps five-hour", window: "5h"),
-        Definition(sourceProviderID: .gemini, key: "weekly", label: "Gemini Apps weekly", window: "weekly"),
-    ]
-
-    static let codingDefinitions = [
-        Definition(sourceProviderID: .antigravity, key: "gemini-5h", label: "Gemini Models five-hour", window: "5h"),
-        Definition(sourceProviderID: .antigravity, key: "gemini-weekly", label: "Gemini Models weekly", window: "weekly"),
-        Definition(sourceProviderID: .antigravity, key: "gemini-argon-wtu-weekly", label: "Argon weekly", window: "weekly"),
-        Definition(sourceProviderID: .antigravity, key: "3p-5h", label: "Other models five-hour", window: "5h"),
-        Definition(sourceProviderID: .antigravity, key: "3p-weekly", label: "Other models weekly", window: "weekly"),
-    ]
-
     public static func definitions(for providerID: ProviderID) -> [Definition] {
         switch providerID {
-        case .gemini:
-            appsDefinitions + codingDefinitions
-        case .antigravity:
-            codingDefinitions
         case .codex:
             [Definition(sourceProviderID: .codex, key: CodexUsageParser.creditsPoolStableKey, label: "Credits pool", window: "balance")]
         case .museCode:
@@ -93,21 +76,4 @@ public enum GoogleUsageMetricCatalog {
         return known + observed.filter { !knownIDs.contains($0.id) }
     }
 
-    public static func setupDescription(for providerID: ProviderID) -> String? {
-        switch providerID {
-        case .gemini:
-            "Gemini Apps, Gemini Models, and Other models each have five-hour and weekly limits. "
-                + "Argon has a separate weekly limit. Other models includes Claude and GPT. "
-                + "Connect the Apps session and coding session separately here, using the same Google account."
-        default:
-            nil
-        }
-    }
-
-    /// Gemini owns every Google quota; obsolete source setup cards are never created.
-    public static func missingSourceConfigurations(
-        in configurations: [ProviderAccountConfiguration]
-    ) -> [ProviderAccountConfiguration] {
-        []
-    }
 }

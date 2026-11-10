@@ -169,9 +169,8 @@ extension ProviderUsageResult {
     }
 
     private var subscriptionBillingIsNotApplicable: Bool {
-        if [.openRouter, .moonshot, .githubBilling, .antigravity].contains(providerID) { return true }
+        if [.openRouter, .moonshot, .githubBilling].contains(providerID) { return true }
         let identifier = plan?.identifier.lowercased() ?? ""
-        if providerID == .gemini && identifier == "google-ai.google ai free" { return true }
         if identifier.hasSuffix(".free") || identifier.hasSuffix(".hobby") || identifier.contains(".api-credits") { return true }
         return providerID == .greptile && greptileAllowanceRenewal?.isApplicable == true
     }
@@ -197,9 +196,6 @@ extension ProviderUsageResult {
         case .cursor:
             return "Cursor billing did not provide a verified subscription date. Refresh or reconnect this account to try again. "
                 + "Team, trial, payment recovery and unsupported subscriptions do not show an assumed renewal."
-        case .gemini:
-            return "Google AI billing is managed by Google One, Google payments or the store where you subscribed. The current "
-                + "connection does not expose a verified next charge and renewal status."
         case .copilot:
             return "Copilot allowance resets are separate from subscription billing. The current connection does not provide a next "
                 + "charge and cancellation status. Check GitHub Billing & licensing."

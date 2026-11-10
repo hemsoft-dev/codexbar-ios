@@ -126,22 +126,6 @@ final class FreeTierPresentationTests: XCTestCase {
         }
     }
 
-    func testGoogleSetupPlaceholderStillReplacesAnObservedResultAfterRename() throws {
-        let configuration = ProviderAccountConfiguration(
-            id: "gemini.saved", providerID: .gemini, accountLabel: "Renamed Gemini", authMethod: .browserSession
-        )
-        let observed = ProviderUsageResult(
-            accountID: configuration.id, providerID: .gemini, title: "Old Gemini",
-            subtitle: "Old observation", bars: [], fetchedAt: Date()
-        )
-        let result = try displayedResult(configuration: configuration, observed: observed, requiresSetup: true)
-
-        XCTAssertEqual(result.title, "Renamed Gemini")
-        XCTAssertEqual(result.recoveryAction, .signIn)
-        XCTAssertEqual(result.fetchedAt, .distantPast)
-        XCTAssertFalse(result.hasSuccessfulRefreshHistory)
-    }
-
     func testDashboardInvitesFirstAccountWhenNoAccountsExist() throws {
         try withDashboard { probe in
             let addAccount = try XCTUnwrap(probe.element(identifier: "dashboard-add-account"), "\(probe.labels)")

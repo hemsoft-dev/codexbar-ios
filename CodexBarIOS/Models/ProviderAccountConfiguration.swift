@@ -11,8 +11,6 @@ public struct ProviderAccountConfiguration: Identifiable, Equatable, Codable, Se
     public var showsHistory: Bool
     public var authMethod: ProviderAuthMethod
     public var oauthClientID: String?
-    /// A subject supplied by a verified Google identity response, never an account label.
-    public var verifiedGoogleSubject: String?
     public var copilotAccountScope: CopilotAccountScope
     public var githubOrganization: String
     public var githubEnterprise: String
@@ -31,7 +29,6 @@ public struct ProviderAccountConfiguration: Identifiable, Equatable, Codable, Se
         showsHistory: Bool = true,
         authMethod: ProviderAuthMethod,
         oauthClientID: String? = nil,
-        verifiedGoogleSubject: String? = nil,
         copilotAccountScope: CopilotAccountScope = .personal,
         githubOrganization: String = "",
         githubEnterprise: String = "",
@@ -49,7 +46,6 @@ public struct ProviderAccountConfiguration: Identifiable, Equatable, Codable, Se
         self.showsHistory = showsHistory
         self.authMethod = authMethod
         self.oauthClientID = oauthClientID
-        self.verifiedGoogleSubject = verifiedGoogleSubject
         self.copilotAccountScope = copilotAccountScope
         self.githubOrganization = githubOrganization
         self.githubEnterprise = githubEnterprise
@@ -142,7 +138,6 @@ public struct ProviderAccountConfiguration: Identifiable, Equatable, Codable, Se
             showsHistory: showsHistory,
             authMethod: authMethod,
             oauthClientID: oauthClientID,
-            verifiedGoogleSubject: verifiedGoogleSubject,
             copilotAccountScope: copilotAccountScope,
             githubOrganization: githubOrganization,
             githubEnterprise: githubEnterprise,
@@ -163,7 +158,6 @@ public struct ProviderAccountConfiguration: Identifiable, Equatable, Codable, Se
         case showsHistory
         case authMethod
         case oauthClientID
-        case verifiedGoogleSubject
         case copilotAccountScope
         case githubOrganization
         case githubEnterprise
@@ -184,7 +178,6 @@ public struct ProviderAccountConfiguration: Identifiable, Equatable, Codable, Se
         self.groupID = try container.decodeIfPresent(String.self, forKey: .groupID)
         self.showsHistory = try container.decodeIfPresent(Bool.self, forKey: .showsHistory) ?? true
         self.authMethod = try container.decode(ProviderAuthMethod.self, forKey: .authMethod)
-        self.verifiedGoogleSubject = try container.decodeIfPresent(String.self, forKey: .verifiedGoogleSubject)
         self.oauthClientID = try container.decodeIfPresent(String.self, forKey: .oauthClientID)
         self.copilotAccountScope = try container.decodeIfPresent(CopilotAccountScope.self, forKey: .copilotAccountScope) ?? .personal
         self.githubOrganization = try container.decodeIfPresent(String.self, forKey: .githubOrganization) ?? ""
@@ -310,10 +303,6 @@ public extension ProviderAccountConfiguration {
         case .githubBilling:
             ProviderAccountConfiguration(providerID: providerID, authMethod: .browserSession)
         case .claude, .grok, .xSubscription:
-            ProviderAccountConfiguration(providerID: providerID, authMethod: .browserSession)
-        case .antigravity:
-            ProviderAccountConfiguration(providerID: providerID, authMethod: .cliToken)
-        case .gemini:
             ProviderAccountConfiguration(providerID: providerID, authMethod: .browserSession)
         case .openRouter:
             ProviderAccountConfiguration(providerID: providerID, authMethod: .apiKey)

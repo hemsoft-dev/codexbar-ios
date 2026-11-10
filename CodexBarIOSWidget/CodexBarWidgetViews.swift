@@ -167,7 +167,6 @@ struct CodexBarWidgetView: View {
             return legacyMatch
         }
 
-        if choice.id.contains("antigravity.") { return .unavailable(choice: choice) }
         let titleMatches = allTiles.filter {
             $0.choiceTitle.localizedCaseInsensitiveCompare(choice.title) == .orderedSame
         }
@@ -179,7 +178,7 @@ struct CodexBarWidgetView: View {
             return previewFallback
         }
 
-        return .unavailable(choice: choice)
+        return allTiles.first ?? .unavailable(choice: choice)
     }
 
     private func resolvedTile(

@@ -79,13 +79,6 @@ Debug builds support a one-time developer handoff using
 customer setup flow, and is excluded from release builds. Use it only when the
 owner has authorized reusing an existing session for the same Google account.
 
-The installer consumes `Library/Caches/google-coding-development-session.json`
-from the app's own container. Its payload contains `accountID`, `credential`,
-and `confirmedSameAccount`. It requires an existing Gemini account, renewable
-credentials, and an empty coding Keychain slot. It applies complete file
-protection, saves through the account-scoped configuration store, removes the
-staging file on success or rejection, and refreshes usage after saving.
-
 Transfer credentials through an encrypted channel, keep any local staging
 directory owner-only, and remove staging artifacts after deployment. Never
 print the payload, put it in a repository, or pass it through command-line

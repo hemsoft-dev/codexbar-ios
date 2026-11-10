@@ -177,24 +177,6 @@ final class AccountPlanAccessTests: XCTestCase {
     }
 
     @MainActor
-    func testHiddenAntigravityAccountsDoNotConsumeOrBypassVisibleAccountLimit() throws {
-        let fixture = try AccountPlanFixture(plan: .free)
-        defer { fixture.cleanUp() }
-        let hidden = try XCTUnwrap(fixture.store.addAccount(for: .antigravity))
-        XCTAssertTrue(fixture.store.canAddAccount(for: .gemini))
-        let gemini = try XCTUnwrap(fixture.store.addAccount(for: .gemini))
-        let secondHidden = ProviderAccountConfiguration.defaultConfiguration(for: .antigravity)
-        XCTAssertTrue(fixture.store.update(secondHidden))
-        XCTAssertTrue(fixture.store.linkGeminiCodingAccount(hidden, to: gemini, confirmedSameAccount: true))
-        XCTAssertEqual(fixture.store.activeAccountCandidates, [gemini])
-        XCTAssertEqual(fixture.store.accountAccess.activeAccountID, gemini.id)
-        XCTAssertTrue(fixture.store.accountAccess.pausedAccountIDs.isEmpty)
-        XCTAssertFalse(fixture.store.accountAccess.permitsRefresh(hidden))
-        XCTAssertFalse(fixture.store.canAddAccount(for: .claude))
-        XCTAssertNil(fixture.store.addAccount(for: .claude))
-    }
-
-    @MainActor
     func testDowngradeAndUpgradePreserveEnabledChoicesCredentialsLayoutsOrderAndAlertSettings() throws {
         let fixture = try AccountPlanFixture()
         defer { fixture.cleanUp() }

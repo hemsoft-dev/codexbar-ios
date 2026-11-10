@@ -174,10 +174,6 @@ public struct UsageBar: Identifiable, Equatable, Sendable {
 
     public func metricIdentifier(providerID: ProviderID, index: Int) -> String {
         if let stableKey, !stableKey.isEmpty {
-            if providerID == .gemini,
-               let definition = GoogleUsageMetricCatalog.definitions(for: .gemini).first(where: { $0.key == stableKey }) {
-                return definition.id
-            }
             return "\(providerID.rawValue).\(stableKey)"
         }
 

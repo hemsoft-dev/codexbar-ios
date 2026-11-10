@@ -197,7 +197,6 @@ entries only after fresh coverage proves the improvement.
 
 | Work item | Existing functions | Initial CRAP | Completion evidence |
 | --- | --- | ---: | --- |
-| Gemini sign-in session state | `GeminiBrowserSignInSession.inspectSession()` | 56 | Test signed-out, missing-cookie, loading, validated and failed-session paths through an injectable state boundary; reduce score to at most 30. |
 | Greptile pagination | `GreptileUsageProvider.fetchUsage(for:)` | 30.721360 | Exercise remaining early exit and pagination failure paths; preserve incomplete-scan behavior and reduce score to at most 30. |
 | Dashboard metric dispatch | `ProviderUsageCard.metricTile(_:)` | 156 | Extract/test metric selection and presentation decisions without screenshot automation; reduce each resulting function to at most 30. |
 | Settings dispatch and notifications | `SettingsView.summary(for:)`, `settingsDestinationView(_:)`, `updateGitHubStatusNotificationSetting(isEnabled:recovery:)` | 42, 42, 56 | Test destination mapping and notification permission outcomes; reduce each function to at most 30. |
@@ -207,52 +206,6 @@ changed counts and a concrete reason in the PR and this document. Do not
 regenerate the baseline in CI. Reviewers must distinguish a verified reduction,
 a renamed or removed function, a tool migration and an attempted increase. A
 new production risk requires remediation, not a routine baseline addition.
-
-## Gemini session-state remediation
-
-Issue [#374](https://github.com/HemSoft/codexbar-ios/issues/374) extracts cookie-read
-eligibility and outcomes into a state model without changing the guided browser,
-Google cookie policy, provider verification, or account-scoped persistence.
-
-The before report is the `function-risk-ios` artifact from
-[run 36637347373](https://github.com/HemSoft/codexbar-ios/actions/runs/36637347373),
-source `bd5cac53a87e72d8432720d49b1903a9212c490f`. The fresh after report is the same
-artifact from [run 36645924629](https://github.com/HemSoft/codexbar-ios/actions/runs/36645924629),
-PR source `78262fae2c96c616961e4c606248e983ca6ec028`. Actions measured its merge
-revision `2e43f4710b4e9a3ae83700a6d67e7a9424667a90`, whose parents are that source
-and the unchanged default branch; its tree matches the PR source exactly.
-Both reports use Xcode 26.6 build 17F113, Swift 6.3.3, and SwiftLint 0.65.1.
-Both iOS suites pass all 711 tests with zero failures or skips.
-
-| Declaration | Decisions | Covered / executable lines | CRAP |
-| --- | ---: | ---: | ---: |
-| `GeminiBrowserSignInSession.inspectSession()` before | 7 | 0 / 24 | 56 |
-| `GeminiBrowserSignInSession.inspectSession()` after | 2 | 0 / 8 | 6 |
-| `GeminiBrowserSignInSession.inspectionContext()` | 0 | 0 / 6 | 0 |
-| `GeminiBrowserSignInSession.apply(_:)` | 5 | 0 / 14 | 30 |
-| `GeminiBrowserInspectionContext.canInspect()` | 0 | 0 / 3 | 0 |
-| `GeminiBrowserInspectionState.begin(in:)` | 1 | 0 / 5 | 2 |
-| `GeminiBrowserInspectionState.complete(cookies:revision:in:)` | 3 | 0 / 10 | 12 |
-| `GeminiBrowserInspectionState.action(for:at:)` | 1 | 0 / 4 | 2 |
-
-The improvement is reduced decision complexity, not increased iOS coverage.
-Nine explicit local SwiftPM regressions exercise the state model with synthetic
-cookies. Those macOS tests are not mixed into the iOS coverage counts above and
-are not live Google sign-in proof. Run them separately:
-
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-  xcrun swift test --filter GeminiBrowserInspectionTests
-```
-
-Remove only the resolved `inspectSession()` high-risk entry from the iOS
-baseline. Its identity is preserved, so future scores above 30 now fail the
-normal production threshold rather than inheriting the old ceiling of 56.
-No other ceiling, unmatched exception, exclusion, tool pin, automatic test
-suite, or CI workflow changes. The fresh report has no gate errors and only
-the two unchanged, hash-locked non-iOS fallback exceptions documented above.
-Final exact-candidate release validation remains in
-[#373](https://github.com/HemSoft/codexbar-ios/issues/373).
 
 ## Greptile pagination remediation
 

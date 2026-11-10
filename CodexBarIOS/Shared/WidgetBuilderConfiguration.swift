@@ -232,7 +232,7 @@ public extension CodexBarWidgetUsageBarSnapshot {
             ? String(tileID.dropFirst("bar.".count))
             : tileID
         let matchesLegacyAccount = legacyAccountIDs.contains { savedBarID.hasPrefix("\($0).") }
-        if matchesLegacyAccount && metricID?.hasPrefix("antigravity.") != true { return false }
+        if matchesLegacyAccount { return false }
         if savedBarID == id
             || savedBarID == "\(accountID).\(id)" {
             return true
@@ -367,5 +367,25 @@ private extension CodexBarWidgetProviderSnapshot {
 
     private static func formattedCurrency(_ amount: Double) -> String {
         CodexBarCurrencyText.format(amount)
+    }
+}
+
+/// Compatibility with provider identifiers saved by versions before Google support was withdrawn.
+public enum RetiredGoogleProviderMigration {
+    public static func isRetiredIdentifier(_ value: String) -> Bool {
+        value.split(separator: ".").contains { $0 == "gemini" || $0 == "antigravity" }
+    }
+
+    /// Filter before decoding ProviderID so one retired record cannot invalidate other accounts or history.
+    public static func removingRetiredRecords(from data: Data) throws -> Data {
+        guard let records = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return data
+        }
+        let retained = records.filter { record in
+            guard let provider = record["providerID"] as? String else { return true }
+            return !["gemini", "antigravity"].contains(provider)
+        }
+        guard retained.count != records.count else { return data }
+        return try JSONSerialization.data(withJSONObject: retained, options: [.sortedKeys])
     }
 }

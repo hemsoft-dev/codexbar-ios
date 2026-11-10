@@ -5,21 +5,20 @@
     "original-1": {
       "phase": "ui-original",
       "tests": [
-        "CodexBarIOSUITests/AccountJourneysUITests/testGeminiOnlyDashboardShowsCodingSetupAndKeepsSelectionOnRelaunch",
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingPermissionDisclosure",
         "CodexBarIOSUITests/AccountJourneysUITests/testRefreshRecoveryHistoryAndAccountDeepLink",
         "CodexBarIOSUITests/AccountJourneysUITests/testTwoCodexAccountsKeepSeparateUsageAfterRelaunch",
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testCompactCardHeadersAndIndependentControls",
         "CodexBarIOSUITests/GrokSignInUITests/testGuidedSetupCancellationReconnectAndRemoval",
         "CodexBarIOSUITests/OpenCodeSignInUITests/testDisconnectedAccountOffersGuidedSignIn",
-        "CodexBarIOSUITests/SettingsEvidenceUITests/testPendingDuplicateGroupBlocksDoneUntilCorrected"
+        "CodexBarIOSUITests/SettingsEvidenceUITests/testPendingDuplicateGroupBlocksDoneUntilCorrected",
+        "CodexBarIOSUITests/SettingsEvidenceUITests/testRetiredGoogleUpgradeEvidence"
       ]
     },
     "original-2": {
       "phase": "ui-original",
       "tests": [
         "CodexBarIOSUITests/AccountJourneysUITests/testAccountSetupPersistsGroupAndCredentialAtAccessibilitySize",
-        "CodexBarIOSUITests/AccountJourneysUITests/testSavedGeminiRingIsSelectedInVisualizationMenu",
         "CodexBarIOSUITests/ClaudeUsageUITests/testWindowLabelsAndSavedCustomizationForProAndMax",
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testThirtyDayWindowLabelAndSavedVisibility",
         "CodexBarIOSUITests/GreptileAllowanceUITests/testDetailReconnectStaysInApp",
@@ -31,7 +30,6 @@
     "original-3": {
       "phase": "ui-original",
       "tests": [
-        "CodexBarIOSUITests/AccountJourneysUITests/testCodingOnlyGeminiChoicesSurvivePartialAndFailedRefresh",
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingActionableWarningStaysInline",
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingAllowanceStates",
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingProductSummaryAndRoutinePlacement",
