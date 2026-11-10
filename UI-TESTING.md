@@ -38,12 +38,12 @@ account store and intercepted provider transport before attaching images.
 Label these captures **native view-host**, not XCUITest navigation, gesture or
 physical-phone verification; retain any separate UI-runner failure explicitly.
 
-The base command above still executes exactly 29 original journeys. The
-[phase manifest](scripts/pro-release-phases.json) requires 53 user journeys per
-family for a release: original 29, supplemental 8, synthetic commerce 14, and
+The base command above still executes exactly 26 original journeys. The
+[phase manifest](scripts/pro-release-phases.json) requires 48 user journeys per
+family for a release: original 26, supplemental 6, synthetic commerce 14, and
 native purchase/restore and purchase-error journeys 1 each. The separate
 storefront, Claude Ultra and billing recovery evidence captures are listed in
-`excluded_marketing` as manual captures, outside the 53 regression journeys.
+`excluded_marketing` as manual captures, outside the 48 regression journeys.
 The Ultra capture remains available for focused manual execution on either
 device family. It also exercises `claude-renewal-ultra` through the real Claude
 provider and intercepted billing transport, capturing the acquired renewal pill
@@ -85,7 +85,7 @@ fails qualification even if the journeys passed.
 Each phase enumerates the built tests and checks exact identities, passing
 counts, zero skips/expected failures and one expected destination. It records
 source and binary hashes, signing, commands, timestamps, summaries and xcresults.
-The supplemental eight reuse the verified base build; native hosts are separately
+The supplemental six reuse the verified base build; native hosts are separately
 built with coverage, the Debug isolation flag and ad hoc signatures. Each
 preparation exits before its consumer starts. Every native scheme execution is
 explicitly filtered. Fresh DerivedData lives inside each unique output directory;
@@ -203,31 +203,11 @@ it. Animations retain the normal app behavior.
   requested account. A second URL returns to the recovered account and verifies
   its fresh $60 balance remains intact.
 
-- `testSixGoogleChoicesAndIndependentCustomizationPersist` starts with one
-  Gemini account containing both source connections. Apps reads 12% and 45%
-  used; coding reads 0%, 31%, 0%, and 0%. Each coding metric must expose its
-  reset caption on the dashboard. It reaches all six settings switches
-  in that account, moves, resizes, restyles and hides Gemini Models weekly
-  independently, then relaunches and restores that choice through Customize Card.
-  It retains a screenshot of the restored, selected ring menu.
 - `testTwoCodexAccountsKeepSeparateUsageAfterRelaunch` uses two synthetic
   ChatGPT identities with separate saved credentials and different usage. It
   captures the account list, Add Account provider picker, the normal/private
   browser choices for another Codex account, and distinct cards after relaunch.
-  It never contacts ChatGPT or proves Google accepted a live sign-in.
-- `testSavedGeminiRingIsSelectedInVisualizationMenu` changes Gemini Models weekly
-  to a ring, relaunches, and verifies the Visualization menu marks the saved
-  style as selected. It retains a screenshot of the selected menu.
-- `testGeminiOnlyDashboardShowsCodingSetupAndKeepsSelectionOnRelaunch` starts
-  with only Gemini Apps connected. All four coding choices stay visible with
-  Setup required in the same Gemini card. It hides a coding metric, refreshes,
-  relaunches, then restores the selection in that Gemini account's settings.
-- `testCodingOnlyGeminiChoicesSurvivePartialAndFailedRefresh` runs a Gemini
-  account with only coding connected. Its Apps choices show Setup required.
-  A partial refresh makes one coding quota unavailable and another disabled,
-  while both remain in Customize Card. A subsequent failure preserves stale
-  values; recovery displays 100%, 31%, 20%, and 60% used with fresh status.
-  All six settings switches remain reachable after recovery.
+  It does not contact live provider accounts.
 
 - `testGitHubBillingPermissionDisclosure` opens a synthetic personal account,
   checks the write-capable `user` scope disclosure and sign-in-again guidance,
@@ -297,14 +277,6 @@ it. Animations retain the normal app behavior.
   handling, not that the affected live response was cached. No account cookies,
   tokens or outbound provider networking are used. It is manual/release-only.
 
-- `SettingsEvidenceUITests.testSettingsDismissalSignalRejectsTheBackgroundGear`
-  verifies that a gear exposed behind the Settings sheet does not count as a
-  closed sheet, then checks that Done returns to a hittable dashboard gear.
-  Settings journeys wait for this actual dismissal before reopening. The
-  Gemini-only journey uses the existing explicit menu/customizer transition
-  checks instead of trying to scroll to a missing menu item. All 29 declared
-  journeys must pass on each family; this added regression is manual/release-only.
-
 - `SettingsEvidenceUITests.testEverySettingsDestinationAndDoneBack` captures
   root summaries and all six existing destinations, then checks Done/Back.
 - `SettingsEvidenceUITests.testPendingDuplicateGroupBlocksDoneUntilCorrected`
@@ -372,7 +344,7 @@ separately from the shared 5-hour and all-model weekly windows. It covers two
 accounts, hide/restore and model-name changes across relaunch, Customize Card,
 light/dark appearance and default/accessibility2 text. Absent allowances and
 usage-credit-only responses do not create a Fable quota. The release count stays
-29 original journeys per family. The full release also requires the supplemental and commerce phases above. No live provider quota is consumed.
+26 original journeys per family. The full release also requires the supplemental and commerce phases above. No live provider quota is consumed.
 
 `ClaudeFableWeeklyTests` runs locally and in the manual native unit suite. Its
 nine cases cover reported values, known aliases, inactive/duplicate windows,
@@ -390,7 +362,6 @@ that a modeled permission boundary rejects the former `read:user` grant, and
 that failure diagnostics exclude raw payloads, owners and arbitrary headers.
 These tests do not establish live OAuth compatibility:
 
-
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   xcrun swift run GitHubBillingFixtureTests
@@ -402,24 +373,6 @@ iPhone worker runs this harness before its journeys;
 routine pull-request CI does not add this work.
 
 ## Fixture startup and isolation
-
-The DEBUG app accepts `CODEXBAR_UI_TESTS=1` only on a simulator, with a valid
-UUID in `CODEXBAR_UI_TEST_RUN_ID`. Invalid IDs fail immediately. This creates
-`com.hemsoft.CodexBarIOS.ui-tests.<UUID>`, never an arbitrary defaults domain.
-`CODEXBAR_UI_TEST_RESET=1` clears only that namespace; `0` preserves it for
-relaunch. `CODEXBAR_UI_TEST_SCENARIO=empty` begins with no accounts, while
-`recovery` seeds a recovery account, five navigation accounts, and three history
-samples per account. Only the recovery account fails its first refresh; the
-navigation accounts retain a distinct $90 balance. The `google-six`, `google-apps-only`, and `google-coding-only` scenarios each
-seed one Gemini account with both sources, Apps only, or coding only. Test runs generate their
-own UUIDs, so separate tests and devices cannot reuse each other's state.
-
-The fixture supplies this suite to account configuration, history, app review,
-app updates, GitHub preferences, and widget preferences. Its credential store
-uses the same suite and accepts only fixed synthetic test credentials. It never
-reads or writes Keychain. Only synthetic OpenRouter, Claude, Codex, combined Gemini, GitHub Billing, Grok and Cursor
-usage providers are registered. The production account form, group
-persistence, refresh service, dashboard, History, and URL handler still execute.
 
 The fixture disables lifecycle polling and bootstrap imports. Its notifier
 never delivers notifications and denies authorization by default; the explicit
@@ -450,7 +403,7 @@ and provisions its own simulator. Fail-fast remains disabled.
 Native preparation, purchase/restore, purchase-error preparation, purchase-error
 and the final normal StoreKit reset stay sequential on one worker. The reset is
 attempted even after a journey failure. The two usage-detail and missing-quota evidence journeys are included
-in the supplemental eight, so the full gate covers 53 distinct journeys per
+in the supplemental six, so the full gate covers 48 distinct journeys per
 family plus the three preparation/reset calls. Marketing capture remains excluded.
 The original local runner retains its separate 29-pass contract.
 
@@ -492,44 +445,25 @@ captions. Each tile must fit within 105 points, reserving space for the medium
 widget's margins, spacing, and Updated footer. This is an intrinsic-layout
 regression check, not an iOS screenshot or full WidgetKit host test.
 
-For Gemini Models and Other Models fixtures, add small and medium widgets using
-Automatic display mode. At ordinary usage, verify that the reset countdown and
-local reset time appear below the metric heading; at warning pace, verify that
-the projection warning takes precedence. Rings, dials, and large numeric
-visualizations sit beside the heading instead of taking a separate row above
-the caption. In medium widgets, check that the Updated footer also remains
-visible with those saved visualization choices. Captions may wrap to two lines and scale
-down to fit the tile. Check a long account label and a weekly caption in both
-widget sizes. Other providers retain their existing caption content, now also
-visible in Automatic mode. Missing descriptions add no empty caption row.
-
 The manual-only `CodexCreditsPoolUITests.testPreciseSubscriptionPillsOnExpandedAndCollapsedCards`
-checks Codex Pro/Plus, Claude Max 5x, verified Grok, unknown Google and API-credit
+checks Codex Pro/Plus, Claude Max 5x, verified Grok, unknown Codex plans and API-credit
 headers in light/dark at default and accessibility text sizes. It asserts actual
 expanded/collapsed state changes and the same account's plan after refresh. The
-base runner requires all 29 original journeys with zero skips; ordinary automatic
+base runner requires all 26 original journeys with zero skips; ordinary automatic
 CI does not run them.
 
-## Google and OpenCode subscription headers
+## OpenCode subscription headers
 
-The existing manual-only compact-header journey also exercises isolated
-`google-plan-*` scenarios for named Google AI Free, Plus, Pro, generic Ultra,
-Ultra 5x/20x and unknown metadata. Each scenario seeds an OpenCode Go + Zen
-card. It verifies Google labels, omitted OpenCode pills and expanded/collapsed
-cards in light/default and dark/accessibility text sizes, retaining screenshots.
+The existing manual compact-header journey checks the retained OpenCode Go
+account in the subscription-renewal fixture. It verifies that the card omits
+an unavailable plan pill and preserves expanded/collapsed controls in
+light/default and dark/accessibility text sizes, retaining screenshots.
 These are synthetic responses, not a live account comparison.
-
-Run the affected journey with
-`-only-testing:CodexBarIOSUITests/CodexCreditsPoolUITests/testCompactCardHeadersAndIndependentControls`
-on the UI-test scheme. This extends an existing journey; the release runner's
-29-test contract and automatic CI workloads are unchanged.
-
 
 ## Subscription billing countdowns
 
 The existing compact-header journey also exercises renewal pills in light/default
-and dark/Accessibility 2 text, exact billing details, two accounts, a long Google
-plan label, OpenCode without a plan pill, unknown/canceled/stale/passed dates, and
+and dark/Accessibility 2 text, exact billing details, two accounts, OpenCode without a plan pill, unknown/canceled/stale/passed dates, and
 the default-on preference with immediate changes and relaunch persistence.
 
 For focused local issue validation, build the test products, then set the
@@ -562,9 +496,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   test-without-building
 ```
 
-The renewal subjourney also checks parsed Google AI Free has no renewal label or
-billing-only More Information menu item. The release runner does not set this
-selector and still requires all 29 original journeys on both families, followed
+The release runner does not set this selector and still requires all 26 original journeys on both families, followed
 by the required supplemental and commerce phases. Billing
 fixtures are synthetic; real-account billing comparisons remain Franz-owned.
 The renewal journey retains synthetic date/cancellation/freshness presentation coverage. Grok retains the guided billing mismatch, Start Over, matching return, Disconnect and Cancel checks. Claude instead opens the fixed provider billing URL directly from settings and More Information, with no embedded Connect/Reconnect or false connection on return.

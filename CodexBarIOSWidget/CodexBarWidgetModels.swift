@@ -15,6 +15,27 @@ struct CodexBarWidgetTile: Identifiable {
     let fetchedAt: Date?
     let severity: CodexBarWidgetSeverity
 
+    /// Saved Builder slots and App Intent choices fall back only when the saved selection belongs to a retired Google provider.
+    static func resolvingSavedID(
+        _ tileID: String,
+        in tiles: [CodexBarWidgetTile],
+        legacyMatch: () -> CodexBarWidgetTile? = { nil }
+    ) -> CodexBarWidgetTile {
+        if let exact = tiles.first(where: { $0.id == tileID }) { return exact }
+        if let legacy = legacyMatch() { return legacy }
+        return fallback(forUnresolvedChoice: CodexBarWidgetTileChoice(
+            id: tileID, title: "Saved Tile", subtitle: "Open CodexBar to refresh"
+        ), in: tiles)
+    }
+
+    static func fallback(
+        forUnresolvedChoice choice: CodexBarWidgetTileChoice,
+        in tiles: [CodexBarWidgetTile]
+    ) -> CodexBarWidgetTile {
+        if RetiredGoogleProviderMigration.isRetiredIdentifier(choice.id), let fallback = tiles.first { return fallback }
+        return .unavailable(choice: choice)
+    }
+
     var choiceTitle: String {
         if bar != nil || monetaryMetric != nil {
             "\(providerTitle) - \(title)"
@@ -155,7 +176,6 @@ extension CodexBarWidgetSnapshot {
         return focus.providerID.map { providerID in
             groupFiltered.filter {
                 $0.providerID == providerID
-                    || (providerID == "antigravity" && $0.providerID == "gemini" && !($0.legacyAccountIDs ?? []).isEmpty)
             }
         } ?? groupFiltered
     }

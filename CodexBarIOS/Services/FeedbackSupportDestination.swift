@@ -402,10 +402,6 @@ extension ProviderID {
             "Cursor"
         case .greptile:
             "Greptile"
-        case .gemini:
-            "Google Gemini"
-        case .antigravity:
-            "Antigravity"
         case .museCode:
             "Muse Code"
         }
@@ -535,12 +531,9 @@ struct FeedbackEmailDraft: Equatable, Identifiable, Sendable {
 
             What happened?
 
-
             What did you expect?
 
-
             Steps to reproduce:
-
 
             Privacy-safe diagnostic:
             \(diagnostic)
@@ -560,12 +553,9 @@ struct FeedbackEmailDraft: Equatable, Identifiable, Sendable {
 
             What would you like CodexBar to improve?
 
-
             How would this help?
 
-
             Anything else we should know?
-
 
             Privacy-safe app and device context:
             \(context.systemDetails)

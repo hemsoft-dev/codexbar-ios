@@ -44,7 +44,7 @@ struct WidgetResetLayoutProbe {
             severity: .normal, visualizationStyle: visualization, allowsGauge: true
         )
         let tile = CodexBarWidgetTile(
-            id: "fixture", accountID: "fixture", providerID: "gemini", providerTitle: "Google Gemini",
+            id: "fixture", accountID: "fixture", providerID: "claude", providerTitle: "Claude",
             title: bar.label, subtitle: "Fixture", bar: bar, creditsRemaining: nil, monetaryMetric: nil,
             barFetchedAt: nil, monetaryValueFetchedAt: nil, fetchedAt: nil, severity: .normal
         )

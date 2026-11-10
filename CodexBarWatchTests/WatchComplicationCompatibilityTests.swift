@@ -120,79 +120,78 @@ final class WatchComplicationCompatibilityTests: XCTestCase {
         XCTAssertEqual(sample.clampedUsedFraction, 0)
     }
 
-    func testConfirmedGoogleAliasPreservesCodingSelectionAndMissingSourceStatus() throws {
-        let now = Date(timeIntervalSince1970: 2_000_000_000)
-        let apps = WatchMetricSnapshot(id: "gemini.weekly", label: "Gemini Apps weekly", exactValue: "10%")
-        let coding = WatchMetricSnapshot(id: "antigravity.gemini-weekly", label: "Gemini Models weekly", exactValue: "31%")
-        let selection = WatchComplicationSelection(accountID: "legacy-coding", metricID: "antigravity.gemini-weekly")
-        for metrics in [[apps, coding], [apps]] {
-            let original = WatchDashboardSnapshot(
-                generatedAt: now, refreshIntervalSeconds: 300,
-                accounts: [WatchAccountSnapshot(
-                    id: "gemini.account", legacyAccountIDs: ["legacy-coding"], providerName: "Google Gemini",
-                    accountLabel: "Personal", fetchedAt: now, metrics: metrics
-                ),
-                ]
-            )
-            let decoded = try WatchDashboardSnapshot.decode(JSONEncoder().encode(original))
-            XCTAssertEqual(decoded.accounts.first?.legacyAccountIDs, ["legacy-coding"])
-            let resolver = WatchComplicationResolver()
-            let sample = resolver.resolve(snapshot: decoded, selection: selection, at: now)
-            let automaticLegacy = resolver.resolve(
-                snapshot: decoded, selection: WatchComplicationSelection(accountID: "legacy-coding", metricID: nil), at: now
-            )
-            XCTAssertEqual(sample.availability, metrics.count == 2 ? .value : .unavailable)
-            XCTAssertEqual(automaticLegacy.availability, sample.availability)
-            if metrics.count == 2 {
-                XCTAssertEqual(sample.exactValue, "31%")
-                XCTAssertEqual(automaticLegacy.metricLabel, "Gemini Models weekly")
-                let choices = WatchComplicationChoiceCatalog(snapshot: decoded)
-                XCTAssertEqual(choices.accounts(for: ["legacy-coding"]).first?.providerName, "Google Gemini")
-                XCTAssertEqual(choices.metrics(for: ["legacy-coding::antigravity.gemini-weekly"]).first?.metricLabel, "Gemini Models weekly")
-            }
-            XCTAssertEqual(resolver.resolve(
-                snapshot: decoded, selection: WatchComplicationSelection(accountID: "unlinked", metricID: coding.id), at: now
-            ).availability, .unavailable)
-        }
-    }
-
     func testLinkedAccountAndMetricEntitiesResolveAcrossCanonicalAndLegacyIDs() {
         let now = Date(timeIntervalSince1970: 2_000_000_000)
         let snapshot = WatchDashboardSnapshot(
             generatedAt: now, refreshIntervalSeconds: 300,
             accounts: [WatchAccountSnapshot(
-                id: "gemini.account", legacyAccountIDs: ["legacy-coding", "second-legacy"], providerName: "Google Gemini",
+                id: "claude.account", legacyAccountIDs: ["legacy-coding", "second-legacy"], providerName: "Claude",
                 accountLabel: "Personal", fetchedAt: now,
                 metrics: [
-                    WatchMetricSnapshot(id: "gemini.weekly", label: "Apps weekly", exactValue: "10%"),
-                    WatchMetricSnapshot(id: "antigravity.gemini-5h", label: "Models 5h", exactValue: "20%"),
-                    WatchMetricSnapshot(id: "antigravity.gemini-weekly", label: "Models weekly", exactValue: "31%"),
+                    WatchMetricSnapshot(id: "claude.weekly", label: "Apps weekly", exactValue: "10%"),
+                    WatchMetricSnapshot(id: "claude.five-hour", label: "Models 5h", exactValue: "20%"),
+                    WatchMetricSnapshot(id: "claude.extra-weekly", label: "Models weekly", exactValue: "31%"),
                 ]
             ),
             ]
         )
         for (accountID, metricAccountID) in [
-            ("legacy-coding", "gemini.account"),
-            ("gemini.account", "legacy-coding"),
+            ("legacy-coding", "claude.account"),
+            ("claude.account", "legacy-coding"),
             ("legacy-coding", "second-legacy"),
         ] {
             let selection = WatchComplicationSelection.resolving(
                 accountID: accountID, metricAccountID: metricAccountID,
-                metricID: "antigravity.gemini-weekly", snapshot: snapshot
+                metricID: "claude.extra-weekly", snapshot: snapshot
             )
-            XCTAssertEqual(selection.metricID, "antigravity.gemini-weekly")
+            XCTAssertEqual(selection.metricID, "claude.extra-weekly")
             XCTAssertEqual(WatchComplicationResolver().resolve(snapshot: snapshot, selection: selection, at: now).exactValue, "31%")
         }
         let appsSelection = WatchComplicationSelection.resolving(
-            accountID: "legacy-coding", metricAccountID: "gemini.account", metricID: "gemini.weekly", snapshot: snapshot
+            accountID: "legacy-coding", metricAccountID: "claude.account", metricID: "claude.weekly", snapshot: snapshot
         )
         XCTAssertEqual(WatchComplicationResolver().resolve(snapshot: snapshot, selection: appsSelection, at: now).exactValue, "10%")
         XCTAssertNil(WatchComplicationSelection.resolving(
-            accountID: "legacy-coding", metricAccountID: "unrelated", metricID: "gemini.weekly", snapshot: snapshot
+            accountID: "legacy-coding", metricAccountID: "unrelated", metricID: "claude.weekly", snapshot: snapshot
         ).metricID)
         XCTAssertNil(WatchComplicationSelection.resolving(
-            accountID: "legacy-coding", metricAccountID: "gemini.account", metricID: "gemini.weekly"
+            accountID: "legacy-coding", metricAccountID: "claude.account", metricID: "claude.weekly"
         ).metricID)
+    }
+
+    func testOnlyRetiredGoogleSelectionsFallBackToAnotherAccount() {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let resolver = WatchComplicationResolver()
+        let available = snapshot(metricID: "greptile.review-quota", fraction: 0.5, at: now)
+        for retired in ["gemini.saved", "antigravity.saved"] {
+            let value = resolver.resolve(snapshot: available,
+                                         selection: WatchComplicationSelection(accountID: retired, metricID: "removed.metric"), at: now)
+            XCTAssertEqual(value.availability, .value)
+            XCTAssertEqual(value.exactValue, "50%")
+        }
+        for missing in ["claude.deleted", "cursor.disabled", "unlinked"] {
+            for metric in [nil, "claude.session"] as [String?] {
+                let value = resolver.resolve(snapshot: available,
+                                             selection: WatchComplicationSelection(accountID: missing, metricID: metric), at: now)
+                XCTAssertEqual(value.availability, .unavailable)
+            }
+        }
+        let empty = WatchAccountSnapshot(id: "claude.expired", providerName: "Claude", accountLabel: "Expired",
+                                         fetchedAt: now, metrics: [])
+        let withEmpty = WatchDashboardSnapshot(generatedAt: now, refreshIntervalSeconds: 300,
+                                              accounts: [empty] + available.accounts)
+        XCTAssertEqual(resolver.resolve(snapshot: withEmpty,
+                                        selection: WatchComplicationSelection(accountID: empty.id, metricID: nil), at: now).availability, .unavailable)
+        let linked = WatchAccountSnapshot(id: "claude.current", legacyAccountIDs: ["claude.legacy"], providerName: "Claude",
+                                          accountLabel: "Personal", fetchedAt: now,
+                                          metrics: [WatchMetricSnapshot(id: "claude.session", label: "Session", exactValue: "25%")])
+        let linkedSnapshot = WatchDashboardSnapshot(generatedAt: now, refreshIntervalSeconds: 300, accounts: [linked])
+        XCTAssertEqual(resolver.resolve(snapshot: linkedSnapshot,
+                                        selection: WatchComplicationSelection(accountID: "claude.legacy", metricID: "unknown"),
+                                        at: now).availability, .unavailable)
+        XCTAssertEqual(resolver.resolve(snapshot: linkedSnapshot,
+                                        selection: WatchComplicationSelection(accountID: "claude.legacy", metricID: "claude.session"),
+                                        at: now).exactValue, "25%")
     }
 
     private func snapshot(

@@ -375,7 +375,7 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
                    greptileAllowanceRenewal?.isApplicable == false { return false }
                 return unavailableUsageMetrics[metricID] == nil
             }
-            return unavailableUsageMetrics[metricID] != GoogleUsageMetricCatalog.disabledReason
+            return unavailableUsageMetrics[metricID] != ProviderMetricCatalog.disabledReason
         }
     }
 
@@ -406,7 +406,7 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
     }
 
     public var configurableMetrics: [ProviderUsageMetric] {
-        GoogleUsageMetricCatalog.metrics(for: providerID, result: self, missingReason: "Unavailable")
+        ProviderMetricCatalog.metrics(for: providerID, result: self, missingReason: "Unavailable")
     }
 
     public var availableMetrics: [ProviderUsageMetric] {

@@ -105,13 +105,11 @@ final class SubscriptionRenewalTests: XCTestCase {
     }
 
     func testFreeAndPrepaidProductsRejectConflictingBillingEvidence() throws {
-        let googleFree = try XCTUnwrap(GoogleAIPlanParser.namedPlan("Google AI Free"))
         for (provider, identifier) in [(ProviderID.codex, "codex.free"), (.cursor, "cursor.free"),
-                                       (.gemini, googleFree.identifier), (.openRouter, "openrouter.api-credits"), (.moonshot, "moonshot.api-credits"),
+                                       (.openRouter, "openrouter.api-credits"), (.moonshot, "moonshot.api-credits"),
         ] {
             var result = ProviderUsageResult(accountID: "personal", providerID: provider, title: "Fixture",
-                                              plan: provider == .gemini ? googleFree
-                                                  : .make(providerPrefix: provider.rawValue, identifier: identifier, label: "Free"),
+                                              plan: .make(providerPrefix: provider.rawValue, identifier: identifier, label: "Free"),
                                               subtitle: "", bars: [], fetchedAt: now)
             result.subscriptionRenewal = SubscriptionRenewal(accountID: "personal", providerID: provider, state: .renewing,
                                                               date: now.addingTimeInterval(172_800), observedAt: now)

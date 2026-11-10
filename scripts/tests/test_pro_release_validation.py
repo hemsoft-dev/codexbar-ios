@@ -122,7 +122,7 @@ class PhaseManifestTests(unittest.TestCase):
         for name in manifest['ui_journeys']:
             declared.update(manifest['phases'][name]['tests'])
         self.assertEqual(discovered, declared)
-        self.assertEqual(len(discovered), 56)
+        self.assertEqual(len(discovered), 51)
         self.assertEqual(len(manifest['shared_pro_tests']), 197)
         self.assertEqual(len(manifest['shared_pro_sources']), 22)
 
@@ -336,6 +336,14 @@ class RunnerCommandFailureTests(unittest.TestCase):
             self.runner.arguments('CodexBarProNativeCommerce', self.root)
         self.assertEqual(self.calls, [])
 
+    def test_ios_unit_host_is_ad_hoc_signed_for_real_keychain_tests(self):
+        arguments = self.runner.arguments('CodexBarIOS', self.root)
+        self.assertIn('CODE_SIGNING_ALLOWED=YES', arguments)
+        self.assertIn('CODE_SIGN_IDENTITY=-', arguments)
+        self.assertNotIn('CODE_SIGNING_ALLOWED=NO', arguments)
+        ui_arguments = self.runner.arguments('CodexBarIOSUITests', self.root)
+        self.assertIn('CODE_SIGNING_ALLOWED=NO', ui_arguments)
+
     def test_replaced_build_is_refused_before_discovery(self):
         build = EVIDENCE.read(self.build)
         build['source'] = {'revision': 'stale'}
@@ -443,7 +451,7 @@ class QualifiedRuntimeTests(unittest.TestCase):
 
 class OriginalUIRunnerTests(unittest.TestCase):
     """Run the real Bash entrypoint with fake xcrun/Python, never a simulator."""
-    def run_entrypoint(self, family='iphone', identifier='owned-device', ownership=None):
+    def run_entrypoint(self, family='iphone', identifier='owned-device', ownership=None, summary_count=None):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
@@ -460,13 +468,13 @@ printf '%s\\n' "$@" > "$MOCK_ARGUMENTS"
 while [ "$#" -gt 0 ]; do
   if [ "$1" = --output ]; then
     shift
-    printf '%s\\n' '{"result":"Passed","totalTestCount":29,"passedTests":29,"failedTests":0,"skippedTests":0,"expectedFailures":0}' > "$1/summary.json"
+    printf '%s\\n' '{"result":"Passed","totalTestCount":MOCK_COUNT,"passedTests":MOCK_COUNT,"failedTests":0,"skippedTests":0,"expectedFailures":0}' > "$1/summary.json"
     exit 0
   fi
   shift
 done
 exit 1
-''')
+'''.replace('MOCK_COUNT', str(EVIDENCE.load_manifest()['phases']['ui-original']['count'] if summary_count is None else summary_count)))
         for name in ('xcrun', 'python3'):
             (root / name).chmod(0o755)
         arguments = root / 'arguments.txt'
@@ -483,6 +491,14 @@ exit 1
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('owned-device', arguments)
         self.assertNotIn('--ownership', arguments)
+
+    def test_incomplete_and_superseded_journey_counts_are_rejected(self):
+        count = EVIDENCE.load_manifest()['phases']['ui-original']['count']
+        for actual in (0, count - 1, 29):
+            with self.subTest(actual=actual):
+                result, arguments = self.run_entrypoint(summary_count=actual)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('owned-device', arguments)
 
     def test_owned_runtime_receipt_reaches_base_runner(self):
         result, arguments = self.run_entrypoint(ownership='/owned/receipt.json')

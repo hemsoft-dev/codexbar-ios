@@ -1,3 +1,4 @@
+import WebKit
 import BackgroundTasks
 import SwiftUI
 
@@ -133,6 +134,7 @@ struct CodexBarIOSApp: App {
                 .environment(\.originalPurchaserNotice, originalPurchaserNotice)
                 .preferredColorScheme(configurationStore.appAppearance.colorScheme)
                 .task {
+                    await removeRetiredGoogleWebsiteData()
                     #if DEBUG
                     if let fixtures = UITestFixtures.current {
                         guard !fixtures.isNativeTestHost else { return }
@@ -156,9 +158,6 @@ struct CodexBarIOSApp: App {
                 .task {
                     #if DEBUG
                     if UITestFixtures.current != nil { return }
-                    if DeveloperGoogleSessionInstaller.installIfRequested(configurationStore: configurationStore) {
-                        await refreshService.refresh(configurations: configurationStore.visibleConfigurations)
-                    }
                     if let screenshotConfiguration {
                         await proEntitlement.refresh()
                         let settleNanoseconds = UInt64(
@@ -264,7 +263,7 @@ struct CodexBarIOSApp: App {
     @ViewBuilder
     private func screenshotRootView(for scene: AppStoreScreenshotScene) -> some View {
         switch scene {
-        case .freeOverview, .dashboardOverview, .dashboardDark, .gemini, .grok, .githubBilling:
+        case .freeOverview, .dashboardOverview, .dashboardDark, .grok, .githubBilling:
             isolatedScreenshotContentView()
         case .widgetBuilder:
             NavigationStack {
@@ -335,3 +334,14 @@ private enum DebugUsageAlertMode {
     }
 }
 #endif
+
+@MainActor
+private func removeRetiredGoogleWebsiteData() async {
+    let store = WKWebsiteDataStore.default()
+    let types = WKWebsiteDataStore.allWebsiteDataTypes()
+    let records = await store.dataRecords(ofTypes: types)
+    let googleRecords = records.filter {
+        $0.displayName == "google.com" || $0.displayName.hasSuffix(".google.com")
+    }
+    await store.removeData(ofTypes: types, for: googleRecords)
+}

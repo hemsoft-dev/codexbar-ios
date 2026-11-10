@@ -455,9 +455,12 @@ struct WatchComplicationResolver {
         in accounts: [WatchAccountSnapshot],
         selection: WatchComplicationSelection
     ) -> (account: WatchAccountSnapshot, metric: WatchMetricSnapshot)? {
+        let selectedProvider = selection.accountID?.split(separator: ".").first
+        let isRetiredSelection = selectedProvider == "gemini" || selectedProvider == "antigravity"
         let account: WatchAccountSnapshot?
         if let accountID = selection.accountID {
             account = accounts.first { $0.id == accountID || ($0.legacyAccountIDs ?? []).contains(accountID) }
+                ?? (isRetiredSelection ? accounts.first : nil)
         } else {
             account = accounts.first
         }
@@ -468,14 +471,11 @@ struct WatchComplicationResolver {
         if let metricID = selection.metricID {
             let metric = account.metrics.first(where: { $0.id == metricID })
                 ?? replacementMetric(in: account, for: metricID)
+                ?? (isRetiredSelection ? account.metrics.first : nil)
             guard let metric else {
                 return nil
             }
             return (account, metric)
-        }
-        if let selectedID = selection.accountID, (account.legacyAccountIDs ?? []).contains(selectedID) {
-            guard let coding = account.metrics.first(where: { $0.id.hasPrefix("antigravity.") }) else { return nil }
-            return (account, coding)
         }
         return (account, account.metrics[0])
     }

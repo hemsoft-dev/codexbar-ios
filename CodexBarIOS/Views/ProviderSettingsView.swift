@@ -9,15 +9,7 @@ struct ProviderSettingsView: View {
     @State private var newGreptileAccountID: String?
     private let startsCursorSignIn: Bool
     @State private var didAutoStartCursorSignIn = false
-    @State private var pendingGeminiConfirmation: GeminiConfirmation?
-    @State private var isConfirmingGoogleAccount = false
     @State private var isChoosingCodexBrowser = false
-
-    private enum GeminiConfirmation {
-        case codingSignIn
-        case legacyLink(ProviderAccountConfiguration)
-        case appsReconnect
-    }
 
     init(
         configurationStore: ProviderConfigurationStore,
@@ -408,8 +400,7 @@ struct ProviderSettingsView: View {
                         Text(cursorAuthError)
                             .foregroundStyle(.red)
                     }
-                } else if providerID == .gemini {
-                    geminiAppsConnection
+
                 } else if providerID == .greptile {
                     Text(GreptileSignInAvailability.googleNotice)
                         .font(.footnote).foregroundStyle(.secondary)
@@ -537,16 +528,7 @@ struct ProviderSettingsView: View {
                 Text(viewModel.credentialPresentation.sectionTitle)
             }
 
-            if providerID == .gemini {
-                geminiCodingConnection
-            }
-
             Section {
-                if let description = GoogleUsageMetricCatalog.setupDescription(for: providerID) {
-                    Text(description)
-                        .font(.subheadline)
-                        .accessibilityIdentifier("google-quota-source-guide")
-                }
                 if viewModel.isLoadingMetrics {
                     HStack(spacing: 10) {
                         ProgressView()
@@ -613,7 +595,7 @@ struct ProviderSettingsView: View {
                 accountID == viewModel.configuration.id ? viewModel.usageResult : nil
             },
             isActive: newGreptileAccountID == nil && viewModel.authURL == nil
-                && viewModel.greptileBrowserSession == nil && viewModel.geminiBrowserSession == nil
+                && viewModel.greptileBrowserSession == nil
                 && viewModel.openCodeBrowserSession == nil && viewModel.subscriptionBillingSession == nil
         )
         .accessibilityIdentifier("provider-account-settings-form")
@@ -672,132 +654,11 @@ struct ProviderSettingsView: View {
         .sheet(item: $viewModel.greptileBrowserSession) { session in
             GreptileBrowserSignInView(session: session)
         }
-        .sheet(item: $viewModel.geminiBrowserSession, onDismiss: {
-            if viewModel.needsGeminiAccountConfirmation { requestGeminiConfirmation(.appsReconnect) }
-        }, content: { session in
-            GeminiBrowserSignInView(session: session)
-        })
         .sheet(item: $viewModel.authURL, onDismiss: {
             viewModel.authenticationSheetDismissed()
         }, content: { authURL in
             SafariAuthSheet(url: authURL.url)
         })
-        .onChange(of: viewModel.needsGoogleCodingAccountConfirmation) { _, needed in
-            if needed { requestGeminiConfirmation(.codingSignIn) }
-        }
-        .alert("Confirm Google Account", isPresented: $isConfirmingGoogleAccount) {
-            Button("Same Google Account") { confirmGeminiAction() }
-            Button("Cancel", role: .cancel) {
-                if case .some(.codingSignIn) = pendingGeminiConfirmation {
-                    viewModel.cancelGoogleCodingSignIn()
-                }
-                if case .some(.appsReconnect) = pendingGeminiConfirmation {
-                    viewModel.cancelGeminiSignIn()
-                }
-                pendingGeminiConfirmation = nil
-            }
-        } message: {
-            Text(geminiConfirmationMessage)
-        }
-    }
-
-    private var geminiAppsConnection: some View {
-        Group {
-            Button(configurationStore.hasSecret(for: viewModel.configuration) ? "Sign in Again with Google" : "Sign in with Google") {
-                viewModel.startGeminiSignIn()
-            }
-            .disabled(viewModel.isSigningInWithGemini)
-            if viewModel.isSigningInWithGemini {
-                ProgressView("Connecting Gemini Apps")
-                Button("Cancel Sign-In") { viewModel.cancelGeminiSignIn() }
-            }
-            Text("Connect Gemini Apps in a private Google sign-in window to read its five-hour and weekly limits.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            Text("Google session credentials may grant broader account access. "
-                + "CodexBar saves only the session values needed for usage in this account's Keychain entry.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            if configurationStore.hasSecret(for: viewModel.configuration) {
-                Button("Disconnect Gemini Apps", role: .destructive) {
-                    viewModel.removeSavedCredential()
-                }
-            }
-        }
-    }
-
-    private var geminiCodingConnection: some View {
-        Section("Coding Usage") {
-            Text("Connect Gemini Models and Other models, Claude/GPT, to show their four coding limits in this Gemini account.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            Button(configurationStore.hasGeminiCodingSecret(for: viewModel.configuration) ? "Reconnect Coding Usage" : "Connect Coding Usage") {
-                viewModel.startGoogleCodingSignIn()
-            }
-            .disabled(viewModel.isSigningInWithGoogleCoding)
-            if viewModel.isSigningInWithGoogleCoding {
-                ProgressView("Waiting for Google…")
-                Button("Cancel Sign-In") { viewModel.cancelGoogleCodingSignIn() }
-            }
-            Text("Choose the same Google account to connect your coding limits. You will return here automatically.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            if configurationStore.hasGeminiCodingSecret(for: viewModel.configuration) {
-                Button("Disconnect Coding Session", role: .destructive) {
-                    viewModel.disconnectGeminiCoding()
-                }
-            }
-            if !configurationStore.unlinkedGeminiCodingAccounts.isEmpty {
-                Text("Previously saved coding accounts are retained until you confirm which Gemini account they belong to.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                ForEach(configurationStore.unlinkedGeminiCodingAccounts) { legacy in
-                    Button("Link saved coding account: \(legacy.displayName)") {
-                        requestGeminiConfirmation(.legacyLink(legacy))
-                    }
-                    .accessibilityIdentifier("gemini-link-coding-\(legacy.id)")
-                }
-            }
-            if let message = viewModel.geminiCodingMessage {
-                Text(message)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("gemini-coding-message")
-            }
-        }
-    }
-
-    private var geminiConfirmationMessage: String {
-        switch pendingGeminiConfirmation {
-        case .appsReconnect:
-            "Confirm that the Google account you just selected is the same as the coding session linked to \(viewModel.configuration.displayName). "
-                + "To use a different Google identity, add another Gemini account."
-        case .legacyLink(let legacy):
-            "Confirm that the saved coding account \(legacy.displayName) and \(viewModel.configuration.displayName) "
-                + "belong to the same Google account. CodexBar cannot verify this identity automatically."
-        case .codingSignIn, nil:
-            "Confirm that the Google account you just selected is the same account used for \(viewModel.configuration.displayName). "
-                + "CodexBar cannot verify this identity automatically."
-        }
-    }
-
-    private func requestGeminiConfirmation(_ confirmation: GeminiConfirmation) {
-        pendingGeminiConfirmation = confirmation
-        isConfirmingGoogleAccount = true
-    }
-
-    private func confirmGeminiAction() {
-        switch pendingGeminiConfirmation {
-        case .codingSignIn:
-            viewModel.confirmGoogleCodingAccount()
-        case .legacyLink(let legacy):
-            viewModel.linkGeminiCodingAccount(legacy, confirmedSameAccount: true)
-        case .appsReconnect:
-            viewModel.confirmGeminiAppsAccount()
-        case nil:
-            break
-        }
-        pendingGeminiConfirmation = nil
     }
 
     private var secretPlaceholder: String {

@@ -10,30 +10,33 @@ The Windows reference implementation is checked out beside this repo at:
 
 ## Current Scope
 
-- SwiftUI dashboard with account-scoped usage cards for Codex, GitHub Copilot,
-  GitHub Billing, Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode
-  Go + Zen, Moonshot (Kimi), Greptile, and Google Gemini
+- SwiftUI dashboard with account-scoped cards for Codex, GitHub Copilot, GitHub Billing,
+  Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot and Greptile
+
 - Live provider adapters and settings for enabling accounts, choosing supported
   authentication methods, labeling accounts, and storing credentials in Keychain
+
 - Usage history and charts, configurable usage alerts, and home-screen and
   lock-screen widgets
+
 - Read-only Greptile review-activity tracking through an organization API key,
   with completed reviews kept distinct from pull requests and billing credits.
   The [Greptile allowance investigation](GREPTILE-USAGE.md) explains why its
   published review tools do not establish an account's remaining credits
-- One Google Gemini account with five-hour and weekly choices for Gemini Apps,
-  Gemini Models, and Other models, plus a separate Argon weekly choice. Missing
-  provider quotas stay unavailable
+
 - An embedded watchOS companion with a live, read-only dashboard that mirrors
   presentation-ready account metrics, visualization choices, ordering, and
   freshness from iPhone; provider setup, credentials, and provider networking
   remain iPhone-only
+
 - Demo data limited to previews, smoke and isolated UI tests, widget galleries, and screenshots
+
 - Simulator unit tests spanning configuration and authentication, provider
   parsing and networking, dashboard and settings, widgets, history, and alerts,
   plus watchOS foundation tests and a SwiftPM smoke harness; see
   [Build and Test](AGENTS.md#build-and-test) and the isolated iPhone/iPad
   [account UI journeys](UI-TESTING.md)
+
 - A measured Release [usage-history performance budget](USAGE-HISTORY-PERFORMANCE.md)
   with retained-data limits and manual workflow runs
 
@@ -253,62 +256,6 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   xcrun swift run GitHubBillingFixtureTests
 ```
 
-## Google Gemini sign-in
-
-One Gemini account contains seven Google usage choices, including Argon weekly. Gemini Apps uses a
-Google website session; Gemini Models and Other models use a separate
-coding OAuth session inside the same account. Both connections are experimental.
-See the verification boundaries in [Gemini sign-in evidence](GEMINI-SIGN-IN.md)
-and [coding session setup](ANTIGRAVITY-SETUP.md).
-
-Choose **Add Account → Google Gemini → Sign in with Google** and sign in to the
-Google account you want to track. Each attempt opens a private website window
-without reusing Safari or another CodexBar account's session. After sign-in,
-CodexBar returns from Google Account to Gemini Usage automatically, verifies
-both the five-hour and weekly meters with reset times, and saves the session
-in that account's iOS Keychain entry. You can also use the window's **Back** and
-**Gemini Usage** controls.
-
-Use **Sign in Again with Google** to renew an expired session. Existing accounts
-created by pasting credentials keep their saved session, label, group, history,
-and display preferences. If a coding session is linked, confirm that the new
-Google account selected in the browser belongs to the linked coding session
-before the new session is saved. Add a
-separate Gemini entry for another Google account. **Disconnect Gemini Apps**
-removes this account's website session and preserves its coding session.
-**Disconnect Coding Session** removes only coding authorization. Neither action
-signs you out of Google in Safari or disconnects another CodexBar entry.
-
-Open **Coding Usage → Connect Coding Usage** in the same Gemini settings.
-Confirm that you will choose the same Google account, then complete browser
-authorization. This flow requires the developer to configure a Google OAuth
-iOS client before deployment; end users do not enter client settings. Existing standalone coding accounts are retained and
-can be linked here after that confirmation; CodexBar does not guess associations
-from matching labels. All seven choices stay available in Metrics and Customize
-Card even when a source needs setup. Their saved identities, layout, and history
-survive the account consolidation. See [coding session setup](ANTIGRAVITY-SETUP.md)
-for developer configuration and renewal details.
-
-Cancellation, a failed usage check, and a failed Keychain save leave the existing
-credential unchanged. If Google denies access, cancel and retry with an eligible
-account. If the sign-in page cannot load, check your connection and retry.
-
-The integration uses ordinary Google website sign-in in a nonpersistent
-`WKWebView` with its default user agent. It does not use a Google OAuth grant,
-copy another application's OAuth registration, export Safari cookies, or require
-a desktop CLI. Only secure `.google.com` root-path `__Secure-1PSID` and optional
-`__Secure-1PSIDTS` cookies are retained. The app does not inspect page contents,
-password fields, or JavaScript. Other website data exists only in the temporary
-browser store and is discarded when that window closes.
-
-Google session credentials are sensitive and may grant broader account access.
-CodexBar uses the retained values only for read-only requests to
-`gemini.google.com`, rejects cross-origin usage redirects, and never includes
-them in diagnostics, settings, widgets, or Watch snapshots. This depends on an
-undocumented consumer web contract. If Google changes or blocks it, sign-in or
-refresh will report failure. See [Gemini sign-in evidence](GEMINI-SIGN-IN.md) for
-the desktop reference, platform mechanism, and sanitized feasibility results.
-
 ## Open Locally
 
 ```bash
@@ -331,47 +278,3 @@ findings, survivor triage, and reproducible local command.
 ## Reference Repo
 
 The current Windows app is a C# / WPF / .NET 9 system tray app with shared provider logic in `src/CodexBar.Core`. The iOS implementation should port behavior from there deliberately instead of sharing project structure directly.
-
-## Gemini coding quotas
-
-The Gemini account's Coding Usage connection reads Gemini Models and Other
-models, Claude/GPT, from the internal Antigravity quota adapter. Each has
-five-hour and weekly metrics alongside Gemini Apps on one dashboard card. Argon
-has a separate weekly choice. The native summary may omit Gemini Models or Argon;
-those pools stay unavailable, as tracked in [#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519).
-See
-[coding session setup](ANTIGRAVITY-SETUP.md) for browser setup, renewal, and the
-remaining live comparison checks.
-
-### Provider card plan pills
-
-Grok uses a separate verified tier pill and generated Grok account names, preserving
-custom account names and verified tier metadata through reusable refresh failures.
-X Subscription follows the same rules with its unified plan names.
-
-Every account card shows its verified plan or product type in the header,
-including when collapsed. Codex `pro` and `prolite` identify the Pro family;
-Claude's returned Max tier distinguishes 5x and 20x. Existing verified
-Copilot, GitHub Billing, Grok and Greptile plan metadata is reused. A verified
-Greptile Free billing state can also identify Free without a renewal date.
-OpenRouter and Moonshot identify API credits. Other missing or unrecognized
-plans show "Plan unavailable". Google usage sources currently provide no verified
-subscription identity; neither a Google account name nor quota size establishes
-Google AI Pro or Ultra. The fallback pill is presentation only and is not saved
-as detected subscription metadata in widgets, watch snapshots or history.
-
-The current [ChatGPT Pro tiers](https://help.openai.com/en/articles/9793128-about-chatgpt-pro-tiers)
-include Pro 100, 200 and 500. Legacy `pro`/`prolite` metadata does not identify
-one of those numeric tiers, so the pill displays Pro without guessing a price
-or usage multiplier.
-
-### Claude saved usage resets
-
-Eligible Claude accounts can view provider-returned saved usage resets, their
-expiry and the windows they restore. Using a reset requires a separate account
-confirmation. CodexBar refreshes usage after every result and protects an
-unconfirmed request against another consumption, including after relaunch.
-Unavailable reset details never appear as a zero balance.
-
-Only reported Grok and X Subscription percentages produce bars. Omitted usage
-stays unavailable even for a verified paid plan.

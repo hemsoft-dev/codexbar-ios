@@ -5,7 +5,6 @@ enum AppStoreScreenshotScene: String {
     case freeOverview = "free-overview"
     case dashboardOverview = "dashboard-overview"
     case dashboardDark = "dashboard-dark"
-    case gemini
     case grok
     case githubBilling = "github-billing"
     case widgetBuilder = "widget-builder"
@@ -30,8 +29,6 @@ enum AppStoreScreenshotFixtureID {
     static let openCodeZenAccount = "app-store-screenshots.opencodzen"
     static let moonshotAccount = "app-store-screenshots.moonshot"
     static let greptileAccount = "app-store-screenshots.greptile"
-    static let geminiAccount = "app-store-screenshots.gemini"
-    static let antigravityAccount = "app-store-screenshots.antigravity"
 }
 
 struct AppStoreScreenshotConfiguration {
@@ -109,11 +106,6 @@ enum AppStoreScreenshotFixtures {
 
     static func featureAccount(for scene: AppStoreScreenshotScene, in store: ProviderConfigurationStore) {
         switch scene {
-        case .gemini:
-            store.updateDashboardCardOrder([AppStoreScreenshotFixtureID.geminiAccount])
-            for definition in GoogleUsageMetricCatalog.definitions(for: .gemini) {
-                store.updateMetricWidth(.half, accountID: AppStoreScreenshotFixtureID.geminiAccount, metricID: definition.id)
-            }
         case .grok: store.updateDashboardCardOrder([AppStoreScreenshotFixtureID.grokAccount])
         case .githubBilling: store.updateDashboardCardOrder([AppStoreScreenshotFixtureID.githubBillingAccount])
         default: break

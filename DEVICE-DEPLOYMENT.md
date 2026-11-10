@@ -72,26 +72,6 @@ run instead of copying a recorded value.
    the phone is locked, installation may still have succeeded; ask the user to
    unlock the phone or open the app manually.
 
-## Existing Google session in a development build
-
-Debug builds support a one-time developer handoff using
-`--install-development-google-session`. This is a deployment tool, not a
-customer setup flow, and is excluded from release builds. Use it only when the
-owner has authorized reusing an existing session for the same Google account.
-
-The installer consumes `Library/Caches/google-coding-development-session.json`
-from the app's own container. Its payload contains `accountID`, `credential`,
-and `confirmedSameAccount`. It requires an existing Gemini account, renewable
-credentials, and an empty coding Keychain slot. It applies complete file
-protection, saves through the account-scoped configuration store, removes the
-staging file on success or rejection, and refreshes usage after saving.
-
-Transfer credentials through an encrypted channel, keep any local staging
-directory owner-only, and remove staging artifacts after deployment. Never
-print the payload, put it in a repository, or pass it through command-line
-arguments. Verify the app's refreshed usage snapshot and staging-file removal.
-Do not describe this tool as completing guided phone authorization.
-
 ## Dedicated Signing Keychain
 
 Use the dedicated CodexBar signing keychain, not the login keychain:

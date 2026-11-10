@@ -85,14 +85,6 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "GeminiAuthTests",
-            dependencies: ["CodexBarIOS"],
-            path: "GeminiAuthTests",
-            plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins"),
-            ]
-        ),
-        .testTarget(
             name: "OpenCodeAuthTests",
             dependencies: ["CodexBarIOS"],
             path: "OpenCodeAuthTests",

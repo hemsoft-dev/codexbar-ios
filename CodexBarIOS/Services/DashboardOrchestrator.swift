@@ -77,16 +77,6 @@ final class DashboardOrchestrator: ObservableObject {
         configurationStore.grokHistoryInvalidations.sink { [weak historyStore] accountID in
             historyStore?.removeSnapshots(for: accountID)
         }.store(in: &cancellables)
-        historyStore.migrateGoogleAccounts(
-            links: configurationStore.confirmedGoogleAccountLinks,
-            configurations: configurationStore.visibleConfigurations
-        )
-        configurationStore.$confirmedGoogleAccountLinks.dropFirst().sink { [weak historyStore, weak configurationStore] links in
-            historyStore?.migrateGoogleAccounts(
-                links: links,
-                configurations: configurationStore?.visibleConfigurations ?? []
-            )
-        }.store(in: &cancellables)
         refreshService.updateCurrentConfigurations(configurationStore.visibleConfigurations)
         refreshService.updateAccountAccess(configurationStore.accountAccess)
         configurationStore.$accountAccess.dropFirst().sink { [weak self] access in
@@ -104,8 +94,8 @@ final class DashboardOrchestrator: ObservableObject {
     var dashboardCardItems: [DashboardProviderCardItem] {
         let configurations = configurationStore.visibleConfigurations.filter {
             configurationStore.shouldDisplayOnDashboard($0)
-                || ($0.isEnabled && $0.providerID != .codex && !GoogleUsageMetricCatalog.definitions(for: $0.providerID).isEmpty)
-        } + GoogleUsageMetricCatalog.missingSourceConfigurations(in: configurationStore.configurations)
+                || ($0.isEnabled && $0.providerID != .codex && !ProviderMetricCatalog.definitions(for: $0.providerID).isEmpty)
+        }
         return DashboardProviderCardItem.items(
             configurations: configurations,
             results: displayedResults,
@@ -751,7 +741,7 @@ struct DashboardProviderCardItem: Identifiable, Equatable {
         isRefreshing: Bool,
         errorMessage: String?
     ) -> ProviderUsageResult? {
-        let definitions = GoogleUsageMetricCatalog.definitions(for: configuration.providerID)
+        let definitions = ProviderMetricCatalog.definitions(for: configuration.providerID)
         var titledObservation = observed
         if let observed {
             titledObservation?.title = configuration.providerID == .openCodeZen

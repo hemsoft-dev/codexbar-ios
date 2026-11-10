@@ -64,30 +64,6 @@ final class DashboardAndSettingsTests: XCTestCase {
         XCTAssertEqual(addAccountState.finishDismissal(), "openCodeZen.team")
     }
 
-    func testGoogleSetupDismissalWaitsForChangedRefreshInputs() {
-        var navigation = DashboardAccountConfigurationNavigationState()
-        let accountID = "dashboard.setup.antigravity"
-
-        navigation.present(accountID: accountID, refreshOnDismiss: false)
-        // A repeated sheet binding write must not arm an unrequested refresh.
-        navigation.present(accountID: accountID)
-        navigation.clearPresentation()
-        XCTAssertNil(navigation.finishDismissal())
-
-        navigation.present(accountID: accountID, refreshOnDismiss: false)
-        navigation.refreshInputsChanged()
-        XCTAssertEqual(navigation.finishDismissal(), accountID)
-        XCTAssertNil(navigation.finishDismissal())
-
-        navigation.present(accountID: accountID, refreshOnDismiss: false)
-        navigation.refreshInputsChanged()
-        navigation.credentialsChanged()
-        XCTAssertNil(navigation.finishDismissal())
-
-        navigation.present(accountID: "configured.account")
-        XCTAssertEqual(navigation.finishDismissal(), "configured.account")
-    }
-
     @MainActor
     func testAccountSettingsReportsOnlyProviderRefreshInputChanges() throws {
         let defaults = UserDefaults(suiteName: #function)!
@@ -175,7 +151,7 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         XCTAssertEqual(
             Set(service.results.map(\.providerID)),
-            Set(ProviderID.allCases.filter { $0 != .antigravity && $0.isAvailableOnIPhone })
+            Set(ProviderID.allCases.filter { $0.isAvailableOnIPhone })
         )
         XCTAssertFalse(service.isRefreshing)
         XCTAssertNil(service.lastRefreshError)
@@ -4622,5 +4598,102 @@ private final class RecordingWatchSnapshotSender: WatchSnapshotSending {
 
     func completeActivation() {
         activationHandler?(true)
+    }
+}
+
+extension AppAndWidgetTests {
+    @MainActor
+    func testRetiredGoogleConfigurationMigrationPreservesOtherAccountsAndGroups() throws {
+        let suite = "GoogleMigrationTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let retained = [
+            ProviderAccountConfiguration(id: "personal", providerID: .codex, accountLabel: "Personal", groupID: "work", authMethod: .browserSession),
+            ProviderAccountConfiguration(id: "team", providerID: .claude, accountLabel: "Team", groupID: "work", authMethod: .browserSession),
+        ]
+        var records = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(retained)) as? [[String: Any]])
+        records += [
+            ["id": "gemini.saved", "providerID": "gemini", "authMethod": "browserSession"],
+            ["id": "legacy-coding", "providerID": "antigravity", "authMethod": "cliToken"],
+        ]
+        defaults.set(try JSONSerialization.data(withJSONObject: records), forKey: "providerConfigurations")
+        let groups = [ProviderAccountGroup(id: "work", name: "Work")]
+        defaults.set(try JSONEncoder().encode(groups), forKey: "providerAccountGroups")
+        defaults.set(["team", "personal"], forKey: "dashboardCardOrder")
+        let secretStore = KeychainService(service: suite)
+        let removed = ["providerAccount.gemini.saved.credential", "providerAccount.legacy-coding.credential",
+                       "provider.gemini.gemini.saved.coding", "provider.antigravity.credential", "provider.gemini.credential",
+        ]
+        for account in removed { try secretStore.saveSecret("synthetic", account: account) }
+        let preserved = ProviderConfigurationStore.keychainAccount(for: retained[0])
+        try secretStore.saveSecret("synthetic-other", account: preserved)
+        defer { for account in removed + [preserved] { try? secretStore.deleteSecret(account: account) } }
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        XCTAssertFalse(store.isConfigurationRecoveryRequired)
+        XCTAssertEqual(store.configurations.sorted { $0.id < $1.id }, retained.sorted { $0.id < $1.id })
+        XCTAssertEqual(store.groups, groups)
+        XCTAssertEqual(store.dashboardCardOrder, ["team", "personal"])
+        for account in removed { XCTAssertNil(try secretStore.readSecret(account: account)) }
+        XCTAssertEqual(try secretStore.readSecret(account: preserved), "synthetic-other")
+        let reloaded = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        XCTAssertEqual(reloaded.configurations, store.configurations)
+        XCTAssertTrue(defaults.stringArray(forKey: "retiredGoogleCredentialCleanup")?.isEmpty == true)
+    }
+
+    func testRetiredGoogleHistoryFilterPreservesOtherRecordsAndCorruption() throws {
+        let input = Data(#"[{"providerID":"gemini","id":"old"},{"providerID":"claude","id":"kept","subscriptionRenewal":{"state":"renewing"}},{"providerID":"antigravity","id":"coding"}]"#.utf8)
+        let filtered = try RetiredGoogleProviderMigration.removingRetiredRecords(from: input)
+        let records = try XCTUnwrap(JSONSerialization.jsonObject(with: filtered) as? [[String: Any]])
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records.first?["id"] as? String, "kept")
+        XCTAssertNotNil(records.first?["subscriptionRenewal"])
+        XCTAssertEqual(try RetiredGoogleProviderMigration.removingRetiredRecords(from: filtered), filtered)
+        XCTAssertThrowsError(try RetiredGoogleProviderMigration.removingRetiredRecords(from: Data("corrupt".utf8)))
+    }
+}
+
+extension AppAndWidgetTests {
+    @MainActor
+    func testRetiredGoogleCleanupRetriesAfterConfigurationWasMigrated() throws {
+        let suite = "GoogleCleanupRetry.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(Data(#"[{"id":"old-id","providerID":"gemini","authMethod":"browserSession"}]"#.utf8),
+                     forKey: "providerConfigurations")
+        XCTAssertNotNil(RetiredGoogleProviderMigration.run(defaults: defaults, secretStore: RetiredCleanupFailure(),
+                                                          configurationKey: "providerConfigurations"))
+        XCTAssertEqual(defaults.data(forKey: "providerConfigurations"), Data("[]".utf8))
+        XCTAssertTrue(defaults.stringArray(forKey: "retiredGoogleCredentialCleanup")?.contains("providerAccount.old-id.credential") == true)
+        let keychain = KeychainService(service: suite)
+        try keychain.saveSecret("synthetic", account: "providerAccount.old-id.credential")
+        defer { try? keychain.deleteSecret(account: "providerAccount.old-id.credential") }
+        XCTAssertNil(RetiredGoogleProviderMigration.run(defaults: defaults, secretStore: keychain,
+                                                       configurationKey: "providerConfigurations"))
+        XCTAssertNil(try keychain.readSecret(account: "providerAccount.old-id.credential"))
+        XCTAssertEqual(defaults.stringArray(forKey: "retiredGoogleCredentialCleanup"), [])
+    }
+}
+
+private struct RetiredCleanupFailure: SecretStore {
+    func readSecret(account: String) throws -> String? { nil }
+    func saveSecret(_ secret: String, account: String) throws { }
+    func deleteSecret(account: String) throws { throw CocoaError(.fileWriteNoPermission) }
+}
+
+extension AppAndWidgetTests {
+    func testRetiredGoogleWatchSnapshotDropsOnlyRetiredAccountsAndFallsBack() throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let metric = WatchMetricSnapshot(id: "claude.weekly", label: "Weekly", exactValue: "25%")
+        let retained = WatchAccountSnapshot(id: "claude.team", providerName: "Claude", accountLabel: "Team", fetchedAt: now, metrics: [metric])
+        let retired = WatchAccountSnapshot(id: "gemini.legacy-account", providerName: "Google Gemini", accountLabel: "Old", fetchedAt: now, metrics: [metric])
+        let payload = WatchDashboardSnapshot(generatedAt: now, refreshIntervalSeconds: 300, accounts: [retired, retained])
+        let migrated = try WatchDashboardSnapshot.decode(payload.encoded())
+        XCTAssertEqual(migrated.accounts, [retained])
+        let selection = WatchComplicationSelection(accountID: "gemini.legacy-account", metricID: "gemini.weekly")
+        let result = WatchComplicationResolver().resolve(snapshot: migrated, selection: selection, at: now)
+        XCTAssertEqual(result.availability, .value)
+        XCTAssertEqual(result.exactValue, "25%")
+        let unrelated = WatchComplicationSelection(accountID: "old-id", metricID: "gemini.weekly")
+        XCTAssertEqual(WatchComplicationResolver().resolve(snapshot: migrated, selection: unrelated, at: now).availability, .unavailable)
     }
 }

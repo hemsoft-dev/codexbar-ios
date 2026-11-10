@@ -300,7 +300,7 @@ struct WidgetRenderingProbe {
             ("codex", "Codex", 0.48, .linearBar),
             ("claude", "Claude", 0.79, .segmentedBar),
             ("copilot", "Copilot", 0.91, .circularRing),
-            ("gemini", "Gemini", 0.34, .semicircularDial),
+            ("claude", "Claude", 0.34, .semicircularDial),
             ("cursor", "Cursor", 0.62, .largeNumeric),
             ("openRouter", "OpenRouter", 0.27, .linearBar),
         ]

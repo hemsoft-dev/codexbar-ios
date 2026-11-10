@@ -195,9 +195,6 @@ enum WatchSnapshotPublisher {
                         providerID: result.providerID,
                         configurationID: configuration.id
                     ),
-                    legacyAccountIDs: configurationStore.linkedGoogleAccountIDs(for: result.accountID).map {
-                        snapshotAccountID(providerID: .antigravity, configurationID: $0)
-                    },
                     providerName: result.providerID == .openCodeZen
                         ? result.title
                         : configuration.providerID.displayName,

@@ -39,9 +39,9 @@ class UIShardTests(unittest.TestCase):
                   if manifest['phases'][phase]['kind'] == 'journey' for test in tests]
         expected = [test for phase in manifest['ui_journeys'] for test in manifest['phases'][phase]['tests']]
         self.assertEqual(sorted(actual), sorted(expected))
-        self.assertEqual(len(actual), 53)
-        self.assertEqual(len(set(actual)), 53)
-        self.assertEqual([len(self.plan[name][0][1]) for name in SHARDS.SHARDS[:3]], [8, 8, 13])
+        self.assertEqual(len(actual), 48)
+        self.assertEqual(len(set(actual)), 48)
+        self.assertEqual([len(self.plan[name][0][1]) for name in SHARDS.SHARDS[:3]], [8, 7, 11])
         self.assertEqual([phase for phase, _ in self.plan['native']],
                          ['ui-preparation', 'ui-native', 'ui-error-preparation', 'ui-native-purchase-error', 'ui-reset'])
 
@@ -107,7 +107,7 @@ class UIShardTests(unittest.TestCase):
             proofs = [self.proof(family, name) for family in SHARDS.FAMILIES for name in SHARDS.SHARDS]
             for index, proof in enumerate(proofs):
                 folder = root / str(index);folder.mkdir();(folder / 'proof.json').write_text(json.dumps(proof))
-            self.assertEqual(SHARDS.aggregate(root, self.source)['journeysPerFamily'], 53)
+            self.assertEqual(SHARDS.aggregate(root, self.source)['journeysPerFamily'], 48)
             path = root / '0/proof.json'
             for key, value in [('complete', False), ('shutdown', False), ('revision', 'other'),
                                ('sourceFingerprint', 'other'), ('family', 'other')]:

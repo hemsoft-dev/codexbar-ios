@@ -446,30 +446,6 @@ public extension DemoUsageProvider {
                 ],
                 subtitle: ""
             ),
-            DemoUsageProvider(
-                providerID: .gemini,
-                bars: [
-                    UsageBar(
-                        stableKey: "five-hour",
-                        label: "Gemini Apps five-hour",
-                        used: 27,
-                        limit: 100,
-                        resetDescription: "Resets in 3h 40m"
-                    ),
-                    UsageBar(
-                        stableKey: "weekly",
-                        label: "Gemini Apps weekly",
-                        used: 54,
-                        limit: 100,
-                        resetDescription: "Resets Monday"
-                    ),
-                    UsageBar(stableKey: "gemini-5h", label: "Gemini Models five-hour", used: 100, limit: 100),
-                    UsageBar(stableKey: "gemini-weekly", label: "Gemini Models weekly", used: 31, limit: 100),
-                    UsageBar(stableKey: "3p-5h", label: "Other models five-hour", used: 20, limit: 100),
-                    UsageBar(stableKey: "3p-weekly", label: "Other models weekly", used: 60, limit: 100),
-                ],
-                subtitle: "Gemini Apps and coding usage"
-            ),
         ]
     }
 }

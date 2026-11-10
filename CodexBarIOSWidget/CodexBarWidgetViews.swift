@@ -167,7 +167,6 @@ struct CodexBarWidgetView: View {
             return legacyMatch
         }
 
-        if choice.id.contains("antigravity.") { return .unavailable(choice: choice) }
         let titleMatches = allTiles.filter {
             $0.choiceTitle.localizedCaseInsensitiveCompare(choice.title) == .orderedSame
         }
@@ -179,28 +178,16 @@ struct CodexBarWidgetView: View {
             return previewFallback
         }
 
-        return .unavailable(choice: choice)
+        return CodexBarWidgetTile.fallback(forUnresolvedChoice: choice, in: allTiles)
     }
 
     private func resolvedTile(
         for tileID: String,
         in allTiles: [CodexBarWidgetTile]
     ) -> CodexBarWidgetTile {
-        if let exactMatch = allTiles.first(where: { $0.id == tileID }) {
-            return exactMatch
+        CodexBarWidgetTile.resolvingSavedID(tileID, in: allTiles) {
+            legacySummaryTile(for: tileID) ?? legacyBarTile(for: tileID)
         }
-
-        if let legacyMatch = legacySummaryTile(for: tileID) ?? legacyBarTile(for: tileID) {
-            return legacyMatch
-        }
-
-        return .unavailable(
-            choice: CodexBarWidgetTileChoice(
-                id: tileID,
-                title: "Saved Tile",
-                subtitle: "Open CodexBar to refresh"
-            )
-        )
     }
 
     private func legacySummaryTile(for tileID: String) -> CodexBarWidgetTile? {

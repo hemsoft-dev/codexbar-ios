@@ -11,7 +11,7 @@ import tempfile
 import time
 
 
-JOURNEY = "CodexBarIOSUITests/AccountJourneysUITests/testSixGoogleChoicesAndIndependentCustomizationPersist"
+JOURNEY = "CodexBarIOSUITests/SettingsEvidenceUITests/testRetiredGoogleUpgradeEvidence"
 
 
 def passed_one(summary):
@@ -27,8 +27,8 @@ def classify_baseline(exit_code, summary):
     failures = summary.get("testFailures", [])
     known_failure = bool(failures) and all(
         "Control is unreachable at accessibility text size" in failure.get("failureText", "").split("\n")[0]
-        and "Configure account Gemini Fixture" in failure.get("failureText", "").split("\n")[0]
-        and "testSixGoogleChoicesAndIndependentCustomizationPersist" in failure.get("testIdentifierString", "")
+        and "Configure account Fixture" in failure.get("failureText", "").split("\n")[0]
+        and "testRetiredGoogleUpgradeEvidence" in failure.get("testIdentifierString", "")
         for failure in failures
     )
     if exit_code == 65 and known_failure and all(summary.get(key) == value for key, value in {

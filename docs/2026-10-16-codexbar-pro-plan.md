@@ -218,7 +218,7 @@ Because releasing 2.0 and changing the price are both manual, three rules close 
 | GitHub status notices | Yes | Yes | Not gated. These are service-health notices, not usage features. |
 | Subscription renewal pills and resets | Yes, for the active account | Yes | Not gated |
 
-Linked hidden accounts (the Antigravity half of a Gemini account) don't count toward the limit.
+Only accounts supported on iPhone count toward the active account limit.
 
 ### Downgrade
 

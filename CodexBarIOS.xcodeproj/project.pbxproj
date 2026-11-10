@@ -32,8 +32,7 @@
 		A42000000000000000000201 /* ClaudeUsageResetClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42000000000000000000202 /* ClaudeUsageResetClient.swift */; };
 		A42100000000000000000201 /* ClaudeFableMetricPreferenceCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42100000000000000000202 /* ClaudeFableMetricPreferenceCompatibility.swift */; };
 		A42000000000000000000101 /* ClaudeUsageResetInventory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42000000000000000000102 /* ClaudeUsageResetInventory.swift */; };
-		AB2990000000000000000001 /* GoogleCodingSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2990000000000000000002; };
-		A31900000000000000000001 /* GoogleUsageMetricCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31900000000000000000002 /* GoogleUsageMetricCatalog.swift */; };
+		A31900000000000000000001 /* ProviderMetricCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31900000000000000000002 /* ProviderMetricCatalog.swift */; };
 		A22600000000000000000001 /* GreptileUsageIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22600000000000000000005 /* GreptileUsageIdentity.swift */; };
 		A22600000000000000000002 /* GreptileUsageIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22600000000000000000005 /* GreptileUsageIdentity.swift */; };
 		A22600000000000000000003 /* GreptileUsageIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22600000000000000000005 /* GreptileUsageIdentity.swift */; };
@@ -67,10 +66,7 @@
 		100000000000000000000051 /* UsageAlertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004A /* UsageAlertTests.swift */; };
 		10000000000000000000004B /* ConfigurationAndAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004B /* ConfigurationAndAuthTests.swift */; };
 		10000000000000000000004C /* ProviderParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004C /* ProviderParsingTests.swift */; };
-		A29600000000000000000003 /* GeminiUsageProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29600000000000000000004 /* GeminiUsageProviderTests.swift */; };
-		A31400000000000000000401 /* AntigravityUsageProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31400000000000000000402 /* AntigravityUsageProviderTests.swift */; };
 		A52200000000000000000107 /* MuseCodeAllowanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52200000000000000000108 /* MuseCodeAllowanceTests.swift */; };
-		A29900000000000000000201 /* GeminiBrowserSignInTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29900000000000000000202 /* GeminiBrowserSignInTests.swift */; };
 		10000000000000000000004D /* UsageHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004D /* UsageHistoryTests.swift */; };
 		10000000000000000000004E /* ProviderNetworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004E /* ProviderNetworkTests.swift */; };
 		10000000000000000000004F /* DashboardAndSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004F /* DashboardAndSettingsTests.swift */; };
@@ -86,7 +82,6 @@
 		100000000000000000000010 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* SettingsView.swift */; };
 		100000000000000000000011 /* ProviderSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000013 /* ProviderSettingsView.swift */; };
 		A35300000000000000000101 /* OpenCodeBrowserSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35300000000000000000102 /* OpenCodeBrowserSignInView.swift */; };
-		A29900000000000000000101 /* GeminiBrowserSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29900000000000000000102 /* GeminiBrowserSignInView.swift */; };
 		100000000000000000000012 /* CodexCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000014 /* CodexCredentials.swift */; };
 		100000000000000000000013 /* CodexCredentialsParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000015 /* CodexCredentialsParser.swift */; };
 		100000000000000000000014 /* CodexUsageParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000016 /* CodexUsageParser.swift */; };
@@ -111,19 +106,13 @@
 		A43100000000000000000101 /* ClaudePlanProfileClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43100000000000000000102 /* ClaudePlanProfileClient.swift */; };
 		100000000000000000000023 /* OpenRouterUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000025 /* OpenRouterUsageProvider.swift */; };
 		A22500000000000000000001 /* GreptileUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22500000000000000000002 /* GreptileUsageProvider.swift */; };
-		A29600000000000000000001 /* GeminiUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29600000000000000000002 /* GeminiUsageProvider.swift */; };
-		A31400000000000000000301 /* AntigravityUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31400000000000000000302 /* AntigravityUsageProvider.swift */; };
-		A31400000000000000000201 /* AntigravityQuotaParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31400000000000000000202 /* AntigravityQuotaParser.swift */; };
 		A52200000000000000000101 /* MuseCodeAllowance.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52200000000000000000102 /* MuseCodeAllowance.swift */; };
-		A31400000000000000000101 /* AntigravityCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31400000000000000000102 /* AntigravityCredentials.swift */; };
 		A35300000000000000000301 /* OpenCodeDeviceAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35300000000000000000302 /* OpenCodeDeviceAuthService.swift */; };
 		A35300000000000000000401 /* OpenCodeConsoleUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35300000000000000000402 /* OpenCodeConsoleUsageProvider.swift */; };
 		A35500000000000000000101 /* GrokDeviceAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35500000000000000000102 /* GrokDeviceAuthService.swift */; };
 		A35500000000000000000201 /* GrokUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35500000000000000000202 /* GrokUsageProvider.swift */; };
 		A45800000000000000000101 /* XSubscriptionUsageParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45800000000000000000102 /* XSubscriptionUsageParser.swift */; };
 		A35300000000000000000201 /* OpenCodeBrowserSessionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35300000000000000000202 /* OpenCodeBrowserSessionPolicy.swift */; };
-		A29900000000000000000001 /* GeminiBrowserSessionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29900000000000000000002 /* GeminiBrowserSessionPolicy.swift */; };
-		A37400000000000000000001 /* GeminiBrowserInspectionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A37400000000000000000002 /* GeminiBrowserInspectionState.swift */; };
 		10000000000000000000003F /* MoonshotUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000003F /* MoonshotUsageProvider.swift */; };
 		100000000000000000000040 /* TokenEndpointErrorFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000040 /* TokenEndpointErrorFormatter.swift */; };
 		100000000000000000000041 /* ProviderAuthSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000041 /* ProviderAuthSupport.swift */; };
@@ -402,8 +391,7 @@
 		A42000000000000000000202 /* ClaudeUsageResetClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageResetClient.swift; sourceTree = "<group>"; };
 		A42100000000000000000202 /* ClaudeFableMetricPreferenceCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeFableMetricPreferenceCompatibility.swift; sourceTree = "<group>"; };
 		A42000000000000000000102 /* ClaudeUsageResetInventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageResetInventory.swift; sourceTree = "<group>"; };
-		AB2990000000000000000002 /* GoogleCodingSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleCodingSignIn.swift; sourceTree = "<group>"; };
-		A31900000000000000000002 /* GoogleUsageMetricCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleUsageMetricCatalog.swift; sourceTree = "<group>"; };
+		A31900000000000000000002 /* ProviderMetricCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderMetricCatalog.swift; sourceTree = "<group>"; };
 		A22600000000000000000005 /* GreptileUsageIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileUsageIdentity.swift; sourceTree = "<group>"; };
 		A22700000000000000000005 /* CursorUsageIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorUsageIdentity.swift; sourceTree = "<group>"; };
 		A42100000000000000000105 /* ClaudeFableUsageIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeFableUsageIdentity.swift; sourceTree = "<group>"; };
@@ -430,10 +418,7 @@
 		20000000000000000000004A /* UsageAlertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageAlertTests.swift; sourceTree = "<group>"; };
 		20000000000000000000004B /* ConfigurationAndAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationAndAuthTests.swift; sourceTree = "<group>"; };
 		20000000000000000000004C /* ProviderParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderParsingTests.swift; sourceTree = "<group>"; };
-		A29600000000000000000004 /* GeminiUsageProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiUsageProviderTests.swift; sourceTree = "<group>"; };
-		A31400000000000000000402 /* AntigravityUsageProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityUsageProviderTests.swift; sourceTree = "<group>"; };
 		A52200000000000000000108 /* MuseCodeAllowanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuseCodeAllowanceTests.swift; sourceTree = "<group>"; };
-		A29900000000000000000202 /* GeminiBrowserSignInTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiBrowserSignInTests.swift; sourceTree = "<group>"; };
 		20000000000000000000004D /* UsageHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageHistoryTests.swift; sourceTree = "<group>"; };
 		20000000000000000000004E /* ProviderNetworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderNetworkTests.swift; sourceTree = "<group>"; };
 		20000000000000000000004F /* DashboardAndSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardAndSettingsTests.swift; sourceTree = "<group>"; };
@@ -444,7 +429,6 @@
 		200000000000000000000012 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		200000000000000000000013 /* ProviderSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSettingsView.swift; sourceTree = "<group>"; };
 		A35300000000000000000102 /* OpenCodeBrowserSignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeBrowserSignInView.swift; sourceTree = "<group>"; };
-		A29900000000000000000102 /* GeminiBrowserSignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiBrowserSignInView.swift; sourceTree = "<group>"; };
 		200000000000000000000014 /* CodexCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexCredentials.swift; sourceTree = "<group>"; };
 		200000000000000000000015 /* CodexCredentialsParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexCredentialsParser.swift; sourceTree = "<group>"; };
 		200000000000000000000016 /* CodexUsageParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageParser.swift; sourceTree = "<group>"; };
@@ -469,19 +453,13 @@
 		A43100000000000000000102 /* ClaudePlanProfileClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudePlanProfileClient.swift; sourceTree = "<group>"; };
 		200000000000000000000025 /* OpenRouterUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterUsageProvider.swift; sourceTree = "<group>"; };
 		A22500000000000000000002 /* GreptileUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileUsageProvider.swift; sourceTree = "<group>"; };
-		A29600000000000000000002 /* GeminiUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiUsageProvider.swift; sourceTree = "<group>"; };
-		A31400000000000000000302 /* AntigravityUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityUsageProvider.swift; sourceTree = "<group>"; };
-		A31400000000000000000202 /* AntigravityQuotaParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityQuotaParser.swift; sourceTree = "<group>"; };
 		A52200000000000000000102 /* MuseCodeAllowance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuseCodeAllowance.swift; sourceTree = "<group>"; };
-		A31400000000000000000102 /* AntigravityCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityCredentials.swift; sourceTree = "<group>"; };
 		A35300000000000000000302 /* OpenCodeDeviceAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeDeviceAuthService.swift; sourceTree = "<group>"; };
 		A35300000000000000000402 /* OpenCodeConsoleUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeConsoleUsageProvider.swift; sourceTree = "<group>"; };
 		A35500000000000000000102 /* GrokDeviceAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokDeviceAuthService.swift; sourceTree = "<group>"; };
 		A35500000000000000000202 /* GrokUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokUsageProvider.swift; sourceTree = "<group>"; };
 		A45800000000000000000102 /* XSubscriptionUsageParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XSubscriptionUsageParser.swift; sourceTree = "<group>"; };
 		A35300000000000000000202 /* OpenCodeBrowserSessionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeBrowserSessionPolicy.swift; sourceTree = "<group>"; };
-		A29900000000000000000002 /* GeminiBrowserSessionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiBrowserSessionPolicy.swift; sourceTree = "<group>"; };
-		A37400000000000000000002 /* GeminiBrowserInspectionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiBrowserInspectionState.swift; sourceTree = "<group>"; };
 		20000000000000000000003F /* MoonshotUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoonshotUsageProvider.swift; sourceTree = "<group>"; };
 		200000000000000000000040 /* TokenEndpointErrorFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenEndpointErrorFormatter.swift; sourceTree = "<group>"; };
 		200000000000000000000041 /* ProviderAuthSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAuthSupport.swift; sourceTree = "<group>"; };
@@ -742,7 +720,7 @@
 				A37600000000000000000002 /* ProviderMetricTileContent.swift */,
 				A37700000000000000000002 /* SettingsPresentationModels.swift */,
 				A37700000000000000000004 /* GitHubStatusNotificationAuthorization.swift */,
-				A31900000000000000000002 /* GoogleUsageMetricCatalog.swift */,
+				A31900000000000000000002 /* ProviderMetricCatalog.swift */,
 				200000000000000000000005 /* UsageBar.swift */,
 				200000000000000000000006 /* UsageSeverity.swift */,
 				200000000000000000000019 /* AppAppearance.swift */,
@@ -811,7 +789,6 @@
 				B33600000000000000000004 /* GitHubBillingWebAuthService.swift */,
 				200000000000000000000021 /* ClaudeCredentialsParser.swift */,
 				200000000000000000000022 /* ClaudeWebAuthService.swift */,
-				AB2990000000000000000002 /* GoogleCodingSignIn.swift */,
 				200000000000000000000023 /* ClaudeUsageParser.swift */,
 				200000000000000000000024 /* ClaudeUsageProvider.swift */,
 				A44400000000000000000202 /* CodexSubscriptionClient.swift */,
@@ -824,15 +801,9 @@
 				A42100000000000000000202 /* ClaudeFableMetricPreferenceCompatibility.swift */,
 				200000000000000000000025 /* OpenRouterUsageProvider.swift */,
 				A22500000000000000000002 /* GreptileUsageProvider.swift */,
-				A29600000000000000000002 /* GeminiUsageProvider.swift */,
-				A31400000000000000000302 /* AntigravityUsageProvider.swift */,
-				A31400000000000000000202 /* AntigravityQuotaParser.swift */,
 				A52200000000000000000102 /* MuseCodeAllowance.swift */,
-				A31400000000000000000102 /* AntigravityCredentials.swift */,
-				A29900000000000000000002 /* GeminiBrowserSessionPolicy.swift */,
 				A40600000000000000000202 /* GreptileDashboardClient.swift */,
 				A40600000000000000000102 /* GreptileSessionCredentials.swift */,
-				A37400000000000000000002 /* GeminiBrowserInspectionState.swift */,
 				A35300000000000000000202 /* OpenCodeBrowserSessionPolicy.swift */,
 				A35300000000000000000302 /* OpenCodeDeviceAuthService.swift */,
 				A35300000000000000000402 /* OpenCodeConsoleUsageProvider.swift */,
@@ -873,7 +844,6 @@
 				200000000000000000000038 /* WidgetBuilderView.swift */,
 				200000000000000000000013 /* ProviderSettingsView.swift */,
 				A44600000000000000000402 /* SubscriptionBillingSignInView.swift */,
-				A29900000000000000000102 /* GeminiBrowserSignInView.swift */,
 				A40600000000000000000602 /* ProviderCardInformationView.swift */,
 				A40600000000000000000502 /* GreptileRenewalView.swift */,
 				A40600000000000000000402 /* GreptileBrowserSignInView.swift */,
@@ -935,10 +905,7 @@
 				20000000000000000000004F /* DashboardAndSettingsTests.swift */,
 				20000000000000000000004E /* ProviderNetworkTests.swift */,
 				20000000000000000000004C /* ProviderParsingTests.swift */,
-				A29600000000000000000004 /* GeminiUsageProviderTests.swift */,
-				A31400000000000000000402 /* AntigravityUsageProviderTests.swift */,
 				A52200000000000000000108 /* MuseCodeAllowanceTests.swift */,
-				A29900000000000000000202 /* GeminiBrowserSignInTests.swift */,
 				200000000000000000000050 /* TestSupport.swift */,
 				A42000000000000000000502 /* ClaudeUsageResetInventoryTests.swift */,
 				A42000000000000000000602 /* ClaudeUsageResetClientTests.swift */,
@@ -1386,7 +1353,7 @@
 				A37600000000000000000001 /* ProviderMetricTileContent.swift in Sources */,
 				A37700000000000000000001 /* SettingsPresentationModels.swift in Sources */,
 				A37700000000000000000003 /* GitHubStatusNotificationAuthorization.swift in Sources */,
-				A31900000000000000000001 /* GoogleUsageMetricCatalog.swift in Sources */,
+				A31900000000000000000001 /* ProviderMetricCatalog.swift in Sources */,
 				100000000000000000000005 /* UsageBar.swift in Sources */,
 				100000000000000000000006 /* UsageSeverity.swift in Sources */,
 				100000000000000000000007 /* UsageProvider.swift in Sources */,
@@ -1404,7 +1371,6 @@
 				100000000000000000000033 /* LocalUsageAlertNotifier.swift in Sources */,
 				100000000000000000000010 /* SettingsView.swift in Sources */,
 				100000000000000000000011 /* ProviderSettingsView.swift in Sources */,
-				A29900000000000000000101 /* GeminiBrowserSignInView.swift in Sources */,
 				A40600000000000000000601 /* ProviderCardInformationView.swift in Sources */,
 				A40600000000000000000501 /* GreptileRenewalView.swift in Sources */,
 				A40600000000000000000401 /* GreptileBrowserSignInView.swift in Sources */,
@@ -1434,7 +1400,6 @@
 				10000000000000000000001E /* ClaudeCredentials.swift in Sources */,
 				10000000000000000000001F /* ClaudeCredentialsParser.swift in Sources */,
 				100000000000000000000020 /* ClaudeWebAuthService.swift in Sources */,
-				AB2990000000000000000001 /* GoogleCodingSignIn.swift in Sources */,
 				100000000000000000000021 /* ClaudeUsageParser.swift in Sources */,
 				100000000000000000000022 /* ClaudeUsageProvider.swift in Sources */,
 				A44400000000000000000201 /* CodexSubscriptionClient.swift in Sources */,
@@ -1448,13 +1413,7 @@
 				A42100000000000000000201 /* ClaudeFableMetricPreferenceCompatibility.swift in Sources */,
 				100000000000000000000023 /* OpenRouterUsageProvider.swift in Sources */,
 				A22500000000000000000001 /* GreptileUsageProvider.swift in Sources */,
-				A29600000000000000000001 /* GeminiUsageProvider.swift in Sources */,
-				A31400000000000000000301 /* AntigravityUsageProvider.swift in Sources */,
-				A31400000000000000000201 /* AntigravityQuotaParser.swift in Sources */,
 				A52200000000000000000101 /* MuseCodeAllowance.swift in Sources */,
-				A31400000000000000000101 /* AntigravityCredentials.swift in Sources */,
-				A29900000000000000000001 /* GeminiBrowserSessionPolicy.swift in Sources */,
-				A37400000000000000000001 /* GeminiBrowserInspectionState.swift in Sources */,
 				A35300000000000000000201 /* OpenCodeBrowserSessionPolicy.swift in Sources */,
 				A35300000000000000000301 /* OpenCodeDeviceAuthService.swift in Sources */,
 				A35300000000000000000401 /* OpenCodeConsoleUsageProvider.swift in Sources */,
@@ -1542,10 +1501,7 @@
 				10000000000000000000004F /* DashboardAndSettingsTests.swift in Sources */,
 				10000000000000000000004E /* ProviderNetworkTests.swift in Sources */,
 				10000000000000000000004C /* ProviderParsingTests.swift in Sources */,
-				A29600000000000000000003 /* GeminiUsageProviderTests.swift in Sources */,
-				A31400000000000000000401 /* AntigravityUsageProviderTests.swift in Sources */,
 				A52200000000000000000107 /* MuseCodeAllowanceTests.swift in Sources */,
-				A29900000000000000000201 /* GeminiBrowserSignInTests.swift in Sources */,
 				100000000000000000000050 /* TestSupport.swift in Sources */,
 				A42000000000000000000501 /* ClaudeUsageResetInventoryTests.swift in Sources */,
 				A42000000000000000000601 /* ClaudeUsageResetClientTests.swift in Sources */,
@@ -1855,7 +1811,6 @@
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;
-				GOOGLE_CODING_CLIENT_ID = "991897870394-4j08o73jakub79io6a949ekppt54dfvu.apps.googleusercontent.com";
 				INFOPLIST_FILE = CodexBarIOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1890,7 +1845,6 @@
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = W2A23PX5BP;
 				GENERATE_INFOPLIST_FILE = NO;
-				GOOGLE_CODING_CLIENT_ID = "991897870394-4j08o73jakub79io6a949ekppt54dfvu.apps.googleusercontent.com";
 				INFOPLIST_FILE = CodexBarIOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (

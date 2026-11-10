@@ -23,7 +23,6 @@ SCREENSHOT_SETTLE_SECONDS="${SCREENSHOT_SETTLE_SECONDS:-2}"
 SCENES=(
   "dashboard-overview:light"
   "dashboard-dark:dark"
-  "gemini:light"
   "grok:dark"
   "github-billing:light"
   "widget-builder:light"

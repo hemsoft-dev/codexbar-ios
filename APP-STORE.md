@@ -720,7 +720,7 @@ submission unless a version-specific note says otherwise.
 
 | Product-page claim | Verified source or constraint | App Store wording guidance |
 | --- | --- | --- |
-| Tracks ChatGPT / Codex, GitHub Copilot, GitHub Billing, Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot (Kimi), Greptile, and Google Gemini | Current provider list used by the app; metrics vary by account and service | Name exactly these providers; do not imply official affiliation or complete metric availability. |
+| Tracks ChatGPT / Codex, GitHub Copilot, GitHub Billing, Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot (Kimi), Greptile | Current provider list used by the app; metrics vary by account and service | Name exactly these providers; do not imply official affiliation or complete metric availability. |
 | Shows usage, limits, balances, reset timing, refresh state, alerts, and history | Provider data varies by API/account type | Say metrics appear where each provider makes them available. |
 | Supports multiple accounts and provider groups with CodexBar Pro | Free refreshes one active account; Pro refreshes all saved accounts | Label multiple active accounts as CodexBar Pro; do not imply team administration. |
 | Offers Home Screen and Lock Screen widgets with CodexBar Pro | Widget extension and entitlement checks | Label widgets as CodexBar Pro; iOS controls refresh timing. |
@@ -787,16 +787,22 @@ Status bars are forced to `9:41` with full battery before capture.
 Scene order:
 
 1. `dashboard-overview` in light appearance
+
 2. `dashboard-dark` in dark appearance
-3. `gemini` in light appearance
+
 4. `grok` in dark appearance
+
 5. `github-billing` in light appearance
+
 6. `widget-builder` in light appearance
+
 7. `accounts` in dark appearance
+
 8. `provider-copilot` in light appearance
+
 9. `history` in dark appearance
 
-The three new scenes put the selected synthetic account first in the actual
+The provider scenes put the selected synthetic account first in the actual
 Dashboard. They do not call live provider services or change customer setup.
 Use `OUTPUT_DIR`, `FASTLANE_OUTPUT_DIR`, and `DERIVED_DATA` to keep generated
 files isolated. Watch capture defaults to `release-assets/1.4.0/screenshots`
@@ -873,13 +879,13 @@ to the App Store Connect version 1.1 submission on 2026-07-11:
 
 - [ ] Re-audit provider logos and names used in the app and widgets before the
   next release.
+
 - [ ] Re-confirm logo usage under each provider's current brand guidelines.
+
 - [ ] Replace any newly identified risky brand asset with a permitted mark or
   neutral in-app icon.
+
 - [ ] Re-check non-affiliation disclaimers before the next submission.
-- [ ] Re-confirm provider-name wording (Codex, Copilot, GitHub Billing, Claude,
-  Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot (Kimi), Greptile,
-  Google Gemini) before the next submission.
 
 The completed content-rights declaration in Final Submission records the 1.1
 submission. These unchecked items are a broader future-release brand audit.
@@ -1037,16 +1043,13 @@ Version 1.2 submission status:
 ## CodexBar-Specific Risks
 
 - Provider integrations depend on third-party services that may return different data by account type or region.
+
 - Some providers may block automation-like auth flows. Review notes should clarify that CodexBar uses user-supplied credentials/API keys to fetch the user's own account data.
-- Google Gemini's consumer usage meters use a guided private Google website
-  sign-in and an undocumented `gemini.google.com` web contract. The app retains
-  only the verified account's required session cookies in Keychain. Before
-  submission, confirm the current Google terms and App Review position and
-  preserve the credential-sensitivity disclosure. Live comparisons belong to
-  Franz; fixture results are not proof of live Google approval or quota values.
-  The integration must remain read-only and fail closed when its contract changes.
+
 - Brand asset permissions need a careful pass before submission.
+
 - Widgets must continue to show useful stale/error states because iOS controls refresh timing.
+
 - OpenCode Go and Zen now have guided phone authorization and workspace
   selection without importing desktop credentials. Provider approval and
   account-specific access remain external dependencies; see

@@ -1282,9 +1282,6 @@ struct ProviderUsageCard: View {
             if let githubAllowanceSummary {
                 allowanceSupportingText(githubAllowanceSummary)
             }
-            if result.providerID == .gemini || result.providerID == .antigravity {
-                supportingText(result.hasCurrentBars ? "Percent used · Current" : "Percent used · Last known value")
-            }
             usageTileResetDetails(item: item, bar: bar, showsAllowanceSummary: githubAllowanceSummary != nil)
         }
     }

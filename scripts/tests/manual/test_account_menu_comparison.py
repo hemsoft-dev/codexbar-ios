@@ -27,13 +27,13 @@ class AccountMenuComparisonTests(unittest.TestCase):
         self.assertEqual(MODULE.classify_baseline(65, self.summary()), "unclassified-failure")
 
     def test_baseline_failure_must_be_the_original_menu_assertion(self):
-        failure = dict(failureText='failed - Control is unreachable at accessibility text size: "Configure account Gemini Fixture" Button.',
-                       testIdentifierString="AccountJourneysUITests/testSixGoogleChoicesAndIndependentCustomizationPersist()")
+        failure = dict(failureText='failed - Control is unreachable at accessibility text size: "Configure account Fixture" Button.',
+                       testIdentifierString="SettingsEvidenceUITests/testRetiredGoogleUpgradeEvidence()")
         summary = self.summary(result="Failed", passedTests=0, failedTests=1, testFailures=[failure])
         self.assertEqual(MODULE.classify_baseline(65, summary), "known-menu-failure")
         self.assertEqual(MODULE.classify_baseline(0, self.summary()), "passed")
         for changes in [dict(failureText="Simulator failed to launch"), dict(failureText="Circular ring is not selected"),
-                        dict(testIdentifierString="OtherJourney"), dict(failureText="Infrastructure failed\nConfigure account Gemini Fixture")]:
+                        dict(testIdentifierString="OtherJourney"), dict(failureText="Infrastructure failed\nConfigure account Fixture")]:
             altered = dict(failure, **changes)
             self.assertEqual(MODULE.classify_baseline(65, dict(summary, testFailures=[altered])), "unclassified-failure")
         for changes in [dict(skippedTests=1), dict(expectedFailures=1), dict(totalTestCount=0), dict(testFailures=[])]:
