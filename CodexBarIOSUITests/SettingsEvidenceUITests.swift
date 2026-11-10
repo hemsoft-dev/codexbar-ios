@@ -22,7 +22,7 @@ final class SettingsEvidenceUITests: XCTestCase {
             XCTAssertFalse(app.staticTexts["Antigravity"].exists)
             capture("upgrade-accounts-\(theme)")
             tap(app.buttons["Add Account"].firstMatch, in: app)
-            XCTAssertTrue(app.navigationBars["Add Account"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.navigationBars["Choose a Provider"].waitForExistence(timeout: 5))
             XCTAssertFalse(app.staticTexts["Google Gemini"].exists)
             XCTAssertFalse(app.staticTexts["Antigravity"].exists)
             capture("upgrade-provider-list-\(theme)")
