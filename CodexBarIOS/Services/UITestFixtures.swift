@@ -212,6 +212,10 @@ final class UITestFixtures {
         """#
         defaults.set(Data(json.utf8), forKey: "providerConfigurations")
         defaults.set(try? JSONEncoder().encode([ProviderAccountGroup(id: "work", name: "Work")]), forKey: "providerAccountGroups")
+        WidgetSnapshotStore.saveBuilderConfiguration(
+            CodexBarWidgetBuilderConfiguration(layout: .oneTile, selectedTileIDs: ["provider.gemini.saved"],
+                                                displayModes: [.compactPercent]), defaults: defaults
+        )
         for id in ["personal", "team", "gemini.saved", "coding.saved"] {
             defaults.set("ui-test-credential", forKey: "fixture-secret.providerAccount.\(id).credential")
         }
@@ -375,7 +379,8 @@ final class UITestFixtures {
                 UITestBillingOpenRecorder(defaults: defaults)
             }
             if showsPlanTransitions { PlanTransitionFixtureControls(fixture: planFixture) }
-            if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"]?.hasPrefix("claude-plan-ultra-") == true {
+            if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"]?.hasPrefix("claude-plan-ultra-") == true
+                || ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"] == "retired-google-upgrade" {
                 UITestWidgetPreviewControl(fixture: self)
             }
         }
