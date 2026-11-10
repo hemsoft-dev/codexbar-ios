@@ -248,19 +248,3 @@ final class SettingsEvidenceUITests: XCTestCase {
         add(attachment)
     }
 }
-
-@MainActor
-final class WeeklyUsageEvidenceUITests: XCTestCase {
-    private func detailRow(in app: XCUIApplication, named name: String) -> XCUIElement {
-        app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label BEGINSWITH %@", name))
-            .firstMatch
-    }
-
-    private func capture(_ name: String) {
-        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        attachment.name = name
-        attachment.lifetime = .keepAlways
-        add(attachment)
-    }
-}
