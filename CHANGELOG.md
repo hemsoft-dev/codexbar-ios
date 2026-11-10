@@ -56,6 +56,9 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Ad-hoc-sign simulator unit-test hosts in manual validation so saved-account
+  migration tests can exercise the real Keychain without developer credentials.
+
 - Reconcile the UI test inventory with the focused Claude Ultra manual capture,
   preserving all 53 regression journeys and the manifest completeness checks.
   ([#544](https://github.com/hemsoft-dev/codexbar-ios/issues/544))

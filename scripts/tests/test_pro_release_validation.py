@@ -336,6 +336,14 @@ class RunnerCommandFailureTests(unittest.TestCase):
             self.runner.arguments('CodexBarProNativeCommerce', self.root)
         self.assertEqual(self.calls, [])
 
+    def test_ios_unit_host_is_ad_hoc_signed_for_real_keychain_tests(self):
+        arguments = self.runner.arguments('CodexBarIOS', self.root)
+        self.assertIn('CODE_SIGNING_ALLOWED=YES', arguments)
+        self.assertIn('CODE_SIGN_IDENTITY=-', arguments)
+        self.assertNotIn('CODE_SIGNING_ALLOWED=NO', arguments)
+        ui_arguments = self.runner.arguments('CodexBarIOSUITests', self.root)
+        self.assertIn('CODE_SIGNING_ALLOWED=NO', ui_arguments)
+
     def test_replaced_build_is_refused_before_discovery(self):
         build = EVIDENCE.read(self.build)
         build['source'] = {'revision': 'stale'}

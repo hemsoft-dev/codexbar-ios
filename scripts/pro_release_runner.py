@@ -483,14 +483,17 @@ class Runner:
     def arguments(self, scheme, derived, tests=(), native=False):
         if scheme == 'CodexBarProNativeCommerce' and not tests:
             raise ValueError('Never execute the native scheme unfiltered')
+        # Simulator Keychain calls require a signed unit-test host as well as commerce hosts.
+        ad_hoc_signed = native or scheme == 'CodexBarIOS'
         return ['xcodebuild', '-project', str(ROOT / 'CodexBarIOS.xcodeproj'), '-scheme', scheme,
                 '-configuration', 'Debug', '-skipPackagePluginValidation',
                 '-destination', f'platform=iOS Simulator,id={self.device["deviceId"]}',
                 '-derivedDataPath', str(derived), '-parallel-testing-enabled', 'NO',
                 '-maximum-concurrent-test-simulator-destinations', '1', '-enableCodeCoverage', 'YES',
                 *['-only-testing:' + test for test in tests],
-                'CODE_SIGNING_ALLOWED=' + ('YES' if native else 'NO'),
-                *(['CODE_SIGN_IDENTITY=-', 'SWIFT_STRICT_CONCURRENCY=complete'] if native else [])]
+                'CODE_SIGNING_ALLOWED=' + ('YES' if ad_hoc_signed else 'NO'),
+                *(['CODE_SIGN_IDENTITY=-'] if ad_hoc_signed else []),
+                *(['SWIFT_STRICT_CONCURRENCY=complete'] if native else [])]
 
     def build(self, label, scheme, tests=(), native=False):
         self.unchanged()
