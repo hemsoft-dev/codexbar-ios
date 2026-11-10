@@ -130,7 +130,7 @@ final class WatchComplicationCompatibilityTests: XCTestCase {
                 metrics: [
                     WatchMetricSnapshot(id: "claude.weekly", label: "Apps weekly", exactValue: "10%"),
                     WatchMetricSnapshot(id: "claude.five-hour", label: "Models 5h", exactValue: "20%"),
-                    WatchMetricSnapshot(id: "claude.weekly", label: "Models weekly", exactValue: "31%"),
+                    WatchMetricSnapshot(id: "claude.extra-weekly", label: "Models weekly", exactValue: "31%"),
                 ]
             ),
             ]
@@ -142,9 +142,9 @@ final class WatchComplicationCompatibilityTests: XCTestCase {
         ] {
             let selection = WatchComplicationSelection.resolving(
                 accountID: accountID, metricAccountID: metricAccountID,
-                metricID: "claude.weekly", snapshot: snapshot
+                metricID: "claude.extra-weekly", snapshot: snapshot
             )
-            XCTAssertEqual(selection.metricID, "claude.weekly")
+            XCTAssertEqual(selection.metricID, "claude.extra-weekly")
             XCTAssertEqual(WatchComplicationResolver().resolve(snapshot: snapshot, selection: selection, at: now).exactValue, "31%")
         }
         let appsSelection = WatchComplicationSelection.resolving(

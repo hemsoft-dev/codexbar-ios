@@ -27,6 +27,14 @@ final class SettingsEvidenceUITests: XCTestCase {
             XCTAssertFalse(app.staticTexts["Antigravity"].exists)
             capture("upgrade-provider-list-\(theme)")
             app.terminate()
+            app.launchEnvironment["CODEXBAR_UI_TEST_RESET"] = "0"
+            app.launch()
+            openSettings(app)
+            select("widgets", in: app)
+            tap(app.buttons["Widget Builder"].firstMatch, in: app)
+            XCTAssertTrue(app.navigationBars["Widget Builder"].waitForExistence(timeout: 5))
+            capture("upgrade-widget-builder-\(theme)")
+            app.terminate()
         }
     }
 

@@ -802,7 +802,7 @@ Scene order:
 
 9. `history` in dark appearance
 
-The three new scenes put the selected synthetic account first in the actual
+The provider scenes put the selected synthetic account first in the actual
 Dashboard. They do not call live provider services or change customer setup.
 Use `OUTPUT_DIR`, `FASTLANE_OUTPUT_DIR`, and `DERIVED_DATA` to keep generated
 files isolated. Watch capture defaults to `release-assets/1.4.0/screenshots`

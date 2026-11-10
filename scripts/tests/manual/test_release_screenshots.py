@@ -32,12 +32,11 @@ class ReleaseScreenshotContractTests(unittest.TestCase):
         source = source_boundary(fixture, "    static func results")[0] + "}\n#endif\n"
         scenes = re.findall(r'^  "([^:]+):(?:light|dark)"$',
                             (ROOT / "scripts/capture-app-store-screenshots.sh").read_text(), re.M)
-        self.assertEqual(len(scenes), 9)
-        self.assertEqual(len(set(scenes)), 9)
-        catalog = (ROOT / "CodexBarIOS/Models/GoogleUsageMetricCatalog.swift").read_text()
-        source += source_boundary(catalog, "    public static func metrics")[0] + "}\n"
+        self.assertEqual(len(scenes), 8)
+        self.assertEqual(len(set(scenes)), 8)
         source += r'''
-public enum ProviderID: String, Sendable { case other }
+// Routing is tested here; the unused screenshot access guard is outside this contract.
+struct WidgetAccessGuard { init(directory: URL) {} }
 enum MetricTileWidthPreference { case half }
 @MainActor final class ProviderConfigurationStore {
     var orders: [[String]] = []

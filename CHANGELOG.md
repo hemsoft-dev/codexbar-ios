@@ -6,13 +6,6 @@ building, testing, or releasing the app.
 
 ## 2.0.1 - Unreleased
 
-### Changed
-
-- Removed Google Gemini and Antigravity support from iOS. Saved Google accounts,
-  credentials and website sessions are removed on upgrade. Other providers,
-  account groups and their usage history remain available.
-  ([#556](https://github.com/hemsoft-dev/codexbar-ios/issues/556))
-
 ### Added
 
 - Add Account now explains that Muse Code isn't available on iPhone. Meta
@@ -21,6 +14,11 @@ building, testing, or releasing the app.
   activity. ([#522](https://github.com/hemsoft-dev/codexbar-ios/issues/522))
 
 ### Changed
+
+- Removed Google Gemini and Antigravity support from iOS. Saved Google accounts,
+  credentials and website sessions are removed on upgrade. Other providers,
+  account groups and their usage history remain available.
+  ([#556](https://github.com/hemsoft-dev/codexbar-ios/issues/556))
 
 - Show Claude Ultra and Max names from supported account metadata while keeping
   only the session and weekly limits Claude reports.
@@ -31,18 +29,6 @@ building, testing, or releasing the app.
   ([#537](https://github.com/hemsoft-dev/codexbar-ios/issues/537))
 
 ### Fixed
-
-- Gemini Models and Argon quotas no longer disappear when Google's quota
-  response includes an entry CodexBar doesn't use. When Google's backup quota
-  service answers without them, the Gemini card now says why the main service
-  wasn't used.
-  ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
-
-- The Gemini card now asks Google for coding quotas for your account's own
-  project, the way other quota tools do, instead of a request without a
-  project. When Google's backup quota service still answers, its note says
-  whether the request named your project.
-  ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
 
 - Claude cards show the plan Claude reports for your organization, such as
   Ultra, even when older account flags disagree. Previously they could show
@@ -61,11 +47,6 @@ building, testing, or releasing the app.
   when canceled, and reject denied billing access before connecting an account.
   Existing saved sessions can still refresh their actual renewal dates.
   ([#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409))
-
-- Read Gemini Models and Argon weekly coding quotas from Google's main quota
-  service, which reports these pools when the backup service leaves them out.
-  The backup service is used only when the main one is unreachable.
-  ([#519](https://github.com/hemsoft-dev/codexbar-ios/issues/519))
 
 - Keep missing Grok and X Subscription usage unavailable instead of inferring
   a zero percentage from the account's paid plan.
