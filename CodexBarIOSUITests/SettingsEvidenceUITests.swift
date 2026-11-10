@@ -3,6 +3,33 @@ import XCTest
 /// Manual-only rendered evidence. Automatic PR CI does not execute the UI-test target.
 @MainActor
 final class SettingsEvidenceUITests: XCTestCase {
+    func testRetiredGoogleUpgradeEvidence() {
+        for dark in [false, true] {
+            let app = XCUIApplication()
+            app.launchEnvironment = [
+                "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
+                "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "retired-google-upgrade",
+                "CODEXBAR_UI_TEST_DEFAULT_TEXT": "1", "CODEXBAR_UI_TEST_DARK": dark ? "1" : "0",
+            ]
+            app.launch()
+            let theme = dark ? "dark" : "light"
+            XCTAssertTrue(app.buttons["More options for Personal Codex"].waitForExistence(timeout: 15))
+            XCTAssertTrue(app.buttons["More options for Team Claude"].exists)
+            capture("upgrade-dashboard-\(theme)")
+            openSettings(app)
+            select("accountsAndGroups", in: app)
+            XCTAssertFalse(app.staticTexts["Google Gemini"].exists)
+            XCTAssertFalse(app.staticTexts["Antigravity"].exists)
+            capture("upgrade-accounts-\(theme)")
+            tap(app.buttons["Add Account"].firstMatch, in: app)
+            XCTAssertTrue(app.navigationBars["Add Account"].waitForExistence(timeout: 5))
+            XCTAssertFalse(app.staticTexts["Google Gemini"].exists)
+            XCTAssertFalse(app.staticTexts["Antigravity"].exists)
+            capture("upgrade-provider-list-\(theme)")
+            app.terminate()
+        }
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
@@ -227,35 +254,5 @@ final class WeeklyUsageEvidenceUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
-    }
-}
-
-@MainActor
-extension SettingsEvidenceUITests {
-    func testRetiredGoogleUpgradeEvidence() {
-        for dark in [false, true] {
-            let app = XCUIApplication()
-            app.launchEnvironment = [
-                "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
-                "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "retired-google-upgrade",
-                "CODEXBAR_UI_TEST_DEFAULT_TEXT": "1", "CODEXBAR_UI_TEST_DARK": dark ? "1" : "0",
-            ]
-            app.launch()
-            let theme = dark ? "dark" : "light"
-            XCTAssertTrue(app.buttons["More options for Personal Codex"].waitForExistence(timeout: 15))
-            XCTAssertTrue(app.buttons["More options for Team Claude"].exists)
-            capture("upgrade-dashboard-\(theme)")
-            openSettings(app)
-            select("accountsAndGroups", in: app)
-            XCTAssertFalse(app.staticTexts["Google Gemini"].exists)
-            XCTAssertFalse(app.staticTexts["Antigravity"].exists)
-            capture("upgrade-accounts-\(theme)")
-            tap(app.buttons["Add Account"].firstMatch, in: app)
-            XCTAssertTrue(app.navigationBars["Add Account"].waitForExistence(timeout: 5))
-            XCTAssertFalse(app.staticTexts["Google Gemini"].exists)
-            XCTAssertFalse(app.staticTexts["Antigravity"].exists)
-            capture("upgrade-provider-list-\(theme)")
-            app.terminate()
-        }
     }
 }
