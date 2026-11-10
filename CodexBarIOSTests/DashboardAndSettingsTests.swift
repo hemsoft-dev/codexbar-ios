@@ -4685,13 +4685,15 @@ extension AppAndWidgetTests {
         let now = Date(timeIntervalSince1970: 2_000_000_000)
         let metric = WatchMetricSnapshot(id: "claude.weekly", label: "Weekly", exactValue: "25%")
         let retained = WatchAccountSnapshot(id: "claude.team", providerName: "Claude", accountLabel: "Team", fetchedAt: now, metrics: [metric])
-        let retired = WatchAccountSnapshot(id: "old-id", providerName: "Google Gemini", accountLabel: "Old", fetchedAt: now, metrics: [metric])
+        let retired = WatchAccountSnapshot(id: "gemini.legacy-account", providerName: "Google Gemini", accountLabel: "Old", fetchedAt: now, metrics: [metric])
         let payload = WatchDashboardSnapshot(generatedAt: now, refreshIntervalSeconds: 300, accounts: [retired, retained])
         let migrated = try WatchDashboardSnapshot.decode(payload.encoded())
         XCTAssertEqual(migrated.accounts, [retained])
-        let selection = WatchComplicationSelection(accountID: "old-id", metricID: "gemini.weekly")
+        let selection = WatchComplicationSelection(accountID: "gemini.legacy-account", metricID: "gemini.weekly")
         let result = WatchComplicationResolver().resolve(snapshot: migrated, selection: selection, at: now)
         XCTAssertEqual(result.availability, .value)
         XCTAssertEqual(result.exactValue, "25%")
+        let unrelated = WatchComplicationSelection(accountID: "old-id", metricID: "gemini.weekly")
+        XCTAssertEqual(WatchComplicationResolver().resolve(snapshot: migrated, selection: unrelated, at: now).availability, .unavailable)
     }
 }
