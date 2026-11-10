@@ -419,6 +419,7 @@ final class UITestFixtures {
     private static func seedRenewalAccounts(in store: ProviderConfigurationStore, scenario: String?) {
         guard scenario?.hasPrefix("subscription-renewals") == true, store.configurations.isEmpty else { return }
         for (id, provider, title) in [("monthly", ProviderID.codex, "Personal Codex"), ("annual", .codex, "Work Codex"),
+                                      ("go", .openCodeZen, "OpenCode Go + Zen"),
                                       ("claude", .claude, "Personal Claude"), ("grok", .grok, "Personal Grok"),
                                       ("cursor", .cursor, "Personal Cursor"), ("cursor-annual", .cursor, "Annual Cursor"),
         ] {

@@ -185,21 +185,9 @@ struct CodexBarWidgetView: View {
         for tileID: String,
         in allTiles: [CodexBarWidgetTile]
     ) -> CodexBarWidgetTile {
-        if let exactMatch = allTiles.first(where: { $0.id == tileID }) {
-            return exactMatch
+        CodexBarWidgetTile.resolvingSavedID(tileID, in: allTiles) {
+            legacySummaryTile(for: tileID) ?? legacyBarTile(for: tileID)
         }
-
-        if let legacyMatch = legacySummaryTile(for: tileID) ?? legacyBarTile(for: tileID) {
-            return legacyMatch
-        }
-
-        return .unavailable(
-            choice: CodexBarWidgetTileChoice(
-                id: tileID,
-                title: "Saved Tile",
-                subtitle: "Open CodexBar to refresh"
-            )
-        )
     }
 
     private func legacySummaryTile(for tileID: String) -> CodexBarWidgetTile? {

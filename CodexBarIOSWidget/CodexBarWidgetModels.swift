@@ -15,6 +15,20 @@ struct CodexBarWidgetTile: Identifiable {
     let fetchedAt: Date?
     let severity: CodexBarWidgetSeverity
 
+    /// Saved Builder slots and App Intent choices share the same available-tile fallback.
+    static func resolvingSavedID(
+        _ tileID: String,
+        in tiles: [CodexBarWidgetTile],
+        legacyMatch: () -> CodexBarWidgetTile? = { nil }
+    ) -> CodexBarWidgetTile {
+        if let exact = tiles.first(where: { $0.id == tileID }) { return exact }
+        if let legacy = legacyMatch() { return legacy }
+        if let fallback = tiles.first { return fallback }
+        return .unavailable(choice: CodexBarWidgetTileChoice(
+            id: tileID, title: "Saved Tile", subtitle: "Open CodexBar to refresh"
+        ))
+    }
+
     var choiceTitle: String {
         if bar != nil || monetaryMetric != nil {
             "\(providerTitle) - \(title)"

@@ -92,7 +92,7 @@ preserve_failure_attachments() {
 }
 trap preserve_failure_attachments EXIT
 
-# The manifest selects the original 29 by exact method identity. The four
+# The manifest selects the retained journeys by exact method identity. The four
 # FreeTierJourneyTests and two newer Grok methods run in ui-supplemental; the
 # 16 commerce journeys and marketing capture cannot leak into this phase.
 # The runner builds into fresh DerivedData under run_dir, enumerates the built
@@ -103,17 +103,18 @@ if [[ -n "${UI_TEST_OWNERSHIP_RECEIPT:-}" ]]; then
 fi
 python3 "$repo_root/scripts/pro_release_runner.py" "${runner_arguments[@]}"
 
-# All twenty-nine named UI journeys must run on each destination. A skipped or empty
+# Every manifest-selected UI journey must run on each destination. A skipped or empty
 # suite can otherwise make xcodebuild return success without testing the flows.
-if ! jq -e '
+expected_count="$(jq -er '.phases["ui-original"].count' "$repo_root/scripts/pro-release-phases.json")"
+if ! jq -e --argjson expected_count "$expected_count" '
   .result == "Passed"
-  and .totalTestCount == 29
-  and .passedTests == 29
+  and .totalTestCount == $expected_count
+  and .passedTests == $expected_count
   and .failedTests == 0
   and .skippedTests == 0
   and .expectedFailures == 0
 ' "$run_dir/summary.json" > /dev/null; then
   cat "$run_dir/summary.json" >&2
-  echo "Expected all twenty-nine UI journeys to pass with zero skips on $device_name." >&2
+  echo "Expected all $expected_count UI journeys to pass with zero skips on $device_name." >&2
   exit 1
 fi

@@ -154,7 +154,6 @@ final class CodexCreditsPoolUITests: XCTestCase {
                     ("Codex Pro lower tier fixture", "ChatGPT Pro 100"),
                     ("Codex unavailable fixture", "Plan unavailable"),
                     ("Claude Max fixture", "Max"),
-                    ("Long Google AI Ultra account name is not proof of a subscription", "Plan unavailable"),
                     ("Grok", "SuperGrok Lite"),
                     ("OpenRouter fixture", "API credits"),
                 ] {
@@ -234,7 +233,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
             keep("renewals-\(dark ? "dark-large" : "light-default")-on-restored", app: app)
             // The dashboard names OpenCode cards by product state. The renewal fixture
             // reports Go usage without a Zen balance, so its card is "OpenCode Go".
-            for title in ["Work Codex", "Personal Claude", "Personal Google", "Personal Grok", "OpenCode Go"] {
+            for title in ["Work Codex", "Personal Claude", "Personal Grok", "OpenCode Go"] {
                 let other = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", title + ", ")).firstMatch
                 reveal(other, in: app)
                 XCTAssertTrue(other.label.contains("Renews in"), other.label)
@@ -279,18 +278,6 @@ final class CodexCreditsPoolUITests: XCTestCase {
                 keep("renewals-\(title)-\(state)-details", app: app)
                 tap(app.navigationBars.buttons["Done"].firstMatch, in: app)
             }
-            app.terminate()
-        }
-        for dark in [false, true] {
-            let app = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "google-plan-free")
-            let header = app.descendants(matching: .any).matching(NSPredicate(
-                format: "label BEGINSWITH %@", "Personal Google, Google AI Free"
-            )).firstMatch
-            XCTAssertTrue(header.waitForExistence(timeout: 10), app.debugDescription)
-            XCTAssertFalse(header.label.contains("Renews"), header.label)
-            tap(app.buttons["More options for Personal Google"], in: app)
-            XCTAssertFalse(app.buttons["More information for Personal Google"].exists, app.debugDescription)
-            keep("renewals-google-free-\(dark ? "dark-large" : "light-default")", app: app)
             app.terminate()
         }
         for state in ["unknown", "canceled"] {
@@ -414,34 +401,19 @@ final class CodexCreditsPoolUITests: XCTestCase {
         app.terminate()
     }
 
-    private func exerciseGoogleAndOpenCodePlanPills() {
-        continueAfterFailure = false
-        let variants = [("free", "Google AI Free"), ("plus", "Google AI Plus (400 GB)"),
-                        ("pro", "Google AI Pro (5 TB)"), ("ultra", "Google AI Ultra"),
-                        ("ultra5", "Google AI Ultra 5x"), ("ultra20", "Google AI Ultra 20x"),
-                        ("unknown", "Plan unavailable"),
-        ]
-        for (variant, label) in variants {
-            for dark in [false, true] {
-                let app = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "google-plan-\(variant)")
-                let header = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Personal Google, \(label)")).firstMatch
-                XCTAssertTrue(header.waitForExistence(timeout: 10), app.debugDescription)
-                reveal(header, in: app, towardTop: true)
-                keep("google-\(variant)-\(dark ? "dark-large" : "light-default")-expanded", app: app)
-                header.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).tap()
-                XCTAssertEqual(header.value as? String, "Collapsed", app.debugDescription)
-                // Go usage without a Zen balance titles this fixture card "OpenCode Go".
-                let openCode = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "OpenCode Go, Synthetic")).firstMatch
-                reveal(openCode, in: app)
-                XCTAssertTrue(openCode.exists, app.debugDescription)
-                XCTAssertFalse(openCode.label.contains("Plan unavailable"))
-                XCTAssertFalse(openCode.label.contains("Google AI"))
-                keep("google-\(variant)-\(dark ? "dark-large" : "light-default")-collapsed-opencode", app: app)
-                openCode.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).tap()
-                XCTAssertEqual(openCode.value as? String, "Collapsed", app.debugDescription)
-                keep("google-\(variant)-\(dark ? "dark-large" : "light-default")-both-collapsed", app: app)
-                app.terminate()
-            }
+    private func exerciseOpenCodePlanPills() {
+        for dark in [false, true] {
+            let app = launchSpacingFixture(defaultText: !dark, dark: dark, scenario: "subscription-renewals")
+            let openCode = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "OpenCode Go, ")).firstMatch
+            reveal(openCode, in: app)
+            XCTAssertTrue(openCode.exists, app.debugDescription)
+            XCTAssertFalse(openCode.label.contains("Plan unavailable"))
+            XCTAssertEqual(openCode.value as? String, "Expanded")
+            keep("opencode-\(dark ? "dark-large" : "light-default")-expanded", app: app)
+            openCode.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).tap()
+            XCTAssertEqual(openCode.value as? String, "Collapsed", app.debugDescription)
+            keep("opencode-\(dark ? "dark-large" : "light-default")-collapsed", app: app)
+            app.terminate()
         }
     }
 
@@ -459,7 +431,7 @@ final class CodexCreditsPoolUITests: XCTestCase {
         exerciseCursorRenewals()
         // Routine issue validation may select this subjourney; release runs keep every scenario.
         if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SUBJOURNEY"] == "renewals" { return }
-        exerciseGoogleAndOpenCodePlanPills()
+        exerciseOpenCodePlanPills()
         exerciseClaudeProfilePills()
         for defaultText in [true, false] {
             for dark in [false, true] {

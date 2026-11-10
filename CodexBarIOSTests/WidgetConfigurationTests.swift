@@ -1034,3 +1034,33 @@ final class WidgetConfigurationTests: XCTestCase {
         ]
     )
 }
+
+extension WidgetConfigurationTests {
+    @MainActor
+    func testRetiredGoogleBuilderIDsFallBackThroughTheSavedStringResolver() throws {
+        let suite = "RetiredGoogleBuilderTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var payload = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(Self.fixtureSnapshot)) as? [String: Any])
+        var records = try XCTUnwrap(payload["results"] as? [[String: Any]])
+        var retired = try XCTUnwrap(records.first)
+        retired["providerID"] = "gemini"
+        retired["accountID"] = "removed-account"
+        records.insert(retired, at: 0)
+        payload["results"] = records
+        let migrated = try JSONDecoder().decode(CodexBarWidgetSnapshot.self, from: JSONSerialization.data(withJSONObject: payload))
+        XCTAssertEqual(migrated.results.map(\.accountID), Self.fixtureSnapshot.results.map(\.accountID))
+        let tiles = migrated.selectableTiles()
+        let fallback = try XCTUnwrap(tiles.first)
+        let preserved = try XCTUnwrap(tiles.last)
+        let saved = CodexBarWidgetBuilderConfiguration(layout: .twoTiles,
+                                                       selectedTileIDs: ["provider.removed-account", preserved.id],
+                                                       displayModes: [.compactPercent, .balanceOnly])
+        WidgetSnapshotStore.saveBuilderConfiguration(saved, defaults: defaults)
+        let loaded = WidgetSnapshotStore.loadBuilderConfiguration(defaults: defaults)
+        XCTAssertEqual(loaded, saved)
+        XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID(try XCTUnwrap(loaded.tileID(at: 0)), in: tiles).id, fallback.id)
+        XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID(try XCTUnwrap(loaded.tileID(at: 1)), in: tiles).id, preserved.id)
+        XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID("provider.removed-account", in: []).providerID, "unavailable")
+    }
+}
