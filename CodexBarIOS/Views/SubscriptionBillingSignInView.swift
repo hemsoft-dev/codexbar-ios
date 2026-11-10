@@ -244,7 +244,7 @@ final class SubscriptionBillingSignInSession: NSObject, ObservableObject, Identi
                 guard !Task.isCancelled, revision == attempt, verificationID == verification, completion != nil else { return }
                 // Cookie observer delivery is not guaranteed. Never save an unobserved removed/replaced credential.
                 let current = await withCheckedContinuation { continuation in
-                    webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { continuation.resume(returning: $0) }
+                    self.webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { continuation.resume(returning: $0) }
                 }
                 guard !Task.isCancelled, revision == attempt, verificationID == verification, completion != nil else { return }
                 let latest = SubscriptionBillingSession.capture(current, provider: configuration.providerID)
