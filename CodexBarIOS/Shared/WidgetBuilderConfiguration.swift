@@ -189,7 +189,7 @@ public extension CodexBarWidgetSnapshot {
         }
     }
 
-    func builderTile(resolvingSavedID tileID: String, fallbackToFirstAvailable: Bool = false) -> CodexBarWidgetBuilderTile? {
+    func builderTile(resolvingSavedID tileID: String, fallbackForRetiredGoogle: Bool = false) -> CodexBarWidgetBuilderTile? {
         if let exactMatch = builderTiles.first(where: { $0.id == tileID }) {
             return exactMatch
         }
@@ -217,7 +217,7 @@ public extension CodexBarWidgetSnapshot {
             }
         }
 
-        return fallbackToFirstAvailable ? builderTiles.first : nil
+        return fallbackForRetiredGoogle && RetiredGoogleProviderMigration.isRetiredIdentifier(tileID) ? builderTiles.first : nil
     }
 }
 

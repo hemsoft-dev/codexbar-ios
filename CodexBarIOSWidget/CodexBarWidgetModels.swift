@@ -15,7 +15,7 @@ struct CodexBarWidgetTile: Identifiable {
     let fetchedAt: Date?
     let severity: CodexBarWidgetSeverity
 
-    /// Saved Builder slots and App Intent choices share the same available-tile fallback.
+    /// Saved Builder slots and App Intent choices fall back only when the saved selection belongs to a retired Google provider.
     static func resolvingSavedID(
         _ tileID: String,
         in tiles: [CodexBarWidgetTile],
@@ -23,10 +23,17 @@ struct CodexBarWidgetTile: Identifiable {
     ) -> CodexBarWidgetTile {
         if let exact = tiles.first(where: { $0.id == tileID }) { return exact }
         if let legacy = legacyMatch() { return legacy }
-        if let fallback = tiles.first { return fallback }
-        return .unavailable(choice: CodexBarWidgetTileChoice(
+        return fallback(forUnresolvedChoice: CodexBarWidgetTileChoice(
             id: tileID, title: "Saved Tile", subtitle: "Open CodexBar to refresh"
-        ))
+        ), in: tiles)
+    }
+
+    static func fallback(
+        forUnresolvedChoice choice: CodexBarWidgetTileChoice,
+        in tiles: [CodexBarWidgetTile]
+    ) -> CodexBarWidgetTile {
+        if RetiredGoogleProviderMigration.isRetiredIdentifier(choice.id), let fallback = tiles.first { return fallback }
+        return .unavailable(choice: choice)
     }
 
     var choiceTitle: String {

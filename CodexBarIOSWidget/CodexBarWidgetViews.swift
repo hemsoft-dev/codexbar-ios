@@ -178,7 +178,7 @@ struct CodexBarWidgetView: View {
             return previewFallback
         }
 
-        return allTiles.first ?? .unavailable(choice: choice)
+        return CodexBarWidgetTile.fallback(forUnresolvedChoice: choice, in: allTiles)
     }
 
     private func resolvedTile(

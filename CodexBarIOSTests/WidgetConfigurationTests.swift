@@ -1045,7 +1045,7 @@ extension WidgetConfigurationTests {
         var records = try XCTUnwrap(payload["results"] as? [[String: Any]])
         var retired = try XCTUnwrap(records.first)
         retired["providerID"] = "gemini"
-        retired["accountID"] = "removed-account"
+        retired["accountID"] = "gemini.removed-account"
         records.insert(retired, at: 0)
         payload["results"] = records
         let migrated = try JSONDecoder().decode(CodexBarWidgetSnapshot.self, from: JSONSerialization.data(withJSONObject: payload))
@@ -1054,15 +1054,26 @@ extension WidgetConfigurationTests {
         let fallback = try XCTUnwrap(tiles.first)
         let preserved = try XCTUnwrap(tiles.last)
         let saved = CodexBarWidgetBuilderConfiguration(layout: .twoTiles,
-                                                       selectedTileIDs: ["provider.removed-account", preserved.id],
+                                                       selectedTileIDs: ["provider.gemini.removed-account", preserved.id],
                                                        displayModes: [.compactPercent, .balanceOnly])
         WidgetSnapshotStore.saveBuilderConfiguration(saved, defaults: defaults)
         let loaded = WidgetSnapshotStore.loadBuilderConfiguration(defaults: defaults)
         XCTAssertEqual(loaded, saved)
         XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID(try XCTUnwrap(loaded.tileID(at: 0)), in: tiles).id, fallback.id)
         XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID(try XCTUnwrap(loaded.tileID(at: 1)), in: tiles).id, preserved.id)
-        XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID("provider.removed-account", in: []).providerID, "unavailable")
-        XCTAssertEqual(migrated.builderTile(resolvingSavedID: "provider.removed-account", fallbackToFirstAvailable: true)?.id,
+        XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID("provider.gemini.removed-account", in: []).providerID, "unavailable")
+        XCTAssertEqual(migrated.builderTile(resolvingSavedID: "provider.gemini.removed-account", fallbackForRetiredGoogle: true)?.id,
                        migrated.builderTiles.first?.id)
+        for savedID in ["provider.claude.deleted", "bar.cursor.disabled.cursor-models", "provider.unlinked"] {
+            XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID(savedID, in: tiles).providerID, "unavailable")
+            let choice = CodexBarWidgetTileChoice(id: savedID, title: "Original account", subtitle: "Original selection")
+            let unavailable = CodexBarWidgetTile.fallback(forUnresolvedChoice: choice, in: tiles)
+            XCTAssertEqual(unavailable.providerID, "unavailable")
+            XCTAssertEqual(unavailable.providerTitle, "Original account")
+            XCTAssertNil(migrated.builderTile(resolvingSavedID: savedID, fallbackForRetiredGoogle: true))
+        }
+        let coding = CodexBarWidgetTileChoice(id: "provider.antigravity.removed", title: "Coding", subtitle: "Retired")
+        XCTAssertEqual(CodexBarWidgetTile.fallback(forUnresolvedChoice: coding, in: tiles).id, fallback.id)
+
     }
 }

@@ -93,7 +93,7 @@ struct WidgetBuilderView: View {
         if configuration.hasCustomizations {
             return (0..<slotCount).compactMap { index -> CodexBarWidgetBuilderTile? in
                 if let tileID = configuration.tileID(at: index) {
-                    return snapshot.builderTile(resolvingSavedID: tileID, fallbackToFirstAvailable: true) ?? .unavailable(id: tileID)
+                    return snapshot.builderTile(resolvingSavedID: tileID, fallbackForRetiredGoogle: true) ?? .unavailable(id: tileID)
                 }
 
                 return fallbackTiles.indices.contains(index) ? fallbackTiles[index] : nil
@@ -119,7 +119,7 @@ struct WidgetBuilderView: View {
                 guard let tileID = configuration.tileID(at: index) else {
                     return nil
                 }
-                return snapshot.builderTile(resolvingSavedID: tileID, fallbackToFirstAvailable: true)?.id ?? tileID
+                return snapshot.builderTile(resolvingSavedID: tileID, fallbackForRetiredGoogle: true)?.id ?? tileID
             },
             set: { tileID in
                 configuration.setTileID(tileID, at: index)
