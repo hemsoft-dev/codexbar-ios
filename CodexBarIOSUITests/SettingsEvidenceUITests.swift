@@ -31,7 +31,9 @@ final class SettingsEvidenceUITests: XCTestCase {
             app.launch()
             tap(app.buttons["Preview synthetic widgets"], in: app)
             XCTAssertTrue(app.navigationBars["Widget Builder"].waitForExistence(timeout: 5))
-            XCTAssertTrue(app.staticTexts["Personal Codex"].firstMatch.waitForExistence(timeout: 5))
+            let preview = app.descendants(matching: .any).matching(identifier: "widget-builder-preview").firstMatch
+            XCTAssertTrue(preview.staticTexts["Personal Codex"].firstMatch.waitForExistence(timeout: 5))
+            XCTAssertFalse(preview.staticTexts["Saved Tile"].exists)
             XCTAssertFalse(app.staticTexts["No Widget Data"].exists)
             XCTAssertFalse(app.staticTexts["Google Gemini"].exists)
             XCTAssertFalse(app.staticTexts["Antigravity"].exists)

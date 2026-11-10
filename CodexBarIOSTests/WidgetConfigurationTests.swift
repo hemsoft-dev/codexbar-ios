@@ -1062,5 +1062,7 @@ extension WidgetConfigurationTests {
         XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID(try XCTUnwrap(loaded.tileID(at: 0)), in: tiles).id, fallback.id)
         XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID(try XCTUnwrap(loaded.tileID(at: 1)), in: tiles).id, preserved.id)
         XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID("provider.removed-account", in: []).providerID, "unavailable")
+        XCTAssertEqual(migrated.builderTile(resolvingSavedID: "provider.removed-account", fallbackToFirstAvailable: true)?.id,
+                       migrated.builderTiles.first?.id)
     }
 }

@@ -28,6 +28,8 @@ struct WidgetBuilderView: View {
 
             Section {
                 WidgetBuilderPreviewGrid(tiles: previewTiles, layout: configuration.layout)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("widget-builder-preview")
             } header: {
                 Text("Preview")
             }
@@ -91,7 +93,7 @@ struct WidgetBuilderView: View {
         if configuration.hasCustomizations {
             return (0..<slotCount).compactMap { index -> CodexBarWidgetBuilderTile? in
                 if let tileID = configuration.tileID(at: index) {
-                    return snapshot.builderTile(resolvingSavedID: tileID) ?? .unavailable(id: tileID)
+                    return snapshot.builderTile(resolvingSavedID: tileID, fallbackToFirstAvailable: true) ?? .unavailable(id: tileID)
                 }
 
                 return fallbackTiles.indices.contains(index) ? fallbackTiles[index] : nil
@@ -117,7 +119,7 @@ struct WidgetBuilderView: View {
                 guard let tileID = configuration.tileID(at: index) else {
                     return nil
                 }
-                return snapshot.builderTile(resolvingSavedID: tileID)?.id ?? tileID
+                return snapshot.builderTile(resolvingSavedID: tileID, fallbackToFirstAvailable: true)?.id ?? tileID
             },
             set: { tileID in
                 configuration.setTileID(tileID, at: index)

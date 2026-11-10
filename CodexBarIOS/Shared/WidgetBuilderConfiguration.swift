@@ -189,7 +189,7 @@ public extension CodexBarWidgetSnapshot {
         }
     }
 
-    func builderTile(resolvingSavedID tileID: String) -> CodexBarWidgetBuilderTile? {
+    func builderTile(resolvingSavedID tileID: String, fallbackToFirstAvailable: Bool = false) -> CodexBarWidgetBuilderTile? {
         if let exactMatch = builderTiles.first(where: { $0.id == tileID }) {
             return exactMatch
         }
@@ -217,7 +217,7 @@ public extension CodexBarWidgetSnapshot {
             }
         }
 
-        return nil
+        return fallbackToFirstAvailable ? builderTiles.first : nil
     }
 }
 
