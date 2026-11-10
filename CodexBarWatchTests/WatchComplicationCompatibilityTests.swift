@@ -159,6 +159,41 @@ final class WatchComplicationCompatibilityTests: XCTestCase {
         ).metricID)
     }
 
+    func testOnlyRetiredGoogleSelectionsFallBackToAnotherAccount() {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let resolver = WatchComplicationResolver()
+        let available = snapshot(metricID: "greptile.review-quota", fraction: 0.5, at: now)
+        for retired in ["gemini.saved", "antigravity.saved"] {
+            let value = resolver.resolve(snapshot: available,
+                                         selection: WatchComplicationSelection(accountID: retired, metricID: "removed.metric"), at: now)
+            XCTAssertEqual(value.availability, .value)
+            XCTAssertEqual(value.exactValue, "50%")
+        }
+        for missing in ["claude.deleted", "cursor.disabled", "unlinked"] {
+            for metric in [nil, "claude.session"] as [String?] {
+                let value = resolver.resolve(snapshot: available,
+                                             selection: WatchComplicationSelection(accountID: missing, metricID: metric), at: now)
+                XCTAssertEqual(value.availability, .unavailable)
+            }
+        }
+        let empty = WatchAccountSnapshot(id: "claude.expired", providerName: "Claude", accountLabel: "Expired",
+                                         fetchedAt: now, metrics: [])
+        let withEmpty = WatchDashboardSnapshot(generatedAt: now, refreshIntervalSeconds: 300,
+                                              accounts: [empty] + available.accounts)
+        XCTAssertEqual(resolver.resolve(snapshot: withEmpty,
+                                        selection: WatchComplicationSelection(accountID: empty.id, metricID: nil), at: now).availability, .unavailable)
+        let linked = WatchAccountSnapshot(id: "claude.current", legacyAccountIDs: ["claude.legacy"], providerName: "Claude",
+                                          accountLabel: "Personal", fetchedAt: now,
+                                          metrics: [WatchMetricSnapshot(id: "claude.session", label: "Session", exactValue: "25%")])
+        let linkedSnapshot = WatchDashboardSnapshot(generatedAt: now, refreshIntervalSeconds: 300, accounts: [linked])
+        XCTAssertEqual(resolver.resolve(snapshot: linkedSnapshot,
+                                        selection: WatchComplicationSelection(accountID: "claude.legacy", metricID: "unknown"),
+                                        at: now).availability, .unavailable)
+        XCTAssertEqual(resolver.resolve(snapshot: linkedSnapshot,
+                                        selection: WatchComplicationSelection(accountID: "claude.legacy", metricID: "claude.session"),
+                                        at: now).exactValue, "25%")
+    }
+
     private func snapshot(
         accountID: String = "greptile.team",
         providerName: String = "Greptile",
