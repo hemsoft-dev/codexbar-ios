@@ -33,7 +33,6 @@
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingActionableWarningStaysInline",
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingAllowanceStates",
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingProductSummaryAndRoutinePlacement",
-        "CodexBarIOSUITests/AccountJourneysUITests/testSixGoogleChoicesAndIndependentCustomizationPersist",
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testOptInBalanceStatesAndSavedAccountChoices",
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testPreciseSubscriptionPillsOnExpandedAndCollapsedCards",
         "CodexBarIOSUITests/GreptileAllowanceUITests/testReviewHistoryAndBillingAvailabilityStates",

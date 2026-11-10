@@ -3,7 +3,7 @@
   "phases": {
     "ui-original": {
       "scheme": "CodexBarIOSUITests",
-      "count": 29,
+      "count": 26,
       "tests": [
         "CodexBarIOSUITests/AccountJourneysUITests/testAccountSetupPersistsGroupAndCredentialAtAccessibilitySize",
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingActionableWarningStaysInline",
@@ -11,7 +11,6 @@
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingPermissionDisclosure",
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingProductSummaryAndRoutinePlacement",
         "CodexBarIOSUITests/AccountJourneysUITests/testRefreshRecoveryHistoryAndAccountDeepLink",
-        "CodexBarIOSUITests/AccountJourneysUITests/testSixGoogleChoicesAndIndependentCustomizationPersist",
         "CodexBarIOSUITests/AccountJourneysUITests/testTwoCodexAccountsKeepSeparateUsageAfterRelaunch",
         "CodexBarIOSUITests/ClaudeUsageUITests/testWindowLabelsAndSavedCustomizationForProAndMax",
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testCompactCardHeadersAndIndependentControls",
@@ -29,6 +28,7 @@
         "CodexBarIOSUITests/OpenCodeSignInUITests/testVerificationFailureKeepsAccountDisconnectedAndAllowsRetry",
         "CodexBarIOSUITests/SettingsEvidenceUITests/testEverySettingsDestinationAndDoneBack",
         "CodexBarIOSUITests/SettingsEvidenceUITests/testPendingDuplicateGroupBlocksDoneUntilCorrected",
+        "CodexBarIOSUITests/SettingsEvidenceUITests/testRetiredGoogleUpgradeEvidence",
         "CodexBarIOSUITests/SettingsEvidenceUITests/testSettingsDismissalSignalRejectsTheBackgroundGear",
         "CodexBarIOSUITests/SettingsEvidenceUITests/testSyntheticGrantedAndDeniedNotificationFeedback"
       ],
@@ -36,16 +36,14 @@
     },
     "ui-supplemental": {
       "scheme": "CodexBarIOSUITests",
-      "count": 8,
+      "count": 6,
       "tests": [
         "CodexBarIOSUITests/FreeTierJourneyTests/testDowngradeAndUpgradeRestoreAccountsAndSavedAlertPreference",
         "CodexBarIOSUITests/FreeTierJourneyTests/testFreeHistoryRangesAreLockedAndDoNotLeaveTheSevenDayChart",
         "CodexBarIOSUITests/FreeTierJourneyTests/testFreeLimitAndAlertsUseTheSharedProDestination",
         "CodexBarIOSUITests/FreeTierJourneyTests/testPausedAccountsKeepValuesAndCanSwitchAtLargeTextSize",
         "CodexBarIOSUITests/GrokSignInUITests/testCursorSubscriptionPillsAreAccountScoped",
-        "CodexBarIOSUITests/GrokSignInUITests/testXSubscriptionGuidedSetupUsesOneXAISignIn",
-        "CodexBarIOSUITests/WeeklyUsageEvidenceUITests/testMissingGooglePoolStaysUnavailable",
-        "CodexBarIOSUITests/WeeklyUsageEvidenceUITests/testWeeklyUsageAndResetDetails"
+        "CodexBarIOSUITests/GrokSignInUITests/testXSubscriptionGuidedSetupUsesOneXAISignIn"
       ],
       "kind": "journey"
     },

@@ -39,11 +39,11 @@ Label these captures **native view-host**, not XCUITest navigation, gesture or
 physical-phone verification; retain any separate UI-runner failure explicitly.
 
 The base command above still executes exactly 29 original journeys. The
-[phase manifest](scripts/pro-release-phases.json) requires 53 user journeys per
+[phase manifest](scripts/pro-release-phases.json) requires 48 user journeys per
 family for a release: original 29, supplemental 8, synthetic commerce 14, and
 native purchase/restore and purchase-error journeys 1 each. The separate
 storefront, Claude Ultra and billing recovery evidence captures are listed in
-`excluded_marketing` as manual captures, outside the 53 regression journeys.
+`excluded_marketing` as manual captures, outside the 48 regression journeys.
 The Ultra capture remains available for focused manual execution on either
 device family. It also exercises `claude-renewal-ultra` through the real Claude
 provider and intercepted billing transport, capturing the acquired renewal pill
@@ -85,7 +85,7 @@ fails qualification even if the journeys passed.
 Each phase enumerates the built tests and checks exact identities, passing
 counts, zero skips/expected failures and one expected destination. It records
 source and binary hashes, signing, commands, timestamps, summaries and xcresults.
-The supplemental eight reuse the verified base build; native hosts are separately
+The supplemental six reuse the verified base build; native hosts are separately
 built with coverage, the Debug isolation flag and ad hoc signatures. Each
 preparation exits before its consumer starts. Every native scheme execution is
 explicitly filtered. Fresh DerivedData lives inside each unique output directory;
@@ -403,7 +403,7 @@ and provisions its own simulator. Fail-fast remains disabled.
 Native preparation, purchase/restore, purchase-error preparation, purchase-error
 and the final normal StoreKit reset stay sequential on one worker. The reset is
 attempted even after a journey failure. The two usage-detail and missing-quota evidence journeys are included
-in the supplemental eight, so the full gate covers 53 distinct journeys per
+in the supplemental six, so the full gate covers 48 distinct journeys per
 family plus the three preparation/reset calls. Marketing capture remains excluded.
 The original local runner retains its separate 29-pass contract.
 
