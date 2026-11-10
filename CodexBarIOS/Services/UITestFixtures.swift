@@ -2132,15 +2132,28 @@ actor UITestClaudeResetProvider: UsageProvider, ClaudeUsageResetConsuming {
          "cedar_ember":{"eligible":\(scenario != "claude-resets-ineligible"),"next_grant_id":"fixture_grant"\(cooldown),"grants":[{
            "id":"fixture_grant","label":"Saved Claude reset","resets_left":\(remaining),
            "starts_at":"\(start)","ends_at":"\(end)","clears":["five_hour","seven_day"],
-           "paused":\(scenario == "claude-resets-paused"),"usable_now":true
+           "paused":\(scenario == "claude-resets-paused"),"usable_now":\(!scenario.hasPrefix("claude-resets-unusable")),
+           "use_requires_limit":\(scenario != "claude-resets-unusable-no-limit")
          }]}}
         """
         let data = Data(payload.utf8)
         let parsed = ClaudeUsageParser.parse(data, subscriptionType: "max_20x", fetchedAt: now)!
         let inventoryData = scenario == "claude-resets-malformed"
             ? Data(#"{"cedar_ember":{"eligible":true,"grants":"invalid"}}"#.utf8) : data
-        let inventory = scenario == "claude-resets-unknown" ? nil
+        var inventory = scenario == "claude-resets-unknown" ? nil
             : ClaudeUsageResetInventoryParser.parse(inventoryData)?.bound(toAccessToken: "ui-test-credential")
+        if scenario == "claude-resets-selection", let current = inventory, let grant = current.grants.first {
+            // Synthetic second grant tests app selection policy, not provider acceptance of arbitrary IDs.
+            let other = ClaudeUsageResetGrant(
+                id: "different_grant", title: "Other saved reset", remainingCount: grant.remainingCount,
+                startsAt: grant.startsAt, expiresAt: grant.expiresAt, clears: grant.clears,
+                isPaused: false, isUsableNow: true, requiresLimit: false
+            )
+            inventory = ClaudeUsageResetInventory(
+                isEligible: current.isEligible, grants: current.grants + [other], selectedGrantID: current.selectedGrantID,
+                cooldownUntil: current.cooldownUntil, credentialBinding: current.credentialBinding
+            )
+        }
         return ProviderUsageResult(accountID: account.id, providerID: .claude, title: account.displayName,
                                    plan: parsed.plan, subtitle: "Synthetic Claude resets. No live account. Reset requests: \(requests)",
                                    bars: parsed.bars, claudeUsageResetInventory: inventory,
