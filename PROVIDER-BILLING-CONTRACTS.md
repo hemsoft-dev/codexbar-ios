@@ -16,7 +16,6 @@ private client source proves the fields that client consumes, not live iOS acces
 | Product | Verified evidence | Remaining gate | Classification |
 | --- | --- | --- | --- |
 | Cursor | Native sign-in successfully reached the authenticated web profile and customer-bound Stripe portal subscription on October 15, 2026. | Franz's phone sign-in and live date comparison; unsupported subscription variants remain unavailable. | Private contract acquired and implemented in [#456](https://github.com/hemsoft-dev/codexbar-ios/issues/456), with [current evidence](CURSOR-BILLING.md). |
-| Google AI / One | Consumer billing pages and store/partner distinctions; publisher and reseller API access boundaries. | Consumer response, account/payer binding and a supported phone authorization-to-data flow. | Private consumer contract unverified; published publisher/reseller APIs inapplicable to this lookup. |
 | Personal Copilot | Personal billing UI, cancellation semantics and public personal usage APIs. | Product-specific next charge and cancellation response tied to the authenticated GitHub user. | Private consumer contract unverified; documented usage/seat APIs insufficient. |
 | OpenCode Go / Go Plus | Current console read schema, workspace bearer middleware, subscriber ID, explicit cancellation, paid period and recovery state. | Franz's separate live compatibility check. | Implemented private client contract in [#451](https://github.com/hemsoft-dev/codexbar-ios/issues/451); synthetic production-client coverage, live account compatibility pending. |
 | Paid Greptile | Current first-party client exposes code-review cancellation/status fields. | Paid next-charge semantics, paid response schema and supported fresh Google billing authorization. | Partial private contract; [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) remains open. |
@@ -119,77 +118,6 @@ request and identity response without purchasing, canceling or embedding a Strip
 server key. Replay those verified fields in isolated transport fixtures before
 opening an implementation issue. Cursor's cancellation field is useful partial
 progress, but does not close the monetary-renewal gap.
-
-## Google AI / Google One
-
-### Consumer flow and independently observed access boundary
-
-The [payments-center guide](https://support.google.com/paymentscenter/answer/9003237)
-points to [Google payments](https://payments.google.com/) → **Subscriptions & services** → product
-**Manage**. It includes automatic payments, manual prepayments and invoicing;
-a listed service is not automatically a recurring subscription. Google One
-settings are at [Google One settings](https://one.google.com/settings).
-
-Anonymous acquisition of One settings redirected to `accounts.google.com`.
-Payments redirected to `/payments/home`, whose HTML contained a JavaScript
-redirect to Google sign-in. The Play consumer subscriptions page,
-[Play subscriptions](https://play.google.com/store/account/subscriptions), also redirected to sign-in.
-No owner-specific subscription payload was exposed by those anonymous pages;
-no authentication was attempted. Sign-in markup is not a billing response schema.
-
-### Public APIs that cannot supply this consumer lookup
-
-The [Payments Reseller Subscription API](https://developers.google.com/payments/reseller/subscription)
-is a partner wholesale platform. Its existence does not authorize reading a
-consumer's unrelated retail subscription.
-
-[Play `purchases.subscriptionsv2.get`](https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptionsv2/get)
-reads
-`GET https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{packageName}/purchases/subscriptionsv2/tokens/{token}`
-and requires the `https://www.googleapis.com/auth/androidpublisher` scope, the purchased
-app's package and its purchase token. The
-[getting-started guide](https://developers.google.com/android-publisher/getting_started)
-requires Play Console permissions; user OAuth does not bypass those permissions.
-CodexBar is not the publisher of Google One and has no purchase token from it.
-Adding that scope to a consumer Google sign-in would not make this a viable
-acquisition path. The API's explicit expiry/renewal fields demonstrate a publisher
-contract, not permission to discover another app's purchases.
-
-[StoreKit transactions](https://developer.apple.com/documentation/storekit/transaction/all)
-cover purchases **for the calling app**. CodexBar cannot enumerate Google One's
-Apple purchases through its own StoreKit transaction sequence.
-
-### Phone authorization and owner binding
-
-Google's [native OAuth guide](https://developers.google.com/identity/protocols/oauth2/native-app)
-explicitly rejects OAuth authorization in `WKWebView`; use its supported browser
-or SDK flow. A private embedded billing sign-in cannot be considered verified
-merely because Claude/Grok use one. Supported Google OAuth establishes access to
-consented APIs, not export of Google payments web cookies. A browser login alone
-also does not return an authenticated billing payload to CodexBar. No billing
-consumer OAuth scope or equivalent session transfer was verified here.
-
-### Direct, store and partner distinctions
-
-[Google One cancellation guidance](https://support.google.com/googleone/answer/9056360?hl=en)
-separates Play and Apple billing and family-member access. Normal cancellation
-retains benefits through the paid cycle; a stated carrier exception ends benefits
-immediately. A member receiving another person's benefits is not necessarily the
-billing owner.
-
-[Partner subscription guidance](https://support.google.com/googleone/answer/15801606?hl=en)
-assigns plan/payment management to the partner. It also describes an Apple plan
-continuing when a partner plan activates, creating possible concurrent billing.
-A single effective Google AI tier therefore cannot prove one recurring purchase.
-
-**Next step:** acquire a first-party consumer contract for direct Google payments
-or One settings with explicit renewal/cancellation, billing channel and stable
-Google/payer/subscription identity. Establish a provider-supported mobile flow
-that returns those reads to the app. Keep Play, Apple and partner subscriptions
-unavailable unless the consumer/provider contract reports their actual billing
-state. Multiple subscriptions, family grants, prepaid offers and immediate partner
-cancellation must have distinct fixtures. No owner sign-in is needed to finish
-this public contract investigation; live verification remains separate.
 
 ## Personal GitHub Copilot
 

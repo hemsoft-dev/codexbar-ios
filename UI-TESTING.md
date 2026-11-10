@@ -38,9 +38,9 @@ account store and intercepted provider transport before attaching images.
 Label these captures **native view-host**, not XCUITest navigation, gesture or
 physical-phone verification; retain any separate UI-runner failure explicitly.
 
-The base command above still executes exactly 29 original journeys. The
+The base command above still executes exactly 26 original journeys. The
 [phase manifest](scripts/pro-release-phases.json) requires 48 user journeys per
-family for a release: original 29, supplemental 8, synthetic commerce 14, and
+family for a release: original 26, supplemental 6, synthetic commerce 14, and
 native purchase/restore and purchase-error journeys 1 each. The separate
 storefront, Claude Ultra and billing recovery evidence captures are listed in
 `excluded_marketing` as manual captures, outside the 48 regression journeys.
@@ -207,7 +207,7 @@ it. Animations retain the normal app behavior.
   ChatGPT identities with separate saved credentials and different usage. It
   captures the account list, Add Account provider picker, the normal/private
   browser choices for another Codex account, and distinct cards after relaunch.
-  It never contacts ChatGPT or proves Google accepted a live sign-in.
+  It does not contact live provider accounts.
 
 - `testGitHubBillingPermissionDisclosure` opens a synthetic personal account,
   checks the write-capable `user` scope disclosure and sign-in-again guidance,
@@ -344,7 +344,7 @@ separately from the shared 5-hour and all-model weekly windows. It covers two
 accounts, hide/restore and model-name changes across relaunch, Customize Card,
 light/dark appearance and default/accessibility2 text. Absent allowances and
 usage-credit-only responses do not create a Fable quota. The release count stays
-29 original journeys per family. The full release also requires the supplemental and commerce phases above. No live provider quota is consumed.
+26 original journeys per family. The full release also requires the supplemental and commerce phases above. No live provider quota is consumed.
 
 `ClaudeFableWeeklyTests` runs locally and in the manual native unit suite. Its
 nine cases cover reported values, known aliases, inactive/duplicate windows,
@@ -446,31 +446,24 @@ widget's margins, spacing, and Updated footer. This is an intrinsic-layout
 regression check, not an iOS screenshot or full WidgetKit host test.
 
 The manual-only `CodexCreditsPoolUITests.testPreciseSubscriptionPillsOnExpandedAndCollapsedCards`
-checks Codex Pro/Plus, Claude Max 5x, verified Grok, unknown Google and API-credit
+checks Codex Pro/Plus, Claude Max 5x, verified Grok, unknown Codex plans and API-credit
 headers in light/dark at default and accessibility text sizes. It asserts actual
 expanded/collapsed state changes and the same account's plan after refresh. The
-base runner requires all 29 original journeys with zero skips; ordinary automatic
+base runner requires all 26 original journeys with zero skips; ordinary automatic
 CI does not run them.
 
-## Google and OpenCode subscription headers
+## OpenCode subscription headers
 
-The existing manual-only compact-header journey also exercises isolated
-`google-plan-*` scenarios for named Google AI Free, Plus, Pro, generic Ultra,
-Ultra 5x/20x and unknown metadata. Each scenario seeds an OpenCode Go + Zen
-card. It verifies Google labels, omitted OpenCode pills and expanded/collapsed
-cards in light/default and dark/accessibility text sizes, retaining screenshots.
+The existing manual compact-header journey checks the retained OpenCode Go
+account in the subscription-renewal fixture. It verifies that the card omits
+an unavailable plan pill and preserves expanded/collapsed controls in
+light/default and dark/accessibility text sizes, retaining screenshots.
 These are synthetic responses, not a live account comparison.
-
-Run the affected journey with
-`-only-testing:CodexBarIOSUITests/CodexCreditsPoolUITests/testCompactCardHeadersAndIndependentControls`
-on the UI-test scheme. This extends an existing journey; the release runner's
-29-test contract and automatic CI workloads are unchanged.
 
 ## Subscription billing countdowns
 
 The existing compact-header journey also exercises renewal pills in light/default
-and dark/Accessibility 2 text, exact billing details, two accounts, a long Google
-plan label, OpenCode without a plan pill, unknown/canceled/stale/passed dates, and
+and dark/Accessibility 2 text, exact billing details, two accounts, OpenCode without a plan pill, unknown/canceled/stale/passed dates, and
 the default-on preference with immediate changes and relaunch persistence.
 
 For focused local issue validation, build the test products, then set the
@@ -503,9 +496,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
   test-without-building
 ```
 
-The renewal subjourney also checks parsed Google AI Free has no renewal label or
-billing-only More Information menu item. The release runner does not set this
-selector and still requires all 29 original journeys on both families, followed
+The release runner does not set this selector and still requires all 26 original journeys on both families, followed
 by the required supplemental and commerce phases. Billing
 fixtures are synthetic; real-account billing comparisons remain Franz-owned.
 The renewal journey retains synthetic date/cancellation/freshness presentation coverage. Grok retains the guided billing mismatch, Start Over, matching return, Disconnect and Cancel checks. Claude instead opens the fixed provider billing URL directly from settings and More Information, with no embedded Connect/Reconnect or false connection on return.
