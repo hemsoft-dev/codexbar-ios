@@ -279,7 +279,7 @@ final class StoreKitProStoreSource: ProStoreSource {
         }
     }
 
-    private static func subscription(_ status: Product.SubscriptionInfo.Status) -> ProSubscriptionEvidence? {
+    static func subscription(_ status: Product.SubscriptionInfo.Status) -> ProSubscriptionEvidence? {
         guard case let .verified(transaction) = status.transaction,
               let purchase = purchase(transaction), purchase.product != .lifetime else { return nil }
         guard case let .verified(renewal) = status.renewalInfo else {
