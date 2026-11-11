@@ -2414,9 +2414,19 @@ final class DashboardAndSettingsTests: XCTestCase {
 
     @MainActor
     func testWatchSnapshotCoordinatorClearsPausedAccountsWhenFreeResolvesBeforeInitialResults() async throws {
-        let defaults = UserDefaults(suiteName: #function)!
-        defaults.removePersistentDomain(forName: #function)
-        defer { defaults.removePersistentDomain(forName: #function) }
+        try await assertWatchSnapshotFreeTransition(coalescingDelay: .milliseconds(5), suiteName: #function)
+    }
+
+    @MainActor
+    func testWatchSnapshotFreeTransitionWithZeroCoalescingDelay() async throws {
+        try await assertWatchSnapshotFreeTransition(coalescingDelay: .zero, suiteName: #function)
+    }
+
+    @MainActor
+    private func assertWatchSnapshotFreeTransition(coalescingDelay: Duration, suiteName: String) async throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
         let (store, service, sender) = try makeWatchSnapshotAccessFixture(
             defaults: defaults,
             initialAccess: .unresolved
@@ -2425,7 +2435,7 @@ final class DashboardAndSettingsTests: XCTestCase {
             refreshService: service,
             configurationStore: store,
             sender: sender,
-            coalescingDelay: .milliseconds(5)
+            coalescingDelay: coalescingDelay
         )
         coordinator.start()
         sender.completeActivation()
@@ -2458,7 +2468,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         }
         await fulfillment(of: [taskEntered, snapshotPublished], timeout: 1)
         record("wait returned")
-        print("[ios564-transition] \(events.joined(separator: " | "))")
+        print("[ios564-transition delay=\(coalescingDelay)] \(events.joined(separator: " | "))")
         XCTAssertEqual(accessEvents, 1, "The fixture must emit exactly one access transition: \(events)")
 
         XCTAssertTrue(service.results.isEmpty)
