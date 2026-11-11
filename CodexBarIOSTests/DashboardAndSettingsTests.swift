@@ -2445,6 +2445,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         let taskEntered = expectation(description: "Free transition main-actor witness entered")
         let trace = WatchTransitionTrace(label: "delay=\(coalescingDelay)")
         let record: @Sendable (String) -> Void = { trace.record($0) }
+        record("wall anchor=\(Date().timeIntervalSince1970), test priority=\(Task.currentPriority.rawValue)")
         var accessEvents = 0
         let accessSubscription = store.$accountAccess.dropFirst().sink { access in
             accessEvents += 1
@@ -2460,10 +2461,16 @@ final class DashboardAndSettingsTests: XCTestCase {
         store.applyPlanAccess(hasProAccess: false, isResolved: true)
         record("free access committed: resolved=\(store.accountAccess.isResolved), pro=\(store.accountAccess.hasProAccess)")
         DispatchQueue.main.async { record("main-queue witness entered") }
-        let executorWitness = Task.detached {
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(5)) {
+            record("independent main-queue timer returned")
+        }
+        let executorWitness = Task.detached(priority: Task.currentPriority) {
             record("global-executor witness entered")
             // One diagnostic timer, never a retry or a wait used to satisfy an assertion.
-            do { try await Task.sleep(for: .milliseconds(5)) } catch { return }
+            do { try await Task.sleep(for: .milliseconds(5)) } catch {
+                record("global-executor timer cancelled")
+                return
+            }
             record("global-executor timer returned")
             await MainActor.run { record("main-actor witness after global timer") }
         }
@@ -2474,6 +2481,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         }
         await fulfillment(of: [taskEntered, snapshotPublished], timeout: 1)
         record("wait returned")
+        print("[ios564-transition \(trace.label)] \(trace.summary)")
         XCTAssertEqual(accessEvents, 1, "The fixture must emit exactly one access transition: \(trace.summary)")
 
         XCTAssertTrue(service.results.isEmpty)
@@ -4644,7 +4652,7 @@ private final class DelayedStubCopilotAuthService: CopilotWebAuthenticating {
 private final class WatchTransitionTrace: @unchecked Sendable {
     private let lock = NSLock()
     private let started = ContinuousClock.now
-    private let label: String
+    let label: String
     private var events = [String]()
 
     init(label: String) { self.label = label }
@@ -4654,7 +4662,6 @@ private final class WatchTransitionTrace: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         events.append(entry)
-        print("[ios564-transition \(label)] \(entry)")
     }
 
     var summary: String {
