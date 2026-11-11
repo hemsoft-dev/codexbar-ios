@@ -1455,6 +1455,8 @@ extension SubscriptionBillingTests {
         let session = SubscriptionBillingSignInSession(configuration: account, usageSecret: usage,
                                                        client: SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session)) { results.append($0) }
         defer { session.invalidate() }
+        let window = try hostBillingWebView(session.webView)
+        defer { window.isHidden = true }
         let store = session.webView.configuration.websiteDataStore.httpCookieStore
         store.remove(session)
         session.webView.loadHTMLString("<html><body>Grok billing fixture</body></html>", baseURL: URL(string: "https://grok.com/"))
@@ -1470,7 +1472,7 @@ extension SubscriptionBillingTests {
             try await Task.sleep(for: .milliseconds(450))
         }
         let completed = await waitUntil { results.count == 1 }
-        XCTAssertTrue(completed)
+        XCTAssertTrue(completed, "Billing completion: verifying=\(session.isVerifying), requests=\(requests.value), message=\(session.message ?? "none")")
         XCTAssertEqual(Set(try XCTUnwrap(results.first).get().cookies.map(\.name)), ["billing-fixture", "commerce"])
         XCTAssertEqual(requests.value, 2)
     }
