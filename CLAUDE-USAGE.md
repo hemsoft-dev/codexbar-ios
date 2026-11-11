@@ -203,6 +203,14 @@ grant start and expiry dates, without a usage refresh. The inventory sheet shows
 end time before generic eligibility messages and removes it once that time passes.
 Neither update consumes a reset or changes provider quotas.
 
+For a current grant other than `next_grant_id`, the sheet explains that CodexBar
+currently uses only the reset selected by Claude. This describes the app's
+selection policy, not a verified server restriction on other grant IDs.
+The exact Fable reset clearing identifier and support for choosing another grant
+remain unverified under [#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559).
+Authentication and client-identity qualification remains separate under
+[#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548).
+
 ## Fable weekly allowance
 
 When Claude returns a model-scoped weekly allowance in `limits[]`, CodexBar

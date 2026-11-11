@@ -107,6 +107,8 @@ struct ClaudeUsageResetInventoryView: View {
                 Text("Claude reset cooldown ends \(cooldown.formatted(date: .abbreviated, time: .shortened)).")
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("claude-reset-cooldown")
+            } else if inventory.selectedGrantID != grant.id {
+                Text("CodexBar can currently use only the reset selected by Claude.").foregroundStyle(.secondary)
             } else if inventory.redeemableGrant(at: date)?.id != grant.id {
                 Text(grant.requiresLimit
                      ? "Claude may require a usage limit to be reached before this reset can be used."

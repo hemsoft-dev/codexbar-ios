@@ -30,6 +30,10 @@ building, testing, or releasing the app.
 
 ### Fixed
 
+- Saved Claude resets now explain when CodexBar can use only Claude's selected
+  reset, rather than suggesting Claude disabled another listed reset.
+  ([#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559))
+
 - Claude cards show the plan Claude reports for your organization, such as
   Ultra, even when older account flags disagree. Previously they could show
   "Plan unavailable" instead.
