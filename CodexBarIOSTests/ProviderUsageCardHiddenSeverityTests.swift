@@ -393,12 +393,33 @@ final class ProviderUsageCardHiddenSeverityTests: XCTestCase {
         XCTAssertTrue(labels.contains("Resets five-hour usage and weekly usage."), "\(labels)")
         XCTAssertTrue(labels.contains("Paused by Claude"), "\(labels)")
         XCTAssertTrue(labels.contains("Not currently available"), "\(labels)")
-        XCTAssertTrue(
-            labels.contains("Claude may require a usage limit to be reached before this reset can be used."), "\(labels)"
+        XCTAssertEqual(
+            labels.filter { $0 == "CodexBar can currently use only the reset selected by Claude." }.count, 2, "\(labels)"
         )
-        XCTAssertTrue(labels.contains("Claude has not enabled this reset for use now."), "\(labels)")
         XCTAssertEqual(probe.elements(identifier: "claude-use-reset").map(\.accessibilityLabel), ["Use one reset"])
         XCTAssertNil(probe.element(identifier: "claude-reset-cooldown"))
+    }
+
+    @MainActor
+    func testSelectedResetExplainsItsLimitOrDisabledState() throws {
+        let now = Date()
+        for requiresLimit in [false, true] {
+            let grant = Self.resetGrant(id: "selected", requiresLimit: requiresLimit, isUsableNow: false, now: now)
+            let inventory = ClaudeUsageResetInventory(
+                isEligible: true, grants: [grant], selectedGrantID: grant.id,
+                cooldownUntil: nil, credentialBinding: "binding"
+            )
+            let probe = try HostedViewProbe(ClaudeUsageResetInventoryView(
+                inventory: inventory, accountName: "Work Claude", canRedeem: true,
+                onUseReset: { _, _ in ClaudeUsageResetFeedback(message: "Unused", isSuccess: true) }
+            ))
+            defer { probe.close() }
+            let expected = requiresLimit
+                ? "Claude may require a usage limit to be reached before this reset can be used."
+                : "Claude has not enabled this reset for use now."
+            XCTAssertTrue(probe.labels.contains(expected), "\(probe.labels)")
+            XCTAssertTrue(probe.elements(identifier: "claude-use-reset").isEmpty)
+        }
     }
 
     @MainActor
@@ -532,12 +553,13 @@ final class ProviderUsageCardHiddenSeverityTests: XCTestCase {
         expiresIn: TimeInterval? = 86_400,
         isPaused: Bool = false,
         requiresLimit: Bool = true,
+        isUsableNow: Bool = true,
         now: Date
     ) -> ClaudeUsageResetGrant {
         ClaudeUsageResetGrant(
             id: id, title: title, remainingCount: remainingCount, startsAt: now.addingTimeInterval(-3_600),
             expiresAt: expiresIn.map { now.addingTimeInterval($0) }, clears: ["seven_day", "five_hour"],
-            isPaused: isPaused, isUsableNow: true, requiresLimit: requiresLimit
+            isPaused: isPaused, isUsableNow: isUsableNow, requiresLimit: requiresLimit
         )
     }
 }

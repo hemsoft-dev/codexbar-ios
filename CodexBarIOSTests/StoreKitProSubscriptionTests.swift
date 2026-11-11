@@ -20,8 +20,9 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         guard case let .verified(transaction) = native.transaction, case let .verified(renewal) = native.renewalInfo else {
             throw StoreKitProTestFailure.assertion("Native subscription status did not contain verified transaction and renewal payloads.")
         }
-        let snapshot = await context.source.snapshot()
-        let mapped = try XCTUnwrap(snapshot.subscriptions.first { $0.purchase.transactionID == transaction.id })
+        // Compare the production mapper with this exact verified payload. A
+        // separate status query may return newly signed renewal information.
+        let mapped = try XCTUnwrap(StoreKitProStoreSource.subscription(native))
         XCTAssertTrue(mapped.renewalVerified)
         XCTAssertEqual(mapped.purchase.environment, .xcode)
         XCTAssertEqual(mapped.purchase.expiresAt, transaction.expirationDate)
@@ -32,10 +33,38 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         XCTAssertEqual(mapped.renewalCurrency, renewal.currency?.identifier)
         XCTAssertEqual(mapped.graceEndsAt, renewal.gracePeriodExpirationDate)
         XCTAssertEqual(mapped.isInBillingRetry, renewal.isInBillingRetry)
+        let snapshot = await context.source.snapshot()
+        let separateRead = try XCTUnwrap(snapshot.subscriptions.first { $0.purchase.transactionID == transaction.id })
+        XCTAssertTrue(separateRead.renewalVerified)
+        XCTAssertEqual(separateRead.purchase.environment, .xcode)
+        // This real-time yearly fixture cannot renew between the two reads.
+        // Only the signature date belongs to the individual signed payload.
+        XCTAssertEqual(separateRead.purchase.transactionID, mapped.purchase.transactionID)
+        XCTAssertEqual(separateRead.state, mapped.state)
+        XCTAssertEqual(separateRead.purchase.expiresAt, mapped.purchase.expiresAt)
+        XCTAssertEqual(separateRead.willAutoRenew, mapped.willAutoRenew)
+        XCTAssertEqual(separateRead.nextRenewalProduct, mapped.nextRenewalProduct)
+        XCTAssertEqual(separateRead.renewalPrice, mapped.renewalPrice)
+        XCTAssertEqual(separateRead.renewalCurrency, mapped.renewalCurrency)
+        XCTAssertEqual(separateRead.graceEndsAt, mapped.graceEndsAt)
+        XCTAssertEqual(separateRead.isInBillingRetry, mapped.isInBillingRetry)
+        let matchesVerifiedPayload = [
+            mapped.renewalVerified, mapped.purchase.environment == .xcode,
+            mapped.purchase.transactionID == transaction.id,
+            mapped.purchase.expiresAt == transaction.expirationDate,
+            mapped.signedAt == renewal.signedDate, mapped.willAutoRenew == renewal.willAutoRenew,
+            mapped.nextRenewalProduct == renewal.autoRenewPreference.flatMap(ProProductID.init(rawValue:)),
+            mapped.renewalPrice == renewal.renewalPrice, mapped.renewalCurrency == renewal.currency?.identifier,
+            mapped.graceEndsAt == renewal.gracePeriodExpirationDate,
+            mapped.isInBillingRetry == renewal.isInBillingRetry,
+        ].allSatisfy { $0 }
         try storeKitEvent("verified-renewal-mapping", [
             "renewalPricePresent": String(mapped.renewalPrice != nil),
             "renewalCurrencyPresent": String(mapped.renewalCurrency != nil),
-            "matchesVerifiedApplePayload": "true",
+            "matchesVerifiedApplePayload": String(matchesVerifiedPayload),
+            "oracleSignedDateEpoch": String(renewal.signedDate.timeIntervalSince1970),
+            "mappedSignedDateEpoch": String(mapped.signedAt.timeIntervalSince1970),
+            "separateReadSignedDateEpoch": String(separateRead.signedAt.timeIntervalSince1970),
         ])
     }
 
@@ -96,7 +125,26 @@ final class StoreKitProSubscriptionTests: XCTestCase {
     func testBillingGraceMapsVerifiedStatusAndKeepsAccess() async throws {
         let context = try await storeKitContext()
         configureBillingRenewal(context, grace: true)
+        XCTAssertTrue(context.session.shouldEnterBillingRetryOnRenewal)
+        XCTAssertTrue(context.session.billingGracePeriodIsEnabled)
+        XCTAssertEqual(context.session.timeRate, .oneRenewalEveryThirtySeconds)
+        let nativeStarted = ProcessInfo.processInfo.systemUptime
+        var nativeStatusTrace = [String]()
+        let nativeUpdates = Product.SubscriptionInfo.Status.updates
+        context.retainListener(Task {
+            for await status in nativeUpdates {
+                guard !Task.isCancelled else { return }
+                guard case let .verified(transaction) = status.transaction,
+                      transaction.productID == ProProductID.monthly.rawValue else { continue }
+                if nativeStatusTrace.count < 16 {
+                    nativeStatusTrace.append(Self.nativeStatusDescription(status, since: nativeStarted))
+                }
+            }
+        })
         let service = try await purchaseMonthly(context)
+        XCTAssertTrue(context.session.shouldEnterBillingRetryOnRenewal)
+        XCTAssertTrue(context.session.billingGracePeriodIsEnabled)
+        XCTAssertEqual(context.session.timeRate, .oneRenewalEveryThirtySeconds)
         let started = ProcessInfo.processInfo.systemUptime
         var receivedStatuses: [String] = []
         var receivedVerifiedGrace = false
@@ -115,6 +163,15 @@ final class StoreKitProSubscriptionTests: XCTestCase {
             do {
                 var details = await storeKitState(context, service: service)
                 details["receivedStatusTrace"] = receivedStatuses.joined(separator: ";")
+                details["nativeStatusTrace"] = nativeStatusTrace.joined(separator: ";")
+                details["fixtureRetryEnabled"] = String(context.session.shouldEnterBillingRetryOnRenewal)
+                details["fixtureGraceEnabled"] = String(context.session.billingGracePeriodIsEnabled)
+                details["fixtureTimeRate"] = String(describing: context.session.timeRate)
+                let products = try await storeKitProducts()
+                let subscription = try XCTUnwrap(products[.monthly]?.subscription)
+                details["nativeStatusesAtTimeout"] = try await subscription.status.prefix(3).map {
+                    Self.nativeStatusDescription($0, since: nativeStarted)
+                }.joined(separator: ";")
                 try storeKitEvent("billing-grace-timeout", details)
             } catch {
                 print("Unable to preserve billing-grace diagnostics; retaining the primary failure.")
@@ -134,6 +191,7 @@ final class StoreKitProSubscriptionTests: XCTestCase {
             "access": "true", "billingIssue": "true", "verifiedGraceDate": "true",
             "receivedStatusTrace": receivedStatuses.joined(separator: ";"),
             "verifiedGraceReceiverObserved": String(receivedVerifiedGrace),
+            "nativeStatusTrace": nativeStatusTrace.joined(separator: ";"),
         ])
     }
 
@@ -258,6 +316,15 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         let fresh = await context.makeService(source: source)
         XCTAssertFalse(fresh.hasAccess)
         try storeKitEvent("natural-expiry-fresh-source", ["access": "false", "verifiedExpiredStatus": "true"])
+    }
+
+    private static func nativeStatusDescription(_ status: Product.SubscriptionInfo.Status, since started: TimeInterval) -> String {
+        let elapsed = ProcessInfo.processInfo.systemUptime - started
+        guard case let .verified(renewal) = status.renewalInfo else {
+            return "elapsed=\(elapsed),state=\(status.state),renewal=unverified"
+        }
+        return "elapsed=\(elapsed),state=\(status.state),signed=\(renewal.signedDate.timeIntervalSince1970)"
+            + ",retry=\(renewal.isInBillingRetry),graceEnd=\(String(describing: renewal.gracePeriodExpirationDate))"
     }
 
     private func configureBillingRenewal(_ context: StoreKitProTestContext, grace: Bool) {

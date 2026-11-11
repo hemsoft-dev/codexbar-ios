@@ -1,3 +1,4 @@
+import Combine
 import XCTest
 @testable import CodexBarIOS
 
@@ -2413,9 +2414,19 @@ final class DashboardAndSettingsTests: XCTestCase {
 
     @MainActor
     func testWatchSnapshotCoordinatorClearsPausedAccountsWhenFreeResolvesBeforeInitialResults() async throws {
-        let defaults = UserDefaults(suiteName: #function)!
-        defaults.removePersistentDomain(forName: #function)
-        defer { defaults.removePersistentDomain(forName: #function) }
+        try await assertWatchSnapshotFreeTransition(coalescingDelay: .milliseconds(5), suiteName: #function)
+    }
+
+    @MainActor
+    func testWatchSnapshotFreeTransitionWithZeroCoalescingDelay() async throws {
+        try await assertWatchSnapshotFreeTransition(coalescingDelay: .zero, suiteName: #function)
+    }
+
+    @MainActor
+    private func assertWatchSnapshotFreeTransition(coalescingDelay: Duration, suiteName: String) async throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
         let (store, service, sender) = try makeWatchSnapshotAccessFixture(
             defaults: defaults,
             initialAccess: .unresolved
@@ -2424,17 +2435,76 @@ final class DashboardAndSettingsTests: XCTestCase {
             refreshService: service,
             configurationStore: store,
             sender: sender,
-            coalescingDelay: .milliseconds(5)
+            coalescingDelay: coalescingDelay
         )
         coordinator.start()
         sender.completeActivation()
         XCTAssertEqual(sender.snapshots.count, 1, "Unresolved startup must preserve the previous snapshot")
 
         let snapshotPublished = expectation(description: "Free access clears old watch accounts without provider results")
-        sender.onPublish = { snapshotPublished.fulfill() }
+        let taskEntered = expectation(description: "Free transition main-actor witness entered")
+        let trace = WatchTransitionTrace(label: "delay=\(coalescingDelay)")
+        let record: @Sendable (String) -> Void = { trace.record($0) }
+        record("wall anchor=\(Date().timeIntervalSince1970), test priority=\(Task.currentPriority.rawValue)")
+        var accessEvents = 0
+        let accessSubscription = store.$accountAccess.dropFirst().sink { access in
+            accessEvents += 1
+            record("access emitted: resolved=\(access.isResolved), pro=\(access.hasProAccess)")
+        }
+        defer { accessSubscription.cancel() }
+        sender.onPublish = {
+            record("sender published: snapshots=\(sender.snapshots.count)")
+            snapshotPublished.fulfill()
+        }
+        defer { sender.onPublish = nil }
+        record("applying free access")
         store.applyPlanAccess(hasProAccess: false, isResolved: true)
-        await fulfillment(of: [snapshotPublished], timeout: 1)
+        record("free access committed: resolved=\(store.accountAccess.isResolved), pro=\(store.accountAccess.hasProAccess)")
+        DispatchQueue.main.async { record("main-queue witness entered") }
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(5)) {
+            record("independent main-queue timer returned")
+        }
+        let executorWitness = Task.detached(priority: Task.currentPriority) {
+            record("global-executor witness entered")
+            // One diagnostic timer, never a retry or a wait used to satisfy an assertion.
+            do { try await Task.sleep(for: .milliseconds(5)) } catch { return }
+            record("global-executor timer returned")
+            await MainActor.run { record("main-actor witness after global timer") }
+        }
+        defer { executorWitness.cancel() }
+        Task { @MainActor in
+            record("main-actor witness entered")
+            taskEntered.fulfill()
+        }
+        await fulfillment(of: [taskEntered, snapshotPublished], timeout: 1)
+        record("wait returned")
+        print("[ios564-transition \(trace.label)] \(trace.summary)")
+        XCTAssertEqual(accessEvents, 1, "The fixture must emit exactly one access transition: \(trace.summary)")
 
+        XCTAssertTrue(service.results.isEmpty)
+        XCTAssertEqual(store.accountAccess.pausedAccountIDs.count, 1)
+        XCTAssertEqual(sender.snapshots.count, 2)
+        XCTAssertTrue(try XCTUnwrap(sender.snapshots.last).accounts.isEmpty)
+        XCTAssertEqual(sender.publishedForces, [false, false])
+        XCTAssertEqual(store.configurations.count, 2)
+        XCTAssertTrue(store.configurations.allSatisfy { store.hasSecret(for: $0) })
+        withExtendedLifetime(coordinator) {}
+    }
+
+    @MainActor
+    func testWatchSnapshotFreeTransitionPublishesWithoutWaitingForTheCoalescingTask() throws {
+        let suite = "WatchSnapshotDirectTransition.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let (store, service, sender) = try makeWatchSnapshotAccessFixture(defaults: defaults, initialAccess: .unresolved)
+        let coordinator = WatchSnapshotCoordinator(
+            refreshService: service, configurationStore: store, sender: sender
+        )
+        coordinator.start()
+        sender.completeActivation()
+        XCTAssertEqual(sender.snapshots.count, 1, "Unresolved startup preserves the retained snapshot")
+        store.applyPlanAccess(hasProAccess: false, isResolved: true)
+        coordinator.publishCurrentSnapshot()
         XCTAssertTrue(service.results.isEmpty)
         XCTAssertEqual(store.accountAccess.pausedAccountIDs.count, 1)
         XCTAssertEqual(sender.snapshots.count, 2)
@@ -4573,6 +4643,28 @@ private final class DelayedStubCopilotAuthService: CopilotWebAuthenticating {
 
     func completeCallback() {
         callbackRelease.signal()
+    }
+}
+
+private final class WatchTransitionTrace: @unchecked Sendable {
+    private let lock = NSLock()
+    private let started = ContinuousClock.now
+    let label: String
+    private var events = [String]()
+
+    init(label: String) { self.label = label }
+
+    func record(_ event: String) {
+        let entry = "\(started.duration(to: .now)): \(event)"
+        lock.lock()
+        defer { lock.unlock() }
+        events.append(entry)
+    }
+
+    var summary: String {
+        lock.lock()
+        defer { lock.unlock() }
+        return events.joined(separator: " | ")
     }
 }
 

@@ -34,7 +34,7 @@ final class MetricTileContentRegressionTests: XCTestCase {
     }
 
     func testUnavailableReasonRemainsDistinctFromReportedValues() {
-        for reason in ["Unavailable", "Setup required", GoogleUsageMetricCatalog.disabledReason, ""] {
+        for reason in ["Unavailable", "Setup required", "Synthetic custom unavailable reason", ""] {
             let input = result(bars: [UsageBar(label: "Known", used: 0, limit: 100)], credits: 0)
             XCTAssertEqual(resolve(.unavailableUsage(reason), input), .unavailableUsage(reason))
         }
