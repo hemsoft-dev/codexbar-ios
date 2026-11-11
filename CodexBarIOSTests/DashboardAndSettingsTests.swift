@@ -1,3 +1,4 @@
+import Combine
 import XCTest
 @testable import CodexBarIOS
 
@@ -2431,10 +2432,59 @@ final class DashboardAndSettingsTests: XCTestCase {
         XCTAssertEqual(sender.snapshots.count, 1, "Unresolved startup must preserve the previous snapshot")
 
         let snapshotPublished = expectation(description: "Free access clears old watch accounts without provider results")
-        sender.onPublish = { snapshotPublished.fulfill() }
+        let taskEntered = expectation(description: "Free transition main-actor witness entered")
+        let started = ContinuousClock.now
+        var events = [String]()
+        let record: @MainActor (String) -> Void = { event in
+            events.append("\(started.duration(to: .now)): \(event)")
+        }
+        var accessEvents = 0
+        let accessSubscription = store.$accountAccess.dropFirst().sink { access in
+            accessEvents += 1
+            record("access emitted: resolved=\(access.isResolved), pro=\(access.hasProAccess)")
+        }
+        defer { accessSubscription.cancel() }
+        sender.onPublish = {
+            record("sender published: snapshots=\(sender.snapshots.count)")
+            snapshotPublished.fulfill()
+        }
+        defer { sender.onPublish = nil }
+        record("applying free access")
         store.applyPlanAccess(hasProAccess: false, isResolved: true)
-        await fulfillment(of: [snapshotPublished], timeout: 1)
+        record("free access committed: resolved=\(store.accountAccess.isResolved), pro=\(store.accountAccess.hasProAccess)")
+        Task { @MainActor in
+            record("main-actor witness entered")
+            taskEntered.fulfill()
+        }
+        await fulfillment(of: [taskEntered, snapshotPublished], timeout: 1)
+        record("wait returned")
+        print("[ios564-transition] \(events.joined(separator: " | "))")
+        XCTAssertEqual(accessEvents, 1, "The fixture must emit exactly one access transition: \(events)")
 
+        XCTAssertTrue(service.results.isEmpty)
+        XCTAssertEqual(store.accountAccess.pausedAccountIDs.count, 1)
+        XCTAssertEqual(sender.snapshots.count, 2)
+        XCTAssertTrue(try XCTUnwrap(sender.snapshots.last).accounts.isEmpty)
+        XCTAssertEqual(sender.publishedForces, [false, false])
+        XCTAssertEqual(store.configurations.count, 2)
+        XCTAssertTrue(store.configurations.allSatisfy { store.hasSecret(for: $0) })
+        withExtendedLifetime(coordinator) {}
+    }
+
+    @MainActor
+    func testWatchSnapshotFreeTransitionPublishesWithoutWaitingForTheCoalescingTask() throws {
+        let suite = "WatchSnapshotDirectTransition.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let (store, service, sender) = try makeWatchSnapshotAccessFixture(defaults: defaults, initialAccess: .unresolved)
+        let coordinator = WatchSnapshotCoordinator(
+            refreshService: service, configurationStore: store, sender: sender
+        )
+        coordinator.start()
+        sender.completeActivation()
+        XCTAssertEqual(sender.snapshots.count, 1, "Unresolved startup preserves the retained snapshot")
+        store.applyPlanAccess(hasProAccess: false, isResolved: true)
+        coordinator.publishCurrentSnapshot()
         XCTAssertTrue(service.results.isEmpty)
         XCTAssertEqual(store.accountAccess.pausedAccountIDs.count, 1)
         XCTAssertEqual(sender.snapshots.count, 2)
