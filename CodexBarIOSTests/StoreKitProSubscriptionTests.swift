@@ -37,6 +37,17 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         let separateRead = try XCTUnwrap(snapshot.subscriptions.first { $0.purchase.transactionID == transaction.id })
         XCTAssertTrue(separateRead.renewalVerified)
         XCTAssertEqual(separateRead.purchase.environment, .xcode)
+        // This real-time yearly fixture cannot renew between the two reads.
+        // Only the signature date belongs to the individual signed payload.
+        XCTAssertEqual(separateRead.purchase.transactionID, mapped.purchase.transactionID)
+        XCTAssertEqual(separateRead.state, mapped.state)
+        XCTAssertEqual(separateRead.purchase.expiresAt, mapped.purchase.expiresAt)
+        XCTAssertEqual(separateRead.willAutoRenew, mapped.willAutoRenew)
+        XCTAssertEqual(separateRead.nextRenewalProduct, mapped.nextRenewalProduct)
+        XCTAssertEqual(separateRead.renewalPrice, mapped.renewalPrice)
+        XCTAssertEqual(separateRead.renewalCurrency, mapped.renewalCurrency)
+        XCTAssertEqual(separateRead.graceEndsAt, mapped.graceEndsAt)
+        XCTAssertEqual(separateRead.isInBillingRetry, mapped.isInBillingRetry)
         let matchesVerifiedPayload = [
             mapped.renewalVerified, mapped.purchase.environment == .xcode,
             mapped.purchase.transactionID == transaction.id,
