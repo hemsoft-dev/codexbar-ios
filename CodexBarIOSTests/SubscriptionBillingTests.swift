@@ -727,6 +727,8 @@ final class SubscriptionBillingTests: XCTestCase {
         let session = SubscriptionBillingSignInSession(configuration: account, usageSecret: "usage-token",
                                                        client: SubscriptionBillingClient.syntheticClaudeContract(session: fixture.session)) { results.append($0) }
         defer { session.invalidate() }
+        let window = try hostBillingWebView(session.webView)
+        defer { window.isHidden = true }
         session.webView.loadHTMLString("<html><body>Sign in</body></html>", baseURL: URL(string: "https://claude.ai/"))
         let loaded = await waitUntil { !session.webView.isLoading && session.webView.url?.host == "claude.ai" }
         XCTAssertTrue(loaded)
@@ -852,7 +854,11 @@ final class SubscriptionBillingTests: XCTestCase {
         let session = try XCTUnwrap(viewModel.subscriptionBillingSession)
         // The view model owns its live billing client; only the explicit simulator fixture host can complete offline.
         try XCTSkipUnless(session.isSynthetic, "Requires the isolated fixture host configured by the CodexBarIOS test scheme")
+        let window = try hostBillingWebView(session.webView)
+        defer { window.isHidden = true }
         session.start()
+        let loaded = await waitUntil { !session.webView.isLoading && session.webView.url?.host == "grok.com" }
+        XCTAssertTrue(loaded)
         session.chooseSyntheticAccount(matching: true)
         let saved = await waitUntil { viewModel.subscriptionBillingSession == nil }
         XCTAssertTrue(saved)
@@ -862,14 +868,30 @@ final class SubscriptionBillingTests: XCTestCase {
 
         viewModel.startSubscriptionBillingSignIn()
         let replacement = try XCTUnwrap(viewModel.subscriptionBillingSession)
+        window.rootViewController?.view = replacement.webView
         XCTAssertTrue(store.saveSecret("replacement-token", for: account))
         replacement.start()
+        let replacementLoaded = await waitUntil { !replacement.webView.isLoading && replacement.webView.url?.host == "grok.com" }
+        XCTAssertTrue(replacementLoaded)
         replacement.chooseSyntheticAccount(matching: true)
         let rejected = await waitUntil { viewModel.subscriptionBillingSession == nil }
         XCTAssertTrue(rejected)
         XCTAssertEqual(viewModel.subscriptionBillingMessage, "Account changed or billing could not be saved. Connect billing again.")
         XCTAssertFalse(store.hasSubscriptionBillingSession(for: account), "Billing is never bound to a replaced usage connection")
         XCTAssertEqual(credentialChanges, 1)
+    }
+
+    @MainActor
+    private func hostBillingWebView(_ webView: WKWebView) throws -> UIWindow {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.frame = scene.coordinateSpace.bounds
+        let controller = UIViewController()
+        controller.view = webView
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        window.layoutIfNeeded()
+        return window
     }
 
     private func cursorProfile(_ overrides: [String: Any] = [:]) throws -> CursorSubscriptionBilling.Profile {
