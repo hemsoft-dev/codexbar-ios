@@ -2443,11 +2443,8 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         let snapshotPublished = expectation(description: "Free access clears old watch accounts without provider results")
         let taskEntered = expectation(description: "Free transition main-actor witness entered")
-        let started = ContinuousClock.now
-        var events = [String]()
-        let record: @MainActor (String) -> Void = { event in
-            events.append("\(started.duration(to: .now)): \(event)")
-        }
+        let trace = WatchTransitionTrace(label: "delay=\(coalescingDelay)")
+        let record: @Sendable (String) -> Void = { trace.record($0) }
         var accessEvents = 0
         let accessSubscription = store.$accountAccess.dropFirst().sink { access in
             accessEvents += 1
@@ -2462,14 +2459,22 @@ final class DashboardAndSettingsTests: XCTestCase {
         record("applying free access")
         store.applyPlanAccess(hasProAccess: false, isResolved: true)
         record("free access committed: resolved=\(store.accountAccess.isResolved), pro=\(store.accountAccess.hasProAccess)")
+        DispatchQueue.main.async { record("main-queue witness entered") }
+        let executorWitness = Task.detached {
+            record("global-executor witness entered")
+            // One diagnostic timer, never a retry or a wait used to satisfy an assertion.
+            do { try await Task.sleep(for: .milliseconds(5)) } catch { return }
+            record("global-executor timer returned")
+            await MainActor.run { record("main-actor witness after global timer") }
+        }
+        defer { executorWitness.cancel() }
         Task { @MainActor in
             record("main-actor witness entered")
             taskEntered.fulfill()
         }
         await fulfillment(of: [taskEntered, snapshotPublished], timeout: 1)
         record("wait returned")
-        print("[ios564-transition delay=\(coalescingDelay)] \(events.joined(separator: " | "))")
-        XCTAssertEqual(accessEvents, 1, "The fixture must emit exactly one access transition: \(events)")
+        XCTAssertEqual(accessEvents, 1, "The fixture must emit exactly one access transition: \(trace.summary)")
 
         XCTAssertTrue(service.results.isEmpty)
         XCTAssertEqual(store.accountAccess.pausedAccountIDs.count, 1)
@@ -4633,6 +4638,29 @@ private final class DelayedStubCopilotAuthService: CopilotWebAuthenticating {
 
     func completeCallback() {
         callbackRelease.signal()
+    }
+}
+
+private final class WatchTransitionTrace: @unchecked Sendable {
+    private let lock = NSLock()
+    private let started = ContinuousClock.now
+    private let label: String
+    private var events = [String]()
+
+    init(label: String) { self.label = label }
+
+    func record(_ event: String) {
+        let entry = "\(started.duration(to: .now)): \(event)"
+        lock.lock()
+        defer { lock.unlock() }
+        events.append(entry)
+        print("[ios564-transition \(label)] \(entry)")
+    }
+
+    var summary: String {
+        lock.lock()
+        defer { lock.unlock() }
+        return events.joined(separator: " | ")
     }
 }
 
