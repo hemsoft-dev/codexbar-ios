@@ -92,7 +92,7 @@ final class CursorSpendingRegressionTests: XCTestCase, @unchecked Sendable {
                     XCTAssertTrue(reason.contains(try currency(120)))
                     XCTAssertFalse(reason.contains("spend not reported"))
                 }
-                XCTAssertEqual(GoogleUsageMetricCatalog.metrics(for: .cursor, result: spendOnly).count, 4)
+                XCTAssertEqual(ProviderMetricCatalog.metrics(for: .cursor, result: spendOnly).count, 4)
             }
         }
         XCTAssertNil(CursorUsageProvider.parseUsage(
