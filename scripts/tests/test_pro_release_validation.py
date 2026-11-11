@@ -281,6 +281,17 @@ class RunnerCommandFailureTests(unittest.TestCase):
         self.assertIn('diagnostic bound', receipt['watchTransitionTraceError'])
         self.assertEqual(sum('-resultBundlePath' in call for call in self.calls), 1)
 
+    def test_ios_phase_trace_failure_cannot_pass_successful_xcode(self):
+        self.ordinary_trace = '[ios564-transition fixture] event\n' * 9
+        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(RUNNER.PhaseFailure) as caught:
+            self.runner.phase('ios', self.ordinary_build())
+        self.assertEqual(caught.exception.code, 1)
+        receipt = EVIDENCE.read(self.root / 'ios/receipt.json')
+        self.assertEqual(receipt['exit'], 1)
+        self.assertIn('diagnostic bound', receipt['watchTransitionTraceError'])
+        self.assertEqual(EVIDENCE.read(self.root / 'ios/xcodebuild.command.json')['exit'], 0)
+        self.assertEqual(sum('-resultBundlePath' in call for call in self.calls), 1)
+
     def process(self, argv, **kwargs):
         self.calls.append(argv)
         stream = kwargs['stdout']
