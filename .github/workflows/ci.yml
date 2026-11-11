@@ -17,6 +17,11 @@ on:
         type: string
         default: ''
 
+      swiftpm_regressions:
+        description: Run metric tile and Claude reset tests; omit account-menu comparison in comparison mode
+        type: boolean
+        default: false
+
       cost_source_role:
         description: Source measured by an automatic-cost control
         type: choice
@@ -245,6 +250,14 @@ jobs:
 
       - name: Run smoke harness
         run: xcrun swift run CodexBarIOSSmokeTests
+
+      - name: Run metric tile SwiftPM regressions
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.swiftpm_regressions }}
+        run: xcrun swift test --filter MetricTileContentRegressionTests
+
+      - name: Run Claude reset SwiftPM regressions
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.swiftpm_regressions }}
+        run: xcrun swift test --filter ClaudeUsageReset
 
       - name: Verify widget reset caption layout
         run: ./scripts/tests/widget-reset-layout-tests.sh
@@ -508,7 +521,7 @@ jobs:
 
   account-menu-comparison:
     name: Account menu comparison
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode == 'account-menu-comparison' && success() }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.ui_validation_mode == 'account-menu-comparison' && !inputs.swiftpm_regressions && success() }}
     needs:
       - swiftlint
       - strict-concurrency

@@ -60,6 +60,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Restore filtered SwiftPM test compilation after Google provider removal, using
+  a provider-independent metric fixture. Manual CI can run the metric tile and
+  Claude reset regressions without UI journeys.
+  ([#562](https://github.com/hemsoft-dev/codexbar-ios/issues/562))
+
 - Ad-hoc-sign simulator unit-test hosts in manual validation so saved-account
   migration tests can exercise the real Keychain without developer credentials.
 
