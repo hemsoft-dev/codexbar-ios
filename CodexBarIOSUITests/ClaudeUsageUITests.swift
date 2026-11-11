@@ -2,7 +2,7 @@ import XCTest
 
 @MainActor
 final class ClaudeUsageUITests: XCTestCase {
-    func testSavedResetSelectionExplainsAppRestriction() {
+    private func exerciseSavedResetSelection() {
         continueAfterFailure = false
         let app = launch(scenario: "claude-resets-selection", runID: UUID().uuidString)
         tap(app.buttons["claude-view-resets-ui-claude"], in: app)
@@ -24,7 +24,7 @@ final class ClaudeUsageUITests: XCTestCase {
         app.terminate()
     }
 
-    func testSelectedUnusableResetPreservesProviderStatus() {
+    private func exerciseSelectedUnusableReset() {
         continueAfterFailure = false
         for scenario in ["claude-resets-unusable-limit", "claude-resets-unusable-no-limit"] {
             let app = launch(scenario: scenario, runID: UUID().uuidString)
@@ -41,6 +41,8 @@ final class ClaudeUsageUITests: XCTestCase {
 
     func testWindowLabelsAndSavedCustomizationForProAndMax() {
         continueAfterFailure = false
+        exerciseSavedResetSelection()
+        exerciseSelectedUnusableReset()
         for scenario in ["claude-pro", "claude-max"] {
             let runID = UUID().uuidString
             let app = launch(scenario: scenario, runID: runID)
