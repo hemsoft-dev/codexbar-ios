@@ -868,7 +868,8 @@ final class SubscriptionBillingTests: XCTestCase {
 
         viewModel.startSubscriptionBillingSignIn()
         let replacement = try XCTUnwrap(viewModel.subscriptionBillingSession)
-        window.rootViewController?.view = replacement.webView
+        let replacementWindow = try hostBillingWebView(replacement.webView)
+        defer { replacementWindow.isHidden = true }
         XCTAssertTrue(store.saveSecret("replacement-token", for: account))
         replacement.start()
         let replacementLoaded = await waitUntil { !replacement.webView.isLoading && replacement.webView.url?.host == "grok.com" }
@@ -891,6 +892,7 @@ final class SubscriptionBillingTests: XCTestCase {
         window.rootViewController = controller
         window.makeKeyAndVisible()
         window.layoutIfNeeded()
+        XCTAssertNotNil(webView.window, "Billing fixtures must run in a visible simulator window")
         return window
     }
 
