@@ -2467,10 +2467,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         let executorWitness = Task.detached(priority: Task.currentPriority) {
             record("global-executor witness entered")
             // One diagnostic timer, never a retry or a wait used to satisfy an assertion.
-            do { try await Task.sleep(for: .milliseconds(5)) } catch {
-                record("global-executor timer cancelled")
-                return
-            }
+            do { try await Task.sleep(for: .milliseconds(5)) } catch { return }
             record("global-executor timer returned")
             await MainActor.run { record("main-actor witness after global timer") }
         }

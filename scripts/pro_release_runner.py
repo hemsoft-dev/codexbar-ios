@@ -66,6 +66,19 @@ def json_command(output, name, argv):
     return value
 
 
+def emit_watch_transition_trace(log):
+    """Preserve bounded synthetic telemetry before later manual phases can fail."""
+    count = 0
+    with log.open() as stream:
+        for line in stream:
+            if line.startswith('[ios564-transition '):
+                if count >= 8 or len(line) > 8192:
+                    raise ValueError('Watch transition trace exceeded its diagnostic bound')
+                print(line.rstrip(), flush=True)
+                count += 1
+    print(f'Watch transition diagnostic records: {count}', flush=True)
+
+
 def device_record(identifier, family, tools, runtime_path=None):
     inventory = json.loads(capture(['xcrun', 'simctl', 'list', '--json']))
     matches = [(runtime, device) for runtime in inventory['runtimes']
@@ -592,6 +605,12 @@ class Runner:
             failure = error if isinstance(error, PhaseFailure) else PhaseFailure(str(error))
             receipt.update(exit=failure.code, error=str(error))
         receipt['ended'] = now()
+        if name == 'ios':
+            try:
+                emit_watch_transition_trace(folder / 'xcodebuild.log')
+            except (OSError, ValueError) as error:
+                receipt['watchTransitionTraceError'] = str(error)
+                failure = failure or PhaseFailure(str(error))
         if name in OBSERVER_PHASES:
             try:
                 receipt['nativeObserver'] = collect_native_observer(self, folder, result, receipt)

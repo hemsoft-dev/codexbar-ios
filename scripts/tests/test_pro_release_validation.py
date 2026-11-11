@@ -1,6 +1,8 @@
 """Manual-only release harness fixtures; no Xcode, simulator, or network work."""
+import contextlib
 import copy
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -36,6 +38,32 @@ def result_fixture(identities):
              for identity in identities]
     tree = dict(devices=[device], testNodes=[dict(nodeType='Unit test bundle', name='CodexBarIOSTests', children=cases)])
     return summary, tree, device
+
+
+class WatchTransitionTraceTests(unittest.TestCase):
+    def test_compact_trace_survives_a_later_phase_failure_without_unrelated_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'xcodebuild.log'
+            trace = '[ios564-transition delay=0.005 seconds] synthetic event'
+            log.write_text('Unrelated test output\n' + trace + '\n')
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output), self.assertRaisesRegex(RuntimeError, 'later phase'):
+                RUNNER.emit_watch_transition_trace(log)
+                raise RuntimeError('later phase failed before artifacts upload')
+            self.assertEqual(output.getvalue(), trace + '\nWatch transition diagnostic records: 1\n')
+
+    def test_trace_output_is_bounded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'xcodebuild.log'
+            for text in ('[ios564-transition fixture] ' + 'x' * 8192,
+                         '[ios564-transition fixture] event\n' * 9):
+                log.write_text(text)
+                with contextlib.redirect_stdout(io.StringIO()), self.assertRaisesRegex(ValueError, 'diagnostic bound'):
+                    RUNNER.emit_watch_transition_trace(log)
+
+    def test_missing_log_is_not_a_successful_diagnostic(self):
+        with tempfile.TemporaryDirectory() as directory, self.assertRaises(FileNotFoundError):
+            RUNNER.emit_watch_transition_trace(Path(directory) / 'missing.log')
 
 
 class PhaseResultTests(unittest.TestCase):
