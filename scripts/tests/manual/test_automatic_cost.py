@@ -202,7 +202,9 @@ class CostControls(unittest.TestCase):
                 COST.command('git', 'status')
         self.assertEqual(run.call_count, 1)
 
-    def test_removing_only_cost_mode_restores_complete_prior_workflow(self):
+    def test_removing_only_cost_mode_preserves_pinned_remaining_workflow(self):
+        # The remaining workflow includes #562's opt-in manual SwiftPM tests.
+        # Keep the full-text pin, including the unchanged automatic job.
         restored = WORKFLOW.replace(
             'Full release gate, focused account-menu diagnosis, or automatic-cost control',
             'Full release gate or focused native account-menu diagnosis',
@@ -216,7 +218,7 @@ class CostControls(unittest.TestCase):
             "          fetch-depth: ${{ inputs.ui_validation_mode == 'automatic-cost' && '0' || '1' }}\n", '', 1,
         ).replace("          ref: ${{ inputs.ui_validation_mode == 'automatic-cost' && github.sha || '' }}\n", '', 1).replace(COST.MANUAL_GUARD, '', 1).replace(" && inputs.ui_validation_mode != 'automatic-cost'", '')
         self.assertEqual(hashlib.sha256(restored.encode()).hexdigest(),
-                         'a42e96c0bb86bf3d840a8067dabf696c137d5b8717e8664a3b1b59623e19df89')
+                         'c939b1ed55948e2e0cdaf617bee22124809928b4b3801af7605d0189cdec5156')
 
     def test_branch_dispatch_pins_only_cost_checkout_to_immutable_sha(self):
         checkout = WORKFLOW.split('    steps:\n', 1)[1].split(COST.MANUAL_GUARD, 1)[0]

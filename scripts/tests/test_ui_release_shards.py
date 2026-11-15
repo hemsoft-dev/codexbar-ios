@@ -161,11 +161,11 @@ class UIShardTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(script.encode()).hexdigest(),
                          '4f299b77c869f5674c5fc63a9af4cd208a0ac17c39a43b8b88b8538763229ead')
         # Removing the approved step and its job-level grant must recover the
-        # pre-relay workflow plus the explicit manual cost-only mode. The separate
-        # manual cost controls recover the complete older workflow byte-for-byte.
+        # pre-relay workflow plus the explicit manual cost-only mode and the
+        # opt-in SwiftPM regressions (#562). Pin the full remaining workflow.
         restored = workflow.replace(notifier, '').replace('      pull-requests: write\n', '', 1)
         self.assertEqual(hashlib.sha256(restored.encode()).hexdigest(),
-                         '0c10b64a94fbcdd2cf9eb120f42f31bcb3e3d3b91ea7e5de8a9c3b848188c357')
+                         '71e478372406a8e2c475c0d6af314c0084e887550c65ffbd1897d907bfe3eb72')
 
 
 if __name__ == '__main__':

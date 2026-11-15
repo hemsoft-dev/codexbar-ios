@@ -1,6 +1,8 @@
 """Manual-only release harness fixtures; no Xcode, simulator, or network work."""
+import contextlib
 import copy
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -36,6 +38,32 @@ def result_fixture(identities):
              for identity in identities]
     tree = dict(devices=[device], testNodes=[dict(nodeType='Unit test bundle', name='CodexBarIOSTests', children=cases)])
     return summary, tree, device
+
+
+class WatchTransitionTraceTests(unittest.TestCase):
+    def test_compact_trace_survives_a_later_phase_failure_without_unrelated_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'xcodebuild.log'
+            trace = '[ios564-transition delay=0.005 seconds] synthetic event'
+            log.write_text('Unrelated test output\n' + trace + '\n')
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output), self.assertRaisesRegex(RuntimeError, 'later phase'):
+                RUNNER.emit_watch_transition_trace(log)
+                raise RuntimeError('later phase failed before artifacts upload')
+            self.assertEqual(output.getvalue(), trace + '\nWatch transition diagnostic records: 1\n')
+
+    def test_trace_output_is_bounded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'xcodebuild.log'
+            for text in ('[ios564-transition fixture] ' + 'x' * 8192,
+                         '[ios564-transition fixture] event\n' * 9):
+                log.write_text(text)
+                with contextlib.redirect_stdout(io.StringIO()), self.assertRaisesRegex(ValueError, 'diagnostic bound'):
+                    RUNNER.emit_watch_transition_trace(log)
+
+    def test_missing_log_is_not_a_successful_diagnostic(self):
+        with tempfile.TemporaryDirectory() as directory, self.assertRaises(FileNotFoundError):
+            RUNNER.emit_watch_transition_trace(Path(directory) / 'missing.log')
 
 
 class PhaseResultTests(unittest.TestCase):
@@ -223,11 +251,54 @@ class RunnerCommandFailureTests(unittest.TestCase):
                 pass
         self.assertNotIn('restart', self.storekit_restarts())
 
+    def ordinary_build(self):
+        path = self.root / 'build-ios.json'
+        EVIDENCE.write(path, dict(EVIDENCE.read(self.build), scheme='CodexBarIOS', native=False,
+                                 derivedData=str(self.root / 'DerivedData-ios')))
+        return path
+
+    def test_ios_phase_emits_trace_before_result_inspection_and_later_failure(self):
+        self.ordinary_trace = '[ios564-transition fixture] original deadline retained\n'
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), self.assertRaisesRegex(RuntimeError, 'later native phase'):
+            receipt = self.runner.phase('ios', self.ordinary_build())
+            self.assertEqual(receipt['exit'], 0)
+            raise RuntimeError('later native phase failed before artifact upload')
+        printed = output.getvalue()
+        self.assertIn(self.ordinary_trace, printed)
+        self.assertLess(printed.index(self.ordinary_trace), printed.index('summary:'))
+        self.assertNotIn('restart', self.storekit_restarts())
+
+    def test_ios_phase_trace_failure_preserves_original_xcode_exit(self):
+        self.ordinary_trace = '[ios564-transition fixture] ' + 'x' * 8192 + '\n'
+        self.exit_codes['ios'] = 65
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()), \
+                self.assertRaises(RUNNER.PhaseFailure) as caught:
+            self.runner.phase('ios', self.ordinary_build())
+        self.assertEqual(caught.exception.code, 65)
+        receipt = EVIDENCE.read(self.root / 'ios/receipt.json')
+        self.assertEqual(receipt['exit'], 65)
+        self.assertIn('diagnostic bound', receipt['watchTransitionTraceError'])
+        self.assertEqual(sum('-resultBundlePath' in call for call in self.calls), 1)
+
+    def test_ios_phase_trace_failure_cannot_pass_successful_xcode(self):
+        self.ordinary_trace = '[ios564-transition fixture] event\n' * 9
+        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(RUNNER.PhaseFailure) as caught:
+            self.runner.phase('ios', self.ordinary_build())
+        self.assertEqual(caught.exception.code, 1)
+        receipt = EVIDENCE.read(self.root / 'ios/receipt.json')
+        self.assertEqual(receipt['exit'], 1)
+        self.assertIn('diagnostic bound', receipt['watchTransitionTraceError'])
+        self.assertEqual(EVIDENCE.read(self.root / 'ios/xcodebuild.command.json')['exit'], 0)
+        self.assertEqual(sum('-resultBundlePath' in call for call in self.calls), 1)
+
     def process(self, argv, **kwargs):
         self.calls.append(argv)
         stream = kwargs['stdout']
         if '-enumerate-tests' in argv:
             tests = sorted(item.removeprefix('-only-testing:') for item in argv if item.startswith('-only-testing:'))
+            if '-scheme' in argv and argv[argv.index('-scheme')+1] == 'CodexBarIOS' and not tests:
+                tests = sorted(self.manifest['shared_pro_tests'])
             EVIDENCE.write(argv[argv.index('-test-enumeration-output-path')+1], discovery_fixture(tests))
             stream.write('enumerated\n')
         elif '-resultBundlePath' in argv:
@@ -235,6 +306,8 @@ class RunnerCommandFailureTests(unittest.TestCase):
             path.mkdir()
             (path / 'Info.plist').write_text(path.parent.name)
             stream.write('retained xcode execution log\n')
+            if path.parent.name == 'ios':
+                stream.write(self.ordinary_trace)
             return SimpleNamespace(returncode=self.exit_codes.get(path.parent.name, 0))
         elif 'test-results' in argv:
             if self.extraction_error:
@@ -242,7 +315,7 @@ class RunnerCommandFailureTests(unittest.TestCase):
             phase = Path(argv[-1]).parent.name
             if self.lazy_result_database:
                 (Path(argv[-1]) / 'database.sqlite3').write_text('lazy xcresult index')
-            tests = self.manifest['phases'][phase]['tests']
+            tests = self.manifest['shared_pro_tests'] if phase == 'ios' else self.manifest['phases'][phase]['tests']
             summary, tree, _ = result_fixture(tests)
             summary.update(startTime=time.time() - .1, finishTime=time.time())
             stream.write(json.dumps(summary if 'summary' in argv else tree))
