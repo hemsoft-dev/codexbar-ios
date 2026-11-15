@@ -16,10 +16,11 @@ still require his separate approval.
 The last live source is
 [`v1.4.0`, 54b2a48](https://github.com/hemsoft-dev/codexbar-ios/tree/v1.4.0).
 The candidate is version 2.0.0, build 6 in all fourteen project configurations.
-The [2.0 changelog](../CHANGELOG.md#200---2026-10-22) remains Unreleased
-until the release date is established. October 23 records the planned submission
-target only. Update its heading and all inbound anchors together when that date
-is known. Published 1.x history is unchanged.
+At preparation time the 2.0 changelog remained Unreleased, and October 23 was
+only a submission target. The later [2.0 changelog](../CHANGELOG.md#200---2026-10-23)
+records the observed October 23 public release of build 5 and its separate
+October 22 submission. This abandoned build-6 candidate was not distributed.
+Published 1.x history is unchanged.
 
 The [local What's New](../fastlane/metadata/en-US/release_notes.txt) summarizes
 customer changes since 1.4.0. It excludes Developer Experience work, synthetic

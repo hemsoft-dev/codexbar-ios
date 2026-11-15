@@ -1,5 +1,11 @@
 # Pro setup acceptance checkpoint
 
+This is a dated October 29 checkpoint. The November 15
+[post-launch reconciliation](../APP-STORE.md#post-launch-status) supersedes
+its pending launch/price and owner-action instructions. No store action is
+authorized by this historical record. The current issue bodies retain the
+remaining account and production criteria separately.
+
 For [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469), checked October
 29, 2026. No App Store Connect changes, purchases or submissions were made.
 This distinguishes completed setup from the remaining release and owner steps.
@@ -16,7 +22,7 @@ This distinguishes completed setup from the remaining release and owner steps.
 | Description links to standard EULA and privacy; promotional text | Done. [Description](../fastlane/metadata/en-US/description.txt) and [promotion](../fastlane/metadata/en-US/promotional_text.txt); submitted copy confirmed October 22. No live metadata was overwritten with current 2.0.1 preparation. |
 | Product page labels widgets, multiple accounts and long history Pro | Submitted assets done per October 18/22 receipts. [Caption manifest](../release-assets/2.0.0/captions.json) labels these CodexBar Pro. The [October 21 image evidence](https://github.com/hemsoft-dev/codexbar-ios/issues/469#issuecomment-6331740815) is source 30f8f208/build 6, not shipping build 5 or current main. The [live page](#live-product-page-and-privacy) still serves these labeled images. Fresh current-main captures are in [simulator evidence](#simulator-evidence); they are not shipping build 5. |
 | Privacy label Data Not Collected | Done. The published US product page shows Data Not Collected on October 29 ([live check](#live-product-page-and-privacy)). The public API does not expose the questionnaire; the published label is the evidence. |
-| Changelog matches shipped 2.0 | Checked [2.0.0 section](../CHANGELOG.md#200---2026-10-22) against build-5 release record. It records submission October 22; public release observed October 23. 2.0.1 remains Unreleased, including #529. Do not relabel the historical submission date as an observed release time. |
+| Changelog matches shipped 2.0 | Checked the [2.0.0 section](../CHANGELOG.md#200---2026-10-23) against the build-5 release record. The November 15 correction dates the heading to the observed October 23 public release and retains October 22 as the separate submission date. 2.0.1 remains Unreleased. |
 | Build number at least 5 | Done. October 29 version/build GET confirms selected VALID build 5, ID e224b2b9-c59a-44ff-bd92-d1ed7a0f6b02. Main carries later build preparation. |
 | Small Business Program before shipping | Missed/unverified. [October 21 receipt](https://github.com/hemsoft-dev/codexbar-ios/issues/469#issuecomment-6326082769) inferred non-enrollment from proceeds. The [October 22 update](https://github.com/hemsoft-dev/codexbar-ios/issues/469#issuecomment-6340791288) marks enrollment optional. Neither proves current enrollment or waives it on Franz's behalf. 2.0 has already shipped; enrollment now cannot satisfy the original timing criterion retroactively. |
 

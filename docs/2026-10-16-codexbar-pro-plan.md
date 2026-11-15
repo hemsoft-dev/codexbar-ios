@@ -1,5 +1,18 @@
 # CodexBar Pro plan for iOS and watchOS
 
+**Historical launch plan.** As reconciled on November 15, 2026, Franz
+[reports that 2.0 has already launched](https://discord.com/channels/268484937475293186/1562562816714473585/1571622861884493926).
+The [release tracker](../APP-STORE.md#post-launch-status) records public
+distribution on October 23, the Free transition, and his post-cutoff
+original-purchaser confirmation. Remaining production/account criteria stay
+open individually under [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469)
+and [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470).
+The launch and rollback instructions,
+build-4 baseline and pre-shipping deadlines below are retained as the original
+plan, not pending work or permission for store actions. `T` is fixed at
+October 31, 2026, 8:00 PM EDT. Development changes belong in
+`2.0.1 - Unreleased`; the standing release hold remains in force.
+
 Plan for [issue #441](https://github.com/hemsoft-dev/codexbar-ios/issues/441), written October 16, 2026. CodexBar 2.0 moves the iOS app, with its watchOS companion and widgets, from a US$3.99 one-time purchase to a free download plus **CodexBar Pro**. There are no ads.
 
 Franz made the product decisions on 2026-10-16; they are recorded in the issue's Decisions table. This document turns them into states, rules, a launch sequence and follow-up work. Other platforms are planned separately in [#459](https://github.com/hemsoft-dev/codexbar-ios/issues/459).

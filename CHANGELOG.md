@@ -60,6 +60,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Correct the 2.0 launch record and separate completed release work from
+  individually unverified production and account checks. Attribute the
+  original-purchaser result to Franz and retain historical validation failures.
+  ([#566](https://github.com/hemsoft-dev/codexbar-ios/issues/566))
+
 - Restore filtered SwiftPM test compilation after Google provider removal, using
   a provider-independent metric fixture. Manual CI can run the metric tile and
   Claude reset regressions without UI journeys.
@@ -160,10 +165,13 @@ building, testing, or releasing the app.
   Store distribution and purchase portability remain unqualified.
   ([#476](https://github.com/hemsoft-dev/codexbar-ios/issues/476))
 
-## 2.0.0 - 2026-10-22
+## 2.0.0 - 2026-10-23
 
-Build 5 was submitted for App Review on October 22, 2026. Distribution is
-tracked in the [release tracker](APP-STORE.md#codexbar-20-policy-and-preparation).
+Build 5 was submitted for App Review on October 22, 2026. The
+[October 23 readback](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6376812259)
+records public distribution at 11:56:39 AM EDT that day. See the
+[release tracker](APP-STORE.md#post-launch-status) for completed launch work
+and remaining verification.
 
 ### Added
 

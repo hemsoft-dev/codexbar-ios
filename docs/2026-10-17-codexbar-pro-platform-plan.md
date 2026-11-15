@@ -14,7 +14,7 @@ This recommendation is reversible today. Until Franz accepts the decisions below
 
 | Order | Work and exit condition |
 | --- | --- |
-| 0 | Complete the separately tracked [iOS/watchOS 2.0 release](https://github.com/hemsoft-dev/codexbar-ios/issues/470). Preserve the existing lifetime promise and offline behavior. |
+| 0 | Launch completed: public 2.0.0 distribution was observed October 23, and Franz confirmed the launch in his [November 15 request](https://discord.com/channels/268484937475293186/1562562816714473585/1571622861884493926). Retain the [remaining production checks](https://github.com/hemsoft-dev/codexbar-ios/issues/470) individually; see [current status](../APP-STORE.md#post-launch-status). The existing lifetime promise and offline behavior remain. |
 | 1 | Qualify the native Mac App Store route against provider authorization, sandboxing, universal purchase and original-purchaser restore. The existing iPhone app running on Apple silicon is a different distribution case, not proof of a native Mac product. |
 | 2 | Ratify the shared-entitlement boundary, account/privacy cost, original-buyer scope, processor responsibilities and launch regions. Prove the state contract with synthetic purchases before any real checkout. |
 | 3 | Pilot one non-Apple channel chosen by Franz. Recommend a Windows desktop build with third-party commerce, then evaluate its Microsoft Store packaging. Do not change another repository under this issue. |
