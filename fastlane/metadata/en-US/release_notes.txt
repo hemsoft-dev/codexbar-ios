@@ -1,5 +1,11 @@
-CodexBar 2.0.1
+CodexBar 2.1.0
 
-Google providers are no longer supported. Saved Google accounts and credentials are removed on upgrade. Your other accounts, groups and usage history remain available.
+Google Gemini and Antigravity are no longer supported on iOS. Saved Google accounts, credentials and website sessions are removed on upgrade. Your other accounts, groups and usage history remain available.
+
+Claude cards show the plan reported by your organization, including Ultra and Max where supported. Saved resets explain when CodexBar can use only the reset Claude selects.
+
+The dashboard and weekly quota details focus on usage and reset times, with subscription scores removed. Missing Grok and X Subscription usage stays unavailable instead of appearing as zero.
+
+Claude billing opens the provider's own page. Automatic use of saved Claude billing sessions is paused; saved data remains until you disconnect. Usage retrieval is unchanged. This does not supply an automatic renewal date.
 
 Provider data depends on your account and service. This update does not add Google-backed Greptile billing access or Muse Code usage on iPhone.
