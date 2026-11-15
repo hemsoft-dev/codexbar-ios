@@ -2,7 +2,47 @@
 
 This document tracks the work required to ship CodexBar for iOS and iPadOS through TestFlight and App Store review.
 
-Status last reviewed: October 31, 2026
+Status last reviewed: November 15, 2026
+
+## Post-launch status
+
+**2.0 has launched.** Franz explicitly confirmed this in his
+[November 15 progress request](https://discord.com/channels/268484937475293186/1562562816714473585/1571622861884493926).
+The existing [October 23 readback](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6376812259)
+records public 2.0.0 distribution at 11:56:39 AM EDT. This update reconciles
+those records; it is not a fresh App Store or App Store Connect observation.
+Development source is **2.0.1 build 6, Unreleased**, distinct from distributed
+**2.0.0 build 5**. The launch sequence below is retained history.
+
+Franz also [confirmed lifetime Pro on his production iPhone after the cutoff](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6551367292)
+on October 31 at 8:37 PM EDT. This is a human-reported result without a
+screenshot. It resolves that specific check, not new-customer commerce or
+Family Sharing.
+
+The [November 1 release hold](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6569029608)
+still prohibits new versions, submissions, TestFlight uploads, pricing and
+App Store Connect changes. Ordinary source work and reviewed merges continue.
+The launch report does not lift that hold. Keep `T` fixed at October 31,
+2026, 8:00 PM EDT and preserve Free pricing.
+
+### Remaining work and next triggers
+
+These are bounded follow-ups, not instructions to repeat the launch. Dated
+evidence is retained below and in the existing issues.
+
+| Existing issue | Remaining criterion | Owner and next actual trigger |
+| --- | --- | --- |
+| [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469) | Small Business Program decision, current account/disclosure verification, and canonical privacy URL | Franz owns the account decision. Reconcile an explicit enrollment/non-enrollment report when supplied. A future authorized editable appInfo is required for the URL change; the prior attempt returned 409. No ASC write is authorized now. |
+| [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) | New-customer production Free download, Pro screen, eligible trial and Restore; family-device result; public Free visibility beyond the six-country sample | Record each result separately when Franz supplies production evidence or authorizes the specific check. Synthetic captures do not prove production behavior. The original-purchaser result above is complete. |
+| [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) | Supported Google-backed Greptile billing grant and callback/session contract | Resume implementation when a consumer-supported provider contract exists. The delivered unsupported-sign-in explanation remains useful; do not invent billing access. |
+| [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548) | Claude usage-authentication permission and client identity | Resume qualification on a verified provider permission/client contract. Existing runtime success and first-party UI screenshots do not establish permission. |
+| [#558](https://github.com/hemsoft-dev/codexbar-ios/issues/558), [#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559), [#560](https://github.com/hemsoft-dev/codexbar-ios/issues/560) | Product-usage payload, Fable reset identifiers/redemption semantics, promotional balance/expiry payload | Use verified sanitized provider contracts, subject to #548. Preserve useful existing usage and the selected-reset explanation; omit unknown fields and unsupported actions. No live probe or reset redemption is authorized. |
+| [#564](https://github.com/hemsoft-dev/codexbar-ios/issues/564), [#565](https://github.com/hemsoft-dev/codexbar-ios/issues/565) | Watch timing and synthetic billing-grace causes remain unqualified | Resume on new failing diagnostics or demonstrated interference. Retain the November 15 static diagnosis receipts and delivered same-payload metadata correction. Do not repeat unchanged investigation or run tests just to obtain green results. |
+
+Build 5's hosted full UI gate **did not pass**. Shipping cannot satisfy that
+historical criterion retroactively. Its release actor and explicit exception
+rationale remain unverified. Retain the failure below; no historical rerun is
+pending. Any future authorized candidate needs its own release qualification.
 
 ## CodexBar 2.0 policy and preparation
 
@@ -24,11 +64,10 @@ App Store Connect readback below. Live App Store pages showed Free in six
 sampled storefronts by October 30, 9:0x AM EDT, while the lookup API lagged.
 The October 31, 8:30 PM EDT live-page check still showed Free after cutover T.
 The earlier US$3.99 rollout remains recorded as history. This documentation update makes no App Store Connect write. [Issue #469](https://github.com/hemsoft-dev/codexbar-ios/issues/469)
-owns the disclosures and draft products;
-[issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) owns final
-qualification, submission, release and the timed price change.
-Keep both issues open until their actual acceptance criteria are complete;
-merged preparation code and saved draft settings do not qualify a release.
+owns remaining account and disclosure verification;
+[issue #470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) owns the
+remaining post-launch production checks. Submission, observed release and
+the Free transition are recorded outcomes, not pending launch work.
 
 ### Post-cutover storefront record, October 31
 
@@ -135,8 +174,9 @@ Franz's own production-device check of a new Free download, Pro, eligible trial
 and Restore remains pending. Local Xcode StoreKit cannot establish production
 purchase eligibility, original-purchaser recognition or Family Sharing. Franz's
 [October 25 original-purchaser pass](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6401351346)
-remains a separate historical result; a fresh post-T check on his own device
-and the family-device check remain pending.
+is a separate historical result, followed by his confirmed October 31,
+8:37 PM EDT post-T pass linked above.
+The family-device check remains unverified.
 
 ### October 29 confirmed Free configuration
 
@@ -278,8 +318,8 @@ release. Review submission `af75f0db-4b2c-403d-81e2-c3b14ab05986` was submitted
 on October 22, 2026 at 8:20 AM EDT, `2026-10-22T12:20:11Z`. It holds five
 items: the app version, the CodexBar Pro group version, and the monthly, yearly
 and lifetime versions. The October 29 GET readback confirms version `READY_FOR_SALE` and all three
-products `APPROVED`. Do not prepare or submit another draft; continue the
-[launch sequence](#approved-launch-sequence). The three local
+products `APPROVED`. The launch is complete; use the
+[post-launch status](#post-launch-status) for remaining work. The three local
 StoreKit review screenshots demonstrate app UI and test-configuration prices.
 They do not establish live App Store prices or production original-purchaser
 access.
@@ -296,14 +336,14 @@ products.
 The [October 21 scope record](docs/2026-10-21-pro-scope-decisions.md) keeps
 Pro Apple-local and native Mac qualification provisional.
 
-The [description](fastlane/metadata/en-US/description.txt),
+The submitted 2.0 [description](fastlane/metadata/en-US/description.txt),
 [promotional text](fastlane/metadata/en-US/promotional_text.txt),
 [release notes](fastlane/metadata/en-US/release_notes.txt) and
-[review notes](fastlane/metadata/review_information/notes.txt) are prepared for
-2.0. They match the copy submitted with build 5 in App Store Connect,
-including the 1,845-character What's New text, as read back on October 22.
-Do not copy the
-2.0 metadata onto the live 1.4.0 listing. The description includes Apple's
+[review notes](fastlane/metadata/review_information/notes.txt) were read back
+on October 22, including the 1,845-character What's New text. The linked
+working files now include later preparation; release notes were aligned to
+Unreleased 2.0.1 in [PR #539](https://github.com/hemsoft-dev/codexbar-ios/pull/539).
+They are not a snapshot of live metadata. The description includes Apple's
 [standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/)
 and the public [privacy policy](https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md).
 The existing GitHub privacy and support URLs remain the release destinations.
@@ -317,8 +357,9 @@ is superseded: Franz kept build 5 and build 6 was never uploaded
 The submitted release is `2.0.0 (5)`, built from
 `62f6d8e392360b91cb704c2503e9796f8ddc285c`. The project now carries build
 number 6 so that any later upload is numbered above build 5.
-The [2.0 changelog](CHANGELOG.md#200---2026-10-22) is dated with the
-submission date, as 1.4.0 was; record the observed release date in this ledger. The [privacy policy](PRIVACY.md) is effective
+The [2.0 changelog](CHANGELOG.md#200---2026-10-23) is dated with the
+observed public release date, October 23; submission was October 22.
+The [privacy policy](PRIVACY.md) is effective
 October 18; that date does not record App Store submission or distribution.
 The cutoff `T` compiled into build 5 is **final: October 31, 2026 at 8:00 PM
 EDT**, which is `2026-11-01T00:00:00Z`. It cannot change without a new binary.
@@ -351,12 +392,17 @@ agent-owned implementation or automated delivery.
 
 ### Approved launch sequence
 
+Historical procedure for the completed 2.0 launch. Its dates and conditional
+rollback branches must not be reused as authority for future store actions.
+The [post-launch status](#post-launch-status) records remaining work and the
+standing release hold.
+
 1. Before submission, set `T` to 00:00 UTC fourteen calendar days after the
    planned submission date. Confirm that the 1.4.0 review is finished. Require
    version 2.0.0 and build 5 or higher across the app and embedded products,
    then verify the built archive rather than relying only on project text.
    Recheck the cutoff disclosures, the privacy policy's effective date and
-   the [2.0 changelog](CHANGELOG.md#200---2026-10-22) against the final candidate.
+   the [2.0 changelog](CHANGELOG.md#200---2026-10-23) against the final candidate.
 2. Submit 2.0 and all first Pro products together through the
    [App Store Connect website](https://appstoreconnect.apple.com).
    Verify the subscription group and all three products are in the same draft
@@ -402,10 +448,10 @@ configuration uses this after-price-change branch. T remains fixed.
 | Manual release | No later than October 25, 8 PM EDT | Observed public October 23, 11:56:39 AM EDT, `2026-10-23T15:56:39Z`; actor/action timestamp unverified | 2.0.0 in six countries October 29 | Same build | None |
 | Propagation | Wait full 48 hours after release | October 29 readback exceeds 48 hours | US, CA, GB, DE, JP, AU all 2.0.0; not proof of every territory | Same build/T | None |
 | Free schedule | Franz reports completed October 29, 2:54 PM EDT; target October 28 was missed | GET confirms 175/175 current zero-price records at 2:55:54 PM EDT; all start/end dates null | Six live pages Free by October 30, 9:0x AM EDT while lookup lagged; still Free October 31, 8:30 PM EDT | Same build/T; per-territory receipt above | All-territory public visibility unverified |
-| Post-cutoff | After October 31, 8 PM EDT | T passed; no ASC mutation in this verification | Six live pages Free at 8:30 PM EDT; simulator evidence above is separate | Distributed 2.0.0 (5), same T; simulator source recorded above | Own-device new Free download, Pro, trial, Restore, fresh original-purchaser and family-device checks |
+| Post-cutoff | After October 31, 8 PM EDT | T passed; no ASC mutation in this verification | Six live pages Free at 8:30 PM EDT; simulator evidence above is separate; Franz reported original-purchaser lifetime Pro at 8:37 PM EDT | Distributed 2.0.0 (5), same T; simulator source recorded above | Own-device new Free download, Pro, trial, Restore and family-device checks |
 
-The release ledger stays open through the price transition and post-cutoff
-checks. Completed and remaining actions follow:
+Launch and price transition are complete. The remaining post-cutoff checks
+stay open individually. Completed and remaining actions follow:
 
 - [x] Freeze build 5 at `62f6d8e` and verify the cutoff, release copy and built
   `2.0.0 (5)` versions.
@@ -430,8 +476,11 @@ checks. Completed and remaining actions follow:
 - [x] Record the Free configuration in all 175 territories and the six-country
   live-page Free sample before T. Exact regional effective times and pre-T
   public visibility in every territory remain unverified.
-- [ ] Record post-cutoff production checks and Franz's original-purchase and
-  Family Sharing results without treating pending checks as passes.
+- [x] Record Franz's October 31 post-cutoff original-purchaser lifetime-Pro
+  confirmation, attributed as a human report without a screenshot.
+- [ ] Record new-customer production Free download, Pro screen, eligible trial
+  and Restore results. The simulator evidence above is separate.
+- [ ] Record the family-device result. No production Family Sharing pass is claimed.
 
 ### Build 5 qualification and submission
 
@@ -452,7 +501,8 @@ native/UI passes are recorded separately; the hosted gate is not green.
 [Hosted security](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/39315802645)
 passed. Hosted performance was inconclusive; the local paired experiment passed.
 Franz submitted build 5 on the local exact-source passes. The hosted gate
-remains a release prerequisite and is being rerun on the same SHA.
+did not pass before distribution. Later attempts and failures are recorded
+above; no further same-SHA rerun is pending.
 
 The build 5 archive and export passed signature, provisioning, bundle-version,
 privacy-manifest and export-compliance verification. The IPA SHA-256 is
@@ -472,7 +522,8 @@ without the group version
 items from a first-product draft; removed products can stay locked.
 Build 6 preparation, including a November 6 cutoff, was dropped and never
 uploaded. Release, pricing, availability and spending still require Franz's
-approval at the concrete step.
+authorization under the standing release hold. This paragraph records the
+October submission history, not current permission to repeat it.
 
 ### Native marketing and review assets
 
@@ -514,15 +565,16 @@ fixture-isolation evidence separately from live App Store configuration.
 
 ### Copy and privacy release checks
 
-Use the family-deadline promotional text before `T`. After `T`, and only after
-worldwide Free is verified, replace it with this evergreen text:
+The launch plan used family-deadline promotional text before `T`. The following
+evergreen copy remains a draft for a future authorized metadata update, after
+worldwide Free is verified:
 
 ```text
 Start free with one AI account and 7-day history. CodexBar Pro adds all accounts, widgets, Watch, alerts and 90-day history. Original purchasers keep lifetime Pro.
 ```
 
-Remove the expired family-install request from What's New at the same
-transition. Keep the historical deadline and offer-code help in support copy.
+That update should remove the expired family-install request from What's New.
+Keep the historical deadline and offer-code help in support copy.
 Revalidate Apple's metadata limits after every timestamp change.
 
 Privacy remains **Data Not Collected** for this local-only implementation.
@@ -549,11 +601,12 @@ These fields do not verify the unpublished privacy questionnaire, legal
 agreements or Small Business Program status.
 
 Paid Apps Agreement status and Small Business Program membership remain
-**UNVERIFIED**. Enrollment remains pending for Franz, who must complete
-[Small Business Program enrollment](https://developer.apple.com/app-store/small-business-program/)
-before 2.0 ships. Do not infer enrollment or current agreement status from
-historical sales. These pending owner checks do not prevent preparation of
-repository copy, native assets or unsubmitted product drafts.
+**UNVERIFIED**. The original before-shipping enrollment timing was missed or
+unverified and cannot be satisfied retroactively. Franz owns the enrollment
+or non-enrollment decision; the [program page](https://developer.apple.com/app-store/small-business-program/)
+is retained for that decision. Do not infer enrollment or current agreement
+status from historical sales or the launch. These account checks do not
+prevent ordinary source preparation, and authorize no account or Store change.
 
 ## Published 1.x history and earlier preparation
 
