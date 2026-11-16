@@ -11,8 +11,17 @@ Status last reviewed: November 15, 2026
 The existing [October 23 readback](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6376812259)
 records public 2.0.0 distribution at 11:56:39 AM EDT. This update reconciles
 those records; it is not a fresh App Store or App Store Connect observation.
-Development source is **2.0.1 build 6, Unreleased**, distinct from distributed
+Development source is **2.1.0 build 6, Unreleased**, distinct from distributed
 **2.0.0 build 5**. The launch sequence below is retained history.
+
+[Next-version preparation](https://github.com/hemsoft-dev/codexbar-ios/issues/568)
+uses 2.1.0 for the merged provider and dashboard changes since shipped 2.0.
+All fourteen active project configurations retain build 6. The
+[changelog](CHANGELOG.md#210---unreleased) and local
+[draft release notes](fastlane/metadata/en-US/release_notes.txt) describe this
+development source. Build 6 is retained from the prior preparation. No new
+upload-inventory check or release qualification was performed for this metadata
+update.
 
 Franz also [confirmed lifetime Pro on his production iPhone after the cutoff](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6551367292)
 on October 31 at 8:37 PM EDT. This is a human-reported result without a
@@ -343,7 +352,9 @@ The submitted 2.0 [description](fastlane/metadata/en-US/description.txt),
 on October 22, including the 1,845-character What's New text. The linked
 working files now include later preparation; release notes were aligned to
 Unreleased 2.0.1 in [PR #539](https://github.com/hemsoft-dev/codexbar-ios/pull/539).
-They are not a snapshot of live metadata. The description includes Apple's
+The current draft now covers Unreleased 2.1.0 under
+[#568](https://github.com/hemsoft-dev/codexbar-ios/issues/568). These working
+files are not a snapshot of live metadata. The description includes Apple's
 [standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/)
 and the public [privacy policy](https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md).
 The existing GitHub privacy and support URLs remain the release destinations.

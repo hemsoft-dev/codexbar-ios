@@ -4,7 +4,7 @@ Notable changes to CodexBar are documented here. Entries describe shipped app
 behavior; development-only changes are listed separately when they affect
 building, testing, or releasing the app.
 
-## 2.0.1 - Unreleased
+## 2.1.0 - Unreleased
 
 ### Added
 
@@ -59,6 +59,12 @@ building, testing, or releasing the app.
 - Keep subscription access current when StoreKit briefly returns an earlier status at expiration. Background checks wait for Purchase and Restore to finish so they cannot interrupt those requests. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 ### Developer Experience
+
+- Prepare development version 2.1.0 across the app, widgets and Watch targets,
+  retaining build 6. Align draft release notes and current documentation with
+  the merged changes since shipped 2.0.0 build 5. This source preparation does
+  not publish a release or qualify the candidate for distribution.
+  ([#568](https://github.com/hemsoft-dev/codexbar-ios/issues/568))
 
 - Correct the 2.0 launch record and separate completed release work from
   individually unverified production and account checks. Attribute the

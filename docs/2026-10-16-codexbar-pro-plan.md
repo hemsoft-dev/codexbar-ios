@@ -11,7 +11,7 @@ The launch and rollback instructions,
 build-4 baseline and pre-shipping deadlines below are retained as the original
 plan, not pending work or permission for store actions. `T` is fixed at
 October 31, 2026, 8:00 PM EDT. Development changes belong in
-`2.0.1 - Unreleased`; the standing release hold remains in force.
+`2.1.0 - Unreleased`; the standing release hold remains in force.
 
 Plan for [issue #441](https://github.com/hemsoft-dev/codexbar-ios/issues/441), written October 16, 2026. CodexBar 2.0 moves the iOS app, with its watchOS companion and widgets, from a US$3.99 one-time purchase to a free download plus **CodexBar Pro**. There are no ads.
 
