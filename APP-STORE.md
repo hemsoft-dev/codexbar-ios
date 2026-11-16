@@ -10,7 +10,8 @@ Status last reviewed: November 15, 2026
 [November 15 progress request](https://discord.com/channels/268484937475293186/1562562816714473585/1571622861884493926).
 The existing [October 23 readback](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6376812259)
 records public 2.0.0 distribution at 11:56:39 AM EDT. This update reconciles
-those records; it is not a fresh App Store or App Store Connect observation.
+those records. A separate November 15 public-page observation is recorded
+below; no fresh App Store Connect observation was performed.
 Development source is **2.1.0 build 6, Unreleased**, distinct from distributed
 **2.0.0 build 5**. The launch sequence below is retained history.
 
@@ -42,7 +43,7 @@ evidence is retained below and in the existing issues.
 | Existing issue | Remaining criterion | Owner and next actual trigger |
 | --- | --- | --- |
 | [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469) | Small Business Program decision, current account/disclosure verification, and canonical privacy URL | Franz owns the account decision. Reconcile an explicit enrollment/non-enrollment report when supplied. A future authorized editable appInfo is required for the URL change; the prior attempt returned 409. No ASC write is authorized now. |
-| [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) | New-customer production Free download, Pro screen, eligible trial and Restore; family-device result; public Free visibility beyond the six-country sample | Record each result separately when Franz supplies production evidence or authorizes the specific check. Synthetic captures do not prove production behavior. The original-purchaser result above is complete. |
+| [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) | New-customer production Free download, Pro screen, eligible trial and Restore; family-device result; complete public Free coverage | Four additional public storefronts were observed November 15; collection stopped on a UAE timeout. Record production evidence separately when supplied or specifically authorized. Synthetic captures do not prove production behavior. The original-purchaser result above is complete. |
 | [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) | Supported Google-backed Greptile billing grant and callback/session contract | Resume implementation when a consumer-supported provider contract exists. The delivered unsupported-sign-in explanation remains useful; do not invent billing access. |
 | [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548) | Claude usage-authentication permission and client identity | Resume qualification on a verified provider permission/client contract. Existing runtime success and first-party UI screenshots do not establish permission. |
 | [#558](https://github.com/hemsoft-dev/codexbar-ios/issues/558), [#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559), [#560](https://github.com/hemsoft-dev/codexbar-ios/issues/560) | Product-usage payload, Fable reset identifiers/redemption semantics, promotional balance/expiry payload | Use verified sanitized provider contracts, subject to #548. Preserve useful existing usage and the selected-reset explanation; omit unknown fields and unsupported actions. No live probe or reset redemption is authorized. |
@@ -52,6 +53,45 @@ Build 5's hosted full UI gate **did not pass**. Shipping cannot satisfy that
 historical criterion retroactively. Its release actor and explicit exception
 rationale remain unverified. Retain the failure below; no historical rerun is
 pending. Any future authorized candidate needs its own release qualification.
+
+### Additional public storefront observations, November 15
+
+The [anonymous public-page receipt](docs/evidence/2026-11-15-public-storefront-observations.json)
+records explicit numeric-zero download offers for Afghanistan (AFG/af), Angola
+(AGO/ao), Anguilla (AIA/ai) and Albania (ALB/al), between **7:37:44 PM and
+7:37:48 PM EST**. Each response retained the requested country and app ID in
+both its final and canonical URLs, the expected developer identity, and an
+explicit price and currency. These four countries extend the older six-country
+sample; they do not establish simultaneous visibility across all 175 territories.
+
+The next request, UAE (ARE/ae), stopped at **7:38:08 PM EST** with
+`TimeoutError: The read operation timed out`. No retry or subsequent request
+was made. Four countries were observed, one failed and 170 were not attempted;
+the other 171 offers remain unknown in this batch. The failed request is not
+evidence that the app is unavailable or paid there. This snapshot cannot
+establish any pre-cutoff price or regional transition timestamp.
+
+The [manual collector](scripts/check-public-storefronts.py) validates app and
+country identity, preserves raw responses and hashes, rejects missing prices,
+and stops on the first failure. Its [territory mapping](docs/evidence/2026-11-15-storefront-territories.json)
+covers exactly the retained October 29 inventory, using pinned Unicode CLDR
+codes; Apple's `XKS` inventory entry maps to `xk` (CLDR `XKK`). That mapping
+alone does not prove a listing exists. See the [reproduction instructions](scripts/PUBLIC-STOREFRONTS.md).
+
+An independent [retained US public-page receipt](docs/evidence/2026-11-15-public-us-disclosures.json)
+also shows the Free/Pro description, eligible seven-day trial wording, renewal,
+Restore and original-purchaser disclosures, and the public **Data Not Collected**
+label. Its description links the canonical hemsoft-dev privacy document.
+The file timestamp bounds capture completion at **7:34:29 PM EST**; it is not
+a server timestamp. This advances only the public US disclosure portion of
+#469. It does not verify the private privacy questionnaire, Paid Apps Agreement,
+Small Business enrollment or current product settings. A correct description
+link also does not establish the separate ASC `privacyPolicyUrl` field.
+
+Collection is manual and has no automatic CI, timer or account integration.
+Production download, Pro, trial, Restore and family-device results remain open
+under #470; account decisions remain under #469. Neither the source preparation
+nor this public-page snapshot qualifies or authorizes a release.
 
 ## CodexBar 2.0 policy and preparation
 
