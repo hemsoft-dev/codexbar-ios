@@ -60,6 +60,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Retain request counts and page-state observations when the billing recovery
+  manual-retry test fails, while preserving its retry predicate and time bounds.
+  These observations do not establish a cause or change billing behavior.
+  ([#573](https://github.com/hemsoft-dev/codexbar-ios/issues/573))
+
 - Retain snapshot-publisher entry and return timing in the existing watch
   transition diagnostic, while keeping its publication deadline and account
   assertions intact. The intermittent cause remains unqualified.
