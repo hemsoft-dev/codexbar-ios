@@ -60,6 +60,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Retain snapshot-publisher entry and return timing in the existing watch
+  transition diagnostic, while keeping its publication deadline and account
+  assertions intact. The intermittent cause remains unqualified.
+  ([#564](https://github.com/hemsoft-dev/codexbar-ios/issues/564))
+
 - Add a manual public storefront checker that retains country-specific offers
   and stops on missing data or transport failure. Record four additional Free
   observations and the incomplete November 15 batch without claiming full
