@@ -2431,11 +2431,26 @@ final class DashboardAndSettingsTests: XCTestCase {
             defaults: defaults,
             initialAccess: .unresolved
         )
+        let trace = WatchTransitionTrace(label: "delay=\(coalescingDelay)")
+        let record: @Sendable (String) -> Void = { trace.record($0) }
+        var snapshotConstructionCount = 0
         let coordinator = WatchSnapshotCoordinator(
             refreshService: service,
             configurationStore: store,
             sender: sender,
-            coalescingDelay: coalescingDelay
+            coalescingDelay: coalescingDelay,
+            publishSnapshot: { results, configurationStore, force in
+                snapshotConstructionCount += 1
+                record("snapshot publisher entered")
+                defer { record("snapshot publisher returned") }
+                WatchSnapshotPublisher.publish(
+                    results: results,
+                    configurationStore: configurationStore,
+                    access: SnapshotProAccess(entitlement: nil),
+                    sender: sender,
+                    force: force
+                )
+            }
         )
         coordinator.start()
         sender.completeActivation()
@@ -2443,8 +2458,6 @@ final class DashboardAndSettingsTests: XCTestCase {
 
         let snapshotPublished = expectation(description: "Free access clears old watch accounts without provider results")
         let taskEntered = expectation(description: "Free transition main-actor witness entered")
-        let trace = WatchTransitionTrace(label: "delay=\(coalescingDelay)")
-        let record: @Sendable (String) -> Void = { trace.record($0) }
         record("wall anchor=\(Date().timeIntervalSince1970), test priority=\(Task.currentPriority.rawValue)")
         var accessEvents = 0
         let accessSubscription = store.$accountAccess.dropFirst().sink { access in
@@ -2480,6 +2493,7 @@ final class DashboardAndSettingsTests: XCTestCase {
         record("wait returned")
         print("[ios564-transition \(trace.label)] \(trace.summary)")
         XCTAssertEqual(accessEvents, 1, "The fixture must emit exactly one access transition: \(trace.summary)")
+        XCTAssertEqual(snapshotConstructionCount, 1, "The trace must measure the actual clearing publication: \(trace.summary)")
 
         XCTAssertTrue(service.results.isEmpty)
         XCTAssertEqual(store.accountAccess.pausedAccountIDs.count, 1)

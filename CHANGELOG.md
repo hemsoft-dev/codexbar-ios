@@ -60,6 +60,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Retain snapshot-publisher entry and return timing in the existing watch
+  transition diagnostic, while keeping its publication deadline and account
+  assertions intact. The intermittent cause remains unqualified.
+  ([#564](https://github.com/hemsoft-dev/codexbar-ios/issues/564))
+
 - Prepare development version 2.1.0 across the app, widgets and Watch targets,
   retaining build 6. Align draft release notes and current documentation with
   the merged changes since shipped 2.0.0 build 5. This source preparation does
