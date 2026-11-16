@@ -1268,9 +1268,23 @@ extension SubscriptionBillingTests {
         session.cookiesDidChange(in: store)
         try await Task.sleep(for: .milliseconds(200))
         XCTAssertEqual(session.automaticCookieReadCount, reads, "Events cannot renew an exhausted generation budget")
+        let beforeManualRetry = """
+        [DEBUG-ios573] before manual retry: baseline=\(count), expected=\(count + 3), requests=\(requests.value), \
+        verifying=\(session.isVerifying), automaticReads=\(session.automaticCookieReadCount), \
+        loading=\(session.webView.isLoading), committedHost=\(session.webView.url?.host ?? "<none>")
+        """
         session.verify()
         let retried = await waitUntil { requests.value == count + 3 && !session.isVerifying }
-        XCTAssertTrue(retried, "Explicit manual intent can retry the same credential")
+        let afterManualRetry = """
+        [DEBUG-ios573] after manual retry wait: baseline=\(count), expected=\(count + 3), requests=\(requests.value), \
+        verifying=\(session.isVerifying), automaticReads=\(session.automaticCookieReadCount), \
+        loading=\(session.webView.isLoading), committedHost=\(session.webView.url?.host ?? "<none>")
+        """
+        XCTAssertTrue(retried, """
+        Explicit manual intent can retry the same credential
+        \(beforeManualRetry)
+        \(afterManualRetry)
+        """)
     }
 
     @MainActor
