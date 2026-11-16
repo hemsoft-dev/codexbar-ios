@@ -517,6 +517,8 @@ final class ProNativeCleanupTests: XCTestCase {
 
 @MainActor
 final class ProNativeSubscriptionObservationTests: XCTestCase {
+    // These controls call startService directly. They check observer registration
+    // and raw received fields, not caller forwarding, listener delivery or persistence.
     func testObserverReceivesExactEarlyStatusBeforeServiceStartReturns() async throws {
         let (service, source) = try makeEarlyStatusService()
         var observed: [ProSubscriptionEvidence] = []
@@ -549,7 +551,12 @@ final class ProNativeSubscriptionObservationTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let source = NativeEarlySubscriptionSource()
         let cache = ProEntitlementCache(fileURL: directory.appendingPathComponent("entitlement.json"))
-        let service = ProEntitlement(source: source, cache: cache)
+        let clockID = UUID().uuidString
+        let service = ProEntitlement(source: source, cache: cache, clock: { date in
+            ProEntitlementClockSample(
+                wallDate: date, continuousSeconds: ProcessInfo.processInfo.systemUptime, continuityID: clockID
+            )
+        })
         source.service = service
         addTeardownBlock { @MainActor in
             await service.stopAndWait()
@@ -559,8 +566,8 @@ final class ProNativeSubscriptionObservationTests: XCTestCase {
     }
 }
 
-/// Inject one early receive while the real service is suspended in its first
-/// snapshot. This controls observation ordering only, not StoreKit generation.
+/// Call receive(status) directly during the initial snapshot. This does not use
+/// subscriptionUpdates/statusTask/receive(update), or prove StoreKit generation.
 @MainActor
 private final class NativeEarlySubscriptionSource: ProStoreSource {
     weak var service: ProEntitlement?
