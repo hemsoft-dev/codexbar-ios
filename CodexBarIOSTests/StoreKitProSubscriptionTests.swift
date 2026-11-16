@@ -141,20 +141,19 @@ final class StoreKitProSubscriptionTests: XCTestCase {
                 }
             }
         })
-        let service = try await purchaseMonthly(context)
-        XCTAssertTrue(context.session.shouldEnterBillingRetryOnRenewal)
-        XCTAssertTrue(context.session.billingGracePeriodIsEnabled)
-        XCTAssertEqual(context.session.timeRate, .oneRenewalEveryThirtySeconds)
         let started = ProcessInfo.processInfo.systemUptime
         var receivedStatuses: [String] = []
         var receivedVerifiedGrace = false
-        service.debugSubscriptionObservation = { status in
+        let service = try await purchaseMonthly(context, subscriptionObservation: { status in
             let elapsed = ProcessInfo.processInfo.systemUptime - started
             receivedStatuses.append("elapsed=\(elapsed),state=\(status.state),signed=\(status.signedAt),graceEnd=\(String(describing: status.graceEndsAt))")
             if status.state == .grace && status.renewalVerified && status.graceEndsAt != nil {
                 receivedVerifiedGrace = true
             }
-        }
+        })
+        XCTAssertTrue(context.session.shouldEnterBillingRetryOnRenewal)
+        XCTAssertTrue(context.session.billingGracePeriodIsEnabled)
+        XCTAssertEqual(context.session.timeRate, .oneRenewalEveryThirtySeconds)
         do {
             try await storeKitEventually("Real StoreKit billing grace did not reach the entitlement service.", timeout: 75) {
                 service.value.reason == .billingGrace && service.commerce.hasBillingIssue
@@ -337,8 +336,11 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         context.session.billingGracePeriodIsEnabled = grace
     }
 
-    private func purchaseMonthly(_ context: StoreKitProTestContext) async throws -> ProEntitlement {
-        let service = await context.makeService()
+    private func purchaseMonthly(
+        _ context: StoreKitProTestContext,
+        subscriptionObservation: (@MainActor (ProSubscriptionEvidence) -> Void)? = nil
+    ) async throws -> ProEntitlement {
+        let service = await context.makeService(subscriptionObservation: subscriptionObservation)
         await service.loadCatalog()
         let product = try XCTUnwrap(service.catalog.loadedCatalog?.products[.monthly])
         let result = try await service.purchase(.monthly, expectedProduct: product)
