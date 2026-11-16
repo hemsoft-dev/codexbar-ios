@@ -150,12 +150,16 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: CodexBarIOSTests-${{ github.run_id }}-${{ github.run_attempt }}
+          # Interrupted xcresult staging files can disappear during ZIP creation.
+          # Keep stable logs, receipts and xcresult Data; these bundles may be partial.
           path: |
             ${{ runner.temp }}/pro-native
             ${{ runner.temp }}/coverage-union
             ${{ runner.temp }}/release-toolchain.json
             !${{ runner.temp }}/pro-native/DerivedData-*/**
             !${{ runner.temp }}/coverage-union/*/DerivedData/**
+            !${{ runner.temp }}/pro-native/**/*.xcresult/Staging/**
+            !${{ runner.temp }}/coverage-union/**/*.xcresult/Staging/**
           if-no-files-found: warn
           retention-days: 14
 
