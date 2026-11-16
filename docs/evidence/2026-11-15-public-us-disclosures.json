@@ -1,0 +1,33 @@
+{
+  "sourceURL": "https://apps.apple.com/us/app/codexbar-usage-monitor/id6787769891",
+  "captureCompletedByFileMtimeUTC": "2026-11-16T00:34:29.899561+00:00",
+  "responseSHA256": "5defacde8212b551debbd9bac232d0e4a808e67325c22bd28fb66b49e4157fcb",
+  "responseBytes": 493043,
+  "publicOffer": {
+    "name": "CodexBar Usage Monitor",
+    "developerURL": "https://apps.apple.com/us/developer/franz-hemmer/id6787769894",
+    "canonicalURL": "https://apps.apple.com/us/app/codexbar-usage-monitor/id6787769891",
+    "price": 0,
+    "currency": "USD",
+    "free": true
+  },
+  "descriptionPhrasesObserved": [
+    "The free plan includes one active account",
+    "seven days of history",
+    "up to 90 days of daily history",
+    "seven days free to eligible customers",
+    "The app shows the price and billing period for your App Store region before purchase.",
+    "Subscriptions renew automatically unless canceled in your Apple Account subscription settings.",
+    "restore purchases from Settings > CodexBar Pro",
+    "Lifetime Pro does not renew.",
+    "Eligible purchasers of the original paid app keep lifetime Pro after Apple verifies their purchase."
+  ],
+  "publicPrivacyLabel": "Data Not Collected",
+  "descriptionPrivacyPolicyURL": "https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md",
+  "limits": [
+    "Public US page only; no private ASC questionnaire or product-setting readback",
+    "Description link does not establish the ASC privacyPolicyUrl field",
+    "No native Pro screen, purchase, trial, Restore or Family Sharing verification",
+    "File modification time bounds capture completion; it is not a server observation timestamp"
+  ]
+}
