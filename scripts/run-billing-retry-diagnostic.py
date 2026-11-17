@@ -125,6 +125,8 @@ def attempt(runner, build_path, number):
         receipt['error'] = str(error)
         primary = primary or failure(error)
     receipt.setdefault('ended', evidence.now())
+    if primary and receipt['verdict'] == 'passed':
+        receipt['verdict'] = 'execution-failure'
     receipt['exit'] = primary.code if primary else 0
     primary = project.persist(folder / 'diagnostic.json', receipt, primary)
     if primary:
@@ -159,7 +161,7 @@ def main(argv=None):
     output.mkdir(parents=True, exist_ok=False)
     outcome = diagnostic_record(selector=SELECTOR, requestedAttempts=args.attempts, exit=1,
                                 experimentComplete=False, deviceReusable=False, started=evidence.now())
-    primary, claimed = None, False
+    primary, claimed, device = None, False, None
     try:
         evidence.write(output / 'outcome.json', outcome)
         source, tools = evidence.source_snapshot(), evidence.toolchain()
@@ -179,6 +181,14 @@ def main(argv=None):
         primary = failure(error)
         outcome.update(exit=primary.code, error=str(error))
     finally:
+        if claimed:
+            try:
+                project.shutdown(output, device)
+            except (project.PhaseFailure, ValueError, KeyError, TypeError, OSError,
+                    subprocess.CalledProcessError) as error:
+                outcome['shutdownFailure'] = str(error)
+                primary = primary or failure(error)
+                outcome.update(exit=primary.code, experimentComplete=False)
         outcome.update(ended=evidence.now(), attemptsRecorded=len(list(output.glob('attempt-*/diagnostic.json'))))
         if primary and claimed:
             primary = project.persist(output / 'quarantine.json', diagnostic_record(

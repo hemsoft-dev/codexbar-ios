@@ -56,6 +56,7 @@ class DiagnosticTests(unittest.TestCase):
         patch.object(D.project, 'binaries', return_value=[{
             'path': str(self.binary), 'sha256': D.evidence.digest(self.binary)}]).start()
         patch.object(D.project, 'command', side_effect=self.command).start()
+        self.shutdown = patch.object(D.project, 'shutdown').start()
 
     def command(self, output, name, argv):
         """Mock only OS/Xcode transport; execute the real Python orchestration."""
@@ -128,6 +129,30 @@ class DiagnosticTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 66)
         self.assertEqual(self.executions, 0)
 
+    def test_source_change_after_passing_case_records_execution_failure(self):
+        build = self.runner.build('billing-retry', 'CodexBarIOS', [D.SELECTOR])
+        with patch.object(self.runner, 'unchanged', side_effect=[None, ValueError('fixture source changed')]):
+            with self.assertRaises(D.project.PhaseFailure):
+                D.attempt(self.runner, build, 1)
+        receipt = D.evidence.read(self.output / 'attempt-1/diagnostic.json')
+        self.assertEqual((receipt['exit'], receipt['verdict'], receipt['testResult']),
+                         (1, 'execution-failure', 'Passed'))
+        self.assertIn('fixture source changed', receipt['error'])
+
+    def test_trace_write_after_passing_case_stops_experiment_as_execution_failure(self):
+        original = Path.write_text
+        def write_text(path, *args, **kwargs):
+            if path.name == 'operand-trace.log':
+                raise OSError('fixture trace write failed')
+            return original(path, *args, **kwargs)
+        with patch.object(Path, 'write_text', new=write_text):
+            with self.assertRaises(D.project.PhaseFailure):
+                D.experiment(self.runner, 3)
+        receipt = D.evidence.read(self.output / 'attempt-1/diagnostic.json')
+        self.assertEqual((receipt['exit'], receipt['verdict'], receipt['testResult']),
+                         (1, 'execution-failure', 'Passed'))
+        self.assertEqual(self.executions, 1)
+
     def test_attempt_bounds_rejected_before_build(self):
         for value in (0, 4, -1, True, '3'):
             with self.subTest(value=value), self.assertRaises(ValueError):
@@ -192,10 +217,45 @@ class DiagnosticTests(unittest.TestCase):
         self.assertFalse(outcome['deviceReusable'])
         self.assertTrue((destination / 'quarantine.json').exists())
         self.assertTrue((ownership.parent / 'native-use.json').exists())
+        self.shutdown.assert_called_once_with(destination, self.device)
         with self.assertRaises(FileExistsError):
             D.main(['--output', str(destination), '--ownership', str(ownership)])
         with self.assertRaisesRegex(ValueError, 'already used'):
             D.project.owned_device(ownership, self.tools)
+
+    def run_main_fixture(self, destination):
+        ownership = self.root / (destination.name + '-device') / 'ownership.json'
+        ownership.parent.mkdir()
+        ownership.write_text('{}')
+        with patch.object(D.evidence, 'source_snapshot', return_value=self.source), \
+             patch.object(D.evidence, 'toolchain', return_value=self.tools), \
+             patch.object(D.project, 'owned_device', return_value=self.device), \
+             patch.object(D.evidence, 'require_pinned'):
+            return D.main(['--output', str(destination), '--ownership', str(ownership)])
+
+    def test_success_shuts_down_claimed_destination_before_completion(self):
+        destination = self.root / 'success-output'
+        self.assertEqual(self.run_main_fixture(destination), 0)
+        self.shutdown.assert_called_once_with(destination, self.device)
+        outcome = D.evidence.read(destination / 'outcome.json')
+        self.assertTrue(outcome['experimentComplete'])
+        self.assertEqual(outcome['exit'], 0)
+        self.assertFalse(outcome['deviceReusable'])
+
+    def test_shutdown_error_fails_success_and_preserves_first_test_failure(self):
+        for status, expected in [('Passed', 71), ('Failed', 65)]:
+            with self.subTest(status=status):
+                self.statuses, self.executions = [status], 0
+                self.shutdown.reset_mock()
+                self.shutdown.side_effect = D.project.PhaseFailure('fixture shutdown failed', 71)
+                destination = self.root / ('shutdown-' + status)
+                self.assertEqual(self.run_main_fixture(destination), expected)
+                self.shutdown.assert_called_once_with(destination, self.device)
+                outcome = D.evidence.read(destination / 'outcome.json')
+                self.assertEqual(outcome['exit'], expected)
+                self.assertFalse(outcome['experimentComplete'])
+                self.assertIn('fixture shutdown failed', outcome['shutdownFailure'])
+                self.assertTrue((destination / 'quarantine.json').exists())
 
     def test_diagnostic_receipt_cannot_qualify_release_phase(self):
         receipt = D.diagnostic_record(exit=0, experimentComplete=True)
