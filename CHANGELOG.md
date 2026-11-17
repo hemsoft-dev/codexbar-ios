@@ -60,6 +60,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Use the focused billing diagnostic's verified build configuration for discovery
+  and execution, rejecting changed or unowned configurations. Native compatibility
+  and any latency improvement remain unverified.
+  ([#573](https://github.com/hemsoft-dev/codexbar-ios/issues/573))
 - Add a manual, fixed-selector billing retry diagnostic that builds once and
   stops at the first failure within at most three recorded measurements. Its
   supplementary evidence does not qualify releases or establish a cause.
