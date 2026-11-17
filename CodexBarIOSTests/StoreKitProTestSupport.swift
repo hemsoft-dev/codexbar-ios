@@ -68,7 +68,10 @@ final class StoreKitProTestContext {
         return session
     }
 
-    func makeService(start: Bool = true, source: (any ProStoreSource)? = nil) async -> ProEntitlement {
+    func makeService(
+        start: Bool = true, source: (any ProStoreSource)? = nil,
+        subscriptionObservation: (@MainActor (ProSubscriptionEvidence) -> Void)? = nil
+    ) async -> ProEntitlement {
         let marker = clockID
         let service = ProEntitlement(source: source ?? self.source, cache: cache, clock: { date in
             ProEntitlementClockSample(
@@ -76,8 +79,18 @@ final class StoreKitProTestContext {
             )
         })
         services.append(service)
-        if start { await service.start() }
+        await Self.startService(service, start: start, subscriptionObservation: subscriptionObservation)
         return service
+    }
+
+    static func startService(
+        _ service: ProEntitlement, start: Bool = true,
+        subscriptionObservation: (@MainActor (ProSubscriptionEvidence) -> Void)? = nil
+    ) async {
+        // Observe before the first suspension: startup or purchase can deliver
+        // status before makeService/purchaseMonthly returns to the test.
+        service.debugSubscriptionObservation = subscriptionObservation
+        if start { await service.start() }
     }
 
     func retainListener(_ listener: Task<Void, Never>) { listeners.append(listener) }
@@ -500,4 +513,90 @@ final class ProNativeCleanupTests: XCTestCase {
         ])
         XCTAssertEqual(visited, [1, 2])
     }
+}
+
+@MainActor
+final class ProNativeSubscriptionObservationTests: XCTestCase {
+    // These controls call startService directly. They check observer registration
+    // and raw received fields, not caller forwarding, listener delivery or persistence.
+    func testObserverReceivesExactEarlyStatusBeforeServiceStartReturns() async throws {
+        let (service, source) = try makeEarlyStatusService()
+        var observed: [ProSubscriptionEvidence] = []
+        await StoreKitProTestContext.startService(service, subscriptionObservation: { observed.append($0) })
+
+        XCTAssertEqual(source.deliveries, 1)
+        XCTAssertEqual(observed.count, 1)
+        let status = try XCTUnwrap(observed.first)
+        XCTAssertEqual(status.purchase, source.status.purchase)
+        XCTAssertEqual(status.signedAt, source.status.signedAt)
+        XCTAssertEqual(status.state, .grace)
+        XCTAssertEqual(status.graceEndsAt, source.status.graceEndsAt)
+        XCTAssertTrue(status.renewalVerified)
+        XCTAssertTrue(status.isInBillingRetry)
+    }
+
+    func testLateObserverControlCannotRecoverTheEarlierStatus() async throws {
+        let (service, source) = try makeEarlyStatusService()
+        var observed: [ProSubscriptionEvidence] = []
+        await StoreKitProTestContext.startService(service)
+        service.debugSubscriptionObservation = { observed.append($0) }
+
+        XCTAssertEqual(source.deliveries, 1)
+        XCTAssertTrue(observed.isEmpty, "An observer attached after startup cannot reconstruct an earlier event.")
+    }
+
+    private func makeEarlyStatusService() throws -> (ProEntitlement, NativeEarlySubscriptionSource) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("NativeSubscriptionObservation-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let source = NativeEarlySubscriptionSource()
+        let cache = ProEntitlementCache(fileURL: directory.appendingPathComponent("entitlement.json"))
+        let clockID = UUID().uuidString
+        let service = ProEntitlement(source: source, cache: cache, clock: { date in
+            ProEntitlementClockSample(
+                wallDate: date, continuousSeconds: ProcessInfo.processInfo.systemUptime, continuityID: clockID
+            )
+        })
+        source.service = service
+        addTeardownBlock { @MainActor in
+            await service.stopAndWait()
+            try FileManager.default.removeItem(at: directory)
+        }
+        return (service, source)
+    }
+}
+
+/// Call receive(status) directly during the initial snapshot. This does not use
+/// subscriptionUpdates/statusTask/receive(update), or prove StoreKit generation.
+@MainActor
+private final class NativeEarlySubscriptionSource: ProStoreSource {
+    weak var service: ProEntitlement?
+    private(set) var deliveries = 0
+    let status: ProSubscriptionEvidence = {
+        let now = Date()
+        return ProSubscriptionEvidence(
+            purchase: ProPurchaseEvidence(
+                product: .monthly, transactionID: 565, purchasedAt: now.addingTimeInterval(-60),
+                signedAt: now, expiresAt: now.addingTimeInterval(-1), environment: .xcode
+            ),
+            signedAt: now, state: .grace, renewalVerified: true, willAutoRenew: true,
+            isInBillingRetry: true, graceEndsAt: now.addingTimeInterval(3600)
+        )
+    }()
+
+    func snapshot() async -> ProStoreSnapshot {
+        if deliveries == 0 {
+            deliveries += 1
+            await service?.receive(status)
+        }
+        return ProStoreSnapshot(
+            appVerificationEnvironment: .xcode, purchases: [status.purchase],
+            subscriptions: [status], subscriptionStatusAvailable: true
+        )
+    }
+
+    func transactionUpdates() -> AsyncStream<ProTransactionDelivery> { AsyncStream { $0.finish() } }
+    func subscriptionUpdates() -> AsyncStream<ProSubscriptionUpdate> { AsyncStream { $0.finish() } }
+    func purchase(_ product: ProProductID) async throws -> ProPurchaseOutcome { .cancelled }
+    func restore(refreshAppTransaction: Bool) async throws {}
 }
