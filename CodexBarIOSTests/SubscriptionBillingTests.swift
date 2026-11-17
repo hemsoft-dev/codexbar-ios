@@ -1273,6 +1273,16 @@ extension SubscriptionBillingTests {
         verifying=\(session.isVerifying), automaticReads=\(session.automaticCookieReadCount), \
         loading=\(session.webView.isLoading), committedHost=\(session.webView.url?.host ?? "<none>")
         """
+        var manualRetryVerifyingHistory = [Bool]()
+        var manualRetryVerifyingDroppedCount = 0
+        let manualRetryVerifyingChanges = session.$isVerifying.sink { emitted in
+            if manualRetryVerifyingHistory.count < 32 {
+                manualRetryVerifyingHistory.append(emitted)
+            } else {
+                manualRetryVerifyingDroppedCount += 1
+            }
+        }
+        defer { manualRetryVerifyingChanges.cancel() }
         session.verify()
         let retried = await waitUntil { requests.value == count + 3 && !session.isVerifying }
         let afterManualRetry = """
@@ -1284,6 +1294,8 @@ extension SubscriptionBillingTests {
         Explicit manual intent can retry the same credential
         \(beforeManualRetry)
         \(afterManualRetry)
+        [DEBUG-ios573] manual retry verifying emissions: values=\(manualRetryVerifyingHistory), \
+        dropped=\(manualRetryVerifyingDroppedCount)
         """)
     }
 
