@@ -1271,7 +1271,8 @@ extension SubscriptionBillingTests {
         let beforeManualRetry = """
         [DEBUG-ios573] before manual retry: baseline=\(count), expected=\(count + 3), requests=\(requests.value), \
         verifying=\(session.isVerifying), automaticReads=\(session.automaticCookieReadCount), \
-        loading=\(session.webView.isLoading), committedHost=\(session.webView.url?.host ?? "<none>")
+        loading=\(session.webView.isLoading), committedHost=\(session.webView.url?.host ?? "<none>"), \
+        secureURL=\(SubscriptionBillingSignInSession.isSecure(session.webView.url))
         """
         var manualRetryVerifyingHistory = [Bool]()
         var manualRetryVerifyingDroppedCount = 0
@@ -1288,7 +1289,8 @@ extension SubscriptionBillingTests {
         let afterManualRetry = """
         [DEBUG-ios573] after manual retry wait: baseline=\(count), expected=\(count + 3), requests=\(requests.value), \
         verifying=\(session.isVerifying), automaticReads=\(session.automaticCookieReadCount), \
-        loading=\(session.webView.isLoading), committedHost=\(session.webView.url?.host ?? "<none>")
+        loading=\(session.webView.isLoading), committedHost=\(session.webView.url?.host ?? "<none>"), \
+        secureURL=\(SubscriptionBillingSignInSession.isSecure(session.webView.url))
         """
         XCTAssertTrue(retried, """
         Explicit manual intent can retry the same credential
