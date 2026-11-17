@@ -170,6 +170,15 @@ final class SubscriptionBillingSignInSession: NSObject, ObservableObject, Identi
         inspectCookies(manual: true)
     }
 
+    #if DEBUG
+    /// Read-only snapshot of the inspection gates for test diagnostics (#573).
+    var debugInspectionState: String {
+        "inspectionPending=\(inspectionPending), manualInspectionRequested=\(manualInspectionRequested), "
+            + "isResetting=\(isResetting), hasCompletion=\(completion != nil), "
+            + "inFlight=\(inFlightCredential != nil), attemptedCredentials=\(attemptedCredentials.count)"
+    }
+    #endif
+
     private var isOnProviderPage: Bool {
         Self.isSecure(webView.url) && Self.canonicalHost(webView.url) == SubscriptionBillingSession.host(configuration.providerID)
     }

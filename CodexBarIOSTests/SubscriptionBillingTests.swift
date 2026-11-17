@@ -1272,8 +1272,15 @@ extension SubscriptionBillingTests {
         [DEBUG-ios573] before manual retry: baseline=\(count), expected=\(count + 3), requests=\(requests.value), \
         verifying=\(session.isVerifying), automaticReads=\(session.automaticCookieReadCount), \
         loading=\(session.webView.isLoading), committedHost=\(session.webView.url?.host ?? "<none>"), \
-        secureURL=\(SubscriptionBillingSignInSession.isSecure(session.webView.url))
+        secureURL=\(SubscriptionBillingSignInSession.isSecure(session.webView.url)), \
+        message=\(session.message ?? "<nil>"), \(session.debugInspectionState)
         """
+        // Independent, non-blocking cookie read: reports whether the store still answers and still
+        // holds the session cookie, without awaiting a callback that might never arrive.
+        let cookieProbe = ManualRetryCookieProbe()
+        store.getAllCookies { cookies in
+            cookieProbe.record(cookies.filter { $0.name == "sessionKey" }.map(\.value))
+        }
         var manualRetryVerifyingHistory = [Bool]()
         var manualRetryVerifyingDroppedCount = 0
         let manualRetryVerifyingChanges = session.$isVerifying.sink { emitted in
@@ -1290,7 +1297,8 @@ extension SubscriptionBillingTests {
         [DEBUG-ios573] after manual retry wait: baseline=\(count), expected=\(count + 3), requests=\(requests.value), \
         verifying=\(session.isVerifying), automaticReads=\(session.automaticCookieReadCount), \
         loading=\(session.webView.isLoading), committedHost=\(session.webView.url?.host ?? "<none>"), \
-        secureURL=\(SubscriptionBillingSignInSession.isSecure(session.webView.url))
+        secureURL=\(SubscriptionBillingSignInSession.isSecure(session.webView.url)), \
+        message=\(session.message ?? "<nil>"), \(session.debugInspectionState)
         """
         XCTAssertTrue(retried, """
         Explicit manual intent can retry the same credential
@@ -1298,6 +1306,7 @@ extension SubscriptionBillingTests {
         \(afterManualRetry)
         [DEBUG-ios573] manual retry verifying emissions: values=\(manualRetryVerifyingHistory), \
         dropped=\(manualRetryVerifyingDroppedCount)
+        [DEBUG-ios573] independent cookie read: \(cookieProbe.summary)
         """)
     }
 
@@ -1530,6 +1539,16 @@ private final class BillingRequestCount: @unchecked Sendable {
     var value: Int { lock.withLock { count } }
     func increment() { lock.withLock { count += 1 } }
     func reset() { lock.withLock { count = 0 } }
+}
+
+/// Records one cookie-store read for the #573 diagnostic; `summary` reports a missing callback explicitly.
+private final class ManualRetryCookieProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var sessionKeys: [String]?
+    func record(_ values: [String]) { lock.withLock { sessionKeys = values } }
+    var summary: String {
+        lock.withLock { sessionKeys.map { "answered, sessionKey=\($0)" } ?? "no callback within the wait" }
+    }
 }
 
 private final class BillingBoundaryProtocol: UITestSubscriptionBillingProtocol, @unchecked Sendable {

@@ -60,9 +60,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
-- Retain bounded verification-state publisher emissions and the existing URL
-  security check result when the focused billing manual-retry assertion fails,
-  without changing inputs or timing. These probes do not establish a cause or fix.
+- Retain bounded verification-state publisher emissions, the existing URL
+  security check result, the sign-in message, the cookie-inspection gate state,
+  and an independent cookie-store read when the focused billing manual-retry
+  assertion fails. These probes do not establish a cause or fix.
   ([#573](https://github.com/hemsoft-dev/codexbar-ios/issues/573))
 - Use the focused billing diagnostic's verified build configuration for discovery
   and execution, rejecting changed or unowned configurations. Native compatibility
