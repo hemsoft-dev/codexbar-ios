@@ -31,6 +31,52 @@ def failure(error):
             else project.PhaseFailure(str(error), getattr(error, 'returncode', 1)))
 
 
+def configuration(runner, build_path, expected=None):
+    """Use only the configuration hashed by this experiment's successful build."""
+    build = evidence.read(build_path)
+    if build['source'] != runner.source or build['tools'] != runner.tools or build['exit'] != 0:
+        raise ValueError('Diagnostic build identity/result changed')
+    evidence.validate_device(build['device'], runner.device)
+    derived = runner.output / 'DerivedData-billing-retry'
+    if (Path(build['derivedData']) != derived or build['scheme'] != 'CodexBarIOS'
+            or build['configuration'] != 'Debug' or build['coverage'] is not True):
+        raise ValueError('Diagnostic build configuration differs from this experiment')
+    binaries = build['binaries']
+    entries = [entry for entry in binaries if entry.get('kind') == '.xctestrun'
+               or Path(entry['path']).suffix == '.xctestrun']
+    if len(entries) != 1:
+        raise ValueError('Diagnostic requires exactly one recorded test configuration')
+    entry = entries[0]
+    path = Path(entry['path'])
+    products = derived / 'Build' / 'Products'
+    if (entry.get('kind') != '.xctestrun' or path.suffix != '.xctestrun'
+            or not path.is_absolute() or '..' in path.parts or not path.is_relative_to(products)):
+        raise ValueError('Test configuration is outside the owned build products or has the wrong kind')
+    current = runner.output
+    for part in path.relative_to(runner.output).parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError('Test configuration path must not contain symlinks')
+    if not path.is_file():
+        raise ValueError('Test configuration must be a regular file')
+    if not path.resolve().is_relative_to(products):
+        raise ValueError('Resolved test configuration escapes the owned build products')
+    if not binaries or any(evidence.digest(binary['path']) != binary['sha256'] for binary in binaries):
+        raise ValueError('Diagnostic build binaries changed')
+    selected = dict(path=str(path), sha256=entry['sha256'], build_sha256=evidence.digest(build_path))
+    if expected is not None and selected != expected:
+        raise ValueError('Test configuration or build receipt changed after discovery')
+    return selected
+
+
+def configuration_arguments(runner, selected):
+    return ['xcodebuild', '-xctestrun', selected['path'],
+            '-destination', f'platform=iOS Simulator,id={runner.device["deviceId"]}',
+            '-parallel-testing-enabled', 'NO', '-maximum-concurrent-test-simulator-destinations', '1',
+            '-enableCodeCoverage', 'YES', '-only-testing:' + SELECTOR,
+            'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-']
+
+
 def validate_result(summary, tree, device, started, ended):
     """Accept exactly the selected case, including a real red measurement."""
     cases = evidence.result_cases(tree)
@@ -64,11 +110,10 @@ def validate_result(summary, tree, device, started, ended):
     return status
 
 
-def attempt(runner, build_path, number):
+def attempt(runner, build_path, number, expected_configuration=None):
     folder = runner.output / f'attempt-{number}'
     folder.mkdir()
     result = folder / 'result.xcresult'
-    build = evidence.read(build_path)
     receipt = diagnostic_record(attempt=number, selector=SELECTOR, source=runner.source,
                                 tools=runner.tools, device=runner.device, started=evidence.now(),
                                 result=str(result), buildReceipt=str(build_path),
@@ -76,11 +121,9 @@ def attempt(runner, build_path, number):
     primary = None
     try:
         runner.unchanged()
-        if build['source'] != runner.source or build['tools'] != runner.tools or build['exit'] != 0:
-            raise ValueError('Diagnostic build identity/result changed')
-        if not build['binaries'] or any(evidence.digest(b['path']) != b['sha256'] for b in build['binaries']):
-            raise ValueError('Diagnostic build binaries changed')
-        argv = runner.arguments('CodexBarIOS', Path(build['derivedData']), [SELECTOR])
+        selected = configuration(runner, build_path, expected_configuration)
+        receipt.update(testConfiguration=selected, build_sha256=selected['build_sha256'])
+        argv = configuration_arguments(runner, selected)
         argv += ['-resultBundlePath', str(result), 'test-without-building']
         receipt['command'] = argv
         try:
@@ -138,16 +181,20 @@ def experiment(runner, maximum):
     if type(maximum) is not int or not 1 <= maximum <= 3:
         raise ValueError('A diagnostic experiment permits one to three attempts')
     build = runner.build('billing-retry', 'CodexBarIOS', [SELECTOR])
-    record = evidence.read(build)
-    discovery = runner.arguments('CodexBarIOS', Path(record['derivedData']), [SELECTOR]) + [
+    runner.unchanged()
+    selected = configuration(runner, build)
+    discovery = configuration_arguments(runner, selected) + [
         'test-without-building', '-enumerate-tests', '-test-enumeration-style', 'flat',
         '-test-enumeration-format', 'json', '-test-enumeration-output-path',
         str(runner.output / 'discovery.json')]
+    evidence.write(runner.output / 'discovery-input.json', diagnostic_record(
+        selector=SELECTOR, testConfiguration=selected, buildReceipt=str(build),
+        build_sha256=selected['build_sha256'], command=discovery))
     project.command(runner.output, 'discovery', discovery)
     if evidence.discovery_tests(evidence.read(runner.output / 'discovery.json')) != [SELECTOR]:
         raise ValueError('Focused diagnostic discovery differs from the fixed selector')
     for number in range(1, maximum + 1):
-        attempt(runner, build, number)  # first red/error propagates; no later attempt
+        attempt(runner, build, number, selected)  # first red/error propagates; no later attempt
 
 
 def main(argv=None):
