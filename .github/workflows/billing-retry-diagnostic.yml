@@ -1,0 +1,52 @@
+name: Focused billing retry diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      attempts:
+        description: Bounded measurements after one build; stop at first failure
+        type: choice
+        options: ['1', '2', '3']
+        default: '1'
+
+permissions:
+  contents: read
+
+jobs:
+  billing-retry-diagnostic:
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      ATTEMPTS: ${{ inputs.attempts }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify pinned toolchain and installed runtimes
+        run: python3 scripts/verify-release-toolchain.py --output "$RUNNER_TEMP/billing-retry-toolchain.json"
+
+      - name: Provision fresh project-owned diagnostic destination
+        run: ./scripts/run-pro-release-validation.sh provision --output "$RUNNER_TEMP/billing-retry-device"
+
+      - name: Measure only the billing manual-retry fixture
+        run: >-
+          python3 scripts/run-billing-retry-diagnostic.py
+          --ownership "$RUNNER_TEMP/billing-retry-device/ownership.json"
+          --output "$RUNNER_TEMP/billing-retry-diagnostic"
+          --attempts "$ATTEMPTS"
+
+      - name: Preserve diagnostic evidence, including partial failures
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: billing-retry-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/billing-retry-diagnostic
+            ${{ runner.temp }}/billing-retry-device
+            ${{ runner.temp }}/billing-retry-toolchain.json
+            !${{ runner.temp }}/billing-retry-diagnostic/DerivedData-*/**
+            !${{ runner.temp }}/billing-retry-diagnostic/**/*.xcresult/Staging/**
+          if-no-files-found: warn
+          retention-days: 14
