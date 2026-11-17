@@ -60,6 +60,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Add a manual, fixed-selector billing retry diagnostic that builds once and
+  stops at the first failure within at most three recorded measurements. Its
+  supplementary evidence does not qualify releases or establish a cause.
+  ([#573](https://github.com/hemsoft-dev/codexbar-ios/issues/573))
 - Exclude volatile xcresult staging files from manual iOS diagnostics archives
   so interrupted bundles can retain stable logs, receipts and completed result
   data. Partial bundles remain incomplete; hosted retention recovery is not yet
