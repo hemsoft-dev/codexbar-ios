@@ -60,6 +60,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Host the billing manual-retry test's web view in a visible window, like the
+  other billing fixtures, so WebKit keeps answering cookie reads for the whole
+  test. A detached web view made the manual retry fail on every CI run.
+  ([#573](https://github.com/hemsoft-dev/codexbar-ios/issues/573))
 - Use the focused billing diagnostic's verified build configuration for discovery
   and execution, rejecting changed or unowned configurations. Native compatibility
   and any latency improvement remain unverified.

@@ -1244,6 +1244,9 @@ extension SubscriptionBillingTests {
         defer { fixture.invalidate() }
         let session = recoverySession(fixture: fixture) { _ in XCTFail("Wrong account must stay open") }
         defer { session.invalidate() }
+        // This fixture runs ~30 s. A detached web view lets WebKit stop answering cookie reads (#573).
+        let window = try hostBillingWebView(session.webView)
+        defer { window.isHidden = true }
         await loadRecoveryPage(session)
         let store = session.webView.configuration.websiteDataStore.httpCookieStore
         await store.setCookie(try signInCookie("wrong"))
