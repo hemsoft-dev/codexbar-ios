@@ -41,7 +41,7 @@ class DiagnosticTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.output = self.root / 'diagnostic'
         self.output.mkdir()
         self.summary, self.tree, self.device = fixture()
@@ -134,20 +134,23 @@ class DiagnosticTests(unittest.TestCase):
         original = D.evidence.read(build)
         outside = self.root / 'foreign.xctestrun'
         outside.write_bytes(self.config.read_bytes())
+        directory = self.config.parent / 'directory.xctestrun'
+        directory.mkdir()
         cases = [([], 'missing'),
                  ([dict(original['binaries'][-1]), dict(original['binaries'][-1])], 'ambiguous'),
                  ([dict(original['binaries'][-1], kind='.app')], 'wrong kind'),
                  ([dict(original['binaries'][-1], path=str(outside))], 'outside'),
                  ([dict(original['binaries'][-1], path=str(self.config.with_suffix('.json')))], 'suffix'),
                  ([dict(original['binaries'][-1], path=str(self.config.parent / 'absent.xctestrun'))], 'absent'),
-                 ([dict(original['binaries'][-1], path=str(self.config.parent))], 'directory'),
+                 ([dict(original['binaries'][-1], path=str(directory))], 'directory'),
                  ([dict(original['binaries'][-1], path=str(self.config.parent / '..' / 'Products' / self.config.name))], 'traversal')]
         for entries, label in cases:
             with self.subTest(label=label):
                 record = dict(original, binaries=[original['binaries'][0]] + entries)
                 D.evidence.write(build, record)
                 self.calls.clear()
-                with patch.object(self.runner, 'build', return_value=build), self.assertRaises(ValueError):
+                message = 'must be a regular file' if label == 'directory' else ''
+                with patch.object(self.runner, 'build', return_value=build), self.assertRaisesRegex(ValueError, message):
                     D.experiment(self.runner, 1)
                 self.assertEqual(self.calls, [])
                 self.assertEqual(self.executions, 0)
