@@ -49,14 +49,21 @@ class DiagnosticTests(unittest.TestCase):
         self.runner = D.project.Runner(self.output, self.device, self.source, self.tools)
         self.binary = self.root / 'signed-binary-fixture'
         self.binary.write_bytes(b'fixture binary, not an Apple build')
+        self.config = self.output / 'DerivedData-billing-retry/Build/Products/CodexBarIOS_fixture.xctestrun'
+        self.binary_records = patch.object(D.project, 'binaries', side_effect=self.binaries).start()
         self.statuses, self.calls, self.executions = ['Passed'] * 3, [], 0
         self.export_error = False
         self.addCleanup(patch.stopall)
         patch.object(D.project.Runner, 'unchanged').start()
-        patch.object(D.project, 'binaries', return_value=[{
-            'path': str(self.binary), 'sha256': D.evidence.digest(self.binary)}]).start()
         patch.object(D.project, 'command', side_effect=self.command).start()
         self.shutdown = patch.object(D.project, 'shutdown').start()
+
+    def binaries(self, derived, signed):
+        self.config = derived / 'Build/Products/CodexBarIOS_fixture.xctestrun'
+        self.config.parent.mkdir(parents=True)
+        self.config.write_bytes(b'fixture configuration, not an Apple build')
+        return [dict(path=str(self.binary), kind='.app', sha256=D.evidence.digest(self.binary)),
+                dict(path=str(self.config), kind='.xctestrun', sha256=D.evidence.digest(self.config))]
 
     def command(self, output, name, argv):
         """Mock only OS/Xcode transport; execute the real Python orchestration."""
@@ -92,6 +99,12 @@ class DiagnosticTests(unittest.TestCase):
         builds = [x for x in self.calls if x[-1] == 'build-for-testing']
         tests = [x for x in self.calls if x[-1] == 'test-without-building']
         self.assertEqual((len(builds), len(tests), self.executions), (1, 3, 3))
+        discoveries = [x for x in self.calls if '-enumerate-tests' in x]
+        self.assertEqual(len(discoveries), 1)
+        for argv in tests + discoveries:
+            self.assertEqual(argv[argv.index('-xctestrun')+1], str(self.config))
+            self.assertNotIn('-project', argv)
+            self.assertNotIn('-scheme', argv)
         for argv in builds + tests + [x for x in self.calls if '-enumerate-tests' in x]:
             self.assertEqual([x for x in argv if x.startswith('-only-testing:')], ['-only-testing:'+D.SELECTOR])
             self.assertIn('CODE_SIGNING_ALLOWED=YES', argv)
@@ -99,6 +112,11 @@ class DiagnosticTests(unittest.TestCase):
             self.assertEqual(argv[argv.index('-parallel-testing-enabled')+1], 'NO')
             self.assertEqual(argv[argv.index('-maximum-concurrent-test-simulator-destinations')+1], '1')
         self.assertEqual(len(list(self.output.glob('attempt-*/diagnostic.json'))), 3)
+        discovery = D.evidence.read(self.output / 'discovery-input.json')
+        for number in range(1, 4):
+            attempt = D.evidence.read(self.output / f'attempt-{number}/diagnostic.json')
+            self.assertEqual(attempt['testConfiguration'], discovery['testConfiguration'])
+            self.assertEqual(attempt['build_sha256'], discovery['build_sha256'])
 
     def test_first_red_is_retained_and_no_third_attempt_can_hide_it(self):
         self.statuses = ['Passed', 'Failed', 'Passed']
@@ -110,6 +128,133 @@ class DiagnosticTests(unittest.TestCase):
         self.assertEqual((receipt['exit'], receipt['verdict'], receipt['testResult']), (65, 'test-failure', 'Failed'))
         self.assertEqual(receipt['operandTraceLines'], 1)
         self.assertFalse((self.output / 'attempt-3').exists())
+
+    def test_invalid_recorded_configuration_never_starts_discovery_or_tests(self):
+        build = self.runner.build('billing-retry', 'CodexBarIOS', [D.SELECTOR])
+        original = D.evidence.read(build)
+        outside = self.root / 'foreign.xctestrun'
+        outside.write_bytes(self.config.read_bytes())
+        cases = [([], 'missing'),
+                 ([dict(original['binaries'][-1]), dict(original['binaries'][-1])], 'ambiguous'),
+                 ([dict(original['binaries'][-1], kind='.app')], 'wrong kind'),
+                 ([dict(original['binaries'][-1], path=str(outside))], 'outside'),
+                 ([dict(original['binaries'][-1], path=str(self.config.with_suffix('.json')))], 'suffix'),
+                 ([dict(original['binaries'][-1], path=str(self.config.parent / 'absent.xctestrun'))], 'absent'),
+                 ([dict(original['binaries'][-1], path=str(self.config.parent))], 'directory'),
+                 ([dict(original['binaries'][-1], path=str(self.config.parent / '..' / 'Products' / self.config.name))], 'traversal')]
+        for entries, label in cases:
+            with self.subTest(label=label):
+                record = dict(original, binaries=[original['binaries'][0]] + entries)
+                D.evidence.write(build, record)
+                self.calls.clear()
+                with patch.object(self.runner, 'build', return_value=build), self.assertRaises(ValueError):
+                    D.experiment(self.runner, 1)
+                self.assertEqual(self.calls, [])
+                self.assertEqual(self.executions, 0)
+
+    def test_configuration_symlink_is_rejected_before_discovery(self):
+        build = self.runner.build('billing-retry', 'CodexBarIOS', [D.SELECTOR])
+        self.calls.clear()
+        # Mock the OS report so this control also runs on hosts without symlink privileges.
+        with patch.object(Path, 'is_symlink', autospec=True, side_effect=lambda path: path == self.config), \
+             patch.object(self.runner, 'build', return_value=build), self.assertRaisesRegex(ValueError, 'symlinks'):
+            D.experiment(self.runner, 1)
+        self.assertEqual(self.calls, [])
+
+    def test_configuration_parent_symlink_is_rejected_before_discovery(self):
+        build = self.runner.build('billing-retry', 'CodexBarIOS', [D.SELECTOR])
+        products = self.config.parent
+        self.calls.clear()
+        with patch.object(Path, 'is_symlink', autospec=True, side_effect=lambda path: path == products), \
+             patch.object(self.runner, 'build', return_value=build), self.assertRaisesRegex(ValueError, 'symlinks'):
+            D.experiment(self.runner, 1)
+        self.assertEqual(self.calls, [])
+
+    def test_configuration_tamper_before_discovery_is_rejected(self):
+        build = self.runner.build('billing-retry', 'CodexBarIOS', [D.SELECTOR])
+        self.config.write_bytes(b'changed configuration')
+        self.calls.clear()
+        with patch.object(self.runner, 'build', return_value=build), self.assertRaisesRegex(ValueError, 'binaries changed'):
+            D.experiment(self.runner, 1)
+        self.assertEqual(self.calls, [])
+
+    def test_configuration_changed_between_discovery_and_attempt_stops_execution(self):
+        original = self.command
+        def command(output, name, argv):
+            record = original(output, name, argv)
+            if '-enumerate-tests' in argv:
+                self.config.write_bytes(b'changed after discovery')
+            return record
+        with patch.object(D.project, 'command', side_effect=command), self.assertRaises(D.project.PhaseFailure):
+            D.experiment(self.runner, 3)
+        self.assertEqual(self.executions, 0)
+        receipt = D.evidence.read(self.output / 'attempt-1/diagnostic.json')
+        self.assertEqual((receipt['exit'], receipt['verdict']), (1, 'execution-failure'))
+        self.assertFalse((self.output / 'attempt-2').exists())
+
+    def test_build_receipt_change_after_discovery_is_rejected_even_with_new_hash(self):
+        original = self.command
+        def command(output, name, argv):
+            record = original(output, name, argv)
+            if '-enumerate-tests' in argv:
+                self.config.write_bytes(b'changed configuration and receipt')
+                path = self.output / 'build-billing-retry.json'
+                build = D.evidence.read(path)
+                build['binaries'][-1]['sha256'] = D.evidence.digest(self.config)
+                D.evidence.write(path, build)
+            return record
+        with patch.object(D.project, 'command', side_effect=command), self.assertRaises(D.project.PhaseFailure):
+            D.experiment(self.runner, 1)
+        self.assertEqual(self.executions, 0)
+        self.assertIn('after discovery', D.evidence.read(self.output / 'attempt-1/diagnostic.json')['error'])
+
+    def test_binary_change_after_discovery_is_rejected(self):
+        original = self.command
+        def command(output, name, argv):
+            record = original(output, name, argv)
+            if '-enumerate-tests' in argv:
+                self.binary.write_bytes(b'changed executable')
+            return record
+        with patch.object(D.project, 'command', side_effect=command), self.assertRaises(D.project.PhaseFailure):
+            D.experiment(self.runner, 1)
+        self.assertEqual(self.executions, 0)
+
+    def test_build_device_mismatch_is_rejected_before_discovery(self):
+        build = self.runner.build('billing-retry', 'CodexBarIOS', [D.SELECTOR])
+        record = D.evidence.read(build)
+        record['device']['deviceId'] = 'foreign-device'
+        D.evidence.write(build, record)
+        self.calls.clear()
+        with patch.object(self.runner, 'build', return_value=build), self.assertRaisesRegex(ValueError, 'device mismatch'):
+            D.experiment(self.runner, 1)
+        self.assertEqual(self.calls, [])
+
+    def test_build_identity_and_configuration_mismatches_stop_before_discovery(self):
+        build = self.runner.build('billing-retry', 'CodexBarIOS', [D.SELECTOR])
+        original = D.evidence.read(build)
+        for field, value in [('source', {'revision': 'other'}), ('tools', {'fixture': 'other'}),
+                             ('exit', 65), ('scheme', 'Other'), ('configuration', 'Release'),
+                             ('coverage', False), ('derivedData', str(self.root / 'foreign-derived'))]:
+            with self.subTest(field=field):
+                D.evidence.write(build, dict(original, **{field: value}))
+                self.calls.clear()
+                with patch.object(self.runner, 'build', return_value=build), self.assertRaises(ValueError):
+                    D.experiment(self.runner, 1)
+                self.assertEqual(self.calls, [])
+                self.assertEqual(self.executions, 0)
+
+    def test_wrong_discovery_does_not_start_an_attempt(self):
+        original = self.command
+        def command(output, name, argv):
+            record = original(output, name, argv)
+            if '-enumerate-tests' in argv:
+                D.evidence.write(self.output / 'discovery.json', dict(errors=[], values=[dict(
+                    testPlan='Fixture', enabledTests=[dict(identifier='CodexBarIOSTests/OtherTests/testOther')],
+                    disabledTests=[])]))
+            return record
+        with patch.object(D.project, 'command', side_effect=command), self.assertRaisesRegex(ValueError, 'discovery differs'):
+            D.experiment(self.runner, 1)
+        self.assertEqual(self.executions, 0)
 
     def test_non_test_error_and_export_error_preserve_first_exit(self):
         self.statuses, self.export_error = ['host-error'], True
