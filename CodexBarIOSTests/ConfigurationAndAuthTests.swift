@@ -331,6 +331,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
             watchSnapshotCoordinator: WatchSnapshotCoordinator(
                 refreshService: refreshService,
                 configurationStore: store,
+                sender: ConfigurationNoopWatchSender(),
                 publishSnapshot: { _, _, _ in }
             )
         )
@@ -2608,4 +2609,11 @@ final class ConfigurationAndAuthTests: XCTestCase {
             [account.id]
         )
     }
+}
+
+/// Keeps the dashboard fixture off the shared WatchConnectivity session (#564).
+@MainActor
+private final class ConfigurationNoopWatchSender: WatchSnapshotSending {
+    func activate(onSnapshotNeeded: @escaping @MainActor (Bool) -> Void) {}
+    func publish(_ snapshot: WatchDashboardSnapshot, force: Bool) -> Bool { true }
 }

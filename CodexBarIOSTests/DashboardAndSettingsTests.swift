@@ -1148,6 +1148,22 @@ final class DashboardAndSettingsTests: XCTestCase {
         XCTAssertTrue(harness.orchestrator.currentUsageAlertsByAccountID.isEmpty, mutation.rawValue)
     }
 
+    /// A production coordinator publishes through the shared WatchConnectivity session, and its
+    /// pending coalesced publish outlives the test that scheduled it. That publish then runs on the
+    /// main actor inside a later test, which is how #564 timed out. Dashboard fixtures stay isolated.
+    @MainActor
+    private func makeIsolatedWatchSnapshotCoordinator(
+        refreshService: UsageRefreshService,
+        configurationStore: ProviderConfigurationStore
+    ) -> WatchSnapshotCoordinator {
+        WatchSnapshotCoordinator(
+            refreshService: refreshService,
+            configurationStore: configurationStore,
+            sender: RecordingWatchSnapshotSender(),
+            publishSnapshot: { _, _, _ in }
+        )
+    }
+
     @MainActor
     private func makeStaleRefreshHarness(
         providers: [any UsageProvider],
@@ -1189,10 +1205,9 @@ final class DashboardAndSettingsTests: XCTestCase {
                 publishSnapshot: { _, _ in },
                 publishSettings: { _ in }
             ),
-            watchSnapshotCoordinator: WatchSnapshotCoordinator(
+            watchSnapshotCoordinator: makeIsolatedWatchSnapshotCoordinator(
                 refreshService: refreshService,
-                configurationStore: configurationStore,
-                publishSnapshot: { _, _, _ in }
+                configurationStore: configurationStore
             )
         )
         return StaleRefreshHarness(
@@ -4369,6 +4384,10 @@ final class DashboardAndSettingsTests: XCTestCase {
                 configurationStore: store,
                 publishSnapshot: { _, _ in },
                 publishSettings: { _ in }
+            ),
+            watchSnapshotCoordinator: makeIsolatedWatchSnapshotCoordinator(
+                refreshService: service,
+                configurationStore: store
             )
         )
 
@@ -4433,6 +4452,10 @@ final class DashboardAndSettingsTests: XCTestCase {
                 configurationStore: store,
                 publishSnapshot: { _, _ in },
                 publishSettings: { _ in }
+            ),
+            watchSnapshotCoordinator: makeIsolatedWatchSnapshotCoordinator(
+                refreshService: service,
+                configurationStore: store
             )
         )
 
@@ -4480,7 +4503,11 @@ final class DashboardAndSettingsTests: XCTestCase {
             historyStore: historyStore,
             usageAlertNotifier: StubUsageAlertNotifier(),
             appReviewPromptPolicy: AppReviewPromptPolicy(defaults: defaults),
-            widgetSnapshotCoordinator: widgetCoordinator
+            widgetSnapshotCoordinator: widgetCoordinator,
+            watchSnapshotCoordinator: makeIsolatedWatchSnapshotCoordinator(
+                refreshService: service,
+                configurationStore: store
+            )
         )
 
         let feedback = await orchestrator.consumeCodexBankedReset(
@@ -4529,6 +4556,10 @@ final class DashboardAndSettingsTests: XCTestCase {
                 configurationStore: store,
                 publishSnapshot: { _, _ in },
                 publishSettings: { _ in }
+            ),
+            watchSnapshotCoordinator: makeIsolatedWatchSnapshotCoordinator(
+                refreshService: service,
+                configurationStore: store
             )
         )
 
