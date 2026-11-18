@@ -119,11 +119,19 @@ def condense_storekit_server_log(lines, limit=STOREKIT_SERVER_LIMIT):
     return text, dict(lines=total, records=len(records), truncated=len(records) > len(kept))
 
 
-def collect_storekit_server_evidence(device_id, folder, elapsed):
+def collect_storekit_server_evidence(device_id, folder, started, booted):
     """Record whether the StoreKit test server generated renewals and storekitd delivered their status."""
-    minutes = math.ceil(elapsed / 60) + 1
-    command(folder, 'storekit-server-raw', ['xcrun', 'simctl', 'spawn', device_id, 'log', 'show',
-            '--last', f'{minutes}m', '--style', 'compact', '--predicate', STOREKIT_SERVER_PREDICATE])
+    # xcodebuild shuts down a simulator it booted. The log store survives that, but reading it
+    # needs a running device, so boot one that is down and leave it down again afterwards.
+    if not booted:
+        command(folder, 'storekit-server-boot', ['xcrun', 'simctl', 'bootstatus', device_id, '-b'])
+    try:
+        minutes = math.ceil((time.monotonic() - started) / 60) + 1
+        command(folder, 'storekit-server-raw', ['xcrun', 'simctl', 'spawn', device_id, 'log', 'show',
+                '--last', f'{minutes}m', '--style', 'compact', '--predicate', STOREKIT_SERVER_PREDICATE])
+    finally:
+        if not booted:
+            command(folder, 'storekit-server-shutdown', ['xcrun', 'simctl', 'shutdown', device_id])
     raw = folder / 'storekit-server-raw.log'
     with raw.open(errors='replace') as stream:
         text, summary = condense_storekit_server_log(stream)
@@ -663,9 +671,11 @@ class Runner:
         if name in STOREKIT_SERVER_PHASES:
             # Supplementary evidence for #565: its absence is recorded but never changes the phase result.
             try:
+                state = device_record(self.device['deviceId'], self.device['family'], self.tools,
+                                      self.device.get('runtimeBundlePath'))['state']
                 receipt['storeKitServerEvidence'] = collect_storekit_server_evidence(
-                    self.device['deviceId'], folder, time.monotonic() - clock)
-            except (PhaseFailure, OSError, ValueError) as error:
+                    self.device['deviceId'], folder, clock, state == 'Booted')
+            except (PhaseFailure, OSError, ValueError, KeyError) as error:
                 receipt['storeKitServerEvidenceError'] = str(error)
         if name == 'ios':
             try:

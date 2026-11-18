@@ -356,6 +356,30 @@ class RunnerCommandFailureTests(unittest.TestCase):
         self.assertEqual(query[10:], ['--predicate', RUNNER.STOREKIT_SERVER_PREDICATE])
         self.assertLess(self.calls.index(next(call for call in self.calls if '-resultBundlePath' in call)),
                         self.calls.index(query))
+        self.assertFalse(any(call[2] in ('bootstatus', 'shutdown') for call in self.calls))
+
+    def test_storekit_server_evidence_boots_a_shut_down_device_and_shuts_it_down_again(self):
+        # xcodebuild leaves the hosted simulator shut down, and the log query needs a running device.
+        self.device_state = 'Shutdown'
+        self.storekit_log = self.storekit_line('07.000', 'storekitd', 'Updated subscription status for fixture')
+        receipt = self.runner.phase('native-commerce', self.build)
+        self.assertEqual(receipt['storeKitServerEvidence']['records'], 1)
+        steps = [call[2] if call[2] in ('bootstatus', 'shutdown') else 'query' for call in self.calls
+                 if call[2] in ('bootstatus', 'shutdown') or call[4:6] == ['log', 'show']]
+        self.assertEqual(steps, ['bootstatus', 'query', 'shutdown'])
+        boot = next(call for call in self.calls if call[2] == 'bootstatus')
+        self.assertEqual(boot, ['xcrun', 'simctl', 'bootstatus', self.device['deviceId'], '-b'])
+        self.assertNotIn('restart', self.storekit_restarts())
+
+    def test_failed_storekit_server_query_still_shuts_the_device_down_again(self):
+        self.device_state = 'Shutdown'
+        self.exit_codes['storekit-server'] = 70
+        with contextlib.redirect_stderr(io.StringIO()):
+            receipt = self.runner.phase('native-commerce', self.build)
+        self.assertEqual(receipt['exit'], 0)
+        self.assertIn('storekit-server-raw failed (70)', receipt['storeKitServerEvidenceError'])
+        self.assertEqual([call[2] for call in self.calls if call[2] in ('bootstatus', 'shutdown')],
+                         ['bootstatus', 'shutdown'])
 
     def test_storekit_server_evidence_failure_never_changes_the_phase_result(self):
         self.exit_codes['storekit-server'] = 70
