@@ -60,6 +60,12 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Let the native billing and expiration tests recover when StoreKit's test
+  server generates a renewal failure or expiration and never pushes its status,
+  which hosted runs showed. Once the status is overdue the test asks StoreKit to
+  sync, the status arrives through the same listeners, and the run records that
+  it needed the sync. No deadline, assertion or product code changes.
+  ([#565](https://github.com/hemsoft-dev/codexbar-ios/issues/565))
 - Save a condensed StoreKit test-server log with the manual native-commerce
   diagnostics. It shows whether the simulated renewal failure was generated and
   whether its status reached the app, which the intermittent billing-grace

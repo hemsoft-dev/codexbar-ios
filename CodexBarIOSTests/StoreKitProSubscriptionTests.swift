@@ -6,6 +6,12 @@ import XCTest
 
 @MainActor
 final class StoreKitProSubscriptionTests: XCTestCase {
+    /// One 30-second period plus a margin. Passing hosted runs delivered the renewal status within
+    /// 2.1 s of the renewal, so by then the test server's push is overdue, not merely slow.
+    private static let renewalOverdue: TimeInterval = 35
+    /// Statuses that follow a session call arrive within a second or two when the push is sent.
+    private static let changeOverdue: TimeInterval = 5
+
     func testVerifiedRenewalMetadataMatchesApplePayloadExactly() async throws {
         let context = try await storeKitContext()
         let service = await context.makeService()
@@ -155,7 +161,10 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         XCTAssertTrue(context.session.billingGracePeriodIsEnabled)
         XCTAssertEqual(context.session.timeRate, .oneRenewalEveryThirtySeconds)
         do {
-            try await storeKitEventually("Real StoreKit billing grace did not reach the entitlement service.", timeout: 75) {
+            try await storeKitEventuallyAnnounced(
+                context, "Real StoreKit billing grace did not reach the entitlement service.", wait: "billing-grace",
+                timeout: 75, syncFrom: started + Self.renewalOverdue
+            ) {
                 service.value.reason == .billingGrace && service.commerce.hasBillingIssue
             }
         } catch let primaryError {
@@ -198,7 +207,11 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         let context = try await storeKitContext()
         configureBillingRenewal(context, grace: false)
         let service = try await purchaseMonthly(context)
-        try await storeKitEventually("Real billing retry without grace did not deny subscription access.", timeout: 75) {
+        let purchased = ProcessInfo.processInfo.systemUptime
+        try await storeKitEventuallyAnnounced(
+            context, "Real billing retry without grace did not deny subscription access.", wait: "billing-retry",
+            timeout: 75, syncFrom: purchased + Self.renewalOverdue
+        ) {
             !service.hasAccess && service.commerce.hasBillingIssue
         }
         let snapshot = await context.source.snapshot()
@@ -213,7 +226,11 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         context.session.shouldEnterBillingRetryOnRenewal = false
         try context.session.resolveIssueForTransaction(identifier: issue.identifier)
         do {
-            try await storeKitEventually("Verified billing recovery did not restore monthly access through the listeners.", timeout: 30) {
+            try await storeKitEventuallyAnnounced(
+                context, "Verified billing recovery did not restore monthly access through the listeners.",
+                wait: "billing-retry-recovery", timeout: 30,
+                syncFrom: ProcessInfo.processInfo.systemUptime + Self.changeOverdue
+            ) {
                 service.hasAccess && service.value.reason == .monthly && !service.commerce.hasBillingIssue
             }
         } catch let primaryError {
@@ -231,11 +248,15 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         let context = try await storeKitContext()
         configureBillingRenewal(context, grace: false)
         let service = try await purchaseMonthly(context)
+        let purchased = ProcessInfo.processInfo.systemUptime
         _ = try await context.session.buyProduct(identifier: ProProductID.lifetime.rawValue)
         try await storeKitEventually("Externally purchased lifetime did not arrive through transaction updates.") {
             service.value.reason == .lifetime
         }
-        try await storeKitEventually("Independent subscription billing problem did not appear for lifetime owner.", timeout: 75) {
+        try await storeKitEventuallyAnnounced(
+            context, "Independent subscription billing problem did not appear for lifetime owner.",
+            wait: "lifetime-billing-retry", timeout: 75, syncFrom: purchased + Self.renewalOverdue
+        ) {
             service.commerce.hasBillingIssue
         }
         XCTAssertTrue(service.hasAccess)
@@ -249,6 +270,7 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         // A 30-second period leaves time to observe auto-renew-off before expiry, even on slow hosts.
         context.session.timeRate = .oneRenewalEveryThirtySeconds
         let service = try await purchaseMonthly(context)
+        let purchased = ProcessInfo.processInfo.systemUptime
         let transaction = try XCTUnwrap(context.session.allTransactions().first { $0.productIdentifier == ProProductID.monthly.rawValue })
         try context.session.disableAutoRenewForTransaction(identifier: transaction.identifier)
         let waitStarted = ProcessInfo.processInfo.systemUptime
@@ -259,7 +281,10 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         var lastElapsed: TimeInterval?
         var lastServiceStatusAvailable: Bool?
         do {
-            try await storeKitEventually("Verified auto-renew-off did not arrive before natural expiration.", timeout: 25) {
+            try await storeKitEventuallyAnnounced(
+                context, "Verified auto-renew-off did not arrive before natural expiration.", wait: "auto-renew-off",
+                timeout: 25, syncFrom: waitStarted + Self.changeOverdue
+            ) {
                 let snapshot = await context.source.snapshot()
                 let off = snapshot.subscriptions.contains { $0.renewalVerified && $0.willAutoRenew == false }
                 // Preserve the original short circuit: inspect the lifetime action only after verified off.
@@ -299,7 +324,10 @@ final class StoreKitProSubscriptionTests: XCTestCase {
         }
         try storeKitEvent("auto-renew-off-before-natural-expiry", await storeKitState(context, service: service))
         do {
-            try await storeKitEventually("Natural StoreKit expiration did not produce verified expired status and deny access.", timeout: 60) {
+            try await storeKitEventuallyAnnounced(
+                context, "Natural StoreKit expiration did not produce verified expired status and deny access.",
+                wait: "natural-expiry", timeout: 60, syncFrom: purchased + Self.renewalOverdue
+            ) {
                 let snapshot = await context.source.snapshot()
                 return snapshot.subscriptions.contains { $0.state == .expired && $0.renewalVerified }
                     && !service.hasAccess

@@ -239,6 +239,17 @@ uses the supported
 [transaction issue resolution](https://developer.apple.com/documentation/storekittest/sktestsession/resolveissuefortransaction(identifier:))
 API and observes the resulting update.
 
+Each wait for a status that only StoreKit's test server can announce (billing
+grace, billing retry and its recovery, auto-renew-off, natural expiration) uses
+`storeKitEventuallyAnnounced`. On hosted runners the test server has generated a
+renewal failure and then pushed no status to `storekitd` for the rest of the
+wait ([#565](https://github.com/hemsoft-dev/codexbar-ios/issues/565)). Once the
+status is overdue, the helper calls `AppStore.sync()` every five seconds. That
+makes `storekitd` fetch the status itself and deliver it through the same update
+streams, so the production listeners and mapping are still what the assertions
+check. Any wait that synced attaches a `status-recovery-sync` event with the
+sync count and whether the state then arrived. Deadlines are unchanged.
+
 The expiration case also uses the ten-second rate. It disables auto-renew for
 the real purchased transaction, requires verified auto-renew-off, and waits for
 native expired status and service access denial before checking a fresh source.

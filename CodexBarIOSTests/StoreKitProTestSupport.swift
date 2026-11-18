@@ -354,6 +354,40 @@ extension XCTestCase {
         throw StoreKitProTestFailure.assertion(message)
     }
 
+    /// Waits for a state that reaches the app only when StoreKit's test server pushes it to storekitd.
+    /// Hosted runs have generated the state and then pushed nothing for the rest of the wait (#565).
+    /// From `syncFrom` (system uptime) this asks StoreKit to sync, which makes storekitd fetch the
+    /// status itself and deliver it through the same update streams. A sync is always recorded, so a
+    /// run that needed one cannot pass silently.
+    func storeKitEventuallyAnnounced(
+        _ context: StoreKitProTestContext, _ message: String, wait: String,
+        timeout: TimeInterval, syncFrom: TimeInterval,
+        condition: @escaping @MainActor () async throws -> Bool
+    ) async throws {
+        let started = ProcessInfo.processInfo.systemUptime
+        var syncs: [TimeInterval] = []
+        func record(conditionMet: Bool) throws {
+            guard let first = syncs.first else { return }
+            try storeKitEvent("status-recovery-sync", [
+                "wait": wait, "conditionMet": String(conditionMet), "syncCount": String(syncs.count),
+                "firstSyncElapsed": String(first - started),
+                "elapsed": String(ProcessInfo.processInfo.systemUptime - started),
+            ])
+        }
+        repeat {
+            if try await condition() { return try record(conditionMet: true) }
+            let now = ProcessInfo.processInfo.systemUptime
+            if now >= syncFrom, now - (syncs.last ?? -.infinity) >= 5 {
+                syncs.append(now)
+                // Not awaited: a slow sync must not move the deadline. Teardown awaits it.
+                context.retainListener(Task { try? await AppStore.sync() })
+            }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        } while ProcessInfo.processInfo.systemUptime < started + timeout
+        try? record(conditionMet: false)
+        throw StoreKitProTestFailure.assertion(message)
+    }
+
     func storeKitEvent(_ phase: String, _ details: [String: String] = [:]) throws {
         var event = details
         event["phase"] = phase
