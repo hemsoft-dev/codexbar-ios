@@ -60,6 +60,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Save a condensed StoreKit test-server log with the manual native-commerce
+  diagnostics. It shows whether the simulated renewal failure was generated and
+  whether its status reached the app, which the intermittent billing-grace
+  timeout left unanswered. It does not change any test or its result.
+  ([#565](https://github.com/hemsoft-dev/codexbar-ios/issues/565))
 - Keep dashboard test fixtures off the shared WatchConnectivity session. Four
   reset tests built a production watch coordinator whose delayed publish ran on
   the main thread during a later test, which made the watch snapshot transition

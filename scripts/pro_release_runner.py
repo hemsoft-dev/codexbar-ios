@@ -79,6 +79,60 @@ def emit_watch_transition_trace(log):
     print(f'Watch transition diagnostic records: {count}', flush=True)
 
 
+STOREKIT_SERVER_PHASES = {'native-commerce'}
+STOREKIT_SERVER_LIMIT = 2000
+# logd retains these default-level lines, so nothing has to stream while the tests run.
+STOREKIT_SERVER_PREDICATE = (
+    '(process == "ASOctaneSupportXPCService" AND subsystem == "com.apple.appstored.StoreKitTesting" AND ('
+    + ' OR '.join(f'eventMessage CONTAINS "{text}"' for text in (
+        'Will start renewing', 'in-app buy request', 'is entering billing retry', 'cannot process renewal',
+        'subscription status request', 'Entered setIntegerValue', 'Entered changeAutoRenewStatus',
+        'Entered deleteAllTransactions', 'Entered resolveIssueForTransaction'))
+    + ')) OR (process == "storekitd" AND subsystem == "com.apple.storekit" AND ('
+    + ' OR '.join(f'eventMessage CONTAINS "{text}"' for text in (
+        'Requested to set value', 'subscription status', 'statuses to'))
+    + '))')
+STOREKIT_SERVER_LINE = re.compile(r'(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+) \w+\s+(\w+)\[\d+:\w+\] \[[^\]]*\] (.*)')
+
+
+def condense_storekit_server_log(lines, limit=STOREKIT_SERVER_LIMIT):
+    """Billing retry repeats one line thousands of times a second; keep each run of repeats once."""
+    records, total = [], 0
+    for line in lines:
+        match = STOREKIT_SERVER_LINE.match(line)
+        if not match:
+            continue
+        total += 1
+        stamp, process, message = match.groups()
+        message = re.sub(r'^\[[0-9A-F]{8}\] ', '', message)
+        message = re.sub(r' from <NSXPCConnection.*', '', message)
+        if records and records[-1][1:3] == [process, message]:
+            records[-1][3] += 1
+            records[-1][4] = stamp
+        else:
+            records.append([stamp, process, message, 1, stamp])
+    kept = records[:limit]
+    text = [f'{stamp} {process} {message}' + (f' [x{count} until {last}]' if count > 1 else '')
+            for stamp, process, message, count, last in kept]
+    if len(records) > len(kept):
+        text.append(f'Truncated: {len(records) - len(kept)} later records omitted')
+    return text, dict(lines=total, records=len(records), truncated=len(records) > len(kept))
+
+
+def collect_storekit_server_evidence(device_id, folder, elapsed):
+    """Record whether the StoreKit test server generated renewals and storekitd delivered their status."""
+    minutes = math.ceil(elapsed / 60) + 1
+    command(folder, 'storekit-server-raw', ['xcrun', 'simctl', 'spawn', device_id, 'log', 'show',
+            '--last', f'{minutes}m', '--style', 'compact', '--predicate', STOREKIT_SERVER_PREDICATE])
+    raw = folder / 'storekit-server-raw.log'
+    with raw.open(errors='replace') as stream:
+        text, summary = condense_storekit_server_log(stream)
+    log = folder / 'storekit-server.log'
+    log.write_text('\n'.join(text) + '\n')
+    raw.unlink()
+    return dict(summary, log=str(log), minutes=minutes)
+
+
 def device_record(identifier, family, tools, runtime_path=None):
     inventory = json.loads(capture(['xcrun', 'simctl', 'list', '--json']))
     matches = [(runtime, device) for runtime in inventory['runtimes']
@@ -599,12 +653,20 @@ class Runner:
                        discovery=str(discovery), discovery_sha256=digest(discovery), discoveryCommand=discovery_argv,
                        command=argv, started=now())
         failure = None
+        clock = time.monotonic()
         try:
             receipt.update(command(folder, 'xcodebuild', argv))
         except (PhaseFailure, OSError) as error:
             failure = error if isinstance(error, PhaseFailure) else PhaseFailure(str(error))
             receipt.update(exit=failure.code, error=str(error))
         receipt['ended'] = now()
+        if name in STOREKIT_SERVER_PHASES:
+            # Supplementary evidence for #565: its absence is recorded but never changes the phase result.
+            try:
+                receipt['storeKitServerEvidence'] = collect_storekit_server_evidence(
+                    self.device['deviceId'], folder, time.monotonic() - clock)
+            except (PhaseFailure, OSError, ValueError) as error:
+                receipt['storeKitServerEvidenceError'] = str(error)
         if name == 'ios':
             try:
                 emit_watch_transition_trace(folder / 'xcodebuild.log')

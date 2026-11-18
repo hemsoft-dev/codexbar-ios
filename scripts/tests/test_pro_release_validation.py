@@ -200,6 +200,7 @@ class RunnerCommandFailureTests(unittest.TestCase):
         self.extraction_error = False
         self.lazy_result_database = False
         self.device_state = 'Booted'
+        self.storekit_log = ''
         self.patches = [patch.object(self.runner, 'unchanged'),
                         patch.object(RUNNER.subprocess, 'run', side_effect=self.process),
                         patch.object(RUNNER, 'device_record', side_effect=lambda *_: dict(self.device, state=self.device_state))]
@@ -319,9 +320,72 @@ class RunnerCommandFailureTests(unittest.TestCase):
             summary, tree, _ = result_fixture(tests)
             summary.update(startTime=time.time() - .1, finishTime=time.time())
             stream.write(json.dumps(summary if 'summary' in argv else tree))
+        elif argv[4:6] == ['log', 'show']:
+            stream.write(self.storekit_log)
+            return SimpleNamespace(returncode=self.exit_codes.get('storekit-server', 0))
         else:
             stream.write('diagnostic attachment export\n')
         return SimpleNamespace(returncode=0)
+
+    def storekit_line(self, stamp, process, message):
+        subsystem = 'com.apple.storekit:Receipts' if process == 'storekitd' else 'com.apple.appstored.StoreKitTesting:server'
+        return f'2026-11-18 10:55:{stamp} Df {process}[101:3c5b80] [{subsystem}] {message}\n'
+
+    def test_native_commerce_retains_condensed_storekit_server_evidence(self):
+        retry = 'Transaction 0 for com.hemsoft.CodexBarIOS is entering billing retry'
+        self.storekit_log = ''.join(
+            ['Timestamp               Ty Process[PID:TID]\n',
+             self.storekit_line('04.100', 'ASOctaneSupportXPCService',
+                                '[8D5E7EBD] Entered setIntegerValue(_:for:forBundleID:withReply:) from <NSXPCConnection: 0x1> connection')]
+            + [self.storekit_line(f'06.{index:03}', 'ASOctaneSupportXPCService', retry) for index in range(900)]
+            + [self.storekit_line('07.000', 'storekitd', 'Sending 1 statuses to StoreKitServiceConnection(7)'),
+               self.storekit_line('07.001', 'ASOctaneSupportXPCService', retry)])
+        receipt = self.runner.phase('native-commerce', self.build)
+        evidence = receipt['storeKitServerEvidence']
+        self.assertEqual({key: evidence[key] for key in ('lines', 'records', 'truncated')},
+                         dict(lines=903, records=4, truncated=False))
+        self.assertEqual((self.root / 'native-commerce/storekit-server.log').read_text().splitlines(), [
+            '2026-11-18 10:55:04.100 ASOctaneSupportXPCService Entered setIntegerValue(_:for:forBundleID:withReply:)',
+            f'2026-11-18 10:55:06.000 ASOctaneSupportXPCService {retry} [x900 until 2026-11-18 10:55:06.899]',
+            '2026-11-18 10:55:07.000 storekitd Sending 1 statuses to StoreKitServiceConnection(7)',
+            f'2026-11-18 10:55:07.001 ASOctaneSupportXPCService {retry}'])
+        self.assertFalse((self.root / 'native-commerce/storekit-server-raw.log').exists())
+        query = next(call for call in self.calls if call[4:6] == ['log', 'show'])
+        self.assertEqual(query[:4], ['xcrun', 'simctl', 'spawn', self.device['deviceId']])
+        self.assertEqual(query[6:10], ['--last', '2m', '--style', 'compact'])
+        self.assertEqual(query[10:], ['--predicate', RUNNER.STOREKIT_SERVER_PREDICATE])
+        self.assertLess(self.calls.index(next(call for call in self.calls if '-resultBundlePath' in call)),
+                        self.calls.index(query))
+
+    def test_storekit_server_evidence_failure_never_changes_the_phase_result(self):
+        self.exit_codes['storekit-server'] = 70
+        with contextlib.redirect_stderr(io.StringIO()):
+            receipt = self.runner.phase('native-commerce', self.build)
+        self.assertEqual(receipt['exit'], 0)
+        self.assertIn('storekit-server-raw failed (70)', receipt['storeKitServerEvidenceError'])
+        self.assertNotIn('storeKitServerEvidence', receipt)
+
+    def test_storekit_server_evidence_cannot_replace_a_failed_native_run(self):
+        self.exit_codes.update({'native-commerce': 65, 'storekit-server': 70})
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(RUNNER.PhaseFailure) as caught:
+            self.runner.phase('native-commerce', self.build)
+        self.assertEqual(caught.exception.code, 65)
+        receipt = EVIDENCE.read(self.root / 'native-commerce/receipt.json')
+        self.assertEqual(receipt['exit'], 65)
+        self.assertIn('storeKitServerEvidenceError', receipt)
+
+    def test_only_native_commerce_queries_the_storekit_server_log(self):
+        self.runner.phase('native-preparation', self.build)
+        self.assertFalse(any(call[4:6] == ['log', 'show'] for call in self.calls))
+        self.assertNotIn('storeKitServerEvidence', EVIDENCE.read(self.root / 'native-preparation/receipt.json'))
+
+    def test_storekit_server_evidence_is_bounded(self):
+        lines = [self.storekit_line(f'06.{index:03}', 'storekitd', f'Updated subscription status {index}')
+                 for index in range(5)]
+        text, summary = RUNNER.condense_storekit_server_log(lines + ['not a log line\n'], limit=3)
+        self.assertEqual(len(text), 4)
+        self.assertEqual(text[-1], 'Truncated: 2 later records omitted')
+        self.assertEqual(summary, dict(lines=5, records=5, truncated=True))
 
     def test_receipt_hash_includes_database_created_by_result_inspection(self):
         self.lazy_result_database = True
