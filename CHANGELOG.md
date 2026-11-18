@@ -60,6 +60,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Keep dashboard test fixtures off the shared WatchConnectivity session. Four
+  reset tests built a production watch coordinator whose delayed publish ran on
+  the main thread during a later test, which made the watch snapshot transition
+  test time out intermittently on CI.
+  ([#564](https://github.com/hemsoft-dev/codexbar-ios/issues/564))
 - Host the billing manual-retry test's web view in a visible window, like the
   other billing fixtures, so WebKit keeps answering cookie reads for the whole
   test. A detached web view made the manual retry fail on every CI run.
