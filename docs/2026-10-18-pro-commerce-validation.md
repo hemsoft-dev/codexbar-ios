@@ -250,6 +250,39 @@ streams, so the production listeners and mapping are still what the assertions
 check. Any wait that synced attaches a `status-recovery-sync` event with the
 sync count and whether the state then arrived. Deadlines are unchanged.
 
+A wait that times out ends its failure message with what StoreKit itself
+reported, read from the SDK and not through the app:
+
+- `state first delivered`: when the SDK's status stream first delivered the
+  state the wait needs, or `never`.
+- `held at timeout`: whether a direct SDK status read held that state when the
+  wait ended.
+- `recovery syncs`: how many times the test asked StoreKit for the status.
+
+The `status-recovery-sync` event carries the same values as `sdkFirstDelivered`
+and `sdkHeldAtTimeout`.
+
+### Judging a red hosted native-commerce phase
+
+StoreKit's test server runs its renewal work late on loaded hosted runners, so
+this phase fails there now and then with the app behaving correctly
+([#565](https://github.com/hemsoft-dev/codexbar-ios/issues/565)). Judge each
+failed case by its message:
+
+| Evidence in the failure | Meaning | Action |
+| --- | --- | --- |
+| First delivered `never`, held `false` | The test server never produced the state, even when asked directly. | Runner timing. Dispatch the run again. |
+| First delivered in the last five seconds of the wait | The test server produced the state too late for the app to act. | Runner timing. Dispatch the run again. |
+| First delivered earlier | The app had the status and did not act on it. | Real failure. Investigate before any new run. |
+| First delivered `never`, held `true` | The state arrived before the wait began and the app did not act on it. | Real failure. Investigate before any new run. |
+| No StoreKit evidence in the message | The failure is not one of these waits. | Real failure. Investigate before any new run. |
+
+A run is runner timing only when every failed case reads that way. Such a run
+is not a product regression, and it still does not qualify its SHA: a release
+needs a green run for the exact SHA. Keep the red run's link next to the green
+one. `storekit-server.log` in the phase folder shows what the test server did
+and when.
+
 The expiration case also uses the ten-second rate. It disables auto-renew for
 the real purchased transaction, requires verified auto-renew-off, and waits for
 native expired status and service access denial before checking a fresh source.

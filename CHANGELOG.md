@@ -60,6 +60,12 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Make a timed-out native billing or expiration wait say what StoreKit itself
+  reported: when the SDK first delivered the needed state, and whether it held
+  that state at the timeout. A red hosted run now shows whether StoreKit's test
+  server was late or the app ignored a status, and the validation guide says how
+  to judge each case. No deadline, assertion or product code changes.
+  ([#565](https://github.com/hemsoft-dev/codexbar-ios/issues/565))
 - Let the native billing and expiration tests recover when StoreKit's test
   server generates a renewal failure or expiration and never pushes its status,
   which hosted runs showed. Once the status is overdue the test asks StoreKit to
