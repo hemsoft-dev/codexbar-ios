@@ -274,7 +274,7 @@ failed case by its message:
 | First delivered `never`, held `false` | The test server never produced the state, even when asked directly. | Runner timing. Dispatch the run again. |
 | First delivered in the last five seconds of the wait | The test server produced the state too late for the app to act. | Runner timing. Dispatch the run again. |
 | First delivered earlier | The app had the status and did not act on it. | Real failure. Investigate before any new run. |
-| First delivered `never`, held `true` | The state arrived before the wait began and the app did not act on it. | Real failure. Investigate before any new run. |
+| First delivered `never`, held `true` | Inconclusive. StoreKit holds the state now, but nothing shows the app was ever sent it. | Read `storekit-server.log`: a `Sending N statuses` line after the state was generated and before the wait ended means a real failure. None means runner timing. |
 | No StoreKit evidence in the message | The failure is not one of these waits. | Real failure. Investigate before any new run. |
 
 A run is runner timing only when every failed case reads that way. Such a run
