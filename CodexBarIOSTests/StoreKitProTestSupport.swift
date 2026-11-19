@@ -332,6 +332,26 @@ final class StoreKitProFinishRecordingSource: ProStoreSource {
     }
 }
 
+/// The SDK state each announced wait needs. A timed-out wait uses it to say whether StoreKit ever
+/// reported that state (#565).
+enum StoreKitAnnouncedWait: String {
+    case billingGrace = "billing-grace", billingRetry = "billing-retry"
+    case billingRetryRecovery = "billing-retry-recovery", lifetimeBillingRetry = "lifetime-billing-retry"
+    case autoRenewOff = "auto-renew-off", naturalExpiry = "natural-expiry"
+
+    func isReported(by status: Product.SubscriptionInfo.Status) -> Bool {
+        switch self {
+        case .billingGrace: return status.state == .inGracePeriod
+        case .billingRetry, .lifetimeBillingRetry: return status.state == .inBillingRetryPeriod
+        case .billingRetryRecovery: return status.state == .subscribed
+        case .naturalExpiry: return status.state == .expired
+        case .autoRenewOff:
+            guard case let .verified(renewal) = status.renewalInfo else { return false }
+            return !renewal.willAutoRenew
+        }
+    }
+}
+
 @MainActor
 extension XCTestCase {
     func storeKitContext(storefront: String = "USA", locale: Locale = Locale(identifier: "en_US")) async throws -> StoreKitProTestContext {
@@ -358,21 +378,34 @@ extension XCTestCase {
     /// Hosted runs have generated the state and then pushed nothing for the rest of the wait (#565).
     /// From `syncFrom` (system uptime) this asks StoreKit to sync, which makes storekitd fetch the
     /// status itself and deliver it through the same update streams. A sync is always recorded, so a
-    /// run that needed one cannot pass silently.
+    /// run that needed one cannot pass silently. A timeout says whether StoreKit ever reported the
+    /// state, so a late test server reads differently from an app that ignored a status.
     func storeKitEventuallyAnnounced(
-        _ context: StoreKitProTestContext, _ message: String, wait: String,
+        _ context: StoreKitProTestContext, _ message: String, wait: StoreKitAnnouncedWait,
         timeout: TimeInterval, syncFrom: TimeInterval,
         condition: @escaping @MainActor () async throws -> Bool
     ) async throws {
         let started = ProcessInfo.processInfo.systemUptime
         var syncs: [TimeInterval] = []
-        func record(conditionMet: Bool) throws {
+        var sdkFirstDelivered: TimeInterval?
+        let statuses = Product.SubscriptionInfo.Status.updates
+        let sdkListener = Task {
+            for await status in statuses where sdkFirstDelivered == nil && wait.isReported(by: status) {
+                sdkFirstDelivered = ProcessInfo.processInfo.systemUptime - started
+            }
+        }
+        context.retainListener(sdkListener)
+        defer { sdkListener.cancel() }
+        func record(conditionMet: Bool, sdkHeldAtTimeout: String? = nil) throws {
             guard let first = syncs.first else { return }
-            try storeKitEvent("status-recovery-sync", [
-                "wait": wait, "conditionMet": String(conditionMet), "syncCount": String(syncs.count),
+            var details = [
+                "wait": wait.rawValue, "conditionMet": String(conditionMet), "syncCount": String(syncs.count),
                 "firstSyncElapsed": String(first - started),
                 "elapsed": String(ProcessInfo.processInfo.systemUptime - started),
-            ])
+                "sdkFirstDelivered": sdkFirstDelivered.map { String($0) } ?? "never",
+            ]
+            details["sdkHeldAtTimeout"] = sdkHeldAtTimeout
+            try storeKitEvent("status-recovery-sync", details)
         }
         repeat {
             if try await condition() { return try record(conditionMet: true) }
@@ -384,8 +417,14 @@ extension XCTestCase {
             }
             try await Task.sleep(nanoseconds: 100_000_000)
         } while ProcessInfo.processInfo.systemUptime < started + timeout
-        try? record(conditionMet: false)
-        throw StoreKitProTestFailure.assertion(message)
+        // The stream misses a status delivered before this wait began, so also read the SDK directly.
+        let current = try? await storeKitProducts()[.monthly]?.subscription?.status
+        let held = current.map { String($0.contains(where: wait.isReported(by:))) } ?? "unknown"
+        try? record(conditionMet: false, sdkHeldAtTimeout: held)
+        let first = sdkFirstDelivered.map { String(format: "%.1f s into the %.0f s wait", $0, timeout) } ?? "never"
+        throw StoreKitProTestFailure.assertion(
+            "\(message) StoreKit evidence: state first delivered \(first), held at timeout \(held), recovery syncs \(syncs.count)."
+        )
     }
 
     func storeKitEvent(_ phase: String, _ details: [String: String] = [:]) throws {
