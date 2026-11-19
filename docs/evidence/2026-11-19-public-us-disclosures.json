@@ -1,0 +1,37 @@
+{
+ "sourceURL": "https://apps.apple.com/us/app/codexbar-usage-monitor/id6787769891",
+ "requestStartedAt": "2026-11-19T15:49:05.328663+00:00",
+ "requestFinishedAt": "2026-11-19T15:49:06.513161+00:00",
+ "collectedBy": "docs/evidence/2026-11-19-public-storefront-observations-remaining.json (USA row; same response)",
+ "responseSHA256": "0488883e2a2c404c932ef6a5c3c46848800d5d49bb538cea10f21360c9f7f1cd",
+ "responseBytes": 493318,
+ "descriptionPhrasesObserved": [
+  "The free plan includes one active account",
+  "seven days of history",
+  "up to 90 days of daily history",
+  "seven days free to eligible customers",
+  "The app shows the price and billing period for your App Store region before purchase.",
+  "Subscriptions renew automatically unless canceled in your Apple Account subscription settings.",
+  "restore purchases from Settings > CodexBar Pro",
+  "Lifetime Pro does not renew.",
+  "Eligible purchasers of the original paid app keep lifetime Pro after Apple verifies their purchase."
+ ],
+ "publicPrivacyLabel": "Data Not Collected",
+ "otherPrivacyLabelCategoriesObserved": [],
+ "descriptionPrivacyPolicyURL": "https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md",
+ "appPrivacySectionPolicyURL": "https://github.com/HemSoft/codexbar-ios/blob/main/PRIVACY.md",
+ "appPrivacySectionPolicyRedirect": {
+  "method": "anonymous HEAD without following redirects, then anonymous GET",
+  "checkedAt": "2026-11-19T16:24:39.623917+00:00",
+  "status": 301,
+  "location": "https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md",
+  "finalStatus": 200,
+  "finalURL": "https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md"
+ },
+ "limits": [
+  "Public US page only; no private ASC questionnaire, agreement or product-setting readback",
+  "The App Privacy section link is the public rendering of the privacy policy URL; it is not an App Store Connect field readback",
+  "No native Pro screen, purchase, trial, Restore or Family Sharing verification",
+  "The redirect was observed once; GitHub controls it and it can change"
+ ]
+}

@@ -42,7 +42,7 @@ evidence is retained below and in the existing issues.
 
 | Existing issue | Remaining criterion | Owner and next actual trigger |
 | --- | --- | --- |
-| [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469) | Small Business Program decision, current account/disclosure verification, and canonical privacy URL | Franz owns the account decision. Reconcile an explicit enrollment/non-enrollment report when supplied. A future authorized editable appInfo is required for the URL change; the prior attempt returned 409. No ASC write is authorized now. |
+| [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469) | Small Business Program decision, current account/disclosure verification, and canonical privacy URL | Public US disclosures and the privacy label were reverified November 19; the public privacy link is still the old path and redirects correctly. Franz owns the account decision. Reconcile an explicit enrollment/non-enrollment report when supplied. A future authorized editable appInfo is required for the URL change; the prior attempt returned 409. No ASC write is authorized now. |
 | [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) | New-customer production Free download, Pro screen, eligible trial and Restore; family-device result; complete public Free coverage | All 175 public storefronts showed an explicit Free offer on November 19, in two batches. That is current visibility, not pre-cutoff timing. Record production evidence separately when supplied or specifically authorized. Synthetic captures do not prove production behavior. The original-purchaser result above is complete. |
 | [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) | Supported Google-backed Greptile billing grant and callback/session contract | Resume implementation when a consumer-supported provider contract exists. The delivered unsupported-sign-in explanation remains useful; do not invent billing access. |
 | [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548) | Claude usage-authentication permission and client identity | Resume qualification on a verified provider permission/client contract. Existing runtime success and first-party UI screenshots do not establish permission. |
@@ -108,6 +108,17 @@ a server timestamp. This advances only the public US disclosure portion of
 #469. It does not verify the private privacy questionnaire, Paid Apps Agreement,
 Small Business enrollment or current product settings. A correct description
 link also does not establish the separate ASC `privacyPolicyUrl` field.
+
+The [November 19 US page receipt](docs/evidence/2026-11-19-public-us-disclosures.json),
+taken from the storefront batch's US response at **10:49:05 AM EST**, shows the
+same nine disclosure phrases and the **Data Not Collected** label with no other
+privacy category. The page's App Privacy section, where Apple renders the
+developer's privacy policy link, still points to the old
+`HemSoft/codexbar-ios` path. An anonymous request at **11:24:39 AM EST**
+returned a 301 to the canonical `hemsoft-dev` document, which loaded. Readers
+reach the right policy today; the saved URL is still the old one and stays a
+#469 follow-up for a future editable app information record. This is a public
+page observation, not an App Store Connect readback.
 
 Collection is manual and has no automatic CI, timer or account integration.
 Production download, Pro, trial, Restore and family-device results remain open
