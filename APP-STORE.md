@@ -43,7 +43,7 @@ evidence is retained below and in the existing issues.
 | Existing issue | Remaining criterion | Owner and next actual trigger |
 | --- | --- | --- |
 | [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469) | Small Business Program decision, current account/disclosure verification, and canonical privacy URL | Franz owns the account decision. Reconcile an explicit enrollment/non-enrollment report when supplied. A future authorized editable appInfo is required for the URL change; the prior attempt returned 409. No ASC write is authorized now. |
-| [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) | New-customer production Free download, Pro screen, eligible trial and Restore; family-device result; complete public Free coverage | Four additional public storefronts were observed November 15; collection stopped on a UAE timeout. Record production evidence separately when supplied or specifically authorized. Synthetic captures do not prove production behavior. The original-purchaser result above is complete. |
+| [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) | New-customer production Free download, Pro screen, eligible trial and Restore; family-device result; complete public Free coverage | All 175 public storefronts showed an explicit Free offer on November 19, in two batches. That is current visibility, not pre-cutoff timing. Record production evidence separately when supplied or specifically authorized. Synthetic captures do not prove production behavior. The original-purchaser result above is complete. |
 | [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) | Supported Google-backed Greptile billing grant and callback/session contract | Resume implementation when a consumer-supported provider contract exists. The delivered unsupported-sign-in explanation remains useful; do not invent billing access. |
 | [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548) | Claude usage-authentication permission and client identity | Resume qualification on a verified provider permission/client contract. Existing runtime success and first-party UI screenshots do not establish permission. |
 | [#558](https://github.com/hemsoft-dev/codexbar-ios/issues/558), [#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559), [#560](https://github.com/hemsoft-dev/codexbar-ios/issues/560) | Product-usage payload, Fable reset identifiers/redemption semantics, promotional balance/expiry payload | Use verified sanitized provider contracts, subject to #548. Preserve useful existing usage and the selected-reset explanation; omit unknown fields and unsupported actions. No live probe or reset redemption is authorized. |
@@ -77,6 +77,27 @@ and stops on the first failure. Its [territory mapping](docs/evidence/2026-11-15
 covers exactly the retained October 29 inventory, using pinned Unicode CLDR
 codes; Apple's `XKS` inventory entry maps to `xk` (CLDR `XKK`). That mapping
 alone does not prove a listing exists. See the [reproduction instructions](scripts/PUBLIC-STOREFRONTS.md).
+
+### Complete public storefront coverage, November 19
+
+Two batches on November 19 observed an explicit numeric-zero download offer in
+all 175 territories of the October 29 inventory.
+
+| Batch, all times EST | Territories | Result |
+| --- | --- | --- |
+| [First receipt](docs/evidence/2026-11-19-public-storefront-observations.json), 10:31:34 AM to 10:33:21 AM | Full 175-territory manifest | 140 Free, AFG through SLE. The next request, El Salvador (SLV/sv), returned `HTTP Error 429: Too Many Requests`. 34 were not attempted. |
+| [Second receipt](docs/evidence/2026-11-19-public-storefront-observations-remaining.json), 10:48:45 AM to 10:49:16 AM | [35-territory subset manifest](docs/evidence/2026-11-19-storefront-territories-remaining.json): SLV and the 34 not attempted | 35 Free, complete. |
+
+Every observed page kept the requested country and app ID in its final and
+canonical URLs, the expected developer identity, and an explicit price and
+currency. No page showed a paid offer. The 429 was Apple's rate limit after
+140 requests in 107 seconds; it says nothing about the El Salvador listing,
+which the second batch then observed as Free.
+
+No single batch covered the full inventory, so coverage is the union of the two
+receipts, collected within 18 minutes of each other. This establishes public
+Free visibility on November 19 only. It cannot establish visibility before the
+cutoff, any regional transition time, or production purchase behavior.
 
 An independent [retained US public-page receipt](docs/evidence/2026-11-15-public-us-disclosures.json)
 also shows the Free/Pro description, eligible seven-day trial wording, renewal,

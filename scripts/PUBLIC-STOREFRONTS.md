@@ -20,6 +20,12 @@ instruction. The November 15 collection stopped on a UAE timeout and has no
 scheduled retry. A future scoped batch can use an explicit subset manifest,
 with its intended territory set recorded; it cannot certify the full inventory.
 
+Apple rate-limits these pages. The November 19 full batch returned HTTP 429 on
+its 141st request, after 140 successful pages in 107 seconds. A 15-minute pause
+and a [35-territory subset manifest](../docs/evidence/2026-11-19-storefront-territories-remaining.json)
+then completed the inventory. Expect to split a full run the same way, and
+record each batch's receipt and manifest.
+
 The mapping keys reproduce all 175 entries in the committed October 29
 inventory. Values come from the pinned Unicode CLDR source recorded in the
 mapping, except Apple's `XKS` identifier maps to CLDR `XKK` / `xk`. Storefront

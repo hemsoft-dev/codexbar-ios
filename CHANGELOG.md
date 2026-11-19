@@ -60,6 +60,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Record public Free offers for all 175 App Store territories on November 19,
+  in two manual batches split by Apple's rate limit. The record covers current
+  public visibility only, not pre-cutoff timing or production purchases.
+  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 - Make a timed-out native billing or expiration wait say what StoreKit itself
   reported: when the SDK first delivered the needed state, and whether it held
   that state at the timeout. A red hosted run now shows whether StoreKit's test

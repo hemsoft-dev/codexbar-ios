@@ -1,0 +1,678 @@
+{
+  "startedAt": "2026-11-19T15:48:45.374985+00:00",
+  "appID": "6787769891",
+  "method": "anonymous public GET; serial; no retries",
+  "territoryManifestSHA256": "65b688fe3f9cd32d9fa1feec92c7b97c7802dc4bc1e2afbc2c8effa06aa018f7",
+  "expectedTerritories": [
+    "SLV",
+    "SRB",
+    "STP",
+    "SUR",
+    "SVK",
+    "SVN",
+    "SWE",
+    "SWZ",
+    "SYC",
+    "TCA",
+    "TCD",
+    "THA",
+    "TJK",
+    "TKM",
+    "TON",
+    "TTO",
+    "TUN",
+    "TUR",
+    "TWN",
+    "TZA",
+    "UGA",
+    "UKR",
+    "URY",
+    "USA",
+    "UZB",
+    "VCT",
+    "VEN",
+    "VGB",
+    "VNM",
+    "VUT",
+    "XKS",
+    "YEM",
+    "ZAF",
+    "ZMB",
+    "ZWE"
+  ],
+  "observations": [
+    {
+      "territory": "SLV",
+      "country": "sv",
+      "requestedURL": "https://apps.apple.com/sv/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:45.375095+00:00",
+      "finalURL": "https://apps.apple.com/sv/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "74ec77379df1a7a4cd2f0322e6cd53fad55c4cd901cfbb0cd86f1b844f88bb71",
+      "responseBytes": 475320,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/sv/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/sv/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:46.143987+00:00"
+    },
+    {
+      "territory": "SRB",
+      "country": "rs",
+      "requestedURL": "https://apps.apple.com/rs/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:46.144012+00:00",
+      "finalURL": "https://apps.apple.com/rs/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "139bb1c4a6ff7cb1b192a35629c22b337f7aa6cbc100c835af4775f1db5ce045",
+      "responseBytes": 479095,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/rs/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/rs/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "EUR",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:46.992782+00:00"
+    },
+    {
+      "territory": "STP",
+      "country": "st",
+      "requestedURL": "https://apps.apple.com/st/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:46.992808+00:00",
+      "finalURL": "https://apps.apple.com/st/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "78eaa6d5416239ba7e5c5d312a55d6492664a2b000ecb2aa56250b6defc67c60",
+      "responseBytes": 476710,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/st/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/st/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:47.989150+00:00"
+    },
+    {
+      "territory": "SUR",
+      "country": "sr",
+      "requestedURL": "https://apps.apple.com/sr/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:47.989172+00:00",
+      "finalURL": "https://apps.apple.com/sr/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "22889f42c172c3e979f0a0d337bbae944d07f98433339dcb3854b0798b15a3eb",
+      "responseBytes": 476662,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/sr/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/sr/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:48.853293+00:00"
+    },
+    {
+      "territory": "SVK",
+      "country": "sk",
+      "requestedURL": "https://apps.apple.com/sk/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:48.853317+00:00",
+      "finalURL": "https://apps.apple.com/sk/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "80465c92531679acacd0818806bffff7bafc8c1b9b45658db335e778e913d0f6",
+      "responseBytes": 480286,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/sk/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/sk/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "EUR",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:49.845454+00:00"
+    },
+    {
+      "territory": "SVN",
+      "country": "si",
+      "requestedURL": "https://apps.apple.com/si/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:49.845479+00:00",
+      "finalURL": "https://apps.apple.com/si/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "f7026f2e49cd097a5093438378952027e5b6cf9ee18e235ca51331d699d73312",
+      "responseBytes": 480290,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/si/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/si/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "EUR",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:50.656691+00:00"
+    },
+    {
+      "territory": "SWE",
+      "country": "se",
+      "requestedURL": "https://apps.apple.com/se/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:50.656717+00:00",
+      "finalURL": "https://apps.apple.com/se/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "38659c5f949edd34df467dcff7568a0c97ac92365ff468e86c14284ce6f1c7bf",
+      "responseBytes": 480104,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/se/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/se/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "SEK",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:51.909581+00:00"
+    },
+    {
+      "territory": "SWZ",
+      "country": "sz",
+      "requestedURL": "https://apps.apple.com/sz/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:51.909609+00:00",
+      "finalURL": "https://apps.apple.com/sz/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "22059418bf8fd7bdefeadee357982c85ebee98ac2c9bbca6abb0b295460cd6f5",
+      "responseBytes": 476469,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/sz/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/sz/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:52.641787+00:00"
+    },
+    {
+      "territory": "SYC",
+      "country": "sc",
+      "requestedURL": "https://apps.apple.com/sc/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:52.641806+00:00",
+      "finalURL": "https://apps.apple.com/sc/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "6372bda1ea3ee74a74ad8a2b66c54bbec01cd34607d23d524376b7bb8140594d",
+      "responseBytes": 476690,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/sc/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/sc/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:53.332795+00:00"
+    },
+    {
+      "territory": "TCA",
+      "country": "tc",
+      "requestedURL": "https://apps.apple.com/tc/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:53.332818+00:00",
+      "finalURL": "https://apps.apple.com/tc/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "428f72de685dae030575829ff341a05dbd9653d0ed4518c4978bed06a9fba90a",
+      "responseBytes": 476473,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/tc/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/tc/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:54.294209+00:00"
+    },
+    {
+      "territory": "TCD",
+      "country": "td",
+      "requestedURL": "https://apps.apple.com/td/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:54.294232+00:00",
+      "finalURL": "https://apps.apple.com/td/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "29ffaac617f896e52a56c8a68d054b35d64c4c4c715706eb70eb6b88b8bf3dc7",
+      "responseBytes": 476684,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/td/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/td/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:54.972508+00:00"
+    },
+    {
+      "territory": "THA",
+      "country": "th",
+      "requestedURL": "https://apps.apple.com/th/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:54.972530+00:00",
+      "finalURL": "https://apps.apple.com/th/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "3f5b8806ca7fc335e64d55a7e8a8c44cbcf95973f9b91af1f58c1a93b1c3b60d",
+      "responseBytes": 476633,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/th/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/th/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "THB",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:55.643909+00:00"
+    },
+    {
+      "territory": "TJK",
+      "country": "tj",
+      "requestedURL": "https://apps.apple.com/tj/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:55.643919+00:00",
+      "finalURL": "https://apps.apple.com/tj/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "14a864cbc7b1261f55150b12651a75ca665ea64190cbf4d19b9b8bfa8b180091",
+      "responseBytes": 476676,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/tj/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/tj/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:56.369507+00:00"
+    },
+    {
+      "territory": "TKM",
+      "country": "tm",
+      "requestedURL": "https://apps.apple.com/tm/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:56.369529+00:00",
+      "finalURL": "https://apps.apple.com/tm/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "a7bc6251b52cde31187ff455d00285c98fd71ac2540b340530c296ef37aba308",
+      "responseBytes": 476678,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/tm/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/tm/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:57.328141+00:00"
+    },
+    {
+      "territory": "TON",
+      "country": "to",
+      "requestedURL": "https://apps.apple.com/to/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:57.328169+00:00",
+      "finalURL": "https://apps.apple.com/to/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "7b39f84cea2e6ce942d16299a312ece4d7ad28dd7d5b02155bf9e842d2c4a303",
+      "responseBytes": 476466,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/to/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/to/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:58.126259+00:00"
+    },
+    {
+      "territory": "TTO",
+      "country": "tt",
+      "requestedURL": "https://apps.apple.com/tt/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:58.126272+00:00",
+      "finalURL": "https://apps.apple.com/tt/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "0b0410fcfb12192d23709b8511f19bb01374eff524481de5eeb8cfc49ab416cc",
+      "responseBytes": 476695,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/tt/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/tt/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:58.960674+00:00"
+    },
+    {
+      "territory": "TUN",
+      "country": "tn",
+      "requestedURL": "https://apps.apple.com/tn/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:58.960700+00:00",
+      "finalURL": "https://apps.apple.com/tn/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "94987cfd5de12068d6bf9882f3b72789a05d39d13c1a7fb431530d3664bd0010",
+      "responseBytes": 476813,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/tn/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/tn/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:48:59.753794+00:00"
+    },
+    {
+      "territory": "TUR",
+      "country": "tr",
+      "requestedURL": "https://apps.apple.com/tr/app/id6787769891",
+      "startedAt": "2026-11-19T15:48:59.753807+00:00",
+      "finalURL": "https://apps.apple.com/tr/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "cd6fe5872ccf88d04bcb589aa11faabe42e17bb7a1cdfe0fd8d176274faf5b99",
+      "responseBytes": 479105,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/tr/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/tr/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "TRY",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:00.469629+00:00"
+    },
+    {
+      "territory": "TWN",
+      "country": "tw",
+      "requestedURL": "https://apps.apple.com/tw/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:00.469653+00:00",
+      "finalURL": "https://apps.apple.com/tw/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "4e21820bf5618424e28108847bf80d0edb0e3302f9a926152406a2f32d53dc65",
+      "responseBytes": 494356,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/tw/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/tw/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "TWD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:01.279043+00:00"
+    },
+    {
+      "territory": "TZA",
+      "country": "tz",
+      "requestedURL": "https://apps.apple.com/tz/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:01.279066+00:00",
+      "finalURL": "https://apps.apple.com/tz/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "f272861fd62328d8178cb739c9ad6544b39062b04bede83ef83d2f6992047d1d",
+      "responseBytes": 476635,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/tz/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/tz/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "TZS",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:02.437130+00:00"
+    },
+    {
+      "territory": "UGA",
+      "country": "ug",
+      "requestedURL": "https://apps.apple.com/ug/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:02.437154+00:00",
+      "finalURL": "https://apps.apple.com/ug/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "45e57b10bfa25c5539cd3f163bf80914eafabd0d695e5b0c6d185c8d6899207b",
+      "responseBytes": 476467,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/ug/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/ug/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:03.493703+00:00"
+    },
+    {
+      "territory": "UKR",
+      "country": "ua",
+      "requestedURL": "https://apps.apple.com/ua/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:03.493732+00:00",
+      "finalURL": "https://apps.apple.com/ua/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "df266b2273a8b9b6e50fcd1f2c16fb0dfb8e5c41d94d522016af3c4967f743e1",
+      "responseBytes": 479294,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/ua/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/ua/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:04.594992+00:00"
+    },
+    {
+      "territory": "URY",
+      "country": "uy",
+      "requestedURL": "https://apps.apple.com/uy/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:04.595015+00:00",
+      "finalURL": "https://apps.apple.com/uy/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "314b66dcfb4b910d5fce6f97a3756a015b09bfe8632b3bf6a26e60273e7b8971",
+      "responseBytes": 473558,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/uy/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/uy/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:05.328638+00:00"
+    },
+    {
+      "territory": "USA",
+      "country": "us",
+      "requestedURL": "https://apps.apple.com/us/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:05.328663+00:00",
+      "finalURL": "https://apps.apple.com/us/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "0488883e2a2c404c932ef6a5c3c46848800d5d49bb538cea10f21360c9f7f1cd",
+      "responseBytes": 493318,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/us/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/us/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:06.513161+00:00"
+    },
+    {
+      "territory": "UZB",
+      "country": "uz",
+      "requestedURL": "https://apps.apple.com/uz/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:06.513179+00:00",
+      "finalURL": "https://apps.apple.com/uz/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "e0383718bfac1cddacd343787256d7291cc01ca66d9ed7a91a40e403ae5bd8d9",
+      "responseBytes": 476676,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/uz/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/uz/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:07.277476+00:00"
+    },
+    {
+      "territory": "VCT",
+      "country": "vc",
+      "requestedURL": "https://apps.apple.com/vc/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:07.277500+00:00",
+      "finalURL": "https://apps.apple.com/vc/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "d82ac1b573c193b7961b5b3f5e747a53c2da7d352d4b604d51bfe92a09265749",
+      "responseBytes": 476487,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/vc/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/vc/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:08.129714+00:00"
+    },
+    {
+      "territory": "VEN",
+      "country": "ve",
+      "requestedURL": "https://apps.apple.com/ve/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:08.129728+00:00",
+      "finalURL": "https://apps.apple.com/ve/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "8c09fa39b9cf09e26ce1d449aa4a1f5c54a86c1567aaf3f23f7710f828678e41",
+      "responseBytes": 476316,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/ve/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/ve/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:08.943415+00:00"
+    },
+    {
+      "territory": "VGB",
+      "country": "vg",
+      "requestedURL": "https://apps.apple.com/vg/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:08.943441+00:00",
+      "finalURL": "https://apps.apple.com/vg/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "b43e6a81642234cc9ab329325514a3a254403b1f8db39704331fb3b598e511b0",
+      "responseBytes": 476480,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/vg/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/vg/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:09.716385+00:00"
+    },
+    {
+      "territory": "VNM",
+      "country": "vn",
+      "requestedURL": "https://apps.apple.com/vn/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:09.716408+00:00",
+      "finalURL": "https://apps.apple.com/vn/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "6d775f6957fa7fb32e66f4ce58a9fa6d8129c8b454c93634480fe29e14dcfe8f",
+      "responseBytes": 476729,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/vn/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/vn/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "VND",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:10.754316+00:00"
+    },
+    {
+      "territory": "VUT",
+      "country": "vu",
+      "requestedURL": "https://apps.apple.com/vu/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:10.754341+00:00",
+      "finalURL": "https://apps.apple.com/vu/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "a3c37a6afca6063b429ce04c128b35a04cf62ab20cc3a651b74bf64ad286f902",
+      "responseBytes": 476687,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/vu/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/vu/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:11.527272+00:00"
+    },
+    {
+      "territory": "XKS",
+      "country": "xk",
+      "requestedURL": "https://apps.apple.com/xk/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:11.527295+00:00",
+      "finalURL": "https://apps.apple.com/xk/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "fecfc333197a5f93aa7db201a18d6ea9cb9ea7b212cf846900393a5088d1c634",
+      "responseBytes": 478902,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/xk/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/xk/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "EUR",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:12.324608+00:00"
+    },
+    {
+      "territory": "YEM",
+      "country": "ye",
+      "requestedURL": "https://apps.apple.com/ye/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:12.324619+00:00",
+      "finalURL": "https://apps.apple.com/ye/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "f54806a1b22d5e853ae5b87246b8537385440167e9cc9ed7c7e10d61ac8d7cb3",
+      "responseBytes": 476623,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/ye/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/ye/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:13.145798+00:00"
+    },
+    {
+      "territory": "ZAF",
+      "country": "za",
+      "requestedURL": "https://apps.apple.com/za/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:13.145820+00:00",
+      "finalURL": "https://apps.apple.com/za/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "4aa8dade278e93862622060f44c09148e56dde7e2b99b99cb85b4b6d8e91c8b7",
+      "responseBytes": 476443,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/za/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/za/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "ZAR",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:14.423965+00:00"
+    },
+    {
+      "territory": "ZMB",
+      "country": "zm",
+      "requestedURL": "https://apps.apple.com/zm/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:14.423978+00:00",
+      "finalURL": "https://apps.apple.com/zm/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "396f4d37cbfbbb7a33484b4810d2a92dc30e1320bc8e35fee21722b0e9f05e07",
+      "responseBytes": 476467,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/zm/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/zm/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:15.268261+00:00"
+    },
+    {
+      "territory": "ZWE",
+      "country": "zw",
+      "requestedURL": "https://apps.apple.com/zw/app/id6787769891",
+      "startedAt": "2026-11-19T15:49:15.268285+00:00",
+      "finalURL": "https://apps.apple.com/zw/app/codexbar-usage-monitor/id6787769891",
+      "responseSHA256": "a5dc2b71fae8807bc3e152ca4c1d5f09167148fc138164347eacd4c6a8292c59",
+      "responseBytes": 476469,
+      "offer": {
+        "name": "CodexBar Usage Monitor",
+        "developerURL": "https://apps.apple.com/zw/developer/franz-hemmer/id6787769894",
+        "canonicalURL": "https://apps.apple.com/zw/app/codexbar-usage-monitor/id6787769891",
+        "price": 0,
+        "currency": "USD",
+        "free": true
+      },
+      "finishedAt": "2026-11-19T15:49:16.099726+00:00"
+    }
+  ],
+  "complete": true,
+  "finishedAt": "2026-11-19T15:49:16.099756+00:00",
+  "freeCount": 35
+}
