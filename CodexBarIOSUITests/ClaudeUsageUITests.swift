@@ -49,10 +49,30 @@ final class ClaudeUsageUITests: XCTestCase {
         }
     }
 
+    private func exercisePromotionalCredit() {
+        continueAfterFailure = false
+        let app = launch(scenario: "claude-fable-promotional", runID: UUID().uuidString)
+        XCTAssertTrue(app.buttons["dashboard-metric-claude.session"].waitForExistence(timeout: 10), app.debugDescription)
+        let balance = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Current balance")).firstMatch
+        XCTAssertTrue(balance.exists, app.debugDescription)
+        XCTAssertTrue(balance.label.contains("$25.00"), balance.label)
+        XCTAssertFalse(balance.label.contains("$75.00") || balance.label.contains("$100.00"), balance.label)
+        tap(app.buttons["More options for Synthetic Claude"], in: app)
+        tap(app.buttons["More information for Synthetic Claude"], in: app)
+        let credit = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label BEGINSWITH %@", "Promotional credit, $75.00 of $100.00 remaining, expires "
+        )).firstMatch
+        XCTAssertTrue(credit.waitForExistence(timeout: 5), app.debugDescription)
+        reveal(credit, in: app)
+        keep("claude-promotional-credit-account-details", app: app)
+        app.terminate()
+    }
+
     func testWindowLabelsAndSavedCustomizationForProAndMax() {
         continueAfterFailure = false
         exerciseSavedResetSelection()
         exerciseSelectedUnusableReset()
+        exercisePromotionalCredit()
         for scenario in ["claude-pro", "claude-max"] {
             let runID = UUID().uuidString
             let app = launch(scenario: scenario, runID: runID)

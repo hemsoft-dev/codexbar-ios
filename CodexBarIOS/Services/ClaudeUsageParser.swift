@@ -80,6 +80,7 @@ public enum ClaudeUsageParser {
         let limits: [StructuredLimit]?
         let extraUsage: ExtraUsage?
         let spend: Spend?
+        let promotionalCredit: PromotionalCredit?
 
         enum CodingKeys: String, CodingKey {
             case fiveHour = "five_hour"
@@ -90,6 +91,7 @@ public enum ClaudeUsageParser {
             case limits
             case extraUsage = "extra_usage"
             case spend
+            case promotionalCredit = "iguana_necktie"
         }
 
         init(from decoder: Decoder) throws {
@@ -111,6 +113,60 @@ public enum ClaudeUsageParser {
             ))?.compactMap(\.value)
             extraUsage = try? container.decodeIfPresent(ExtraUsage.self, forKey: .extraUsage)
             spend = try? container.decodeIfPresent(Spend.self, forKey: .spend)
+            promotionalCredit = try? container.decodeIfPresent(
+                PromotionalCredit.self,
+                forKey: .promotionalCredit
+            )
+        }
+    }
+
+    /// Promotional credit Claude reports apart from the prepaid balance. Unlike `Money`, the amounts
+    /// are US dollars, not minor units. A block that fails any check is omitted as a whole, so a
+    /// partial or malformed block never shows an invented balance or expiry.
+    private struct PromotionalCredit: Decodable {
+        let limit: Decimal
+        let remaining: Decimal
+        let expiresAt: Date?
+        let isLocked: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case limit = "limit_dollars"
+            case used = "used_dollars"
+            case remaining = "remaining_dollars"
+            case expiresAt = "resets_at"
+            case lockedReason = "locked_reason"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let limit = try container.decode(Decimal.self, forKey: .limit)
+            let used = try container.decodeIfPresent(Decimal.self, forKey: .used)
+            let reported = try container.decodeIfPresent(Decimal.self, forKey: .remaining)
+            guard limit > 0, limit <= 1_000_000,
+                  used.map({ $0 >= 0 && $0 <= limit }) ?? true,
+                  reported.map({ $0 >= 0 && $0 <= limit }) ?? true,
+                  let remaining = reported ?? used.map({ limit - $0 })
+            else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .limit, in: container, debugDescription: "Unusable promotional credit amounts"
+                )
+            }
+            self.limit = limit
+            self.remaining = remaining
+            if let rawExpiry = try container.decodeIfPresent(String.self, forKey: .expiresAt) {
+                let fractional = ISO8601DateFormatter()
+                fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                guard let expiry = fractional.date(from: rawExpiry) ?? ISO8601DateFormatter().date(from: rawExpiry) else {
+                    throw DecodingError.dataCorruptedError(
+                        forKey: .expiresAt, in: container, debugDescription: "Unusable promotional credit expiry"
+                    )
+                }
+                expiresAt = expiry
+            } else {
+                expiresAt = nil
+            }
+            let reason = try container.decodeIfPresent(String.self, forKey: .lockedReason)
+            isLocked = reason?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
         }
     }
 
@@ -466,7 +522,15 @@ public enum ClaudeUsageParser {
                 .map(\.text)
         )
         usageMessages.append(contentsOf: extraUsage.messages.map(\.text))
-        let accountInformationItems = extraUsage.messages.compactMap(\.informationItem)
+        var accountInformationItems = extraUsage.messages.compactMap(\.informationItem)
+        let promotionalCredit = promotionalCreditItem(
+            usage.promotionalCredit,
+            fetchedAt: fetchedAt,
+            dateTimeFormatter: dateTimeFormatter
+        )
+        if let promotionalCredit {
+            accountInformationItems.append(promotionalCredit)
+        }
         var cardInformationSections: [ProviderCardInformationSection] = []
         if !limitInformationItems.isEmpty {
             cardInformationSections.append(ProviderCardInformationSection(
@@ -483,7 +547,7 @@ public enum ClaudeUsageParser {
             ))
         }
 
-        guard !bars.isEmpty || !extraUsage.metrics.isEmpty || !usageMessages.isEmpty else {
+        guard !bars.isEmpty || !extraUsage.metrics.isEmpty || !usageMessages.isEmpty || promotionalCredit != nil else {
             return nil
         }
 
@@ -826,6 +890,33 @@ public enum ClaudeUsageParser {
             ))
         }
         return SpendPresentation(metrics: metrics, messages: messages)
+    }
+
+    /// The promotional credit row for "Account details". It never joins the prepaid balance or the
+    /// spend metrics, and an expired or locked credit shows no usable amount.
+    private static func promotionalCreditItem(
+        _ credit: PromotionalCredit?,
+        fetchedAt: Date,
+        dateTimeFormatter: UserFacingDateTimeFormatter
+    ) -> ProviderCardInformationItem? {
+        guard let credit else {
+            return nil
+        }
+        let detail: String
+        if let expiresAt = credit.expiresAt, expiresAt <= fetchedAt {
+            detail = "Expired \(dateTimeFormatter.dateAndTime(expiresAt))"
+        } else if credit.isLocked {
+            detail = "Not available to use now"
+        } else {
+            let amounts = "\(dateTimeFormatter.usDollars(credit.remaining)) of "
+                + "\(dateTimeFormatter.usDollars(credit.limit)) remaining"
+            detail = credit.expiresAt.map { "\(amounts), expires \(dateTimeFormatter.dateAndTime($0))" } ?? amounts
+        }
+        return ProviderCardInformationItem(
+            id: "claude.promotional-credit",
+            label: "Promotional credit",
+            detail: detail
+        )
     }
 
     private static func monetaryMetric(

@@ -13,6 +13,11 @@ building, testing, or releasing the app.
   Code subscriptions, and CodexBar won't estimate an allowance from token
   activity. ([#522](https://github.com/hemsoft-dev/codexbar-ios/issues/522))
 
+- Claude's More Information now shows promotional credit when Claude reports
+  it: how much is left, how much was granted and when it expires. It is listed
+  apart from your prepaid balance.
+  ([#560](https://github.com/hemsoft-dev/codexbar-ios/issues/560))
+
 ### Changed
 
 - Removed Google Gemini and Antigravity support from iOS. Saved Google accounts,
