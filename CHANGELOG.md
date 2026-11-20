@@ -60,6 +60,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Record the November 19 public US App Store disclosures and privacy label, and
+  that the page's privacy policy link still uses the old repository path, which
+  redirects to the current policy.
+  ([#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469))
 - Record public Free offers for all 175 App Store territories on November 19,
   in two manual batches split by Apple's rate limit. The record covers current
   public visibility only, not pre-cutoff timing or production purchases.
