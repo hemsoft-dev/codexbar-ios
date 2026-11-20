@@ -39,6 +39,11 @@ public struct UserFacingDateTimeFormatter {
         return "\(value) \(zoneLabel(for: date, timeZone: timeZone))"
     }
 
+    /// A US dollar amount in this formatter's locale, so text that joins an amount and a date agrees.
+    public func usDollars(_ amount: Decimal) -> String {
+        amount.formatted(.currency(code: "USD").precision(.fractionLength(2)).locale(localeProvider()))
+    }
+
     public func shortDate(_ date: Date) -> String {
         format(date, template: "MMMd", timeZone: timeZoneProvider())
     }

@@ -24,8 +24,46 @@ defensively and optional values are omitted when absent or malformed.
 | Remaining spend headroom | `spend.limit - spend.used`, then the equivalent `extra_usage` values | Labeled as derived and never presented as prepaid balance |
 | Auto-reload | `spend.auto_reload` | Omitted if the key is absent |
 | Spend reset | Not exposed in verified OAuth response shapes | Omitted |
-| Promotional amount/expiry | Not exposed as a stable, provider-described OAuth field | Omitted |
+| Promotional credit balance and expiry | `iguana_necktie.remaining_dollars`, `limit_dollars` and `resets_at` | Omitted when the block is absent, null or malformed |
 | Temporary-limit notice | Not exposed as a stable, provider-described OAuth field | Omitted; codenames and plan labels are not interpreted as promotions |
+
+## Promotional credit
+
+When the usage response carries an `iguana_necktie` block, "Account details"
+shows one "Promotional credit" row, for example "$75.00 of $100.00 remaining,
+expires Nov 5, 2026 at 7:59 AM". No extra request is made. The row is separate
+from "Current balance", which stays the prepaid `spend.balance`; promotional
+amounts are never added to the balance or the spend metrics.
+
+| Field | Use |
+| --- | --- |
+| `limit_dollars` | Credit granted. Required and greater than zero. |
+| `remaining_dollars` | Credit left. Preferred when reported. |
+| `used_dollars` | Used only to derive the remainder when `remaining_dollars` is absent. |
+| `resets_at` | Expiry, not a recurring reset. Optional. |
+| `locked_reason` | Any non-blank reason shows "Not available to use now" with no amount. |
+
+The amounts are US dollars, not minor units, so they are not divided by 100.
+A credit whose expiry has passed at refresh shows "Expired" with its date and
+no amount. A row kept from the last successful refresh keeps its stated expiry.
+A block that is null, incomplete or malformed (a non-numeric amount, a
+remainder above the grant, an unreadable expiry) is omitted as a whole and the
+card looks exactly as it does without it. Plan names, codenames and offers
+never create a credit. The row belongs to the account's own usage result, so
+another account, a later response without the block, sign-out or a replaced
+credential never shows an earlier credit.
+
+This is an undocumented response shape taken from public implementations:
+[desktop CodexBar](https://github.com/steipete/CodexBar/blob/1f6da9bec44455288ddee5ef6f3617a803d8eb2a/docs/claude.md)
+documents the fields under "Cloud-session credits", and
+[Pane's live-shape test](https://github.com/ItsJazii/pane/blob/beb4bbfd4e7c776d970a56d254e8cce4d61154d9/src-tauri/src/providers/claude.rs#L1049)
+records an untouched $100 credit with an expiry. Anthropic describes
+promotional credit and its expiry in its
+[promotional credit offer terms](https://www.anthropic.com/legal/promotion-credit-terms).
+No public or captured response shows any other promotional field, so reload
+offers and other credit types remain omitted. CodexBar's tests use synthetic
+data; comparison with a live account that holds promotional credit remains
+pending for Franz ([#560](https://github.com/hemsoft-dev/codexbar-ios/issues/560)).
 
 ## Window labels and plans
 

@@ -710,6 +710,18 @@ final class UITestFixtures {
                 "is_enabled": true, "monthly_limit": 1_000,
                 "used_credits": 350, "utilization": 35,
             ]
+        } else if scenario == "claude-fable-promotional" {
+            // Synthetic prepaid balance beside a synthetic promotional credit. No live account.
+            payload["spend"] = [
+                "enabled": true,
+                "used": ["amount_minor": 500, "currency": "USD", "exponent": 2],
+                "limit": ["amount_minor": 4_000, "currency": "USD", "exponent": 2],
+                "balance": ["amount_minor": 2_500, "currency": "USD", "exponent": 2],
+            ]
+            payload["iguana_necktie"] = [
+                "limit_dollars": 100, "used_dollars": 25, "remaining_dollars": 75,
+                "resets_at": formatter.string(from: now.addingTimeInterval(5 * 86_400)),
+            ]
         }
         guard let data = try? JSONSerialization.data(withJSONObject: payload) else {
             preconditionFailure("Synthetic Fable fixture must serialize")

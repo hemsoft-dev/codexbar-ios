@@ -25,6 +25,7 @@
 		A42000000000000000000701 /* ClaudeUsageResetFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42000000000000000000702 /* ClaudeUsageResetFlowTests.swift */; };
 		A42000000000000000000801 /* ClaudeUsageResetProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42000000000000000000802 /* ClaudeUsageResetProviderTests.swift */; };
 		A42100000000000000000301 /* ClaudeFableWeeklyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42100000000000000000302 /* ClaudeFableWeeklyTests.swift */; };
+		A56000000000000000000101 /* ClaudePromotionalCreditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56000000000000000000102 /* ClaudePromotionalCreditTests.swift */; };
 		A43100000000000000000201 /* ClaudePlanProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43100000000000000000202 /* ClaudePlanProfileTests.swift */; };
 		A43800000000000000000101 /* CursorPlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43800000000000000000102 /* CursorPlanTests.swift */; };
 		A42000000000000000000301 /* ClaudeUsageResetInventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42000000000000000000302 /* ClaudeUsageResetInventoryView.swift */; };
@@ -384,6 +385,7 @@
 		A42000000000000000000702 /* ClaudeUsageResetFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageTests/ClaudeUsageResetFlowTests.swift; sourceTree = SOURCE_ROOT; };
 		A42000000000000000000802 /* ClaudeUsageResetProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageTests/ClaudeUsageResetProviderTests.swift; sourceTree = SOURCE_ROOT; };
 		A42100000000000000000302 /* ClaudeFableWeeklyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageTests/ClaudeFableWeeklyTests.swift; sourceTree = SOURCE_ROOT; };
+		A56000000000000000000102 /* ClaudePromotionalCreditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageTests/ClaudePromotionalCreditTests.swift; sourceTree = SOURCE_ROOT; };
 		A43100000000000000000202 /* ClaudePlanProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageTests/ClaudePlanProfileTests.swift; sourceTree = SOURCE_ROOT; };
 		A43800000000000000000102 /* CursorPlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOSTests/CursorPlanTests.swift; sourceTree = SOURCE_ROOT; };
 		A42000000000000000000302 /* ClaudeUsageResetInventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageResetInventoryView.swift; sourceTree = "<group>"; };
@@ -912,6 +914,7 @@
 				A42000000000000000000702 /* ClaudeUsageResetFlowTests.swift */,
 				A42000000000000000000802 /* ClaudeUsageResetProviderTests.swift */,
 				A42100000000000000000302 /* ClaudeFableWeeklyTests.swift */,
+				A56000000000000000000102 /* ClaudePromotionalCreditTests.swift */,
 				A43100000000000000000202 /* ClaudePlanProfileTests.swift */,
 				A44400000000000000000302 /* SubscriptionRenewalTests.swift */,
 				A44600000000000000000502 /* SubscriptionBillingTests.swift */,
@@ -1508,6 +1511,7 @@
 				A42000000000000000000701 /* ClaudeUsageResetFlowTests.swift in Sources */,
 				A42000000000000000000801 /* ClaudeUsageResetProviderTests.swift in Sources */,
 				A42100000000000000000301 /* ClaudeFableWeeklyTests.swift in Sources */,
+				A56000000000000000000101 /* ClaudePromotionalCreditTests.swift in Sources */,
 				A43100000000000000000201 /* ClaudePlanProfileTests.swift in Sources */,
 				A44400000000000000000301 /* SubscriptionRenewalTests.swift in Sources */,
 				A44600000000000000000501 /* SubscriptionBillingTests.swift in Sources */,
