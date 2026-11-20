@@ -158,9 +158,11 @@ CodexBar reads the optional `cedar_ember` inventory by adding `cedar_ember=1`
 to the usage request. Missing, malformed or unsupported inventory is unknown,
 not a claimed zero balance. A confirmed empty eligible inventory is zero.
 Counts exclude paused, expired and not-yet-started grants. Redemption is offered
-only for the provider-selected `next_grant_id` when it is marked `usable_now`,
-eligibility holds and any cooldown has ended. Other saved grants remain visible
-with their availability and provider-reported expiration.
+for each grant Claude marks `usable_now`, when eligibility holds and any cooldown
+has ended. Each such grant is its own choice with its own confirmation, so a
+Fable reset and a weekly reset are never used in place of one another. Other
+saved grants remain visible with their availability and provider-reported
+expiration.
 
 The reset sheet names the account, affected windows, expiration and irreversible
 cost of one reset before confirmation. Its count and availability update while
@@ -174,7 +176,7 @@ saved credential and grant. A changed account, grant or rotated credential
 requires a fresh usage read and a new confirmation.
 
 The organization-bound `reset_rate_limits` POST uses `program=cedar_ember`, the
-selected `grant_id` and a new `request_id`. This contract follows the
+confirmed grant's own `grant_id` and a new `request_id`. This contract follows the
 [current provider implementation](https://github.com/can1357/oh-my-pi/blob/main/packages/ai/src/usage/claude-reset.ts),
 not a stable published Anthropic API. The request identifies CodexBar honestly;
 it does not impersonate another client to obtain reset eligibility. An unsupported
@@ -203,11 +205,41 @@ grant start and expiry dates, without a usage refresh. The inventory sheet shows
 end time before generic eligibility messages and removes it once that time passes.
 Neither update consumes a reset or changes provider quotas.
 
-For a current grant other than `next_grant_id`, the sheet explains that CodexBar
-currently uses only the reset selected by Claude. This describes the app's
-selection policy, not a verified server restriction on other grant IDs.
-The exact Fable reset clearing identifier and support for choosing another grant
-remain unverified under [#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559).
+### Reset types and choosing a reset
+
+The sheet describes each grant from the windows Claude lists in `clears`:
+
+| `clears` identifier | Sheet wording |
+| --- | --- |
+| `five_hour` | five-hour usage |
+| `seven_day` | weekly usage |
+| `seven_day_opus` | Opus weekly usage |
+| `seven_day_sonnet` | Sonnet weekly usage |
+| `seven_day_overage_included` | Fable weekly usage |
+| Any other identifier | provider-scoped usage |
+
+`seven_day_overage_included` is the Fable identifier in two independent public
+implementations. [oh-my-pi `d502479`](https://github.com/can1357/oh-my-pi/commit/d502479ba7a152b0cab72d9186d3229b6852cae6)
+maps it to the Fable weekly limit. [OpenUsage #1642](https://github.com/robinebers/openusage/pull/1642)
+lists it as a Fable reset and reports checking its wording against sanitized
+live reset-grant responses from three accounts on November 10, 2026. Anthropic's
+[limit-reset explanation](https://support.claude.com/en/articles/17007452-what-is-a-limit-reset)
+says a Fable reset restores the weekly usage spent on Fable. When Claude also
+lists `five_hour` on the grant, the sheet names both. An identifier CodexBar
+does not know keeps the general wording and never names an effect Claude did
+not report. The `type` and `gives_back_weekly` grant fields that OpenUsage reads
+are not used.
+
+OpenUsage #1642 also reports that Claude Code sends the chosen grant's own
+`grant_id`, and that Claude can answer `{"result":"unavailable","reason":"not_next_grant"}`
+when it wants another reset used first. That answer has not been observed on a
+live account: OpenUsage says so, and CodexBar has not used a reset other than
+`next_grant_id` on a live account either. CodexBar treats `not_next_grant` as a
+confirmed refusal: it reports that Claude declined the reset, removes the
+pending receipt and refreshes usage and inventory. Any other `unavailable`
+answer stays unconfirmed and keeps the receipt. Live use of a Fable reset beside
+a weekly reset remains pending for Franz
+([#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559)).
 Authentication and client-identity qualification remains separate under
 [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548).
 

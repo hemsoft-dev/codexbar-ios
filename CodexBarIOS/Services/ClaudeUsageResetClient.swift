@@ -26,6 +26,8 @@ public enum ClaudeUsageResetOutcome: Equatable, Sendable {
     case nothingToReset
     case noCredit
     case stateChanged
+    /// Claude declined the confirmed reset because it wants another saved reset used first.
+    case notNextGrant
 }
 
 public enum ClaudeUsageResetError: LocalizedError, Equatable, Sendable {
@@ -106,7 +108,7 @@ public actor ClaudeUsageResetClient {
     ) async throws -> ClaudeUsageResetGrant? {
         let inventory = try await inventory(accessToken: accessToken)
         if try reconcilePendingReceipt(inventory: inventory, scope: scope, url: receiptURL) { return nil }
-        guard let grant = inventory.redeemableGrant(at: now()), grant.id == grantID else { throw ClaudeUsageResetError.unavailable }
+        guard let grant = inventory.redeemableGrants(at: now()).first(where: { $0.id == grantID }) else { throw ClaudeUsageResetError.unavailable }
         if grant != confirmedGrant { return nil }
         guard try await verifiedIdentity(accessToken: accessToken) == identity else { throw ClaudeUsageResetError.credentialChanged }
         try verifyCredential(accessToken, configuration: configuration)
@@ -206,6 +208,9 @@ public actor ClaudeUsageResetClient {
         let http = try checkedResponse(response, request: request)
         guard (200..<300).contains(http.statusCode) else { throw ClaudeUsageResetError.httpStatus(http.statusCode) }
         guard data.count <= 1_048_576, let result = try? JSONDecoder().decode(ResetResponse.self, from: data) else { throw ClaudeUsageResetError.indeterminate }
+        if result.result == "not_next_grant" || (result.result == "unavailable" && result.reason == "not_next_grant") {
+            return .notNextGrant
+        }
         switch result.result {
         case "reset": return .reset
         case "already_redeemed", "already_used": return .alreadyRedeemed
@@ -283,7 +288,18 @@ public actor ClaudeUsageResetClient {
         }
     }
 
-    private struct ResetResponse: Decodable { let result: String }
+    private struct ResetResponse: Decodable {
+        let result: String
+        let reason: String?
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            result = try container.decode(String.self, forKey: .result)
+            reason = try? container.decodeIfPresent(String.self, forKey: .reason)
+        }
+
+        enum CodingKeys: String, CodingKey { case result, reason }
+    }
 }
 
 /// A redirect must never replay the mutating request or send grant data elsewhere.

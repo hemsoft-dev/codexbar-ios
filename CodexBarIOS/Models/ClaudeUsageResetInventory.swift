@@ -17,6 +17,22 @@ public struct ClaudeUsageResetGrant: Equatable, Sendable {
             && (startsAt.map { $0 <= date } ?? true)
             && (expiresAt.map { $0 > date } ?? true)
     }
+
+    /// What one reset restores, from the windows Claude lists in `clears`. An identifier this app does
+    /// not know keeps the general wording, so the sheet never names an effect Claude did not report.
+    public var restorationDescription: String {
+        let windows = clears.map { value in
+            switch value {
+            case "five_hour": "five-hour usage"
+            case "seven_day": "weekly usage"
+            case "seven_day_opus": "Opus weekly usage"
+            case "seven_day_sonnet": "Sonnet weekly usage"
+            case "seven_day_overage_included": "Fable weekly usage"
+            default: "provider-scoped usage"
+            }
+        }
+        return "Resets \(Array(Set(windows)).sorted().joined(separator: " and "))."
+    }
 }
 
 public struct ClaudeUsageResetInventory: Equatable, Sendable {
@@ -46,12 +62,19 @@ public struct ClaudeUsageResetInventory: Equatable, Sendable {
     }
 
     public func matchesConfirmation(grant: ClaudeUsageResetGrant, binding: String, at date: Date) -> Bool {
-        credentialBinding == binding && redeemableGrant(at: date) == grant
+        credentialBinding == binding && redeemableGrants(at: date).contains(grant)
     }
 
+    /// The reset Claude lists as next, when it can be used now.
     public func redeemableGrant(at date: Date) -> ClaudeUsageResetGrant? {
-        guard isEligible, cooldownUntil.map({ $0 <= date }) ?? true else { return nil }
-        return grants.first { $0.id == selectedGrantID && $0.isUsableNow && $0.isCurrent(at: date) }
+        redeemableGrants(at: date).first { $0.id == selectedGrantID }
+    }
+
+    /// Every saved reset Claude marks usable now, so a Fable reset and a weekly reset stay separate
+    /// choices. Claude can still decline one it does not want used first.
+    public func redeemableGrants(at date: Date) -> [ClaudeUsageResetGrant] {
+        guard isEligible, cooldownUntil.map({ $0 <= date }) ?? true else { return [] }
+        return grants.filter { $0.isUsableNow && $0.isCurrent(at: date) }
     }
 }
 

@@ -41,7 +41,9 @@ final class ClaudeUsageResetInventoryTests: XCTestCase {
         XCTAssertNil(try XCTUnwrap(parse(replacing: "\"eligible\":true", with: "\"eligible\":false")).redeemableGrant(at: now))
         XCTAssertNil(try XCTUnwrap(parse(replacing: "\"paused\":false", with: "\"paused\":true")).redeemableGrant(at: now))
         XCTAssertNil(try XCTUnwrap(parse(replacing: "\"usable_now\":true", with: "\"usable_now\":false")).redeemableGrant(at: now))
-        XCTAssertNil(try XCTUnwrap(parse(replacing: "\"next_grant_id\":\"fixture_grant\"", with: "\"next_grant_id\":\"different\"")).redeemableGrant(at: now))
+        let unselected = try XCTUnwrap(parse(replacing: "\"next_grant_id\":\"fixture_grant\"", with: "\"next_grant_id\":\"different\""))
+        XCTAssertNil(unselected.redeemableGrant(at: now))
+        XCTAssertEqual(unselected.redeemableGrants(at: now).map(\.id), ["fixture_grant"])
         let cooling = try XCTUnwrap(parse(replacing: "\"eligible\":true", with: "\"eligible\":true,\"cooldown_until\":\"2030-01-02T00:00:00Z\""))
         XCTAssertEqual(cooling.availableCount(at: now), 2)
         XCTAssertNil(cooling.redeemableGrant(at: now))
@@ -63,6 +65,49 @@ final class ClaudeUsageResetInventoryTests: XCTestCase {
         XCTAssertEqual(empty.availableCount(at: now), 0)
         XCTAssertNil(empty.redeemableGrant(at: now))
         XCTAssertEqual(available.availableCount(at: now), 2)
+    }
+
+    func testFableAndWeeklyResetsStaySeparateChoicesWithTheirOwnWording() throws {
+        let inventory = try XCTUnwrap(parseMixed()).bound(toAccessToken: "fixture-token")
+        let binding = try XCTUnwrap(inventory.credentialBinding)
+        let descriptions = Dictionary(uniqueKeysWithValues: inventory.grants.map { ($0.id, $0.restorationDescription) })
+        XCTAssertEqual(descriptions["weekly_grant"], "Resets weekly usage.")
+        XCTAssertEqual(descriptions["fable_grant"], "Resets Fable weekly usage and five-hour usage.")
+        XCTAssertEqual(descriptions["locked_fable_grant"], "Resets Fable weekly usage.")
+        // An identifier this app does not know keeps the general wording, alone or beside a known window.
+        XCTAssertEqual(descriptions["future_grant"], "Resets five-hour usage and provider-scoped usage.")
+
+        XCTAssertEqual(inventory.redeemableGrant(at: now)?.id, "weekly_grant")
+        XCTAssertEqual(inventory.redeemableGrants(at: now).map(\.id), ["weekly_grant", "fable_grant", "future_grant"])
+        for grant in inventory.grants {
+            XCTAssertEqual(inventory.matchesConfirmation(grant: grant, binding: binding, at: now), grant.id != "locked_fable_grant", grant.id)
+            XCTAssertFalse(inventory.matchesConfirmation(grant: grant, binding: "other-binding", at: now), grant.id)
+        }
+        XCTAssertEqual(inventory.availableCount(at: now), 5)
+    }
+
+    func testIneligibleOrCoolingAccountOffersNoResetOfAnyKind() throws {
+        let ineligible = try XCTUnwrap(parseMixed(replacing: "\"eligible\":true", with: "\"eligible\":false"))
+        XCTAssertTrue(ineligible.redeemableGrants(at: now).isEmpty)
+        let cooling = try XCTUnwrap(parseMixed(replacing: "\"eligible\":true",
+                                               with: "\"eligible\":true,\"cooldown_until\":\"2030-01-02T00:00:00Z\""))
+        XCTAssertTrue(cooling.redeemableGrants(at: now).isEmpty)
+        XCTAssertEqual(cooling.redeemableGrants(at: try XCTUnwrap(cooling.cooldownUntil)).count, 3)
+        let expired = try XCTUnwrap(parseMixed())
+        XCTAssertTrue(expired.redeemableGrants(at: now.addingTimeInterval(8 * 86_400)).isEmpty)
+    }
+
+    private func parseMixed(replacing old: String = "unused", with new: String = "unused") -> ClaudeUsageResetInventory? {
+        let window = "\"starts_at\":\"2029-12-01T00:00:00Z\",\"ends_at\":\"2030-01-08T00:00:00Z\",\"paused\":false"
+        let fixture = """
+        {"cedar_ember":{"eligible":true,"next_grant_id":"weekly_grant","grants":[
+          {"id":"weekly_grant","resets_left":1,\(window),"clears":["seven_day"],"usable_now":true},
+          {"id":"fable_grant","resets_left":2,\(window),"clears":["seven_day_overage_included","five_hour"],"usable_now":true},
+          {"id":"locked_fable_grant","resets_left":1,\(window),"clears":["seven_day_overage_included"],"usable_now":false},
+          {"id":"future_grant","resets_left":1,\(window),"clears":["five_hour","cedar_future_window"],"usable_now":true}
+        ]}}
+        """
+        return ClaudeUsageResetInventoryParser.parse(Data(fixture.replacingOccurrences(of: old, with: new).utf8))
     }
 
     private func parse(replacing old: String = "unused", with new: String = "unused") -> ClaudeUsageResetInventory? {

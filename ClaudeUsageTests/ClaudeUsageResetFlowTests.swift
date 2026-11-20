@@ -24,7 +24,7 @@ final class ClaudeUsageResetFlowTests: XCTestCase, @unchecked Sendable {
 
     @MainActor
     func testEveryOutcomeRefreshesAuthoritativeUsage() async throws {
-        for outcome in [ClaudeUsageResetOutcome.reset, .alreadyRedeemed, .nothingToReset, .noCredit, .stateChanged] {
+        for outcome in [ClaudeUsageResetOutcome.reset, .alreadyRedeemed, .nothingToReset, .noCredit, .stateChanged, .notNextGrant] {
             for refreshMode in ["valid", "failed", "rebound"] {
                 let harness = makeHarness(outcome: outcome, refreshMode: refreshMode)
                 defer { harness.clear() }
@@ -47,6 +47,10 @@ final class ClaudeUsageResetFlowTests: XCTestCase, @unchecked Sendable {
                     XCTAssertEqual(refreshed.claudeUsageResetInventory?.availableCount(at: Date()), 1)
                 }
                 XCTAssertEqual(feedback.isSuccess, refreshMode != "rebound" && (outcome == .reset || outcome == .alreadyRedeemed))
+                if outcome == .notNextGrant, refreshMode != "rebound" {
+                    XCTAssertEqual(feedback.message,
+                                   "Claude declined this reset and wants another saved reset used first. Check the refreshed list.")
+                }
                 if refreshMode == "rebound" { XCTAssertTrue(feedback.message.contains("authorization changed")) }
             }
         }

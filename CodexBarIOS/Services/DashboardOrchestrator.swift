@@ -330,6 +330,11 @@ final class DashboardOrchestrator: ObservableObject {
                 message: "The saved reset inventory changed. Review the refreshed details before confirming again.",
                 isSuccess: false
             )
+        case .notNextGrant:
+            return ClaudeUsageResetFeedback(
+                message: "Claude declined this reset and wants another saved reset used first. Check the refreshed list.",
+                isSuccess: false
+            )
         case nil:
             return ClaudeUsageResetFeedback(message: failure ?? "Claude did not confirm this reset.", isSuccess: false)
         }
