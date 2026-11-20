@@ -348,3 +348,39 @@ The local SwiftPM card-label regression can also be run with
 `swift test --filter ProviderCardPlanTests`. Profile capacity-tier validation applies
 to Max and Ultra; absent or malformed capacity tiers do not hide a known Pro,
 Team, or Enterprise family.
+
+## Per-product usage
+
+CodexBar shows no breakdown of Claude usage by product or surface (Claude Code,
+chat, artifacts), because no response this app can read is known to report one
+([#558](https://github.com/hemsoft-dev/codexbar-ios/issues/558)). This is a
+statement of data absence as of November 20, 2026, not a decision against the
+feature.
+
+What was checked:
+
+- The usage response fields read by three public implementations at their
+  current commits:
+  [oh-my-pi `fbb8085`](https://github.com/can1357/oh-my-pi/blob/fbb8085ff432419132c6e3132f36ad857893b1a4/packages/ai/src/usage/claude.ts),
+  [OpenUsage `53f70b3`](https://github.com/robinebers/openusage/blob/53f70b396698656cb5e1e3f59c40d1b86d6b5296/Sources/OpenUsage/Providers/Claude/ClaudeUsageMapper.swift)
+  and [desktop CodexBar `1f6da9b`](https://github.com/steipete/CodexBar/blob/1f6da9bec44455288ddee5ef6f3617a803d8eb2a/Sources/CodexBarCore/Providers/Claude/ClaudeOAuth/ClaudeOAuthUsageFetcher.swift).
+  All read session, weekly and model-scoped windows, spend and saved resets.
+  None reads a share of usage per product.
+- Desktop CodexBar also accepts `seven_day_routines` and `seven_day_cowork` as a
+  "Daily Routines" window. Its
+  [own report](https://github.com/steipete/CodexBar/pull/2450) says a live
+  account returned `seven_day_cowork: null`, that a populated value could not be
+  produced, and that claude.ai draws its bars from `limits`, which has no
+  routines entry. A window nobody has seen populated is not a verified shape, so
+  CodexBar for iOS does not read these keys.
+- Anthropic documents per-product figures only in the
+  [Claude Enterprise Analytics API](https://platform.claude.com/docs/en/manage-claude/analytics-api),
+  which needs an analytics key created by an Enterprise organization's primary
+  owner. Individual subscriptions cannot use it, and asking for such a key would
+  break this app's guided-setup rule.
+
+Until a sanitized response shows product identifiers and units, keys that look
+like a product breakdown add no row, no zero value and no error.
+`ClaudeWindowLabelTests.testProductKeysWithoutAnEstablishedShapeChangeNothing`
+pins that. A model name, a plan label or an active session never implies a
+product share. No request is added for this.

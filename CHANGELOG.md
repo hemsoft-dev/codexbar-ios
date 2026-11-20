@@ -67,6 +67,10 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Record that no Claude response this app can read reports usage per product,
+  with the public sources checked, and pin that product-like keys add no row,
+  zero value or error.
+  ([#558](https://github.com/hemsoft-dev/codexbar-ios/issues/558))
 - Record the November 19 public US App Store disclosures and privacy label, and
   that the page's privacy policy link still uses the old repository path, which
   redirects to the current policy.
