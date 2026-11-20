@@ -112,12 +112,81 @@ final class ClaudeUsageResetClientTests: XCTestCase {
                                                      credentialBinding: ClaudeUsageResetClient.credentialBinding(for: "fixture-token"),
                                                      confirmedGrant: fixtureConfirmedGrant
                 )
-                XCTFail("An unselected grant must not be redeemed")
+                XCTFail("A grant Claude does not list as usable must not be redeemed")
             } catch {
                 XCTAssertEqual(error as? ClaudeUsageResetError, .unavailable)
             }
             XCTAssertFalse(ResetClientProtocol.requests.contains { $0.httpMethod == "POST" })
             try? FileManager.default.removeItem(at: harness.directory)
+        }
+    }
+
+    private var fixtureFableGrant: ClaudeUsageResetGrant {
+        ClaudeUsageResetGrant(id: "fixture_fable", title: "Claude usage reset", remainingCount: 1,
+                             startsAt: Date(timeIntervalSince1970: 1_890_777_600),
+                             expiresAt: Date(timeIntervalSince1970: 1_894_060_800),
+                             clears: ["seven_day_overage_included"], isPaused: false, isUsableNow: true, requiresLimit: true)
+    }
+
+    private func consume(_ grant: ClaudeUsageResetGrant, with client: ClaudeUsageResetClient) async throws -> ClaudeUsageResetOutcome {
+        try await client.consume(for: account, accessToken: "fixture-token", grantID: grant.id,
+                                 credentialBinding: ClaudeUsageResetClient.credentialBinding(for: "fixture-token"),
+                                 confirmedGrant: grant)
+    }
+
+    func testUsableUnselectedGrantPostsItsOwnIdentifier() async throws {
+        let harness = makeHarness()
+        defer { try? FileManager.default.removeItem(at: harness.directory) }
+        ResetClientProtocol.configure(mode: .mixedGrants(postBody: #"{"result":"reset"}"#))
+        let outcome = try await consume(fixtureFableGrant, with: harness.client)
+        XCTAssertEqual(outcome, .reset)
+        let posts = ResetClientProtocol.requests.filter { $0.httpMethod == "POST" }
+        XCTAssertEqual(posts.count, 1)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: try XCTUnwrap(posts.first?.httpBody)) as? [String: String])
+        XCTAssertEqual(body["grant_id"], "fixture_fable")
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: harness.directory.path).isEmpty)
+
+        // A listed grant Claude has not marked usable never reaches the network.
+        ResetClientProtocol.configure(mode: .mixedGrants(postBody: #"{"result":"reset"}"#))
+        let locked = ClaudeUsageResetGrant(id: "fixture_locked", title: "Claude usage reset", remainingCount: 1,
+                                           startsAt: fixtureFableGrant.startsAt, expiresAt: fixtureFableGrant.expiresAt,
+                                           clears: ["seven_day_overage_included"], isPaused: false, isUsableNow: false, requiresLimit: true)
+        do {
+            _ = try await consume(locked, with: harness.client)
+            XCTFail("A grant Claude has not enabled must not be redeemed")
+        } catch { XCTAssertEqual(error as? ClaudeUsageResetError, .unavailable) }
+        XCTAssertFalse(ResetClientProtocol.requests.contains { $0.httpMethod == "POST" })
+    }
+
+    func testClaudeDecliningAnUnselectedGrantIsConfirmedAndLeavesOtherResetsUsable() async throws {
+        for declined in [#"{"result":"unavailable","reason":"not_next_grant"}"#, #"{"result":"not_next_grant"}"#] {
+            let harness = makeHarness()
+            defer { try? FileManager.default.removeItem(at: harness.directory) }
+            ResetClientProtocol.configure(mode: .mixedGrants(postBody: declined))
+            let outcome = try await consume(fixtureFableGrant, with: harness.client)
+            XCTAssertEqual(outcome, .notNextGrant, declined)
+            XCTAssertEqual(ResetClientProtocol.requests.filter { $0.httpMethod == "POST" }.count, 1, declined)
+            XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: harness.directory.path).isEmpty, declined)
+
+            // The refusal is a confirmed answer: the reset Claude listed as next is not locked out by it.
+            ResetClientProtocol.configure(mode: .mixedGrants(postBody: #"{"result":"reset"}"#))
+            let next = try await consume(fixtureConfirmedGrant, with: harness.client)
+            XCTAssertEqual(next, .reset, declined)
+        }
+    }
+
+    func testOtherUnavailableAnswersStayUnconfirmed() async throws {
+        for unconfirmed in [#"{"result":"unavailable"}"#, #"{"result":"unavailable","reason":"cooldown"}"#,
+                            #"{"result":"unavailable","reason":7}"#,
+        ] {
+            let harness = makeHarness()
+            defer { try? FileManager.default.removeItem(at: harness.directory) }
+            ResetClientProtocol.configure(mode: .mixedGrants(postBody: unconfirmed))
+            do {
+                _ = try await consume(fixtureFableGrant, with: harness.client)
+                XCTFail("An answer this app cannot interpret must not be reported as confirmed")
+            } catch { XCTAssertEqual(error as? ClaudeUsageResetError, .indeterminate, unconfirmed) }
+            XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: harness.directory.path).count, 1, unconfirmed)
         }
     }
 
@@ -308,6 +377,8 @@ private class ResetClientProtocol: URLProtocol, @unchecked Sendable {
         case success, ineligible, expired, missingIdentity, timeout, reconciled
         case serverError, malformedSuccess, missingGrant, changedIdentity, delayed, otherIdentity
         case confirmed(String), rejected(Int), oversizedSuccess, redirectSuccess, actualRedirect
+        /// A weekly reset Claude lists as next, a usable Fable reset and a Fable reset Claude has not enabled.
+        case mixedGrants(postBody: String)
     }
     private static let lock = NSLock()
     nonisolated(unsafe) private static var mode = Mode.success
@@ -375,10 +446,20 @@ private class ResetClientProtocol: URLProtocol, @unchecked Sendable {
             case .confirmed(let result): body = "{\"result\":\"\(result)\"}"
             case .oversizedSuccess: body = "{\"result\":\"reset\",\"padding\":\"" + String(repeating: "x", count: 1_048_576) + "\"}"
             case .malformedSuccess: body = "{}"
+            case .mixedGrants(let postBody): body = postBody
             default: body = #"{"result":"reset","cleared":["five_hour","seven_day"]}"#
             }
         } else if mode == .missingGrant {
             body = #"{"cedar_ember":{"eligible":true,"grants":[]}}"#
+        } else if case .mixedGrants = mode {
+            let window = #""starts_at":"2029-12-01T00:00:00Z","ends_at":"2030-01-08T00:00:00Z","paused":false"#
+            body = """
+            {"cedar_ember":{"eligible":true,"next_grant_id":"fixture_grant","grants":[
+              {"id":"fixture_grant","resets_left":2,\(window),"clears":["five_hour","seven_day"],"usable_now":true},
+              {"id":"fixture_fable","resets_left":1,\(window),"clears":["seven_day_overage_included"],"usable_now":true},
+              {"id":"fixture_locked","resets_left":1,\(window),"clears":["seven_day_overage_included"],"usable_now":false}
+            ]}}
+            """
         } else {
             body = """
             {"cedar_ember":{"eligible":\(mode != .ineligible),"next_grant_id":"fixture_grant","grants":[{

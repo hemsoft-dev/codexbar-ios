@@ -30,8 +30,10 @@ building, testing, or releasing the app.
 
 ### Fixed
 
-- Saved Claude resets now explain when CodexBar can use only Claude's selected
-  reset, rather than suggesting Claude disabled another listed reset.
+- Saved Claude resets now say when a reset restores Fable weekly usage instead
+  of "provider-scoped usage". Each reset Claude marks usable has its own Use
+  action and confirmation, so you can choose a Fable reset or a weekly reset.
+  If Claude wants a different reset used first, CodexBar says so.
   ([#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559))
 
 - Claude cards show the plan Claude reports for your organization, such as

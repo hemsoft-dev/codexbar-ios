@@ -374,10 +374,11 @@ final class ProviderUsageCardHiddenSeverityTests: XCTestCase {
         let selected = Self.resetGrant(id: "selected", remainingCount: 2, now: now)
         let paused = Self.resetGrant(id: "paused", title: "Paused grant", isPaused: true, now: now)
         let expired = Self.resetGrant(id: "expired", title: "Expired grant", expiresIn: -60, now: now)
-        let limited = Self.resetGrant(id: "limited", title: "Limited grant", requiresLimit: true, now: now)
-        let disabled = Self.resetGrant(id: "disabled", title: "Disabled grant", requiresLimit: false, now: now)
+        let limited = Self.resetGrant(id: "limited", title: "Limited grant", requiresLimit: true, isUsableNow: false, now: now)
+        let disabled = Self.resetGrant(id: "disabled", title: "Disabled grant", requiresLimit: false, isUsableNow: false, now: now)
+        let fable = Self.resetGrant(id: "fable", title: "Fable grant", clears: ["seven_day_overage_included"], now: now)
         let inventory = ClaudeUsageResetInventory(
-            isEligible: true, grants: [selected, paused, expired, limited, disabled],
+            isEligible: true, grants: [selected, paused, expired, limited, disabled, fable],
             selectedGrantID: selected.id, cooldownUntil: nil, credentialBinding: "binding"
         )
         let probe = try HostedViewProbe(ClaudeUsageResetInventoryView(
@@ -387,16 +388,20 @@ final class ProviderUsageCardHiddenSeverityTests: XCTestCase {
         defer { probe.close() }
         let labels = probe.labels
 
-        XCTAssertEqual(probe.element(identifier: "claude-reset-summary")?.accessibilityLabel, "4 resets available", "\(labels)")
+        XCTAssertEqual(probe.element(identifier: "claude-reset-summary")?.accessibilityLabel, "5 resets available", "\(labels)")
         XCTAssertTrue(labels.contains("2 saved resets"), "\(labels)")
         XCTAssertTrue(labels.contains("1 saved reset"), "\(labels)")
         XCTAssertTrue(labels.contains("Resets five-hour usage and weekly usage."), "\(labels)")
         XCTAssertTrue(labels.contains("Paused by Claude"), "\(labels)")
         XCTAssertTrue(labels.contains("Not currently available"), "\(labels)")
+        XCTAssertTrue(labels.contains("Resets Fable weekly usage."), "\(labels)")
+        XCTAssertTrue(labels.contains("Claude may require a usage limit to be reached before this reset can be used."), "\(labels)")
+        XCTAssertTrue(labels.contains("Claude has not enabled this reset for use now."), "\(labels)")
+        XCTAssertFalse(labels.contains("CodexBar can currently use only the reset selected by Claude."), "\(labels)")
+        // The selected reset and the Fable reset are separate choices; grants Claude has not enabled offer none.
         XCTAssertEqual(
-            labels.filter { $0 == "CodexBar can currently use only the reset selected by Claude." }.count, 2, "\(labels)"
+            probe.elements(identifier: "claude-use-reset").map(\.accessibilityLabel), ["Use one reset", "Use one reset"]
         )
-        XCTAssertEqual(probe.elements(identifier: "claude-use-reset").map(\.accessibilityLabel), ["Use one reset"])
         XCTAssertNil(probe.element(identifier: "claude-reset-cooldown"))
     }
 
@@ -554,11 +559,12 @@ final class ProviderUsageCardHiddenSeverityTests: XCTestCase {
         isPaused: Bool = false,
         requiresLimit: Bool = true,
         isUsableNow: Bool = true,
+        clears: [String] = ["seven_day", "five_hour"],
         now: Date
     ) -> ClaudeUsageResetGrant {
         ClaudeUsageResetGrant(
             id: id, title: title, remainingCount: remainingCount, startsAt: now.addingTimeInterval(-3_600),
-            expiresAt: expiresIn.map { now.addingTimeInterval($0) }, clears: ["seven_day", "five_hour"],
+            expiresAt: expiresIn.map { now.addingTimeInterval($0) }, clears: clears,
             isPaused: isPaused, isUsableNow: isUsableNow, requiresLimit: requiresLimit
         )
     }

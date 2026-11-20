@@ -324,7 +324,9 @@ usage, relaunch persistence and ambiguous-request protection. An open confirmati
 expires automatically without a reset request. The dashboard remains open across
 grant start/expiry boundaries and updates without another interaction. Provider
 cooldown text and the disabled action change when the cooldown ends, with zero
-requests. It exercises
+requests. A synthetic Fable reset beside the weekly reset shows its own wording,
+its own Use action and confirmation, and the message for a reset Claude
+declines. It exercises
 light/dark with default/accessibility2 text, plus zero, ineligible, paused,
 inactive, expired, unknown, malformed and failed inventories. Fixtures use the
 production inventory parser and an isolated fake consuming provider; networking

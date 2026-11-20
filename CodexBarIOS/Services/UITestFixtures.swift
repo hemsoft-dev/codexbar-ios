@@ -2092,6 +2092,15 @@ actor UITestClaudeResetProvider: UsageProvider, ClaudeUsageResetConsuming {
     func consumeClaudeReset(
         for account: ProviderAccountConfiguration, grantID: String, confirmedGrant: ClaudeUsageResetGrant, credentialBinding: String
     ) async throws -> ClaudeUsageResetOutcome {
+        if scenario == "claude-resets-selection", grantID == "fixture_fable" {
+            guard account.id == "ui-claude", confirmedGrant.id == grantID, confirmedGrant.isCurrent(at: Date()),
+                  credentialBinding == ClaudeUsageResetClient.credentialBinding(for: "ui-test-credential")
+            else { throw ClaudeUsageResetError.unavailable }
+            // Synthetic refusal of a reset that is not the fixture's next one. No provider behavior is claimed.
+            requestsByAccount[account.id, default: 0] += 1
+            defaults.set(requestsByAccount, forKey: "fixtureClaudeResetRequests")
+            return .notNextGrant
+        }
         let remaining = remainingByAccount[account.id, default: account.id == "ui-claude-second" ? 1 : 2]
         guard ["ui-claude", "ui-claude-second"].contains(account.id), grantID == "fixture_grant", remaining > 0,
               confirmedGrant.id == grantID, confirmedGrant.remainingCount == remaining, confirmedGrant.isCurrent(at: Date()),
@@ -2143,10 +2152,10 @@ actor UITestClaudeResetProvider: UsageProvider, ClaudeUsageResetConsuming {
         var inventory = scenario == "claude-resets-unknown" ? nil
             : ClaudeUsageResetInventoryParser.parse(inventoryData)?.bound(toAccessToken: "ui-test-credential")
         if scenario == "claude-resets-selection", let current = inventory, let grant = current.grants.first {
-            // Synthetic second grant tests app selection policy, not provider acceptance of arbitrary IDs.
+            // Synthetic Fable grant beside the weekly one: each is its own choice. Provider acceptance is not claimed.
             let other = ClaudeUsageResetGrant(
-                id: "different_grant", title: "Other saved reset", remainingCount: grant.remainingCount,
-                startsAt: grant.startsAt, expiresAt: grant.expiresAt, clears: grant.clears,
+                id: "fixture_fable", title: "Fable reset", remainingCount: 1,
+                startsAt: grant.startsAt, expiresAt: grant.expiresAt, clears: ["seven_day_overage_included"],
                 isPaused: false, isUsableNow: true, requiresLimit: false
             )
             inventory = ClaudeUsageResetInventory(

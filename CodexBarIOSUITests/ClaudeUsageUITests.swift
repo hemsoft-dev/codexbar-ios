@@ -7,20 +7,30 @@ final class ClaudeUsageUITests: XCTestCase {
         let app = launch(scenario: "claude-resets-selection", runID: UUID().uuidString)
         tap(app.buttons["claude-view-resets-ui-claude"], in: app)
         XCTAssertTrue(app.navigationBars["Claude resets"].waitForExistence(timeout: 5))
-        let explanation = app.staticTexts["CodexBar can currently use only the reset selected by Claude."]
-        reveal(explanation, in: app)
-        XCTAssertTrue(app.staticTexts["Other saved reset"].exists, app.debugDescription)
-        XCTAssertTrue(explanation.isHittable, app.debugDescription)
-        XCTAssertEqual(app.buttons.matching(identifier: "claude-use-reset").count, 1)
+        let fableWording = app.staticTexts["Resets Fable weekly usage."]
+        reveal(fableWording, in: app)
+        XCTAssertTrue(app.staticTexts["Fable reset"].exists, app.debugDescription)
+        XCTAssertTrue(fableWording.isHittable, app.debugDescription)
+        XCTAssertFalse(app.staticTexts["CodexBar can currently use only the reset selected by Claude."].exists)
         XCTAssertFalse(app.staticTexts["Claude has not enabled this reset for use now."].exists)
+        let actions = app.buttons.matching(identifier: "claude-use-reset")
+        XCTAssertEqual(actions.count, 2)
         keep("claude-reset-selection-copy", app: app)
-        tap(app.buttons["claude-use-reset"], in: app)
+        tap(actions.element(boundBy: 1), in: app)
         let confirmation = app.alerts["Use one Claude reset?"]
         XCTAssertTrue(confirmation.waitForExistence(timeout: 5))
-        XCTAssertTrue(confirmation.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "This cannot be undone.")).firstMatch.exists)
+        let message = confirmation.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "This cannot be undone.")).firstMatch
+        XCTAssertTrue(message.exists, app.debugDescription)
+        XCTAssertTrue(message.label.contains("Resets Fable weekly usage."), message.label)
+        XCTAssertFalse(message.label.contains("five-hour usage"), message.label)
         keep("claude-reset-selection-confirmation", app: app)
-        confirmation.buttons["Cancel"].tap()
-        XCTAssertFalse(confirmation.exists)
+        tap(confirmation.buttons["Use reset"], in: app)
+        let feedback = app.staticTexts["claude-reset-feedback"]
+        XCTAssertTrue(feedback.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(feedback.label, "Claude declined this reset and wants another saved reset used first. Check the refreshed list.")
+        XCTAssertEqual(actions.count, 2)
+        reveal(feedback, in: app)
+        keep("claude-reset-selection-declined", app: app)
         app.terminate()
     }
 
