@@ -67,6 +67,12 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Record the owner's November 20 dispositions for the remaining 2.0 production
+  and account checks: which were reported, which were waived and stay
+  unverified, and the privacy policy URL change scheduled for the next
+  submission.
+  ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470),
+  [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469))
 - Record that no Claude response this app can read reports usage per product,
   with the public sources checked, and pin that product-like keys add no row,
   zero value or error.

@@ -42,11 +42,11 @@ evidence is retained below and in the existing issues.
 
 | Existing issue | Remaining criterion | Owner and next actual trigger |
 | --- | --- | --- |
-| [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469) | Small Business Program decision, current account/disclosure verification, and canonical privacy URL | Public US disclosures and the privacy label were reverified November 19; the public privacy link is still the old path and redirects correctly. Franz owns the account decision. Reconcile an explicit enrollment/non-enrollment report when supplied. A future authorized editable appInfo is required for the URL change; the prior attempt returned 409. No ASC write is authorized now. |
-| [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) | New-customer production Free download, Pro screen, eligible trial and Restore; family-device result; complete public Free coverage | All 175 public storefronts showed an explicit Free offer on November 19, in two batches. That is current visibility, not pre-cutoff timing. Record production evidence separately when supplied or specifically authorized. Synthetic captures do not prove production behavior. The original-purchaser result above is complete. |
+| [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469) | Private privacy questionnaire, Paid Apps Agreement status and retained product settings | Franz will read these in App Store Connect and report them. The other two criteria have owner dispositions from November 20: not enrolled in the Small Business Program by choice, and the canonical privacy URL is changed with the next submission (see the final submission checklist). No ASC write is authorized now. |
+| [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) | None. Closed on owner dispositions, November 20 | New-customer Free download and Pro screen reported as working by Franz. Production trial, Restore and family-device checks waived by Franz and left unverified. No production screenshots, by decision. All 175 public storefronts showed Free on November 19. Details are under "Owner dispositions, November 20". |
 | [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) | Supported Google-backed Greptile billing grant and callback/session contract | Resume implementation when a consumer-supported provider contract exists. The delivered unsupported-sign-in explanation remains useful; do not invent billing access. |
-| [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548) | Claude usage-authentication permission and client identity | Resume qualification on a verified provider permission/client contract. Existing runtime success and first-party UI screenshots do not establish permission. |
-| [#558](https://github.com/hemsoft-dev/codexbar-ios/issues/558), [#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559), [#560](https://github.com/hemsoft-dev/codexbar-ios/issues/560) | Product-usage payload, Fable reset identifiers/redemption semantics, promotional balance/expiry payload | Use verified sanitized provider contracts, subject to #548. Preserve useful existing usage and the selected-reset explanation; omit unknown fields and unsupported actions. No live probe or reset redemption is authorized. |
+| [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548) | Claude usage-authentication permission and client identity | Owner decision November 20: Franz asks Anthropic, and the app sends a truthful identity with fewer scopes meanwhile ([#589](https://github.com/hemsoft-dev/codexbar-ios/issues/589)). The release hold stays until Anthropic answers. Existing runtime success and first-party UI screenshots do not establish permission. |
+| [#558](https://github.com/hemsoft-dev/codexbar-ios/issues/558), [#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559), [#560](https://github.com/hemsoft-dev/codexbar-ios/issues/560) | None. Resolved November 20 | Fable reset wording and per-reset choice ([#587](https://github.com/hemsoft-dev/codexbar-ios/pull/587)) and the promotional credit row ([#588](https://github.com/hemsoft-dev/codexbar-ios/pull/588)) shipped from public implementations' evidence; their live checks are pending for Franz. No response reports usage per product, so #558 is closed as not planned ([#586](https://github.com/hemsoft-dev/codexbar-ios/pull/586)). All remain subject to #548. |
 | [#564](https://github.com/hemsoft-dev/codexbar-ios/issues/564), [#565](https://github.com/hemsoft-dev/codexbar-ios/issues/565) | Watch timing and synthetic billing-grace causes remain unqualified | Resume on new failing diagnostics or demonstrated interference. Retain the November 15 static diagnosis receipts and delivered same-payload metadata correction. Do not repeat unchanged investigation or run tests just to obtain green results. |
 
 Build 5's hosted full UI gate **did not pass**. Shipping cannot satisfy that
@@ -121,9 +121,30 @@ reach the right policy today; the saved URL is still the old one and stays a
 page observation, not an App Store Connect readback.
 
 Collection is manual and has no automatic CI, timer or account integration.
-Production download, Pro, trial, Restore and family-device results remain open
-under #470; account decisions remain under #469. Neither the source preparation
-nor this public-page snapshot qualifies or authorizes a release.
+Neither the source preparation nor this public-page snapshot qualifies or
+authorizes a release. The production and account criteria that were still open
+here are settled or reassigned under "Owner dispositions, November 20" below.
+
+### Owner dispositions, November 20
+
+Franz gave these answers on November 20, 2026 at about 7:50 PM EST
+([#470 record](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-7054606032),
+[#469 record](https://github.com/hemsoft-dev/codexbar-ios/issues/469#issuecomment-7054606399)).
+They are his reports and decisions. None is an agent verification, an App Store
+Connect readback or a retroactive pass of a missed launch requirement.
+
+| Criterion | Disposition | Evidence standing |
+| --- | --- | --- |
+| New-customer production Free download and Pro screen | Reported as working | Human report without a screenshot; device and exact date not recorded |
+| Production eligible trial and Restore | Waived | Unverified. Local StoreKit results do not establish production behavior |
+| Family-device result | Waived | Unverified. No production Family Sharing pass is claimed |
+| Production-device screenshots | Not supplied, by decision | Franz's written reports stand as the evidence |
+| Small Business Program | Not enrolled, by choice | Franz's stated decision; not an enrollment-screen readback. The missed before-shipping timing does not pass retroactively |
+| Canonical privacy policy URL | Change it with the next submission | The old address still redirected on November 20. Carried by the final submission checklist |
+| Privacy questionnaire, Paid Apps Agreement, retained product settings | Open | Franz will read them in App Store Connect and report; tracked in #469 |
+
+Fixed `T`, the rule never to raise the app price after `T`, the recorded hosted
+release-gate failure and the November 1 hold are unchanged.
 
 ## CodexBar 2.0 policy and preparation
 
@@ -561,9 +582,13 @@ stay open individually. Completed and remaining actions follow:
   public visibility in every territory remain unverified.
 - [x] Record Franz's October 31 post-cutoff original-purchaser lifetime-Pro
   confirmation, attributed as a human report without a screenshot.
-- [ ] Record new-customer production Free download, Pro screen, eligible trial
-  and Restore results. The simulator evidence above is separate.
-- [ ] Record the family-device result. No production Family Sharing pass is claimed.
+- [x] Record new-customer production Free download, Pro screen, eligible trial
+  and Restore results. Franz reported the Free download and Pro screen as
+  working on November 20, without a screenshot. He waived the production trial
+  and Restore checks, which stay unverified. The simulator evidence above is
+  separate.
+- [x] Record the family-device result. Franz waived it on November 20. No
+  production Family Sharing pass is claimed.
 
 ### Build 5 qualification and submission
 
@@ -683,12 +708,13 @@ en-US name and subtitle, and the saved
 These fields do not verify the unpublished privacy questionnaire, legal
 agreements or Small Business Program status.
 
-Paid Apps Agreement status and Small Business Program membership remain
-**UNVERIFIED**. The original before-shipping enrollment timing was missed or
-unverified and cannot be satisfied retroactively. Franz owns the enrollment
-or non-enrollment decision; the [program page](https://developer.apple.com/app-store/small-business-program/)
-is retained for that decision. Do not infer enrollment or current agreement
-status from historical sales or the launch. These account checks do not
+Paid Apps Agreement status remains **UNVERIFIED**. On November 20, 2026 Franz
+stated that he is not enrolled in the
+[Small Business Program](https://developer.apple.com/app-store/small-business-program/),
+by choice. That is his decision as stated, not an enrollment-screen readback.
+The original before-shipping enrollment timing was missed or unverified and
+cannot be satisfied retroactively. Do not infer current agreement status from
+historical sales or the launch. These account checks do not
 prevent ordinary source preparation, and authorize no account or Store change.
 
 ## Published 1.x history and earlier preparation
@@ -1077,6 +1103,12 @@ Manual CI release gate for every future version:
   pass before uploading or releasing the build.
 - [ ] If the candidate SHA changes, discard the earlier result and pass a new
   manual run. Routine pull requests do not require this gate.
+- [ ] While the app information is editable for the next submission, change the
+  saved privacy policy URL to
+  `https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md` and record
+  the readback. The saved value is still the old `HemSoft/codexbar-ios` path
+  ([#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469)). Remove this
+  line once it is done.
 
 Version 1.4.0 submission status:
 
