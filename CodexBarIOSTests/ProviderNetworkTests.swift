@@ -2321,6 +2321,7 @@ final class ProviderNetworkTests: XCTestCase {
         ProviderNetworkMockURLProtocol.handler = { request in
             requestCount += 1
             XCTAssertEqual(request.url?.path, "/api/oauth/usage")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "CodexBarIOS")
             return (
                 HTTPURLResponse(
                     url: try XCTUnwrap(request.url),
@@ -2344,7 +2345,7 @@ final class ProviderNetworkTests: XCTestCase {
         XCTAssertEqual(requestCount, 4)
         XCTAssertEqual(unauthorized.subtitle, "Claude credential was rejected. Sign in again.")
         XCTAssertEqual(unauthorized.recoveryAction, .reauthenticate)
-        XCTAssertEqual(forbidden.subtitle, "Claude credential lacks permission to read subscription usage.")
+        XCTAssertEqual(forbidden.subtitle, "Claude declined CodexBar's usage request (HTTP 403). Your sign-in was not changed.")
         XCTAssertEqual(forbidden.recoveryAction, .retryRefresh)
         XCTAssertEqual(missing.subtitle, "Claude subscription usage is unavailable for this account.")
         XCTAssertEqual(missing.recoveryAction, .retryRefresh)

@@ -213,7 +213,8 @@ final class SubscriptionBillingClient: @unchecked Sendable {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.httpShouldHandleCookies = false
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("CodexBarIOS", forHTTPHeaderField: "User-Agent")
+        // Shared with Grok. One value for both, so Claude hosts never see a second identity.
+        request.setValue(ClaudeClientIdentity.userAgent, forHTTPHeaderField: "User-Agent")
         let (data, response) = try await session.data(for: request)
         try Task.checkCancellation()
         guard let response = response as? HTTPURLResponse, response.url == request.url else { throw SubscriptionBillingError.transportFailure }

@@ -1063,7 +1063,7 @@ struct ProviderUsageCard: View {
     }
 
     private func claudeResetAvailabilityText(at date: Date) -> String {
-        guard let inventory = result.claudeUsageResetInventory else { return "Saved resets unavailable" }
+        guard let inventory = result.claudeUsageResetInventory, !inventory.isUnavailableInThisApp else { return "Saved resets unavailable" }
         let count = inventory.availableCount(at: date)
         return count == 1 ? "1 saved reset available" : "\(count) saved resets available"
     }

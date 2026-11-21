@@ -87,7 +87,7 @@ actor ClaudePlanProfileClient {
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
-        request.setValue("CodexBarIOS", forHTTPHeaderField: "User-Agent")
+        ClaudeClientIdentity.apply(to: &request)
         do {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { return ProfileResponse(resolution: nil, retryDelay: 300) }

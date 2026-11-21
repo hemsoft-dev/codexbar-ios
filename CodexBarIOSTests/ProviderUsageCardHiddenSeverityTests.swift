@@ -406,6 +406,45 @@ final class ProviderUsageCardHiddenSeverityTests: XCTestCase {
     }
 
     @MainActor
+    func testResetSheetSaysWhenClaudeDoesNotOfferResetsToThisApp() throws {
+        let now = Date()
+        for reason in ["surface", "cooldown"] {
+            let empty = ClaudeUsageResetInventory(
+                isEligible: false, grants: [], selectedGrantID: nil, cooldownUntil: nil,
+                credentialBinding: "binding", ineligibilityReason: reason
+            )
+            // A grant that would be usable on an eligible account must still offer no action.
+            let listed = Self.resetGrant(id: "listed", now: now)
+            let withGrant = ClaudeUsageResetInventory(
+                isEligible: false, grants: [listed], selectedGrantID: listed.id, cooldownUntil: nil,
+                credentialBinding: "binding", ineligibilityReason: reason
+            )
+            let grantProbe = try HostedViewProbe(ClaudeUsageResetInventoryView(
+                inventory: withGrant, accountName: "Work Claude", canRedeem: true,
+                onUseReset: { _, _ in ClaudeUsageResetFeedback(message: "Unused", isSuccess: true) }
+            ))
+            XCTAssertTrue(grantProbe.labels.contains("Saved reset"), "\(grantProbe.labels)")
+            XCTAssertTrue(grantProbe.elements(identifier: "claude-use-reset").isEmpty, "\(grantProbe.labels)")
+            grantProbe.close()
+            let inventory = empty
+            let probe = try HostedViewProbe(ClaudeUsageResetInventoryView(
+                inventory: inventory, accountName: "Work Claude", canRedeem: true,
+                onUseReset: { _, _ in ClaudeUsageResetFeedback(message: "Unused", isSuccess: true) }
+            ))
+            defer { probe.close() }
+            let labels = probe.labels
+            let unavailable = reason == "surface"
+            XCTAssertEqual(probe.element(identifier: "claude-reset-summary")?.accessibilityLabel,
+                           unavailable ? "Saved resets unavailable" : "0 resets available", "\(labels)")
+            XCTAssertEqual(labels.contains("Claude did not offer saved resets to CodexBar."), unavailable, "\(labels)")
+            XCTAssertEqual(labels.contains("Claude listed no saved resets for this request."), unavailable, "\(labels)")
+            // An unavailable feature is never presented as an empty balance.
+            XCTAssertEqual(labels.contains("No saved usage resets."), !unavailable, "\(labels)")
+            XCTAssertEqual(labels.contains("Claude has not made usage resets available for this account."), !unavailable, "\(labels)")
+        }
+    }
+
+    @MainActor
     func testSelectedResetExplainsItsLimitOrDisabledState() throws {
         let now = Date()
         for requiresLimit in [false, true] {

@@ -20,6 +20,14 @@ building, testing, or releasing the app.
 
 ### Changed
 
+- CodexBar now sends its own name, not another app's, as the user agent of its
+  Claude requests, and Claude sign-in asks for fewer permissions. CodexBar does
+  not sign out or change accounts that are already signed in. If Claude
+  declines a request, the card says so and does not sign you out; usage already
+  loaded stays visible. Claude may limit usage or saved resets for apps other
+  than its own, and the card says so when it does.
+  ([#589](https://github.com/hemsoft-dev/codexbar-ios/issues/589))
+
 - Removed Google Gemini and Antigravity support from iOS. Saved Google accounts,
   credentials and website sessions are removed on upgrade. Other providers,
   account groups and their usage history remain available.
@@ -48,7 +56,7 @@ building, testing, or releasing the app.
 - Replace Claude's embedded billing login with **View billing in Claude** in
   personal account settings and More Information. Automatic use of saved Claude
   billing sessions is paused; saved data remains until explicit Disconnect.
-  Usage retrieval is unchanged. This improves access to the provider's billing
+  This improves access to the provider's billing
   page but does not supply an automatic renewal date or verify Google sign-in.
   Grok's existing billing connection is unchanged.
   ([#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454))
@@ -67,6 +75,13 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- One `ClaudeClientIdentity` now holds the user agent, the sign-in client
+  identifier and the requested scopes for every Claude request, with tests that
+  pin the exact values and fail if a Claude service names another client.
+  Sign-in still goes through the public Claude Code client identifier; whether
+  that is permitted stays with
+  [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548).
+  ([#589](https://github.com/hemsoft-dev/codexbar-ios/issues/589))
 - Record the owner's November 20 dispositions for the remaining 2.0 production
   and account checks: which were reported, which were waived and stay
   unverified, and the privacy policy URL change scheduled for the next

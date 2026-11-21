@@ -37,6 +37,9 @@ public enum ClaudeUsageResetError: LocalizedError, Equatable, Sendable {
     case indeterminate
     case storageUnavailable
     case httpStatus(Int)
+    /// Claude refused the reset request itself although it had just accepted the same sign-in for
+    /// the profile and inventory reads. Signing in again would not obviously help.
+    case notPermitted(Int)
 
     public var errorDescription: String? {
         switch self {
@@ -46,6 +49,7 @@ public enum ClaudeUsageResetError: LocalizedError, Equatable, Sendable {
         case .indeterminate: "Claude has not confirmed the previous reset request. Refresh usage before trying again."
         case .storageUnavailable: "CodexBar could not prepare this reset. No request was sent. Try again."
         case .httpStatus(let status): "Claude could not use the reset (HTTP \(status)). Refresh usage to check again."
+        case .notPermitted(let status): "Claude did not allow CodexBar to use this reset (HTTP \(status)). No reset was used."
         }
     }
 }
@@ -142,6 +146,7 @@ public actor ClaudeUsageResetClient {
                 guard (400..<500).contains(status), status != 408 else { throw ClaudeUsageResetError.indeterminate }
                 try? FileManager.default.removeItem(at: receiptURL)
             }
+            if case .notPermitted = error { try? FileManager.default.removeItem(at: receiptURL) }
             throw error
         } catch {
             throw ClaudeUsageResetError.indeterminate
@@ -206,6 +211,7 @@ public actor ClaudeUsageResetClient {
         request.httpBody = try JSONEncoder().encode(ResetRequest(program: "cedar_ember", grantID: grant.id, requestID: requestID))
         let (data, response) = try await session.data(for: request, delegate: redirectDelegate)
         let http = try checkedResponse(response, request: request)
+        if http.statusCode == 401 || http.statusCode == 403 { throw ClaudeUsageResetError.notPermitted(http.statusCode) }
         guard (200..<300).contains(http.statusCode) else { throw ClaudeUsageResetError.httpStatus(http.statusCode) }
         guard data.count <= 1_048_576, let result = try? JSONDecoder().decode(ResetResponse.self, from: data) else { throw ClaudeUsageResetError.indeterminate }
         if result.result == "not_next_grant" || (result.result == "unavailable" && result.reason == "not_next_grant") {
@@ -237,7 +243,7 @@ public actor ClaudeUsageResetClient {
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
-        request.setValue("CodexBarIOS", forHTTPHeaderField: "User-Agent")
+        ClaudeClientIdentity.apply(to: &request)
         return request
     }
 

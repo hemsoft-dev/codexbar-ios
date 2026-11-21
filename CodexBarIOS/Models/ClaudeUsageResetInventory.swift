@@ -41,19 +41,30 @@ public struct ClaudeUsageResetInventory: Equatable, Sendable {
     public let selectedGrantID: String?
     public let cooldownUntil: Date?
     public let credentialBinding: String?
+    /// Claude's stated reason when the account is not eligible, kept only for that case.
+    public let ineligibilityReason: String?
 
     public init(isEligible: Bool, grants: [ClaudeUsageResetGrant], selectedGrantID: String?,
-                cooldownUntil: Date?, credentialBinding: String? = nil) {
+                cooldownUntil: Date?, credentialBinding: String? = nil, ineligibilityReason: String? = nil) {
         self.isEligible = isEligible
         self.grants = grants
         self.selectedGrantID = selectedGrantID
         self.cooldownUntil = cooldownUntil
         self.credentialBinding = credentialBinding
+        self.ineligibilityReason = isEligible ? nil : ineligibilityReason
     }
 
     public func bound(toAccessToken token: String) -> Self {
         Self(isEligible: isEligible, grants: grants, selectedGrantID: selectedGrantID,
-             cooldownUntil: cooldownUntil, credentialBinding: ClaudeUsageResetClient.credentialBinding(for: token))
+             cooldownUntil: cooldownUntil, credentialBinding: ClaudeUsageResetClient.credentialBinding(for: token),
+             ineligibilityReason: ineligibilityReason)
+    }
+
+    /// Claude answered "not eligible" with the reason `surface`. Public reports tie that reason to
+    /// the client making the request, not to the account, so it is shown as "not offered to
+    /// CodexBar" instead of an empty balance. That reading is unverified (#589).
+    public var isUnavailableInThisApp: Bool {
+        !isEligible && ineligibilityReason == "surface"
     }
 
     public func availableCount(at date: Date) -> Int {
@@ -95,7 +106,8 @@ public enum ClaudeUsageResetInventoryParser {
                 isEligible: payload.eligible,
                 grants: grants,
                 selectedGrantID: payload.nextGrantID,
-                cooldownUntil: date(payload.cooldownUntil)
+                cooldownUntil: date(payload.cooldownUntil),
+                ineligibilityReason: payload.ineligibleReason.flatMap { validIdentifier($0, maximumLength: 40) ? $0 : nil }
             )
         } catch {
             return nil
@@ -152,10 +164,22 @@ public enum ClaudeUsageResetInventoryParser {
         let grants: [Grant]?
         let nextGrantID: String?
         let cooldownUntil: String?
+        let ineligibleReason: String?
         enum CodingKeys: String, CodingKey {
             case eligible, grants
             case nextGrantID = "next_grant_id"
             case cooldownUntil = "cooldown_until"
+            case ineligibleReason = "ineligible_reason"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            eligible = try container.decode(Bool.self, forKey: .eligible)
+            grants = try container.decodeIfPresent([Grant].self, forKey: .grants)
+            nextGrantID = try container.decodeIfPresent(String.self, forKey: .nextGrantID)
+            cooldownUntil = try container.decodeIfPresent(String.self, forKey: .cooldownUntil)
+            // Optional wording only: a malformed reason never makes the inventory unknown.
+            ineligibleReason = try? container.decodeIfPresent(String.self, forKey: .ineligibleReason)
         }
     }
 

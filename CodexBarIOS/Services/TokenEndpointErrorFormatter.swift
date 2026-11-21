@@ -18,7 +18,7 @@ enum TokenEndpointErrorFormatter {
         safeOAuthErrorCode(errorCode) ?? "Token endpoint rejected the request."
     }
 
-    private static func oauthErrorCode(from body: Data) -> String? {
+    static func oauthErrorCode(from body: Data) -> String? {
         guard
             let object = try? JSONSerialization.jsonObject(with: body),
             let dictionary = object as? [String: Any],
