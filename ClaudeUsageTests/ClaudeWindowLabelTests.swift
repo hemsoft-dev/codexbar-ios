@@ -28,6 +28,40 @@ final class ClaudeWindowLabelTests: XCTestCase {
         }
     }
 
+    /// No response shape for a per-product breakdown is established (#558). Keys that look like
+    /// one are never shown as a row, as zero usage or as an error.
+    func testProductKeysWithoutAnEstablishedShapeChangeNothing() throws {
+        let windows = #""five_hour":{"utilization":42,"resets_at":"2030-01-01T00:00:00Z"},"#
+            + #""seven_day":{"utilization":64,"resets_at":"2030-01-08T00:00:00Z"}"#
+        let baseline = try shownContent(XCTUnwrap(ClaudeUsageParser.parse(
+            Data("{\(windows)}".utf8), subscriptionType: "max", fetchedAt: now
+        )))
+        XCTAssertEqual(baseline.count, 2)
+        let productLikeKeys = [
+            #""seven_day_cowork":null,"seven_day_routines":null"#,
+            #""seven_day_cowork":{"utilization":30,"resets_at":"2030-01-08T00:00:00Z"}"#,
+            #""seven_day_routines":{"utilization":0,"resets_at":null}"#,
+            #""seven_day_omelette":{"utilization":12,"resets_at":null}"#,
+            #""products":[{"name":"claude_code","percent":70},{"name":"chat","percent":30}]"#,
+            #""usage_by_product":{"claude_code":0.7,"chat":0.3,"artifacts":"unknown"}"#,
+            #""limits":[{"kind":"product","percent":70,"scope":{"product":"claude_code"}}]"#,
+            #""limits":[{"kind":"weekly_scoped","group":"weekly","percent":70,"scope":{"product":"claude_code"}}]"#,
+        ]
+        for extra in productLikeKeys {
+            let result = try XCTUnwrap(ClaudeUsageParser.parse(
+                Data("{\(windows),\(extra)}".utf8), subscriptionType: "max", fetchedAt: now
+            ))
+            XCTAssertEqual(shownContent(result), baseline, extra)
+            XCTAssertNil(result.failureMessage, extra)
+        }
+    }
+
+    private func shownContent(_ result: ProviderUsageResult) -> [String] {
+        result.bars.map { "\($0.stableKey ?? "")|\($0.label)|\($0.used)" }
+            + result.monetaryMetrics.map(\.id) + result.usageMessages + result.dashboardUsageMessages
+            + result.cardInformationSections.flatMap { section in section.items.map { "\(section.id)|\($0.label)|\($0.detail)" } }
+    }
+
     func testHeaderWindowsPreserveResetsAndValuesForProAndMax() throws {
         for plan in ["pro", "max_20x"] {
             try assertWindows(XCTUnwrap(ClaudeUsageParser.parseRateLimitHeaders(
