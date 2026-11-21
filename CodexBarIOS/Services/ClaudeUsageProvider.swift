@@ -183,9 +183,12 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
                 isSuccessfulSnapshot: true
             )
         case 401, 403:
-            let renewedToken = await snapshotCache.isRenewed(accountID: configuration.id, credential: accessToken)
+            // The remembered renewal only fills in when this refresh had nothing to renew. An explicit
+            // outcome from this refresh, such as a refresh token Claude now refuses, always wins.
+            let remembered = renewal == .notNeeded
+                ? await snapshotCache.isRenewed(accountID: configuration.id, credential: accessToken) : false
             return OAuthUsageOutcome(result: await refusedResult(
-                status: httpResponse.statusCode, body: data, renewal: renewedToken ? .renewed : renewal, configuration: configuration
+                status: httpResponse.statusCode, body: data, renewal: remembered ? .renewed : renewal, configuration: configuration
             ))
         case 404:
             return OAuthUsageOutcome(

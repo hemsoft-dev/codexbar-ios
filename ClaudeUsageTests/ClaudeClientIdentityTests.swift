@@ -116,6 +116,27 @@ final class ClaudeClientIdentityTests: XCTestCase {
         XCTAssertEqual(rejected.recoveryAction, .reauthenticate)
     }
 
+    func testRememberedRenewalNeverHidesALaterRefusedRefreshToken() async throws {
+        let harness = makeHarness(expired: true)
+        defer { harness.session.invalidateAndCancel() }
+        // The renewed token is already at its expiry, so the next refresh has to renew again.
+        IdentityProtocol.configure(token: (200, #"{"access_token":"renewed-token","expires_in":0}"#), usage: (401, ""))
+        let declined = try await harness.provider.fetchUsage(for: account)
+        XCTAssertEqual(declined.failureMessage, "Claude declined CodexBar's usage request (HTTP 401). Your sign-in was not changed.")
+
+        IdentityProtocol.configure(token: (400, #"{"error":"invalid_grant"}"#), usage: (401, ""))
+        let expired = try await harness.provider.fetchUsage(for: account)
+        XCTAssertEqual(expired.failureMessage, "Claude did not renew this sign-in: HTTP 400 (invalid_grant). Sign in again.")
+        XCTAssertEqual(expired.recoveryAction, .reauthenticate)
+        XCTAssertEqual(IdentityProtocol.requests.filter { $0.url?.path == "/v1/oauth/token" }.count, 1)
+
+        IdentityProtocol.configure(token: (503, ""), usage: (401, ""))
+        let unavailable = try await harness.provider.fetchUsage(for: account)
+        XCTAssertEqual(unavailable.failureMessage,
+                       "Claude could not renew this sign-in right now: HTTP 503. Your sign-in was not changed.")
+        XCTAssertEqual(unavailable.recoveryAction, .retryRefresh)
+    }
+
     func testUsageRefusalsFollowClaudesStatedReason() async throws {
         // The scope wording is from a public report; the 403 pairing here is a synthetic fixture.
         let scope = #"{"error":{"message":"OAuth token does not meet scope requirement user:profile"}}"#
