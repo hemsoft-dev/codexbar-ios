@@ -3,232 +3,6 @@ import XCTest
 
 final class UsageHistoryTests: XCTestCase {
     @MainActor
-    func testGreptileHistoryStoresCompletedReviewCountsAsNumbers() {
-        let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let store = UsageHistoryStore(defaults: defaults)
-        let dates = [
-            Date(timeIntervalSince1970: 1_788_475_200),
-            Date(timeIntervalSince1970: 1_788_561_600),
-        ]
-
-        for (index, date) in dates.enumerated() {
-            let count = 12 + index * 3
-            store.record(
-                results: [
-                    ProviderUsageResult(
-                        accountID: "greptile.team",
-                        providerID: .greptile,
-                        title: "Greptile",
-                        subtitle: "All available review history",
-                        bars: [
-                            UsageBar(
-                                stableKey: GreptileUsageIdentity.completedReviewsStableKey,
-                                label: "Completed reviews",
-                                used: Double(count),
-                                limit: 0,
-                                fractionlessUsageText: count.formatted()
-                            ),
-                        ],
-                        fetchedAt: date
-                    ),
-                ],
-                now: dates.last!
-            )
-        }
-
-        let result = ProviderUsageResult(
-            accountID: "greptile.team",
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "All available review history",
-            bars: [
-                UsageBar(
-                    stableKey: GreptileUsageIdentity.completedReviewsStableKey,
-                    label: "Completed reviews",
-                    used: 15,
-                    limit: 0,
-                    fractionlessUsageText: "15"
-                ),
-            ],
-            fetchedAt: dates.last!
-        )
-        let option = store.historySeriesOptions(for: result).first
-
-        XCTAssertEqual(option?.id, GreptileUsageIdentity.completedReviewsHistorySeriesID)
-        XCTAssertEqual(option?.label, "Completed reviews")
-        XCTAssertEqual(option?.series.points.map(\.value), [12, 15])
-        XCTAssertEqual(option?.series.latestValueDescription, "15")
-        XCTAssertEqual(option?.series.changeDescription, "Up 3")
-        XCTAssertTrue(option?.series.isCount == true)
-        XCTAssertFalse(option?.series.showsQuotaLimitRule == true)
-        XCTAssertEqual(
-            store.trendSummary(for: result, now: dates.last!)?.valueDescription,
-            "Changed +3"
-        )
-
-    }
-
-    @MainActor
-    func testGreptileQuotaHistoryDoesNotMixWithCompletedReviewHistory() {
-        let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let store = UsageHistoryStore(defaults: defaults)
-        let dates = [
-            Date(timeIntervalSince1970: 1_788_475_200),
-            Date(timeIntervalSince1970: 1_788_561_600),
-            Date(timeIntervalSince1970: 1_788_648_000),
-            Date(timeIntervalSince1970: 1_788_734_400),
-        ]
-
-        let completedResult = ProviderUsageResult(
-            accountID: "greptile.team",
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "All available review history",
-            bars: [
-                UsageBar(
-                    stableKey: GreptileUsageIdentity.completedReviewsStableKey,
-                    label: "Completed reviews",
-                    used: 50,
-                    limit: 0,
-                    fractionlessUsageText: "50"
-                ),
-            ],
-            fetchedAt: dates[0]
-        )
-        store.record(results: [completedResult], now: dates.last!)
-
-        var quotaResult = ProviderUsageResult(
-            accountID: "greptile.team",
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "Current billing period",
-            bars: [
-                UsageBar(
-                    stableKey: GreptileUsageIdentity.reviewQuotaStableKey,
-                    label: "Reviews used",
-                    used: 1,
-                    limit: 50
-                ),
-            ],
-            fetchedAt: dates[1]
-        )
-        store.record(results: [quotaResult], now: dates.last!)
-        quotaResult = ProviderUsageResult(
-            accountID: "greptile.team",
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "Current billing period",
-            bars: [
-                UsageBar(
-                    stableKey: GreptileUsageIdentity.reviewQuotaStableKey,
-                    label: "Reviews used",
-                    used: 2,
-                    limit: 50
-                ),
-            ],
-            fetchedAt: dates[2]
-        )
-        store.record(results: [quotaResult], now: dates.last!)
-
-        let options = store.historySeriesOptions(for: quotaResult)
-        XCTAssertEqual(options.map(\.id), [
-            GreptileUsageIdentity.reviewQuotaHistorySeriesID,
-            GreptileUsageIdentity.completedReviewsHistorySeriesID,
-        ])
-        XCTAssertEqual(options[0].series.points.map(\.value), [1, 2])
-        XCTAssertEqual(options[1].series.points.map(\.value), [50])
-        XCTAssertEqual(
-            store.trendSummary(for: quotaResult, now: dates.last!)?.valueDescription,
-            "Changed +1"
-        )
-
-        let combinedResult = ProviderUsageResult(
-            accountID: quotaResult.accountID,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "Current billing period",
-            bars: completedResult.bars + quotaResult.bars,
-            fetchedAt: dates[2]
-        )
-        XCTAssertEqual(UsageHistorySnapshot(result: combinedResult).primaryValue, 2)
-        XCTAssertEqual(
-            store.historySeriesOptions(for: combinedResult).first?.id,
-            GreptileUsageIdentity.reviewQuotaHistorySeriesID
-        )
-        XCTAssertEqual(store.historySeries(for: combinedResult).points.map(\.value), [1, 2])
-
-        let currentCompletedResult = ProviderUsageResult(
-            accountID: completedResult.accountID,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "All available review history",
-            bars: completedResult.bars,
-            fetchedAt: dates[3]
-        )
-        XCTAssertEqual(
-            store.historySeriesOptions(for: currentCompletedResult).map(\.id),
-            [
-                GreptileUsageIdentity.completedReviewsHistorySeriesID,
-                GreptileUsageIdentity.reviewQuotaHistorySeriesID,
-            ]
-        )
-        store.record(results: [currentCompletedResult], now: dates[3])
-
-        let staleQuotaResult = ProviderUsageResult(
-            accountID: quotaResult.accountID,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "Current billing period",
-            bars: quotaResult.bars,
-            fetchedAt: dates[2]
-        )
-        XCTAssertEqual(store.historySeries(for: staleQuotaResult).points.map(\.value), [50, 50])
-        XCTAssertEqual(
-            store.historySeriesOptions(for: staleQuotaResult).first?.id,
-            GreptileUsageIdentity.completedReviewsHistorySeriesID
-        )
-
-        let failedResult = ProviderUsageResult(
-            accountID: "greptile.team",
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "Greptile rate limit reached.",
-            bars: completedResult.bars,
-            barsFetchedAt: dates[0],
-            failureMessage: "Greptile rate limit reached.",
-            preserveCachedBarsOnFailure: true,
-            fetchedAt: dates[3]
-        )
-        XCTAssertFalse(failedResult.hasCurrentBars)
-        XCTAssertEqual(store.historySeries(for: failedResult).points.map(\.value), [50, 50])
-        XCTAssertEqual(
-            store.historySeriesOptions(for: failedResult).map(\.id),
-            [
-                GreptileUsageIdentity.completedReviewsHistorySeriesID,
-                GreptileUsageIdentity.reviewQuotaHistorySeriesID,
-            ]
-        )
-
-        let emptyResult = ProviderUsageResult(
-            accountID: quotaResult.accountID,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "No review history returned",
-            bars: [],
-            fetchedAt: dates[3]
-        )
-        XCTAssertEqual(store.historySeries(for: emptyResult).points.map(\.value), [50, 50])
-        XCTAssertEqual(
-            store.historySeriesOptions(for: emptyResult).first?.id,
-            GreptileUsageIdentity.completedReviewsHistorySeriesID
-        )
-    }
-
-    @MainActor
     func testMissingUsageHistoryInitializesWithoutAnError() {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -1592,16 +1366,16 @@ final class UsageHistoryTests: XCTestCase {
         }
         let firstFetch = Date(timeIntervalSince1970: 1_788_475_200)
         let completedResult = ProviderUsageResult(
-            accountID: "greptile.personal",
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "Completed reviews",
+            accountID: "claude.personal",
+            providerID: .claude,
+            title: "Claude",
+            subtitle: "Session",
             bars: [
                 UsageBar(
-                    stableKey: GreptileUsageIdentity.completedReviewsStableKey,
-                    label: "Completed reviews",
+                    stableKey: "five-hour",
+                    label: "Session",
                     used: 4,
-                    limit: 4
+                    limit: 100
                 ),
             ],
             fetchedAt: firstFetch
@@ -1610,13 +1384,13 @@ final class UsageHistoryTests: XCTestCase {
             accountID: completedResult.accountID,
             providerID: completedResult.providerID,
             title: completedResult.title,
-            subtitle: "Review quota",
+            subtitle: "Weekly",
             bars: [
                 UsageBar(
-                    stableKey: GreptileUsageIdentity.reviewQuotaStableKey,
-                    label: "Reviews used",
+                    stableKey: "seven-day",
+                    label: "Weekly",
                     used: 1,
-                    limit: 10
+                    limit: 100
                 ),
             ],
             fetchedAt: firstFetch.addingTimeInterval(60 * 60)
@@ -1638,29 +1412,11 @@ final class UsageHistoryTests: XCTestCase {
             now: firstFetch.addingTimeInterval(31 * 24 * 60 * 60)
         )
 
-        let emptyCurrentResult = ProviderUsageResult(
-            accountID: completedResult.accountID,
-            providerID: completedResult.providerID,
-            title: completedResult.title,
-            subtitle: "No current usage",
-            bars: [],
-            fetchedAt: quotaResult.fetchedAt
-        )
-        let options = store.historySeriesOptions(for: emptyCurrentResult)
-
         XCTAssertTrue(store.snapshots.isEmpty)
         XCTAssertEqual(store.dailySnapshots.count, 2)
         XCTAssertEqual(
-            options.first(where: {
-                $0.id == GreptileUsageIdentity.reviewQuotaHistorySeriesID
-            })?.series.points.map(\.value),
-            [1]
-        )
-        XCTAssertEqual(
-            options.first(where: {
-                $0.id == GreptileUsageIdentity.completedReviewsHistorySeriesID
-            })?.series.points.map(\.value),
-            [4]
+            Set(store.dailySnapshots.flatMap { $0.bars.compactMap(\.stableKey) }),
+            ["five-hour", "seven-day"]
         )
     }
 
@@ -2352,25 +2108,25 @@ final class UsageHistoryTests: XCTestCase {
             "Retries refreshing usage for \(result.title)"
         )
 
-        let greptileResult = ProviderUsageResult(
-            accountID: "greptile.team",
-            providerID: .greptile,
-            title: "Greptile",
+        let openRouterResult = ProviderUsageResult(
+            accountID: "openRouter.team",
+            providerID: .openRouter,
+            title: "OpenRouter",
             subtitle: "API key required",
             bars: [],
             fetchedAt: Date()
         )
-        let greptileCard = ProviderUsageCard(
-            result: greptileResult,
+        let openRouterCard = ProviderUsageCard(
+            result: openRouterResult,
             statusText: "API key required",
-            history: UsageHistorySeries(accountID: greptileResult.accountID, points: [], isBalance: false),
-            refreshErrorMessage: "Greptile needs an organization API key.",
+            history: UsageHistorySeries(accountID: openRouterResult.accountID, points: [], isBalance: false),
+            refreshErrorMessage: "OpenRouter needs a Management API Key.",
             recoveryAction: .signIn
         )
-        XCTAssertEqual(greptileCard.recoveryActionTitle, "Open account settings")
+        XCTAssertEqual(openRouterCard.recoveryActionTitle, "Open account settings")
         XCTAssertEqual(
-            greptileCard.recoveryAccessibilityHint,
-            "Opens account settings for Greptile"
+            openRouterCard.recoveryAccessibilityHint,
+            "Opens account settings for OpenRouter"
         )
     }
 

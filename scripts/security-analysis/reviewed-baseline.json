@@ -51,7 +51,7 @@
         "diagnostic_sha256": "7722d1d6b1ec385bdacd27c0b888dab47f1b04ff536fef08b0c0dd2f4a00d275"
       },
       "alert": "https://github.com/hemsoft-dev/codexbar-ios/security/code-scanning/4",
-      "rationale": "UITestSecretStore is compiled only in DEBUG builds and activates only on simulators with a UUID-isolated defaults suite; Release builds do not contain it. It accepts ui-test-credential, the cursor-plan- prefixed plan-parity values, and exact parsed synthetic coding, Codex (personal, work and plan-tier), Cursor billing/session, Greptile, Grok, OpenCode console, Claude profile and matching-cookie subscription-billing fixtures. Other values are rejected before the preferences write. These synthetic values grant no provider access, and provider networking stays blocked except the existing synthetic Greptile host. Re-review any accepted value, caller, activation guard or network boundary change."
+      "rationale": "UITestSecretStore is compiled only in DEBUG builds and activates only on simulators with a UUID-isolated defaults suite; Release builds do not contain it. It accepts ui-test-credential, the cursor-plan- prefixed plan-parity values, and exact parsed synthetic coding, Codex (personal, work and plan-tier), Cursor billing/session, Grok, OpenCode console, Claude profile and matching-cookie subscription-billing fixtures. Other values are rejected before the preferences write. These synthetic values grant no provider access, and all provider networking stays blocked. Re-review any accepted value, caller, activation guard or network boundary change."
     }
   ]
 }

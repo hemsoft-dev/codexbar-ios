@@ -20,7 +20,6 @@ Supported providers:
 - OpenRouter
 - OpenCode Go + Zen
 - Moonshot (Kimi)
-- Greptile
 
 What you can track:
 
@@ -28,7 +27,6 @@ What you can track:
 - GitHub personal and organization billing, included allowances, budgets and spending projections where supported
 - Grok paid weekly usage and Extra Usage Credits where available, separately from Cursor's Grok Bot allowance
 - X Subscription's shared weekly pool, its reset, per-product details and Extra Usage Credits where available, with one xAI sign-in
-- Greptile completed-review activity and provider-returned free-allowance renewal dates, kept distinct from pull requests and billing credit balances
 
 Make the dashboard yours by showing, hiding, reordering, resizing and restyling individual metrics. Pro keeps work and personal accounts organized in provider groups. Widgets and Watch show saved snapshots; iOS and watchOS control background refresh timing. Setup stays on the iPhone.
 
@@ -41,7 +39,7 @@ Privacy and account model:
 - Apple processes Pro purchases; CodexBar checks access on your device with StoreKit
 - Feedback is optional. You preview and choose whether to open a private email draft or a public GitHub report
 
-Provider metrics and authorization depend on the service, account, subscription and available permissions. Unavailable data stays unavailable. Greptile renewal dates require a verified dashboard session; fresh Google-backed billing sign-in or reconnection may be unavailable in this version.
+Provider metrics and authorization depend on the service, account, subscription and available permissions. Unavailable data stays unavailable.
 
 CodexBar is an independent tool and is not affiliated with, endorsed by or sponsored by the providers it displays. Provider names identify only the services you choose to connect.
 

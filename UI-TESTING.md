@@ -38,12 +38,12 @@ account store and intercepted provider transport before attaching images.
 Label these captures **native view-host**, not XCUITest navigation, gesture or
 physical-phone verification; retain any separate UI-runner failure explicitly.
 
-The base command above still executes exactly 26 original journeys. The
-[phase manifest](scripts/pro-release-phases.json) requires 48 user journeys per
-family for a release: original 26, supplemental 6, synthetic commerce 14, and
+The base command above still executes exactly 25 original journeys. The
+[phase manifest](scripts/pro-release-phases.json) requires 47 user journeys per
+family for a release: original 25, supplemental 6, synthetic commerce 14, and
 native purchase/restore and purchase-error journeys 1 each. The separate
 storefront, Claude Ultra and billing recovery evidence captures are listed in
-`excluded_marketing` as manual captures, outside the 48 regression journeys.
+`excluded_marketing` as manual captures, outside the 47 regression journeys.
 The Ultra capture remains available for focused manual execution on either
 device family. It also exercises `claude-renewal-ultra` through the real Claude
 provider and intercepted billing transport, capturing the acquired renewal pill
@@ -153,15 +153,6 @@ it. Animations retain the normal app behavior.
   generated images. They validate the algorithm, not the app layout, and stay
   outside automatic CI discovery. UI journeys separately cover navigation,
   other cards and layout choices.
-
-- `GreptileAllowanceUITests.testReviewHistoryAndBillingAvailabilityStates`
-  runs the production Greptile transport/parser against an intercepted synthetic
-  endpoint. It captures review-history-only dashboard, review statuses and
-  account metrics, then checks empty activity, an explicit hypothetical returned
-  review quota, and HTTP failure. Missing billing data never becomes a zero
-  credit balance or an assumed Free allowance. Run locally with
-  `-only-testing:CodexBarIOSUITests/GreptileAllowanceUITests`. Every non-fixture
-  network request is blocked.
 
 - `CodexCreditsPoolUITests.testThirtyDayWindowLabelAndSavedVisibility`
   feeds a synthetic Free account's 2,592,000-second window through the real
@@ -330,7 +321,7 @@ declines. It exercises
 light/dark with default/accessibility2 text, plus zero, ineligible, paused,
 inactive, expired, unknown, malformed and failed inventories. Fixtures use the
 production inventory parser and an isolated fake consuming provider; networking
-is blocked and no Anthropic reset is used. The original base phase remains 29 journeys.
+is blocked and no Anthropic reset is used. The original base phase remains 25 journeys.
 
 Local/native regression classes are `ClaudeUsageResetInventoryTests`,
 `ClaudeUsageResetClientTests`, `ClaudeUsageResetFlowTests` and
@@ -346,7 +337,7 @@ separately from the shared 5-hour and all-model weekly windows. It covers two
 accounts, hide/restore and model-name changes across relaunch, Customize Card,
 light/dark appearance and default/accessibility2 text. Absent allowances and
 usage-credit-only responses do not create a Fable quota. The release count stays
-26 original journeys per family. The full release also requires the supplemental and commerce phases above. No live provider quota is consumed.
+25 original journeys per family. The full release also requires the supplemental and commerce phases above. No live provider quota is consumed.
 
 `ClaudeFableWeeklyTests` runs locally and in the manual native unit suite. Its
 nine cases cover reported values, known aliases, inactive/duplicate windows,
@@ -397,15 +388,15 @@ release cannot proceed unless every job passes for the candidate SHA. If that
 SHA changes, dispatch a new run.
 
 Each family runs six independent manual shards: three original-journey partitions,
-supplemental, synthetic commerce, and native commerce. The original 29 tests are
-balanced using retained hosted durations into groups of 8, 8 and 13. Every shard
+supplemental, synthetic commerce, and native commerce. The original 25 tests are
+balanced using retained hosted durations into groups of 8, 7 and 10. Every shard
 keeps the 90-minute limit, pinned Xcode 26.6 / 17F113 and iOS 26.2 / 23C54,
 and provisions its own simulator. Fail-fast remains disabled.
 
 Native preparation, purchase/restore, purchase-error preparation, purchase-error
 and the final normal StoreKit reset stay sequential on one worker. The reset is
 attempted even after a journey failure. The two usage-detail and missing-quota evidence journeys are included
-in the supplemental six, so the full gate covers 48 distinct journeys per
+in the supplemental six, so the full gate covers 47 distinct journeys per
 family plus the three preparation/reset calls. Marketing capture remains excluded.
 The original local runner retains its separate 29-pass contract.
 

@@ -2,8 +2,6 @@ import SwiftUI
 
 struct ProviderCardInformationView: View {
     let sections: [ProviderCardInformationSection]
-    let greptileRenewal: GreptileAllowanceRenewal?
-    var onConnect: (() -> Void)?
     var showsBillingSettings = false
 
     @Environment(\.dismiss) private var dismiss
@@ -11,11 +9,6 @@ struct ProviderCardInformationView: View {
     var body: some View {
         NavigationStack {
             List {
-                if let greptileRenewal {
-                    Section {
-                        GreptileRenewalView(renewal: greptileRenewal, onConnect: onConnect)
-                    }
-                }
                 ForEach(sections) { section in
                     Section(section.title) {
                         ForEach(section.items) { item in

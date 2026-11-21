@@ -112,8 +112,6 @@ public struct CodexBarProviderLogo: View {
             "MoonshotLogo"
         case "cursor":
             "CursorLogo"
-        case "greptile":
-            "GreptileLogo"
         default:
             nil
         }

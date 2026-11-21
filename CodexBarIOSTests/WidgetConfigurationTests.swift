@@ -25,7 +25,6 @@ final class WidgetConfigurationTests: XCTestCase {
             (.moonshot, "moonshot"),
             (.openCodeZen, "openCodeZen"),
             (.openRouter, "openRouter"),
-            (.greptile, "greptile"),
         ]
 
         for (focus, providerID) in mappings {
@@ -36,82 +35,6 @@ final class WidgetConfigurationTests: XCTestCase {
             Set(CodexBarWidgetFocus.caseDisplayRepresentations.keys)
         )
         XCTAssertEqual(Set(CodexBarWidgetFocus.allCases), Set(mappings.map(\.0)))
-    }
-
-    @MainActor
-    func testGreptileWidgetSnapshotPublishesCountWithoutGaugeSemantics() throws {
-        let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let store = ProviderConfigurationStore(
-            initialPlanAccess: .unrestricted,
-            defaults: defaults,
-            secretStore: MemorySecretStore()
-        )
-        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
-        XCTAssertTrue(store.saveSecret("greptile-widget-key", for: configuration))
-        let result = ProviderUsageResult(
-            accountID: configuration.id,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "All available review history",
-            bars: [
-                UsageBar(
-                    stableKey: GreptileUsageIdentity.completedReviewsStableKey,
-                    label: "Completed reviews",
-                    used: 27,
-                    limit: 0,
-                    fractionlessUsageText: "27"
-                ),
-            ],
-            fetchedAt: Date(timeIntervalSince1970: 1_788_475_200)
-        )
-
-        WidgetSnapshotPublisher.publish(
-            results: [result],
-            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
-        )
-
-        let bar = try XCTUnwrap(
-            WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first?.bars.first
-        )
-        XCTAssertEqual(bar.metricID, GreptileUsageIdentity.completedReviewsMetricID)
-        XCTAssertEqual(bar.usageText, "27")
-        XCTAssertEqual(bar.fractionUsed, 0)
-        XCTAssertEqual(bar.allowsGauge, false)
-        XCTAssertFalse(bar.allowsAutomaticVisualization)
-        XCTAssertEqual(bar.severity, .normal)
-        let usageBar = try XCTUnwrap(result.bars.first)
-        XCTAssertEqual(usageBar.supportedVisualizationStyles, [.automatic, .largeNumeric])
-        XCTAssertEqual(usageBar.resolvedVisualizationStyle(.circularRing), .largeNumeric)
-
-        let providerSnapshot = try XCTUnwrap(
-            WidgetSnapshotStore.loadSnapshot(defaults: defaults).results.first
-        )
-        let tile = providerSnapshot.barTile(bar)
-        XCTAssertFalse(tile.allowsUsageGauge)
-        XCTAssertFalse(
-            CodexBarWidgetRenderedTile(tile: tile, displayMode: .compactPercent).allowsUsageGauge
-        )
-        XCTAssertFalse(
-            CodexBarWidgetRenderedTile(tile: tile, displayMode: .fullBar).allowsUsageGauge
-        )
-
-        store.updateVisualizationStyle(
-            .circularRing,
-            accountID: configuration.id,
-            metricID: GreptileUsageIdentity.completedReviewsMetricID
-        )
-        let watchMetric = try XCTUnwrap(
-            WatchSnapshotPublisher.makeSnapshot(
-                results: [result],
-                configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil)
-            ).accounts.first?.metrics.first
-        )
-        XCTAssertNil(watchMetric.usedFraction)
-        XCTAssertEqual(watchMetric.exactValue, "27")
-        XCTAssertEqual(watchMetric.visualizationStyle, .largeNumeric)
     }
 
     @MainActor
@@ -144,82 +67,6 @@ final class WidgetConfigurationTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(metric.usedFraction), 1.374, accuracy: 0.000_001)
         XCTAssertEqual(metric.remainingFraction, 0)
         XCTAssertEqual(metric.exactValue, "137%")
-    }
-
-    @MainActor
-    func testSavedGreptileWidgetTileSurvivesQuotaModeChanges() throws {
-        let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let store = ProviderConfigurationStore(
-            initialPlanAccess: .unrestricted,
-            defaults: defaults,
-            secretStore: MemorySecretStore()
-        )
-        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
-        XCTAssertTrue(store.saveSecret("greptile-widget-key", for: configuration))
-        let completedResult = ProviderUsageResult(
-            accountID: configuration.id,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "All available review history",
-            bars: [
-                UsageBar(
-                    stableKey: GreptileUsageIdentity.completedReviewsStableKey,
-                    label: "Completed reviews",
-                    used: 27,
-                    limit: 0,
-                    fractionlessUsageText: "27"
-                ),
-            ],
-            fetchedAt: Date(timeIntervalSince1970: 1_788_475_200)
-        )
-        WidgetSnapshotPublisher.publish(
-            results: [completedResult],
-            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
-        )
-        let completedSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
-        let savedCompletedTileID = try XCTUnwrap(
-            completedSnapshot.builderTiles.first { $0.id.hasPrefix("bar.") }?.id
-        )
-        let quotaResult = ProviderUsageResult(
-            accountID: configuration.id,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "Current billing period",
-            bars: [
-                UsageBar(
-                    stableKey: GreptileUsageIdentity.reviewQuotaStableKey,
-                    label: "Reviews used",
-                    used: 12,
-                    limit: 50
-                ),
-            ],
-            fetchedAt: Date(timeIntervalSince1970: 1_788_561_600)
-        )
-        WidgetSnapshotPublisher.publish(
-            results: [quotaResult],
-            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
-        )
-        let quotaSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
-        let quotaTile = try XCTUnwrap(quotaSnapshot.builderTiles.first { $0.id.hasPrefix("bar.") })
-        XCTAssertEqual(
-            quotaSnapshot.builderTile(resolvingSavedID: savedCompletedTileID)?.id,
-            quotaTile.id
-        )
-
-        WidgetSnapshotPublisher.publish(
-            results: [completedResult],
-            configurationStore: store, access: SnapshotProAccess(isProLocked: false, proAccessEndsAt: nil),
-            snapshotDefaults: defaults, accessGuard: WidgetAccessGuard(directory: nil)
-        )
-        let restoredCompletedSnapshot = WidgetSnapshotStore.loadSnapshot(defaults: defaults)
-        XCTAssertEqual(
-            restoredCompletedSnapshot.builderTile(resolvingSavedID: quotaTile.id)?.id,
-            savedCompletedTileID
-        )
     }
 
     @MainActor
@@ -1062,7 +909,7 @@ extension WidgetConfigurationTests {
         XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID(try XCTUnwrap(loaded.tileID(at: 0)), in: tiles).id, fallback.id)
         XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID(try XCTUnwrap(loaded.tileID(at: 1)), in: tiles).id, preserved.id)
         XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID("provider.gemini.removed-account", in: []).providerID, "unavailable")
-        XCTAssertEqual(migrated.builderTile(resolvingSavedID: "provider.gemini.removed-account", fallbackForRetiredGoogle: true)?.id,
+        XCTAssertEqual(migrated.builderTile(resolvingSavedID: "provider.gemini.removed-account", fallbackForRetiredProvider: true)?.id,
                        migrated.builderTiles.first?.id)
         for savedID in ["provider.claude.deleted", "bar.cursor.disabled.cursor-models", "provider.unlinked"] {
             XCTAssertEqual(CodexBarWidgetTile.resolvingSavedID(savedID, in: tiles).providerID, "unavailable")
@@ -1070,7 +917,7 @@ extension WidgetConfigurationTests {
             let unavailable = CodexBarWidgetTile.fallback(forUnresolvedChoice: choice, in: tiles)
             XCTAssertEqual(unavailable.providerID, "unavailable")
             XCTAssertEqual(unavailable.providerTitle, "Original account")
-            XCTAssertNil(migrated.builderTile(resolvingSavedID: savedID, fallbackForRetiredGoogle: true))
+            XCTAssertNil(migrated.builderTile(resolvingSavedID: savedID, fallbackForRetiredProvider: true))
         }
         let coding = CodexBarWidgetTileChoice(id: "provider.antigravity.removed", title: "Coding", subtitle: "Retired")
         XCTAssertEqual(CodexBarWidgetTile.fallback(forUnresolvedChoice: coding, in: tiles).id, fallback.id)

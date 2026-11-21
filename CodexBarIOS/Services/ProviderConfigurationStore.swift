@@ -209,7 +209,8 @@ struct MetricLayoutUndoHistory {
     }
 }
 
-private enum GreptileMetricPreferenceCompatibility {
+/// Pairs metrics between two accounts' layouts when copying a layout.
+private enum MetricLayoutCopyMatching {
     static func matchingMetrics(
         _ sourceMetricIDs: [String],
         destinationAvailableMetricIDs: [String],
@@ -255,60 +256,7 @@ private enum GreptileMetricPreferenceCompatibility {
         for sourceMetricID: String,
         destinationMetricIDs: Set<String>
     ) -> String? {
-        if destinationMetricIDs.contains(sourceMetricID) {
-            return sourceMetricID
-        }
-        if sourceMetricID == GreptileUsageIdentity.completedReviewsMetricID,
-           destinationMetricIDs.contains(GreptileUsageIdentity.reviewQuotaMetricID) {
-            return GreptileUsageIdentity.reviewQuotaMetricID
-        }
-        if sourceMetricID == GreptileUsageIdentity.reviewQuotaMetricID,
-           destinationMetricIDs.contains(GreptileUsageIdentity.completedReviewsMetricID) {
-            return GreptileUsageIdentity.completedReviewsMetricID
-        }
-        return nil
-    }
-
-    static func migrate(
-        layout: inout AccountMetricLayout,
-        availableMetricIDs: [String]
-    ) {
-        let availableMetricIDSet = Set(availableMetricIDs)
-        let sourceMetricID: String
-        let destinationMetricID: String
-        if availableMetricIDSet.contains(GreptileUsageIdentity.reviewQuotaMetricID),
-           !availableMetricIDSet.contains(GreptileUsageIdentity.completedReviewsMetricID) {
-            sourceMetricID = GreptileUsageIdentity.completedReviewsMetricID
-            destinationMetricID = GreptileUsageIdentity.reviewQuotaMetricID
-        } else if availableMetricIDSet.contains(GreptileUsageIdentity.completedReviewsMetricID),
-                  !availableMetricIDSet.contains(GreptileUsageIdentity.reviewQuotaMetricID) {
-            sourceMetricID = GreptileUsageIdentity.reviewQuotaMetricID
-            destinationMetricID = GreptileUsageIdentity.completedReviewsMetricID
-        } else {
-            return
-        }
-
-        let destinationPreference = layout.preferences[destinationMetricID]
-        if !hasCustomPresentation(destinationPreference),
-           var sourcePreference = layout.preferences.removeValue(forKey: sourceMetricID) {
-            if let destinationPreference {
-                sourcePreference.isNewlyDiscovered = sourcePreference.isNewlyDiscovered
-                    && destinationPreference.isNewlyDiscovered
-            }
-            layout.preferences[destinationMetricID] = sourcePreference
-        }
-        var seenMetricIDs = Set<String>()
-        layout.orderedMetricIDs = layout.orderedMetricIDs
-            .map { $0 == sourceMetricID ? destinationMetricID : $0 }
-            .filter { !$0.isEmpty && seenMetricIDs.insert($0).inserted }
-    }
-
-    private static func hasCustomPresentation(_ preference: MetricTilePreference?) -> Bool {
-        guard let preference else { return false }
-        return !preference.isVisible
-            || preference.visualizationStyle != nil
-            || preference.width != .automatic
-            || preference.watchVisibility != .inherit
+        destinationMetricIDs.contains(sourceMetricID) ? sourceMetricID : nil
     }
 }
 
@@ -422,10 +370,6 @@ private enum MetricPreferenceCompatibility {
         layout: inout AccountMetricLayout,
         availableMetricIDs: [String]
     ) {
-        GreptileMetricPreferenceCompatibility.migrate(
-            layout: &layout,
-            availableMetricIDs: availableMetricIDs
-        )
         CursorMetricPreferenceCompatibility.migrate(
             layout: &layout,
             availableMetricIDs: availableMetricIDs
@@ -463,11 +407,12 @@ public final class ProviderConfigurationStore: ObservableObject {
     let cursorHistoryInvalidations = PassthroughSubject<String, Never>()
     let cursorSameIdentityReconnects = PassthroughSubject<String, Never>()
     let grokHistoryInvalidations = PassthroughSubject<String, Never>()
-    let greptileCredentialUpdates = PassthroughSubject<(accountID: String, identityChanged: Bool), Never>()
     @Published public private(set) var configurations: [ProviderAccountConfiguration]
     @Published public private(set) var groups: [ProviderAccountGroup]
     @Published public private(set) var secretAvailability: [String: Bool]
     @Published public private(set) var showsSubscriptionRenewals: Bool
+    /// True once after an upgrade removed a saved Greptile account (#594), until the note is dismissed.
+    @Published public private(set) var showsGreptileRemovalNotice: Bool
     @Published public private(set) var appAppearance: AppAppearance
     @Published public private(set) var autoRefreshInterval: AutoRefreshInterval
     @Published public private(set) var historySamplingInterval: HistorySamplingInterval
@@ -514,7 +459,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         secretStore: SecretStore = KeychainService(),
         widgetSnapshotDefaults: UserDefaults? = WidgetSnapshotStore.userDefaults()
     ) {
-        let migrationError = RetiredGoogleProviderMigration.run(
+        let migrationError = RetiredProviderMigration.run(
             defaults: defaults, secretStore: secretStore, configurationKey: DefaultsKey.configurations
         )
         let usageAlertSettingsNeedMigration = Self.usageAlertSettingsNeedMigration(
@@ -542,6 +487,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         self.configurations = configurationLoadResult.configurations
         self.secretAvailability = [:]
         self.showsSubscriptionRenewals = defaults.object(forKey: DefaultsKey.showsSubscriptionRenewals) as? Bool ?? true
+        self.showsGreptileRemovalNotice = defaults.bool(forKey: RetiredProviderMigration.greptileRemovalNoticeKey)
         self.appAppearance = Self.loadAppAppearance(from: defaults)
         self.autoRefreshInterval = Self.loadAutoRefreshInterval(from: defaults)
         self.historySamplingInterval = Self.loadHistorySamplingInterval(from: defaults)
@@ -804,7 +750,6 @@ public final class ProviderConfigurationStore: ObservableObject {
 
         do {
             let data = try JSONEncoder().encode(updatedConfigurations)
-            let greptileIdentityChanged = try greptileCredentialChangesIdentity(credential, for: normalized)
             try writeAccountSecret(credential, for: normalized)
             if [ProviderID.grok, .xSubscription, .claude, .openCodeZen].contains(normalized.providerID) {
                 credentialChanges.send(normalized.id)
@@ -816,7 +761,6 @@ public final class ProviderConfigurationStore: ObservableObject {
                 metricLayouts[normalized.id] = AccountMetricLayout()
                 saveMetricLayouts()
             }
-            sendGreptileCredentialUpdate(for: normalized, identityChanged: greptileIdentityChanged)
             lastError = nil
             refreshSecretAvailability()
             return true
@@ -1203,7 +1147,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             accountID: destinationAccountID,
             availableMetricIDs: destinationMetricIDs
         )
-        let copiedMetrics = GreptileMetricPreferenceCompatibility.matchingMetrics(
+        let copiedMetrics = MetricLayoutCopyMatching.matchingMetrics(
             sourceLayout.orderedMetricIDs,
             destinationAvailableMetricIDs: destinationMetricIDs,
             destinationLayout: destinationLayout
@@ -1733,7 +1677,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         }
 
         if configuration.requiresSecret
-            || [.codex, .claude, .cursor, .grok, .xSubscription, .greptile].contains(configuration.providerID) {
+            || [.codex, .claude, .cursor, .grok, .xSubscription].contains(configuration.providerID) {
             return hasSecret(for: configuration)
         }
 
@@ -1865,8 +1809,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             return "Not configured - sign in with Claude"
         }
 
-        if [.cursor, .greptile].contains(configuration.providerID) {
-            if configuration.providerID == .greptile { return "Not configured - sign in to Greptile" }
+        if configuration.providerID == .cursor {
             return "Not configured - sign in with Cursor"
         }
 
@@ -2400,7 +2343,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         switch configuration.providerID {
         case .codex, .githubBilling, .cursor, .grok, .xSubscription:
             normalized.authMethod = .browserSession
-        case .copilot, .claude, .openRouter, .openCodeZen, .moonshot, .greptile, .museCode:
+        case .copilot, .claude, .openRouter, .openCodeZen, .moonshot, .museCode:
             break
         }
         return normalized
@@ -2575,13 +2518,6 @@ public extension ProviderConfigurationStore {
                 providerID: .moonshot,
                 accountLabel: "Moonshot (Kimi)",
                 groupID: balanceGroup.id,
-                authMethod: .apiKey
-            ),
-            ProviderAccountConfiguration(
-                id: AppStoreScreenshotFixtureID.greptileAccount,
-                providerID: .greptile,
-                accountLabel: "Greptile Reviews",
-                groupID: usageGroup.id,
                 authMethod: .apiKey
             ),
         ]
@@ -2935,42 +2871,11 @@ extension ProviderConfigurationStore {
 }
 
 extension ProviderConfigurationStore {
-    private func greptileCredentialChangesIdentity(_ credential: String, for configuration: ProviderAccountConfiguration) throws -> Bool {
-        guard configuration.providerID == .greptile else { return false }
-        let previous = try secretStore.readSecret(account: Self.keychainAccount(for: configuration))
-        guard let next = GreptileSessionCredentials.parse(credential) else { return previous != credential }
-        return GreptileSessionCredentials.parse(previous)?.cacheIdentity != next.cacheIdentity
+    public func acknowledgeGreptileRemovalNotice() {
+        defaults.removeObject(forKey: RetiredProviderMigration.greptileRemovalNoticeKey)
+        showsGreptileRemovalNotice = false
     }
 
-    private func sendGreptileCredentialUpdate(for configuration: ProviderAccountConfiguration, identityChanged: Bool) {
-        guard configuration.providerID == .greptile else { return }
-        greptileCredentialUpdates.send((accountID: configuration.id, identityChanged: identityChanged))
-    }
-
-    func canReconnectGreptile(_ credential: GreptileSessionCredentials, for configuration: ProviderAccountConfiguration) -> Bool {
-        do {
-            let saved = try secretStore.readSecret(account: Self.keychainAccount(for: configuration))
-            guard let saved, !saved.isEmpty else { return true }
-            guard let previous = GreptileSessionCredentials.parse(saved) else {
-                lastError = configuration.authMethod == .apiKey
-                    ? "Add a separate Greptile account to sign in. This API-key account's identity cannot be verified."
-                    : "The saved Greptile sign-in could not be read. Disconnect and sign in again."
-                return false
-            }
-            guard previous.cacheIdentity == credential.cacheIdentity else {
-                lastError = GreptileSignInError.wrongAccount.localizedDescription
-                return false
-            }
-            return true
-        } catch {
-            lastError = "The saved Greptile identity could not be verified. Your saved account was not changed."
-            return false
-        }
-    }
-
-}
-
-extension ProviderConfigurationStore {
     public func updateShowsSubscriptionRenewals(_ shows: Bool) {
         showsSubscriptionRenewals = shows
         defaults.set(shows, forKey: DefaultsKey.showsSubscriptionRenewals)

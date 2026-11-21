@@ -3,7 +3,7 @@
   "phases": {
     "ui-original": {
       "scheme": "CodexBarIOSUITests",
-      "count": 26,
+      "count": 25,
       "tests": [
         "CodexBarIOSUITests/AccountJourneysUITests/testAccountSetupPersistsGroupAndCredentialAtAccessibilitySize",
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingActionableWarningStaysInline",
@@ -17,8 +17,6 @@
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testOptInBalanceStatesAndSavedAccountChoices",
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testPreciseSubscriptionPillsOnExpandedAndCollapsedCards",
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testThirtyDayWindowLabelAndSavedVisibility",
-        "CodexBarIOSUITests/GreptileAllowanceUITests/testDetailReconnectStaysInApp",
-        "CodexBarIOSUITests/GreptileAllowanceUITests/testReviewHistoryAndBillingAvailabilityStates",
         "CodexBarIOSUITests/GrokSignInUITests/testCursorFreshPercentagesBotAndSavedChoices",
         "CodexBarIOSUITests/GrokSignInUITests/testCursorStaleSignInReconnectCancellationAndValidZero",
         "CodexBarIOSUITests/GrokSignInUITests/testGrokAndCursorMetersStaySeparateAndNoAllowanceIsUnavailable",
@@ -29,6 +27,7 @@
         "CodexBarIOSUITests/SettingsEvidenceUITests/testEverySettingsDestinationAndDoneBack",
         "CodexBarIOSUITests/SettingsEvidenceUITests/testPendingDuplicateGroupBlocksDoneUntilCorrected",
         "CodexBarIOSUITests/SettingsEvidenceUITests/testRetiredGoogleUpgradeEvidence",
+        "CodexBarIOSUITests/SettingsEvidenceUITests/testRetiredGreptileUpgradeEvidence",
         "CodexBarIOSUITests/SettingsEvidenceUITests/testSettingsDismissalSignalRejectsTheBackgroundGear",
         "CodexBarIOSUITests/SettingsEvidenceUITests/testSyntheticGrantedAndDeniedNotificationFeedback"
       ],

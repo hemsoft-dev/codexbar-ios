@@ -2,33 +2,6 @@ import XCTest
 @testable import CodexBarWatch
 
 final class WatchComplicationCompatibilityTests: XCTestCase {
-    func testSavedGreptileMetricSurvivesQuotaModeChanges() {
-        let now = Date(timeIntervalSince1970: 2_000_000_000)
-        let resolver = WatchComplicationResolver()
-
-        let quotaForSavedCompletedSelection = resolver.resolve(
-            snapshot: snapshot(metricID: "greptile.review-quota", fraction: 1, at: now),
-            selection: WatchComplicationSelection(
-                accountID: "greptile.team",
-                metricID: "greptile.completed-reviews"
-            ),
-            at: now
-        )
-        let completedForSavedQuotaSelection = resolver.resolve(
-            snapshot: snapshot(metricID: "greptile.completed-reviews", fraction: 0.5, at: now),
-            selection: WatchComplicationSelection(
-                accountID: "greptile.team",
-                metricID: "greptile.review-quota"
-            ),
-            at: now
-        )
-
-        XCTAssertEqual(quotaForSavedCompletedSelection.availability, .value)
-        XCTAssertEqual(quotaForSavedCompletedSelection.exactValue, "100%")
-        XCTAssertEqual(completedForSavedQuotaSelection.availability, .value)
-        XCTAssertEqual(completedForSavedQuotaSelection.exactValue, "50%")
-    }
-
     func testSavedCursorMetricsSurviveSemanticIdentityUpgrade() {
         let now = Date(timeIntervalSince1970: 2_000_000_000)
         let resolver = WatchComplicationResolver()
@@ -159,11 +132,11 @@ final class WatchComplicationCompatibilityTests: XCTestCase {
         ).metricID)
     }
 
-    func testOnlyRetiredGoogleSelectionsFallBackToAnotherAccount() {
+    func testOnlyRetiredProviderSelectionsFallBackToAnotherAccount() {
         let now = Date(timeIntervalSince1970: 2_000_000_000)
         let resolver = WatchComplicationResolver()
-        let available = snapshot(metricID: "greptile.review-quota", fraction: 0.5, at: now)
-        for retired in ["gemini.saved", "antigravity.saved"] {
+        let available = snapshot(metricID: "cursor.total", fraction: 0.5, at: now)
+        for retired in ["gemini.saved", "antigravity.saved", "greptile.saved"] {
             let value = resolver.resolve(snapshot: available,
                                          selection: WatchComplicationSelection(accountID: retired, metricID: "removed.metric"), at: now)
             XCTAssertEqual(value.availability, .value)
@@ -195,8 +168,8 @@ final class WatchComplicationCompatibilityTests: XCTestCase {
     }
 
     private func snapshot(
-        accountID: String = "greptile.team",
-        providerName: String = "Greptile",
+        accountID: String = "cursor.team",
+        providerName: String = "Cursor",
         metricID: String,
         fraction: Double,
         at now: Date
@@ -213,7 +186,7 @@ final class WatchComplicationCompatibilityTests: XCTestCase {
                     metrics: [
                         WatchMetricSnapshot(
                             id: metricID,
-                            label: "Reviews",
+                            label: "Total",
                             usedFraction: fraction,
                             remainingFraction: 1 - fraction,
                             exactValue: "\(Int(fraction * 100))%"

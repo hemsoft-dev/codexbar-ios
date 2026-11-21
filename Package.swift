@@ -77,14 +77,6 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "GreptilePaginationTests",
-            dependencies: ["CodexBarIOS"],
-            path: "GreptilePaginationTests",
-            plugins: [
-                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins"),
-            ]
-        ),
-        .testTarget(
             name: "OpenCodeAuthTests",
             dependencies: ["CodexBarIOS"],
             path: "OpenCodeAuthTests",

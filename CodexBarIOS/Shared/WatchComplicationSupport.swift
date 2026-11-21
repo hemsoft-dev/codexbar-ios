@@ -456,7 +456,7 @@ struct WatchComplicationResolver {
         selection: WatchComplicationSelection
     ) -> (account: WatchAccountSnapshot, metric: WatchMetricSnapshot)? {
         let selectedProvider = selection.accountID?.split(separator: ".").first
-        let isRetiredSelection = selectedProvider == "gemini" || selectedProvider == "antigravity"
+        let isRetiredSelection = selectedProvider.map { ["gemini", "antigravity", "greptile"].contains(String($0)) } ?? false
         let account: WatchAccountSnapshot?
         if let accountID = selection.accountID {
             account = accounts.first { $0.id == accountID || ($0.legacyAccountIDs ?? []).contains(accountID) }
@@ -490,17 +490,7 @@ struct WatchComplicationResolver {
         if let replacementID = CursorUsageIdentity.replacementMetricID(for: metricID) {
             return account.metrics.first { $0.id == replacementID }
         }
-
-        let replacementID: String
-        switch metricID {
-        case GreptileUsageIdentity.completedReviewsMetricID:
-            replacementID = GreptileUsageIdentity.reviewQuotaMetricID
-        case GreptileUsageIdentity.reviewQuotaMetricID:
-            replacementID = GreptileUsageIdentity.completedReviewsMetricID
-        default:
-            return nil
-        }
-        return account.metrics.first { $0.id == replacementID }
+        return nil
     }
 
     private static func isStale(

@@ -414,38 +414,6 @@ public extension DemoUsageProvider {
                 ],
                 subtitle: "Cursor plan usage"
             ),
-            DemoUsageProvider(
-                providerID: .greptile,
-                bars: [
-                    UsageBar(
-                        stableKey: GreptileUsageIdentity.completedReviewsStableKey,
-                        label: "Completed reviews",
-                        used: 84,
-                        limit: 0,
-                        fractionlessUsageText: "84"
-                    ),
-                ],
-                usageMessages: [],
-                cardInformationSections: [
-                    ProviderCardInformationSection(
-                        id: "greptile.review-statuses",
-                        title: "Review statuses",
-                        items: [
-                            ProviderCardInformationItem(
-                                id: "greptile.status.completed",
-                                label: "Completed",
-                                detail: "84"
-                            ),
-                            ProviderCardInformationItem(
-                                id: "greptile.status.skipped",
-                                label: "Skipped",
-                                detail: "3"
-                            ),
-                        ]
-                    ),
-                ],
-                subtitle: ""
-            ),
         ]
     }
 }

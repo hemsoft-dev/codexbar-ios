@@ -28,6 +28,13 @@ building, testing, or releasing the app.
   than its own, and the card says so when it does.
   ([#589](https://github.com/hemsoft-dev/codexbar-ios/issues/589))
 
+- Removed Greptile support. When you update, CodexBar removes a saved
+  Greptile account, its saved credential and its usage history from this
+  device, and shows a one-time note saying so. Greptile is no longer offered in
+  Add Account, widgets or Apple Watch, and your other accounts, groups and
+  their history are unchanged.
+  ([#594](https://github.com/hemsoft-dev/codexbar-ios/issues/594))
+
 - Removed Google Gemini and Antigravity support from iOS. Saved Google accounts,
   credentials and website sessions are removed on upgrade. Other providers,
   account groups and their usage history remain available.
@@ -80,6 +87,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Remove the Greptile provider code, its local regression targets, UI journeys
+  and documentation. The release UI gate now covers 47 journeys per device
+  family (25 original), including a new upgrade journey that checks the
+  one-time note and the widget fallback.
+  ([#594](https://github.com/hemsoft-dev/codexbar-ios/issues/594))
 - One `ClaudeClientIdentity` now holds the user agent, the sign-in client
   identifier and the requested scopes for every Claude request, with tests that
   pin the exact values and fail if a Claude service names another client.

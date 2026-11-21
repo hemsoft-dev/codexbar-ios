@@ -18,7 +18,7 @@ private client source proves the fields that client consumes, not live iOS acces
 | Cursor | Native sign-in successfully reached the authenticated web profile and customer-bound Stripe portal subscription on October 15, 2026. | Franz's phone sign-in and live date comparison; unsupported subscription variants remain unavailable. | Private contract acquired and implemented in [#456](https://github.com/hemsoft-dev/codexbar-ios/issues/456), with [current evidence](CURSOR-BILLING.md). |
 | Personal Copilot | Personal billing UI, cancellation semantics and public personal usage APIs. | Product-specific next charge and cancellation response tied to the authenticated GitHub user. | Private consumer contract unverified; documented usage/seat APIs insufficient. |
 | OpenCode Go / Go Plus | Current console read schema, workspace bearer middleware, subscriber ID, explicit cancellation, paid period and recovery state. | Franz's separate live compatibility check. | Implemented private client contract in [#451](https://github.com/hemsoft-dev/codexbar-ios/issues/451); synthetic production-client coverage, live account compatibility pending. |
-| Paid Greptile | Current first-party client exposes code-review cancellation/status fields. | Paid next-charge semantics, paid response schema and supported fresh Google billing authorization. | Partial private contract; [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) remains open. |
+| Paid Greptile | Current first-party client exposes code-review cancellation/status fields. | Paid next-charge semantics, paid response schema and supported fresh Google billing authorization. | Not pursued. Greptile support was removed in [#594](https://github.com/hemsoft-dev/codexbar-ios/issues/594), and [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) was closed as not planned. |
 
 These classifications are specific to the inspected interfaces. They do not claim
 that a provider can never expose billing data. OpenCode is the verified implementation opportunity. The other four products
@@ -325,6 +325,10 @@ honest unavailable states when native access is denied.
 
 ## Paid Greptile
 
+Greptile support was removed from the app in
+[#594](https://github.com/hemsoft-dev/codexbar-ios/issues/594). This section is
+kept as a research record only.
+
 The current [billing guide](https://www.greptile.com/docs/code-review-bot/billing-seats)
 identifies organization Billing and a portal for plan status and cancellation.
 [Published MCP tools](https://www.greptile.com/docs/mcp-v2/tools) expose account,
@@ -337,7 +341,7 @@ reused the already signed-in browser session, with no new login or billing
 action. Only its public JavaScript was inspected; no private account payload,
 cookie, token, invoice or paid subscription was collected. An independent
 anonymous HTTP navigation reached Greptile login. The older usage bundle URL
-recorded in [GREPTILE-USAGE.md](GREPTILE-USAGE.md) now returns 404, so it was not
+recorded in [GREPTILE-USAGE.md](https://github.com/hemsoft-dev/codexbar-ios/blob/934513a/GREPTILE-USAGE.md) now returns 404, so it was not
 used to claim current paid support.
 
 | First-party asset | SHA-256 | Evidence |

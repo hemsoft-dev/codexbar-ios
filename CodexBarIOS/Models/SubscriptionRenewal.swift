@@ -171,8 +171,7 @@ extension ProviderUsageResult {
     private var subscriptionBillingIsNotApplicable: Bool {
         if [.openRouter, .moonshot, .githubBilling].contains(providerID) { return true }
         let identifier = plan?.identifier.lowercased() ?? ""
-        if identifier.hasSuffix(".free") || identifier.hasSuffix(".hobby") || identifier.contains(".api-credits") { return true }
-        return providerID == .greptile && greptileAllowanceRenewal?.isApplicable == true
+        return identifier.hasSuffix(".free") || identifier.hasSuffix(".hobby") || identifier.contains(".api-credits")
     }
 
     private var subscriptionBillingUnavailableReason: String? {
@@ -202,9 +201,6 @@ extension ProviderUsageResult {
         case .openCodeZen:
             return "The current OpenCode connection did not verify a Go subscription billing date. Refresh or reconnect to check. Zen "
                 + "prepaid credit balances do not renew."
-        case .greptile:
-            return "Paid Greptile billing needs a verified next charge and renewal status for the selected organization. Free-credit "
-                + "allowance renewals remain separate."
         default:
             return nil
         }

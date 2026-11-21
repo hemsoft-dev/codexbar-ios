@@ -263,11 +263,11 @@ final class DashboardAndSettingsTests: XCTestCase {
 
     func testDashboardAuthenticationRecoveryRoutesNonClaudeProvidersToSettings() {
         XCTAssertEqual(
-            DashboardRecoveryRoute.resolve(action: .signIn, providerID: .greptile),
+            DashboardRecoveryRoute.resolve(action: .signIn, providerID: .cursor),
             .accountSettings
         )
         XCTAssertEqual(
-            DashboardRecoveryRoute.resolve(action: .reauthenticate, providerID: .greptile),
+            DashboardRecoveryRoute.resolve(action: .reauthenticate, providerID: .cursor),
             .accountSettings
         )
         XCTAssertEqual(
@@ -275,7 +275,7 @@ final class DashboardAndSettingsTests: XCTestCase {
             .claudeSignIn
         )
         XCTAssertEqual(
-            DashboardRecoveryRoute.resolve(action: .retryRefresh, providerID: .greptile),
+            DashboardRecoveryRoute.resolve(action: .retryRefresh, providerID: .cursor),
             .retryRefresh
         )
     }
@@ -3130,272 +3130,6 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
-    func testGreptileCredentialSaveReportsStoredThenValidated() async throws {
-        let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        let store = ProviderConfigurationStore(
-            initialPlanAccess: .unrestricted,
-            defaults: defaults,
-            secretStore: MemorySecretStore()
-        )
-        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
-        let validatedResult = ProviderUsageResult(
-            accountID: configuration.id,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "All available review history",
-            bars: [],
-            fetchedAt: Date(timeIntervalSince1970: 2_000_000_000)
-        )
-        let gate = UsageProviderGate()
-        let viewModel = ProviderSettingsViewModel(
-            configurationStore: store,
-            accountID: configuration.id,
-            onCredentialRefresh: { _ in
-                await gate.wait()
-                return validatedResult
-            }
-        )
-        viewModel.secret = "greptile-key"
-
-        viewModel.saveGenericCredential()
-        try await withTestWatchdog(
-            timeout: .seconds(5),
-            failureMessage: "Greptile credential validation did not block within five seconds.",
-            onTimeout: {
-                Task { await gate.release() }
-            },
-            operation: {
-                await gate.waitUntilBlocked()
-            }
-        )
-
-        XCTAssertEqual(
-            viewModel.credentialMessage,
-            "API key saved in Keychain. Validating with Greptile..."
-        )
-        XCTAssertEqual(viewModel.credentialMessageSystemImage, "clock")
-        XCTAssertNil(viewModel.credentialError)
-
-        await gate.release()
-        for _ in 0..<100 where viewModel.credentialMessage?.contains("validated") != true {
-            await Task.yield()
-        }
-
-        XCTAssertEqual(
-            viewModel.credentialMessage,
-            "API key saved in Keychain and validated by Greptile."
-        )
-        XCTAssertEqual(viewModel.credentialMessageSystemImage, "checkmark.circle")
-        XCTAssertNil(viewModel.credentialError)
-    }
-
-    @MainActor
-    func testGreptileCredentialSavedWhileDisabledValidatesWhenEnabled() async throws {
-        let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
-        var configuration = try XCTUnwrap(store.addAccount(for: .greptile))
-        configuration.isEnabled = false
-        XCTAssertTrue(store.update(configuration))
-        let validatedResult = ProviderUsageResult(
-            accountID: configuration.id,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "All available review history",
-            bars: [],
-            fetchedAt: Date(timeIntervalSince1970: 2_000_000_000)
-        )
-        var credentialRefreshCount = 0
-        var dismissalRefreshState = SettingsDismissalRefreshState()
-        let viewModel = ProviderSettingsViewModel(
-            configurationStore: store,
-            accountID: configuration.id,
-            onCredentialsChanged: {
-                dismissalRefreshState.credentialsChanged(accountID: configuration.id)
-            },
-            onRefreshInputsChanged: {
-                dismissalRefreshState.refreshInputsChanged(accountID: configuration.id)
-            },
-            onCredentialRefresh: { _ in
-                credentialRefreshCount += 1
-                return validatedResult
-            }
-        )
-        viewModel.secret = "greptile-key"
-
-        viewModel.saveGenericCredential()
-        for _ in 0..<100 {
-            await Task.yield()
-        }
-        XCTAssertEqual(credentialRefreshCount, 0)
-        XCTAssertEqual(
-            viewModel.credentialMessage,
-            "API key saved in Keychain. Enable this account to validate it with Greptile."
-        )
-
-        viewModel.binding(for: \.isEnabled).wrappedValue = true
-        for _ in 0..<100 where viewModel.credentialMessage?.contains("validated") != true {
-            await Task.yield()
-        }
-
-        XCTAssertEqual(credentialRefreshCount, 1)
-        XCTAssertEqual(viewModel.credentialMessage, "API key saved in Keychain and validated by Greptile.")
-        XCTAssertNil(viewModel.credentialError)
-        XCTAssertEqual(dismissalRefreshState.finishDismissal(), .none)
-    }
-
-    @MainActor
-    func testGreptileCredentialSaveReportsValidationFailureAndManualRetrySuccess() async throws {
-        let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        let store = ProviderConfigurationStore(
-            initialPlanAccess: .unrestricted,
-            defaults: defaults,
-            secretStore: MemorySecretStore()
-        )
-        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
-        let rejectedResult = ProviderUsageResult(
-            accountID: configuration.id,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "Greptile rejected this organization API key.",
-            bars: [],
-            failureMessage: "Greptile rejected this organization API key.",
-            recoveryAction: .reauthenticate,
-            fetchedAt: Date(timeIntervalSince1970: 2_000_000_000)
-        )
-        let validatedResult = ProviderUsageResult(
-            accountID: configuration.id,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "All available review history",
-            bars: [],
-            fetchedAt: Date(timeIntervalSince1970: 2_000_000_001)
-        )
-        let viewModel = ProviderSettingsViewModel(
-            configurationStore: store,
-            accountID: configuration.id,
-            onAccountRefresh: { _ in validatedResult },
-            onCredentialRefresh: { _ in rejectedResult }
-        )
-        viewModel.secret = "expired-greptile-key"
-
-        viewModel.saveGenericCredential()
-        for _ in 0..<100 where viewModel.credentialError == nil {
-            await Task.yield()
-        }
-
-        XCTAssertNil(viewModel.credentialMessage)
-        XCTAssertEqual(
-            viewModel.credentialError,
-            "API key saved in Keychain, but Greptile validation failed. "
-                + "Greptile rejected this organization API key."
-        )
-        XCTAssertTrue(store.hasSecret(for: configuration))
-
-        await viewModel.refreshMetrics()
-
-        XCTAssertEqual(
-            viewModel.credentialMessage,
-            "API key saved in Keychain and validated by Greptile."
-        )
-        XCTAssertNil(viewModel.credentialError)
-    }
-
-    @MainActor
-    func testGreptileTransientFailureDoesNotRejectOrUndoValidatedCredential() async throws {
-        let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
-        let transientFailure = ProviderUsageResult(
-            accountID: configuration.id,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "Greptile rate limit reached. Wait before refreshing again.",
-            bars: [],
-            failureMessage: "Greptile rate limit reached. Wait before refreshing again.",
-            fetchedAt: Date(timeIntervalSince1970: 2_000_000_000)
-        )
-        let validatedResult = ProviderUsageResult(
-            accountID: configuration.id,
-            providerID: .greptile,
-            title: "Greptile",
-            subtitle: "All available review history",
-            bars: [],
-            fetchedAt: Date(timeIntervalSince1970: 2_000_000_001)
-        )
-        var manualRefreshCount = 0
-        let viewModel = ProviderSettingsViewModel(
-            configurationStore: store,
-            accountID: configuration.id,
-            onAccountRefresh: { _ in
-                manualRefreshCount += 1
-                return manualRefreshCount == 1 ? validatedResult : transientFailure
-            },
-            onCredentialRefresh: { _ in transientFailure }
-        )
-        viewModel.secret = "greptile-key"
-
-        viewModel.saveGenericCredential()
-        for _ in 0..<100 where viewModel.credentialMessage?.contains("could not validate") != true {
-            await Task.yield()
-        }
-        XCTAssertNil(viewModel.credentialError)
-        XCTAssertTrue(viewModel.credentialMessage?.contains("could not validate it right now") == true)
-        XCTAssertEqual(viewModel.credentialMessageSystemImage, "clock")
-
-        await viewModel.refreshMetrics()
-        XCTAssertEqual(viewModel.credentialMessage, "API key saved in Keychain and validated by Greptile.")
-        XCTAssertNil(viewModel.credentialError)
-
-        await viewModel.refreshMetrics()
-        XCTAssertEqual(viewModel.credentialMessage, "API key saved in Keychain and validated by Greptile.")
-        XCTAssertNil(viewModel.credentialError)
-
-        viewModel.removeSavedCredential()
-        for _ in 0..<100 {
-            await Task.yield()
-        }
-        XCTAssertNil(viewModel.credentialMessage)
-        XCTAssertNil(viewModel.credentialError)
-    }
-
-    @MainActor
-    func testGreptileCredentialRemovalWithoutRefreshResultDoesNotClaimKeyWasSaved() async throws {
-        let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: MemorySecretStore())
-        let configuration = try XCTUnwrap(store.addAccount(for: .greptile))
-        XCTAssertTrue(store.saveSecret("greptile-key", for: configuration))
-        let viewModel = ProviderSettingsViewModel(
-            configurationStore: store,
-            accountID: configuration.id,
-            onCredentialRefresh: { _ in nil }
-        )
-
-        viewModel.removeSavedCredential()
-        for _ in 0..<100 {
-            await Task.yield()
-        }
-
-        XCTAssertNil(viewModel.credentialMessage)
-        XCTAssertNil(viewModel.credentialError)
-        XCTAssertFalse(store.hasSecret(for: configuration))
-    }
-
-    @MainActor
     func testAccountSettingsReplaceCachedMetricsAfterCredentialChange() async throws {
         let suiteName = "CodexBarIOSTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -4897,13 +4631,13 @@ extension AppAndWidgetTests {
 
     func testRetiredGoogleHistoryFilterPreservesOtherRecordsAndCorruption() throws {
         let input = Data(#"[{"providerID":"gemini","id":"old"},{"providerID":"claude","id":"kept","subscriptionRenewal":{"state":"renewing"}},{"providerID":"antigravity","id":"coding"}]"#.utf8)
-        let filtered = try RetiredGoogleProviderMigration.removingRetiredRecords(from: input)
+        let filtered = try RetiredProviderMigration.removingRetiredRecords(from: input)
         let records = try XCTUnwrap(JSONSerialization.jsonObject(with: filtered) as? [[String: Any]])
         XCTAssertEqual(records.count, 1)
         XCTAssertEqual(records.first?["id"] as? String, "kept")
         XCTAssertNotNil(records.first?["subscriptionRenewal"])
-        XCTAssertEqual(try RetiredGoogleProviderMigration.removingRetiredRecords(from: filtered), filtered)
-        XCTAssertThrowsError(try RetiredGoogleProviderMigration.removingRetiredRecords(from: Data("corrupt".utf8)))
+        XCTAssertEqual(try RetiredProviderMigration.removingRetiredRecords(from: filtered), filtered)
+        XCTAssertThrowsError(try RetiredProviderMigration.removingRetiredRecords(from: Data("corrupt".utf8)))
     }
 }
 
@@ -4915,17 +4649,90 @@ extension AppAndWidgetTests {
         defer { defaults.removePersistentDomain(forName: suite) }
         defaults.set(Data(#"[{"id":"old-id","providerID":"gemini","authMethod":"browserSession"}]"#.utf8),
                      forKey: "providerConfigurations")
-        XCTAssertNotNil(RetiredGoogleProviderMigration.run(defaults: defaults, secretStore: RetiredCleanupFailure(),
+        XCTAssertNotNil(RetiredProviderMigration.run(defaults: defaults, secretStore: RetiredCleanupFailure(),
                                                           configurationKey: "providerConfigurations"))
         XCTAssertEqual(defaults.data(forKey: "providerConfigurations"), Data("[]".utf8))
         XCTAssertTrue(defaults.stringArray(forKey: "retiredGoogleCredentialCleanup")?.contains("providerAccount.old-id.credential") == true)
         let keychain = KeychainService(service: suite)
         try keychain.saveSecret("synthetic", account: "providerAccount.old-id.credential")
         defer { try? keychain.deleteSecret(account: "providerAccount.old-id.credential") }
-        XCTAssertNil(RetiredGoogleProviderMigration.run(defaults: defaults, secretStore: keychain,
+        XCTAssertNil(RetiredProviderMigration.run(defaults: defaults, secretStore: keychain,
                                                        configurationKey: "providerConfigurations"))
         XCTAssertNil(try keychain.readSecret(account: "providerAccount.old-id.credential"))
         XCTAssertEqual(defaults.stringArray(forKey: "retiredGoogleCredentialCleanup"), [])
+    }
+}
+
+extension AppAndWidgetTests {
+    @MainActor
+    func testRetiredGreptileMigrationRemovesOnlyGreptileAndNotesItOnce() throws {
+        let suite = "GreptileMigrationTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let retained = [
+            ProviderAccountConfiguration(id: "personal", providerID: .codex, accountLabel: "Personal", groupID: "work", authMethod: .browserSession),
+            ProviderAccountConfiguration(id: "team", providerID: .claude, accountLabel: "Team", groupID: "work", authMethod: .browserSession),
+        ]
+        var records = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(retained)) as? [[String: Any]])
+        let savedGreptile: [String: Any] = [
+            "id": "greptile.saved", "providerID": "greptile", "accountLabel": "Team Greptile",
+            "groupID": "work", "authMethod": "browserSession",
+        ]
+        records.insert(savedGreptile, at: 1)
+        records.append(["id": "greptile", "providerID": "greptile", "authMethod": "apiKey"])
+        defaults.set(try JSONSerialization.data(withJSONObject: records), forKey: "providerConfigurations")
+        let groups = [ProviderAccountGroup(id: "work", name: "Work")]
+        defaults.set(try JSONEncoder().encode(groups), forKey: "providerAccountGroups")
+        let history = #"[{"providerID":"greptile","id":"old"},{"providerID":"claude","id":"kept"}]"#
+        defaults.set(Data(history.utf8), forKey: "usageHistorySnapshots")
+        defaults.set(Data(history.utf8), forKey: "usageHistoryDailySnapshots")
+        let secretStore = KeychainService(service: suite)
+        let removed = ["providerAccount.greptile.saved.credential", "provider.greptile.credential",
+                       "providerAccount.greptile.orphan.credential",
+        ]
+        for account in removed { try secretStore.saveSecret("synthetic", account: account) }
+        let preserved = retained.map { ProviderConfigurationStore.keychainAccount(for: $0) }
+        for account in preserved { try secretStore.saveSecret("synthetic-other", account: account) }
+        defer { for account in removed + preserved { try? secretStore.deleteSecret(account: account) } }
+
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        XCTAssertFalse(store.isConfigurationRecoveryRequired)
+        XCTAssertEqual(store.configurations, retained)
+        XCTAssertEqual(store.groups, groups)
+        XCTAssertFalse(store.configurations.contains { $0.id.hasPrefix("greptile") })
+        for account in removed { XCTAssertNil(try secretStore.readSecret(account: account), account) }
+        for account in preserved { XCTAssertEqual(try secretStore.readSecret(account: account), "synthetic-other") }
+        for key in ["usageHistorySnapshots", "usageHistoryDailySnapshots"] {
+            let kept = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: key))) as? [[String: Any]])
+            XCTAssertEqual(kept.compactMap { $0["id"] as? String }, ["kept"], key)
+        }
+        XCTAssertTrue(store.showsGreptileRemovalNotice)
+        XCTAssertTrue(ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults,
+                                                 secretStore: secretStore).showsGreptileRemovalNotice,
+                      "The note waits until it has been dismissed.")
+        store.acknowledgeGreptileRemovalNotice()
+        XCTAssertFalse(store.showsGreptileRemovalNotice)
+        let reloaded = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        XCTAssertEqual(reloaded.configurations, retained)
+        XCTAssertFalse(reloaded.showsGreptileRemovalNotice, "The note shows once.")
+    }
+
+    @MainActor
+    func testGreptileRemovalNoticeNeedsARemovedGreptileAccount() throws {
+        for providerID in ["gemini", nil] as [String?] {
+            let suite = "GreptileNoticeTests.\(UUID().uuidString)"
+            let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+            defer { defaults.removePersistentDomain(forName: suite) }
+            var records = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode([
+                ProviderAccountConfiguration(id: "personal", providerID: .codex, accountLabel: "Personal", authMethod: .browserSession),
+            ])) as? [[String: Any]])
+            if let providerID { records.append(["id": "\(providerID).saved", "providerID": providerID, "authMethod": "browserSession"]) }
+            defaults.set(try JSONSerialization.data(withJSONObject: records), forKey: "providerConfigurations")
+            let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults,
+                                                   secretStore: MemorySecretStore())
+            XCTAssertEqual(store.configurations.map(\.id), ["personal"])
+            XCTAssertFalse(store.showsGreptileRemovalNotice, providerID ?? "no retired account")
+        }
     }
 }
 

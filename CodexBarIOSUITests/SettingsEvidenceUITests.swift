@@ -42,6 +42,49 @@ final class SettingsEvidenceUITests: XCTestCase {
         }
     }
 
+    /// #594: an upgrade that removes a saved Greptile account says so once, and Greptile is offered nowhere.
+    func testRetiredGreptileUpgradeEvidence() {
+        let app = XCUIApplication()
+        app.launchEnvironment = [
+            "CODEXBAR_UI_TESTS": "1", "CODEXBAR_UI_TEST_RUN_ID": UUID().uuidString,
+            "CODEXBAR_UI_TEST_RESET": "1", "CODEXBAR_UI_TEST_SCENARIO": "retired-greptile-upgrade",
+            "CODEXBAR_UI_TEST_DEFAULT_TEXT": "1", "CODEXBAR_UI_TEST_DARK": "0",
+        ]
+        app.launch()
+        let notice = app.alerts["Greptile is no longer supported"]
+        XCTAssertTrue(notice.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(notice.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "saved Greptile account was removed"))
+            .firstMatch.exists, app.debugDescription)
+        capture("greptile-upgrade-notice")
+        notice.buttons["OK"].tap()
+        XCTAssertTrue(app.buttons["More options for Personal Codex"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["More options for Team Claude"].exists)
+        XCTAssertFalse(app.buttons["More options for Team Greptile"].exists)
+        capture("greptile-upgrade-dashboard")
+        openSettings(app)
+        select("accountsAndGroups", in: app)
+        XCTAssertFalse(app.staticTexts["Team Greptile"].exists)
+        XCTAssertFalse(app.staticTexts["Greptile"].exists)
+        tap(app.buttons["Add Account"].firstMatch, in: app)
+        XCTAssertTrue(app.navigationBars["Choose a Provider"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Greptile"].exists)
+        capture("greptile-upgrade-provider-list")
+        app.terminate()
+
+        app.launchEnvironment["CODEXBAR_UI_TEST_RESET"] = "0"
+        app.launch()
+        XCTAssertTrue(app.buttons["More options for Personal Codex"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.alerts["Greptile is no longer supported"].exists, "The note shows only once.")
+        tap(app.buttons["Preview synthetic widgets"], in: app)
+        XCTAssertTrue(app.navigationBars["Widget Builder"].waitForExistence(timeout: 5))
+        let preview = app.descendants(matching: .any).matching(identifier: "widget-builder-preview").firstMatch
+        XCTAssertTrue(preview.staticTexts["Personal Codex"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(preview.staticTexts["Saved Tile"].exists)
+        XCTAssertFalse(app.staticTexts["Greptile"].exists)
+        capture("greptile-upgrade-widget-builder")
+        app.terminate()
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
     }

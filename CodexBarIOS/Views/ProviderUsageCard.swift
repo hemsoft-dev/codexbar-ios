@@ -115,7 +115,6 @@ struct ProviderUsageCard: View {
     @State private var isResetActionUnavailable = false
     @State private var isCustomizingMetrics = false
     @State private var isShowingMoreInformation = false
-    @State private var reconnectAfterInformation = false
 
     /// Simulator-only fixture hook: the More Information sheet opens directly when
     /// a journey relaunches with CODEXBAR_UI_TEST_MORE_INFORMATION=1. Production
@@ -320,17 +319,12 @@ struct ProviderUsageCard: View {
                 onMarkMetricsSeen: onMarkMetricsSeen
             )
         }
-        .sheet(isPresented: $isShowingMoreInformation, onDismiss: reconnectFromInformation, content: {
+        .sheet(isPresented: $isShowingMoreInformation) {
             ProviderCardInformationView(
                 sections: informationSections,
-                greptileRenewal: greptileRenewal,
-                onConnect: {
-                    reconnectAfterInformation = true
-                    isShowingMoreInformation = false
-                },
                 showsBillingSettings: result.canOpenClaudeBillingSettings
             )
-        })
+        }
         .sheet(item: $metricDetailPresentation) { presentation in
             if let metric = Self.metric(withID: presentation.metricID, in: result) {
                 ProviderMetricTileDetailView(
@@ -368,7 +362,6 @@ struct ProviderUsageCard: View {
             }
         }
         .onChange(of: informationSections) {
-            guard result.providerID != .greptile else { return }
             isShowingMoreInformation = Self.reconciledMoreInformationPresentation(
                 currentlyPresented: isShowingMoreInformation,
                 sections: informationSections
@@ -546,10 +539,6 @@ struct ProviderUsageCard: View {
                     message: refreshErrorMessage,
                     onReport: onReportProblem
                 )
-            }
-
-            if let greptileRenewal {
-                GreptileRenewalView(renewal: greptileRenewal, onConnect: onConfigureAccount)
             }
 
             if !metricGridRows.isEmpty {
@@ -928,7 +917,7 @@ struct ProviderUsageCard: View {
         isMetricVisible: (String) -> Bool = { _ in true }
     ) -> [ProviderUsageCardMenuAction] {
         var actions: [ProviderUsageCardMenuAction] = []
-        if result.providerID == .greptile || !informationSections(for: result, alerts: alerts).isEmpty {
+        if !informationSections(for: result, alerts: alerts).isEmpty {
             actions.append(.moreInformation)
         }
         if result.configurableMetrics.isEmpty {
@@ -990,24 +979,6 @@ struct ProviderUsageCard: View {
 
     var inlineAlerts: [UsageAlertDetail] {
         result.providerID == .cursor ? [] : displayedAlerts
-    }
-
-    private func reconnectFromInformation() {
-        guard reconnectAfterInformation else { return }
-        reconnectAfterInformation = false
-        // Let SwiftUI finish removing this sheet before the dashboard presents settings.
-        DispatchQueue.main.async {
-            onConfigureAccount()
-        }
-    }
-
-    private var greptileRenewal: GreptileAllowanceRenewal? {
-        guard result.providerID == .greptile else { return nil }
-        if let renewal = result.greptileAllowanceRenewal, renewal.isApplicable == false && !renewal.requiresAuthentication { return nil }
-        return result.greptileAllowanceRenewal ?? GreptileAllowanceRenewal(
-            renewsAt: nil, observedAt: result.fetchedAt,
-            unavailableReason: "Connect Greptile to read the allowance renewal date.", requiresAuthentication: true, isApplicable: nil
-        )
     }
 
     var informationSections: [ProviderCardInformationSection] {
@@ -1341,16 +1312,6 @@ struct ProviderUsageCard: View {
         let preferredOptionID: String?
         switch metric.kind {
         case let .usageBar(index):
-            if result.providerID == .greptile,
-               result.bars.indices.contains(index),
-               let stableKey = result.bars[index].stableKey,
-               let seriesID = GreptileUsageIdentity.historySeriesID(forStableKey: stableKey) {
-                return historySeriesOptionsProvider()
-                    .first(where: {
-                        $0.id == seriesID
-                    })?
-                    .series
-            }
             guard
                 result.providerID == .cursor,
                 result.bars.indices.contains(index),

@@ -21,10 +21,10 @@
         "CodexBarIOSUITests/AccountJourneysUITests/testAccountSetupPersistsGroupAndCredentialAtAccessibilitySize",
         "CodexBarIOSUITests/ClaudeUsageUITests/testWindowLabelsAndSavedCustomizationForProAndMax",
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testThirtyDayWindowLabelAndSavedVisibility",
-        "CodexBarIOSUITests/GreptileAllowanceUITests/testDetailReconnectStaysInApp",
         "CodexBarIOSUITests/GrokSignInUITests/testGrokAndCursorMetersStaySeparateAndNoAllowanceIsUnavailable",
         "CodexBarIOSUITests/GrokSignInUITests/testSavedGrokLayoutAndWeeklyStates",
-        "CodexBarIOSUITests/SettingsEvidenceUITests/testEverySettingsDestinationAndDoneBack"
+        "CodexBarIOSUITests/SettingsEvidenceUITests/testEverySettingsDestinationAndDoneBack",
+        "CodexBarIOSUITests/SettingsEvidenceUITests/testRetiredGreptileUpgradeEvidence"
       ]
     },
     "original-3": {
@@ -35,7 +35,6 @@
         "CodexBarIOSUITests/AccountJourneysUITests/testGitHubBillingProductSummaryAndRoutinePlacement",
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testOptInBalanceStatesAndSavedAccountChoices",
         "CodexBarIOSUITests/CodexCreditsPoolUITests/testPreciseSubscriptionPillsOnExpandedAndCollapsedCards",
-        "CodexBarIOSUITests/GreptileAllowanceUITests/testReviewHistoryAndBillingAvailabilityStates",
         "CodexBarIOSUITests/GrokSignInUITests/testCursorFreshPercentagesBotAndSavedChoices",
         "CodexBarIOSUITests/GrokSignInUITests/testCursorStaleSignInReconnectCancellationAndValidZero",
         "CodexBarIOSUITests/OpenCodeSignInUITests/testVerificationFailureKeepsAccountDisconnectedAndAllowsRetry",
