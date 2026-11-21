@@ -43,6 +43,11 @@ building, testing, or releasing the app.
 
 ### Fixed
 
+- Closing the Claude sign-in page in account settings now cancels the sign-in
+  right away, the same way it does on the dashboard. CodexBar says the sign-in
+  was canceled and that your saved sign-in was not changed, and the Sign in
+  button works again at once instead of spinning for up to three minutes
+  ([#591](https://github.com/hemsoft-dev/codexbar-ios/issues/591)).
 - Saved Claude resets now say when a reset restores Fable weekly usage instead
   of "provider-scoped usage". Each reset Claude marks usable has its own Use
   action and confirmation, so you can choose a Fable reset or a weekly reset.

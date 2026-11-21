@@ -89,7 +89,11 @@ final class ProviderSettingsViewModel: ObservableObject {
     private var githubBillingSignInAttemptID: UUID?
     private var githubBillingConnectionAttemptID: UUID?
     private var ignoresNextGitHubBillingAuthDismissal = false
-    private let claudeAuthService: ClaudeWebAuthService
+    private let claudeAuthenticate: DashboardClaudeAuthenticationController.Authenticate
+    private var claudeSignInTask: Task<Void, Never>?
+    /// True only while Claude's page is open and no callback has arrived, so closing the sheet after
+    /// a successful return never cancels the token exchange.
+    private var isAwaitingClaudeCallback = false
     private let grokAuthService: GrokDeviceAuthService
     private let grokUsageProvider: GrokUsageProvider
     private var grokAuthPresenter = PrivateWebAuthenticationPresenter()
@@ -135,7 +139,13 @@ final class ProviderSettingsViewModel: ObservableObject {
         copilotAuthService: any CopilotWebAuthenticating = CopilotWebAuthService(),
         githubBillingAuthService: any GitHubBillingWebAuthenticating = GitHubBillingWebAuthService(),
         githubBillingUsageProvider: GitHubBillingUsageProvider = GitHubBillingUsageProvider(),
-        claudeAuthService: ClaudeWebAuthService = ClaudeWebAuthService(),
+        claudeAuthenticate: @escaping DashboardClaudeAuthenticationController.Authenticate = { present, report, received in
+            try await ClaudeWebAuthService().signIn(
+                presentAuthorizationURL: present,
+                reportStage: report,
+                didReceiveCallback: received
+            )
+        },
         grokAuthService: GrokDeviceAuthService = GrokDeviceAuthService(),
         grokUsageProvider: GrokUsageProvider = GrokUsageProvider(),
         cursorAuthService: any CursorWebAuthenticating = CursorWebAuthService(),
@@ -156,7 +166,14 @@ final class ProviderSettingsViewModel: ObservableObject {
         self.copilotAuthService = copilotAuthService
         self.githubBillingAuthService = githubBillingAuthService
         self.githubBillingUsageProvider = githubBillingUsageProvider
-        self.claudeAuthService = claudeAuthService
+        #if DEBUG
+        if UITestFixtures.current != nil,
+           ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"] == "claude-settings-sign-in" {
+            self.claudeAuthenticate = UITestFixtures.claudeSignInThatNeverReturns
+        } else { self.claudeAuthenticate = claudeAuthenticate }
+        #else
+        self.claudeAuthenticate = claudeAuthenticate
+        #endif
         self.grokAuthService = grokAuthService
         self.grokUsageProvider = grokUsageProvider
         #if DEBUG
@@ -486,6 +503,7 @@ final class ProviderSettingsViewModel: ObservableObject {
     }
 
     func authenticationSheetDismissed() {
+        cancelClaudeSignInIfAwaitingCallback()
         if ignoresNextGitHubBillingAuthDismissal {
             ignoresNextGitHubBillingAuthDismissal = false
             return
@@ -905,21 +923,44 @@ final class ProviderSettingsViewModel: ObservableObject {
     }
 
     func signInWithClaude() async {
+        guard claudeSignInTask == nil else { return }
+        let task = Task { await performClaudeSignIn() }
+        claudeSignInTask = task
+        await task.value
+    }
+
+    /// Closing Claude's page before it returns ends the attempt at once, like the dashboard does.
+    private func cancelClaudeSignInIfAwaitingCallback() {
+        guard isSigningInWithClaude, isAwaitingClaudeCallback else { return }
+        isAwaitingClaudeCallback = false
+        claudeSignInTask?.cancel()
+    }
+
+    private func performClaudeSignIn() async {
         isSigningInWithClaude = true
         credentialError = nil
         claudeAuthError = nil
         claudeAuthDiagnostic = nil
-        defer { isSigningInWithClaude = false }
+        defer {
+            isSigningInWithClaude = false
+            isAwaitingClaudeCallback = false
+            claudeSignInTask = nil
+        }
 
         do {
-            let result = try await claudeAuthService.signIn(
-                presentAuthorizationURL: { url in
+            let result = try await claudeAuthenticate(
+                { url in
+                    self.isAwaitingClaudeCallback = true
                     self.authURL = PresentedAuthURL(url: url)
                 },
-                reportStage: { message in
+                { message in
                     self.claudeAuthDiagnostic = message
+                },
+                {
+                    self.isAwaitingClaudeCallback = false
                 }
             )
+            try Task.checkCancellation()
             var updated = configuration
             updated.authMethod = .browserSession
             guard persistCredential(result.storedCredential, with: updated) else {
@@ -932,6 +973,10 @@ final class ProviderSettingsViewModel: ObservableObject {
             credentialsDidChange()
             authURL = nil
             claudeAuthDiagnostic = "Claude sign-in complete."
+        } catch is CancellationError {
+            authURL = nil
+            claudeAuthDiagnostic = nil
+            claudeAuthError = "Claude sign-in canceled. The existing credential was not changed."
         } catch {
             claudeAuthError = error.localizedDescription
             authURL = nil
