@@ -53,9 +53,11 @@ struct ClaudeUsageResetInventoryView: View {
         List {
             Section {
                 Text(accountName)
-                Text(summary(at: date))
+                Text(inventory.isUnavailableInThisApp ? "Saved resets unavailable" : summary(at: date))
                     .accessibilityIdentifier("claude-reset-summary")
-                if !inventory.isEligible {
+                if inventory.isUnavailableInThisApp {
+                    Text("Claude did not offer saved resets to CodexBar.")
+                } else if !inventory.isEligible {
                     Text("Claude has not made usage resets available for this account.")
                 }
                 if !canRedeem {
@@ -64,7 +66,7 @@ struct ClaudeUsageResetInventoryView: View {
             }
             Section("Saved usage resets") {
                 if inventory.grants.isEmpty {
-                    Text("No saved usage resets.")
+                    Text(inventory.isUnavailableInThisApp ? "Claude listed no saved resets for this request." : "No saved usage resets.")
                 }
                 ForEach(inventory.grants, id: \.id) { grant in
                     grantRow(grant, at: date)

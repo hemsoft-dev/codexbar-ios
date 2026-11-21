@@ -49,6 +49,61 @@ final class ClaudeUsageUITests: XCTestCase {
         }
     }
 
+    /// Synthetic states for the ways Claude can refuse CodexBar's own identity or a sign-in's permissions (#589).
+    private func exerciseIdentityRefusals() {
+        continueAfterFailure = false
+        let cards: [(scenario: String, message: String, signIn: Bool)] = [
+            ("claude-rejection-declined", "Claude declined CodexBar's usage request (HTTP 403). Your sign-in was not changed.", false),
+            ("claude-rejection-permission", "Claude says this sign-in does not include permission to read usage.", true),
+            ("claude-rejection-renewal-declined", "Claude did not renew this sign-in: HTTP 400 (invalid_grant). Sign in again.", true),
+            ("claude-rejection-renewal-unavailable", "Claude could not renew this sign-in right now: HTTP 503.", false),
+        ]
+        for card in cards {
+            let app = launch(scenario: card.scenario, runID: UUID().uuidString)
+            // Healthy first load, then Claude refuses the next refresh.
+            XCTAssertTrue(app.buttons["dashboard-metric-claude.session"].waitForExistence(timeout: 10), app.debugDescription)
+            tap(app.buttons["Refresh usage"], in: app)
+            let message = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", card.message)).firstMatch
+            XCTAssertTrue(message.waitForExistence(timeout: 10), app.debugDescription)
+            // Sign-in is offered only where a new sign-in can help. Either way the last known usage stays.
+            XCTAssertEqual(app.buttons["Sign in again"].exists, card.signIn, card.scenario)
+            XCTAssertEqual(app.buttons["Retry"].exists, !card.signIn, card.scenario)
+            XCTAssertTrue(app.buttons["dashboard-metric-claude.session"].exists, card.scenario)
+            keep(card.scenario, app: app)
+            app.terminate()
+        }
+
+        var app = launch(scenario: "claude-resets-surface", runID: UUID().uuidString)
+        let availability = app.staticTexts["claude-reset-availability-ui-claude"]
+        XCTAssertTrue(availability.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(availability.label, "Saved resets unavailable")
+        keep("claude-resets-surface-card", app: app)
+        tap(app.buttons["claude-view-resets-ui-claude"], in: app)
+        XCTAssertTrue(app.staticTexts["Claude did not offer saved resets to CodexBar."].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["claude-reset-summary"].label, "Saved resets unavailable")
+        XCTAssertFalse(app.staticTexts["No saved usage resets."].exists)
+        XCTAssertFalse(app.buttons["claude-use-reset"].exists)
+        keep("claude-resets-surface-sheet", app: app)
+        app.terminate()
+
+        app = launch(scenario: "claude-resets-not-permitted", runID: UUID().uuidString)
+        tap(app.buttons["claude-view-resets-ui-claude"], in: app)
+        tap(app.buttons["claude-use-reset"], in: app)
+        tap(app.alerts["Use one Claude reset?"].buttons["Use reset"], in: app)
+        let feedback = app.staticTexts["claude-reset-feedback"]
+        XCTAssertTrue(feedback.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(feedback.label, "Claude did not allow CodexBar to use this reset (HTTP 401). No reset was used.")
+        XCTAssertTrue(app.staticTexts["claude-reset-summary"].label.contains("2 resets available"))
+        reveal(feedback, in: app)
+        keep("claude-resets-not-permitted", app: app)
+        tap(app.buttons["Done"], in: app)
+        // A refused reset changes nothing: usage and the saved resets are as they were.
+        XCTAssertTrue(app.buttons["dashboard-metric-claude.session"].label.contains("42%"), app.debugDescription)
+        XCTAssertTrue(app.buttons["dashboard-metric-claude.weekly-all"].label.contains("64%"), app.debugDescription)
+        assertResetAvailability(2, account: "ui-claude", in: app)
+        app.terminate()
+    }
+
     private func exercisePromotionalCredit() {
         continueAfterFailure = false
         let app = launch(scenario: "claude-fable-promotional", runID: UUID().uuidString)
@@ -73,6 +128,7 @@ final class ClaudeUsageUITests: XCTestCase {
         exerciseSavedResetSelection()
         exerciseSelectedUnusableReset()
         exercisePromotionalCredit()
+        exerciseIdentityRefusals()
         for scenario in ["claude-pro", "claude-max"] {
             let runID = UUID().uuidString
             let app = launch(scenario: scenario, runID: runID)

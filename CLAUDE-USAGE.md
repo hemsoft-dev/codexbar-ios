@@ -5,10 +5,115 @@ CodexBar reads Claude subscription usage from:
 ```text
 GET https://api.anthropic.com/api/oauth/usage
 anthropic-beta: oauth-2025-04-20
+User-Agent: CodexBarIOS
 ```
 
 This is an undocumented provider endpoint, so every field is decoded
 defensively and optional values are omitted when absent or malformed.
+
+## Client identity, sign-in scope and refusals
+
+CodexBar names itself in the user agent of every request it sends to a Claude
+host ([#589](https://github.com/hemsoft-dev/codexbar-ios/issues/589)). The
+value is `User-Agent: CodexBarIOS`, from one constant, `ClaudeClientIdentity`.
+No request's user agent names Claude Code or any other client, and a refused
+request is never sent again under a different identity. Sign-in and renewal
+still carry Claude Code's public client identifier; see below.
+
+| Request | User agent before | User agent now |
+| --- | --- | --- |
+| Usage and saved-reset inventory read | `claude-code/2.1.0` | `CodexBarIOS` |
+| Token exchange at sign-in, token renewal | Not set by the app; URLSession supplied its default | `CodexBarIOS` |
+| Profile read, reset client reads and reset request | `CodexBarIOS` | `CodexBarIOS` |
+| Billing lookups (paused in production, shared helper with Grok) | `CodexBarIOS` | `CodexBarIOS`, now from the same constant |
+| Claude's sign-in page | Safari's own, not set by the app | Unchanged |
+
+Guided sign-in asks for `user:profile user:inference`. It used to ask for
+`org:create_api_key user:profile user:inference user:sessions:claude_code`.
+
+| Scope | The request that needs it | Evidence |
+| --- | --- | --- |
+| `user:profile` | Usage read, saved-reset inventory, profile read | [Desktop CodexBar](https://github.com/steipete/CodexBar/blob/1f6da9bec44455288ddee5ef6f3617a803d8eb2a/docs/claude.md#L236); [OpenUsage #1448](https://github.com/robinebers/openusage/pull/1448) narrowed its sign-in to this scope alone, and [#1652](https://github.com/robinebers/openusage/pull/1652) reports that sign-in reading usage |
+| `user:inference` | Using a saved reset (`reset_rate_limits`) | OpenUsage #1652 reports HTTP 401 on that request with a `user:profile`-only token |
+
+CodexBar sends no inference request, creates no API key and opens no Claude
+Code session. `user:inference` is kept only because the reset request is
+reported to need it; if a live check shows that saved resets are not offered to
+CodexBar at all, it should be dropped. Asking for a scope later would make
+people sign in again, while dropping one would not, so the wider of the two
+candidate sets is the reversible choice.
+
+What stays the same, and what this does not establish:
+
+- Sign-in still goes through the public Claude Code client identifier, because
+  CodexBar has no client registration of its own. Only the user agent is
+  truthful. Whether this sign-in is permitted is
+  [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548), and the
+  release hold stays.
+- `anthropic-beta: oauth-2025-04-20`, `anthropic-version: 2023-06-01` and the
+  `cedar_ember=1` query are kept as protocol parameters.
+- Accounts signed in earlier are not signed out, migrated or rewritten. Renewal
+  sends the same body as before, with no `scope`. Their tokens keep whatever
+  Claude granted at the time; CodexBar does not use the extra permissions. What
+  Claude does with an earlier grant after a new sign-in is not established.
+
+How Claude responds to this identity is not known. Public reports from March
+2026 say the usage endpoint rate-limited user agents other than Claude Code
+([desktop CodexBar #487](https://github.com/steipete/CodexBar/issues/487)), and
+one report says saved resets are listed only for Claude's own command-line
+client, with `ineligible_reason: "surface"` for others, including the
+`claude-code/…` user agent this app sent before
+([desktop CodexBar #3895](https://github.com/steipete/CodexBar/issues/3895)).
+Both are second-hand. OpenUsage's reports were made with a Claude client user
+agent, so nothing shows the narrower scopes working together with CodexBar's
+own name. If Claude refuses, the card says so and the app does not
+change identity:
+
+| Claude's answer | Card message | Offered |
+| --- | --- | --- |
+| Usage 401 or 403 whose body says "scope requirement" | "Claude says this sign-in does not include permission to read usage. Sign in again to grant it." | Sign in again |
+| Usage 401, renewal refused with `invalid_grant` (as the error code, or as an error object's type or code) | "Claude did not renew this sign-in: HTTP 400 (invalid_grant). Sign in again." | Sign in again |
+| Usage 401, renewal refused or failed any other way | "Claude could not renew this sign-in right now: HTTP 503. Your sign-in was not changed." | Retry |
+| Usage 401 with a token Claude renewed and has refused since | "Claude declined CodexBar's usage request (HTTP 401). Your sign-in was not changed." | Retry |
+| Usage 401 otherwise | "Claude credential was rejected. Sign in again." | Sign in again |
+| Usage 403 otherwise, and any other unexpected status | "Claude declined CodexBar's usage request (HTTP 403). Your sign-in was not changed." | Retry |
+| Usage 429 | "Claude usage is rate-limited until …" (unchanged) | Retry |
+| Reset request 401 or 403 | "Claude did not allow CodexBar to use this reset (HTTP 401). No reset was used." | None |
+| Inventory not eligible, reason `surface` | "Saved resets unavailable", and in the sheet "Claude did not offer saved resets to CodexBar." | None |
+
+The aim is to offer sign-in only where a new sign-in can help. "Retry" means
+no sign-in prompt: the card shows a Retry button, beside the last known usage
+when this session has any. Limits of that aim:
+
+- The last known usage is held in memory. A refusal on the first refresh after
+  launch, for example right after an update, shows the message with no usage.
+- A token Claude renewed and then refuses stays "declined" across refreshes
+  only until the app restarts. After a restart, or for a token that was never
+  renewed in this session, a plain 401 reads "Claude credential was rejected.
+  Sign in again.", because the app cannot tell a refused identity from a
+  rejected token.
+- A renewal refused in a way that does not name `invalid_grant` offers Retry
+  even if the refresh token is in fact dead. Sign in Again in the account's
+  settings still works.
+- Reading `surface` as "not offered to CodexBar" is an interpretation of one
+  public report. The sheet says only that Claude did not offer saved resets.
+
+No state deletes or rewrites the saved sign-in. The
+"scope requirement" wording comes from a
+[public report](https://github.com/anthropics/claude-code/issues/22450) that
+shows the text without its status, so the app accepts it on either status. If
+Claude refuses the narrower sign-in on its own page, the app receives nothing.
+Closing the sheet from the dashboard shows "Claude sign-in canceled. The
+existing credential was not changed." Leaving it open for three minutes, or
+closing it in account settings (which does not cancel,
+[#591](https://github.com/hemsoft-dev/codexbar-ios/issues/591)), shows the
+timeout message, which now mentions that Claude may not have accepted the
+request.
+
+Pending for Franz, on a live account, in this order: an account signed in
+before the change still renews and reads usage; a fresh sign-in completes and
+shows usage and the plan name; what Claude's consent page lists; whether saved
+resets are still listed and usable. Agents made no request to any Claude host.
 
 ## Display ownership
 
@@ -85,8 +190,8 @@ No verification badge, quota multiplier calculation or new usage field is added.
 ## Subscription-name source and refresh policy
 
 The card pill now reads `GET https://api.anthropic.com/api/oauth/profile` with
-its account-scoped Bearer credential, the existing `user:profile` authorization
-scope and `anthropic-beta: oauth-2025-04-20`. Guided phone sign-in already
+its account-scoped Bearer credential, the `user:profile` authorization
+scope and `anthropic-beta: oauth-2025-04-20`. Guided phone sign-in
 requests that scope. This read-only lookup sends no inference request and
 requires no desktop process, exported credentials or additional setup.
 
@@ -216,8 +321,9 @@ requires a fresh usage read and a new confirmation.
 The organization-bound `reset_rate_limits` POST uses `program=cedar_ember`, the
 confirmed grant's own `grant_id` and a new `request_id`. This contract follows the
 [current provider implementation](https://github.com/can1357/oh-my-pi/blob/main/packages/ai/src/usage/claude-reset.ts),
-not a stable published Anthropic API. The request identifies CodexBar honestly;
-it does not impersonate another client to obtain reset eligibility. An unsupported
+not a stable published Anthropic API. The request identifies CodexBar honestly,
+as every Claude request now does; it does not impersonate another client to
+obtain reset eligibility. An unsupported
 or ineligible provider response leaves redemption unavailable.
 
 No mutation is retried automatically. Redirects are refused before a request can

@@ -3,7 +3,6 @@ import Foundation
 public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming {
     private static let usageEndpoint = URL(string: "https://api.anthropic.com/api/oauth/usage")!
     private static let tokenRefreshEndpoint = URL(string: "https://platform.claude.com/v1/oauth/token")!
-    private static let clientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 
     private let secretStore: SecretStore
     private let session: URLSession
@@ -65,6 +64,7 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
                 from: rotatedCredential,
                 to: token
             )
+            await snapshotCache.markRenewed(accountID: configuration.id, credential: token)
         } else {
             await snapshotCache.prepare(accountID: configuration.id, credential: token)
         }
@@ -74,7 +74,8 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
         let oauthOutcome = try await fetchOAuthUsage(
             configuration: configuration,
             credentials: credentials,
-            accessToken: token
+            accessToken: token,
+            renewal: refreshOutcome.renewal
         )
         let resolution = await planResolution
         guard try currentToken(for: configuration) == token else {
@@ -141,7 +142,8 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
     private func fetchOAuthUsage(
         configuration: ProviderAccountConfiguration,
         credentials: ClaudeCredentials,
-        accessToken: String
+        accessToken: String,
+        renewal: ClaudeRenewalOutcome
     ) async throws -> OAuthUsageOutcome {
         let fetchedAt = now()
         if let retryAt = await snapshotCache.retryAt(accountID: configuration.id), retryAt > fetchedAt {
@@ -173,24 +175,21 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
             ) else {
                 return OAuthUsageOutcome(result: nil)
             }
+            await snapshotCache.clearRenewal(accountID: configuration.id)
             let inventory = ClaudeUsageResetInventoryParser.parse(data)?.bound(toAccessToken: accessToken)
             let result = applyAccountMetadata(to: parsed, configuration: configuration, resetInventory: inventory)
             return OAuthUsageOutcome(
                 result: result,
                 isSuccessfulSnapshot: true
             )
-        case 401:
-            return OAuthUsageOutcome(
-                result: failureResult(
-                    "Claude credential was rejected. Sign in again.",
-                    configuration: configuration,
-                    recoveryAction: .reauthenticate
-                )
-            )
-        case 403:
-            return OAuthUsageOutcome(
-                result: failureResult("Claude credential lacks permission to read subscription usage.", configuration: configuration)
-            )
+        case 401, 403:
+            // The remembered renewal only fills in when this refresh had nothing to renew. An explicit
+            // outcome from this refresh, such as a refresh token Claude now refuses, always wins.
+            let remembered = renewal == .notNeeded
+                ? await snapshotCache.isRenewed(accountID: configuration.id, credential: accessToken) : false
+            return OAuthUsageOutcome(result: await refusedResult(
+                status: httpResponse.statusCode, body: data, renewal: remembered ? .renewed : renewal, configuration: configuration
+            ))
         case 404:
             return OAuthUsageOutcome(
                 result: await staleOrFailureResult(
@@ -216,25 +215,52 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
                 )
             )
         default:
-            return OAuthUsageOutcome(result: nil)
+            return OAuthUsageOutcome(result: await staleOrFailureResult(
+                ClaudeUsageFailureCopy.requestDeclined(status: httpResponse.statusCode), configuration: configuration
+            ))
+        }
+    }
+
+    /// A 401 or 403 on the usage read. Sign-in is offered only where a new sign-in can help: a
+    /// missing permission, a refresh token Claude no longer accepts, or a plainly rejected saved
+    /// token. A token Claude itself renewed and has refused ever since is a refusal of the request, so
+    /// signing in again would only replace the saved sign-in for nothing. That holds for later
+    /// refreshes too, until the token reads usage once or the app restarts.
+    private func refusedResult(
+        status: Int, body: Data, renewal: ClaudeRenewalOutcome, configuration: ProviderAccountConfiguration
+    ) async -> ProviderUsageResult {
+        if ClaudeUsageFailureCopy.isScopeRequirement(body) {
+            return failureResult(ClaudeUsageFailureCopy.permissionMissing, configuration: configuration, recoveryAction: .reauthenticate)
+        }
+        let declined = ClaudeUsageFailureCopy.requestDeclined(status: status)
+        guard status == 401 else { return await staleOrFailureResult(declined, configuration: configuration) }
+        switch renewal {
+        case .signInExpired(let detail):
+            return failureResult(ClaudeUsageFailureCopy.renewalDeclined(detail), configuration: configuration, recoveryAction: .reauthenticate)
+        case .unavailable(let detail):
+            return await staleOrFailureResult(ClaudeUsageFailureCopy.renewalUnavailable(detail), configuration: configuration)
+        case .renewed:
+            return await staleOrFailureResult(declined, configuration: configuration)
+        case .notNeeded:
+            return failureResult("Claude credential was rejected. Sign in again.", configuration: configuration, recoveryAction: .reauthenticate)
         }
     }
 
     private func refreshedCredentialsIfNeeded(
         _ credentials: ClaudeCredentials,
         configuration: ProviderAccountConfiguration
-    ) async throws -> (credentials: ClaudeCredentials, rotatedCredentialFrom: String?) {
+    ) async throws -> (credentials: ClaudeCredentials, rotatedCredentialFrom: String?, renewal: ClaudeRenewalOutcome) {
         guard credentials.expiresAt > 0 else {
-            return (credentials, nil)
+            return (credentials, nil, .notNeeded)
         }
 
         let expiresAt = Date(timeIntervalSince1970: TimeInterval(normalizeEpochToSeconds(credentials.expiresAt)))
         guard expiresAt <= now() else {
-            return (credentials, nil)
+            return (credentials, nil, .notNeeded)
         }
 
         guard let refreshToken = credentials.refreshToken, !refreshToken.isEmpty else {
-            return (credentials, nil)
+            return (credentials, nil, .notNeeded)
         }
 
         let keychainAccount = ProviderConfigurationStore.keychainAccount(for: configuration)
@@ -242,10 +268,10 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
             let storedSecret = try secretStore.readSecret(account: keychainAccount),
             let latestCredentials = ClaudeCredentialsParser.parse(storedSecret)
         else {
-            return (credentials, nil)
+            return (credentials, nil, .notNeeded)
         }
         if latestCredentials != credentials {
-            return (latestCredentials, nil)
+            return (latestCredentials, nil, .notNeeded)
         }
 
         var request = URLRequest(url: Self.tokenRefreshEndpoint)
@@ -253,21 +279,26 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        ClaudeClientIdentity.apply(to: &request)
         request.httpBody = try JSONEncoder().encode([
             "grant_type": "refresh_token",
             "refresh_token": refreshToken,
-            "client_id": Self.clientID,
+            "client_id": ClaudeClientIdentity.oauthClientID,
         ])
 
         let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            return (credentials, nil, .unavailable("no HTTP response"))
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            return (credentials, nil, ClaudeRenewalOutcome.refused(statusCode: httpResponse.statusCode, body: data))
+        }
         guard
-            let httpResponse = response as? HTTPURLResponse,
-            (200..<300).contains(httpResponse.statusCode),
             let refreshed = try? JSONDecoder().decode(TokenRefreshResponse.self, from: data),
             let accessToken = refreshed.accessToken,
             !accessToken.isEmpty
         else {
-            return (credentials, nil)
+            return (credentials, nil, .unavailable("HTTP \(httpResponse.statusCode) without a usable token"))
         }
 
         let refreshedAt = now()
@@ -285,17 +316,17 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
             let storedSecret = try secretStore.readSecret(account: keychainAccount),
             let latestCredentials = ClaudeCredentialsParser.parse(storedSecret)
         else {
-            return (credentials, nil)
+            return (credentials, nil, .notNeeded)
         }
         if latestCredentials != credentials {
-            return (latestCredentials, nil)
+            return (latestCredentials, nil, .notNeeded)
         }
 
         try secretStore.saveSecret(
             ClaudeCredentialsParser.storedCredential(from: updated),
             account: keychainAccount
         )
-        return (updated, credentials.accessToken)
+        return (updated, credentials.accessToken, .renewed)
     }
 
     private func makeOAuthUsageRequest(accessToken: String) -> URLRequest {
@@ -307,7 +338,7 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
-        request.setValue("claude-code/2.1.0", forHTTPHeaderField: "User-Agent")
+        ClaudeClientIdentity.apply(to: &request)
         return request
     }
 
@@ -332,6 +363,7 @@ public final class ClaudeUsageProvider: UsageProvider, ClaudeUsageResetConsuming
         _ message: String,
         configuration: ProviderAccountConfiguration
     ) async -> ProviderUsageResult {
+        // Always Retry: these states leave the saved sign-in as it is.
         guard let cached = await snapshotCache.result(accountID: configuration.id) else {
             return failureResult(message, configuration: configuration)
         }
@@ -416,11 +448,26 @@ private actor ClaudeUsageSnapshotCache {
     private var results: [String: ProviderUsageResult] = [:]
     private var retryDates: [String: Date] = [:]
     private var credentials: [String: String] = [:]
+    /// The access token a renewal produced, until it reads usage once. In memory only.
+    private var renewedCredentials: [String: String] = [:]
 
     func clear(accountID: String) {
         credentials[accountID] = nil
         results[accountID] = nil
         retryDates[accountID] = nil
+        renewedCredentials[accountID] = nil
+    }
+
+    func markRenewed(accountID: String, credential: String) {
+        renewedCredentials[accountID] = credential
+    }
+
+    func isRenewed(accountID: String, credential: String) -> Bool {
+        renewedCredentials[accountID] == credential
+    }
+
+    func clearRenewal(accountID: String) {
+        renewedCredentials[accountID] = nil
     }
 
     func prepare(accountID: String, credential: String) {
@@ -492,6 +539,55 @@ private actor ClaudeUsageSnapshotCache {
 
     func retryAt(accountID: String) -> Date? {
         retryDates[accountID]
+    }
+}
+
+/// What happened when this fetch tried to renew an expired access token.
+enum ClaudeRenewalOutcome: Equatable {
+    case notNeeded
+    case renewed
+    /// Claude no longer accepts the refresh token. Only a new sign-in can help.
+    case signInExpired(String)
+    /// Any other refusal or failure. The saved sign-in is unchanged and may still be good.
+    case unavailable(String)
+
+    static func refused(statusCode: Int, body: Data) -> Self {
+        let detail = TokenEndpointErrorFormatter.message(statusCode: statusCode, body: body)
+        return namesInvalidGrant(body) ? .signInExpired(detail) : .unavailable(detail)
+    }
+
+    /// `invalid_grant` as the OAuth error code, flat or inside an error object.
+    private static func namesInvalidGrant(_ body: Data) -> Bool {
+        if TokenEndpointErrorFormatter.oauthErrorCode(from: body) == "invalid_grant" { return true }
+        guard body.count <= 65_536, let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
+              let error = object["error"] as? [String: Any]
+        else { return false }
+        return ["type", "code"].contains { error[$0] as? String == "invalid_grant" }
+    }
+}
+
+/// Card text for the ways Claude can refuse CodexBar's truthful identity or a sign-in's permissions.
+/// "Declined" states offer Retry and say the sign-in was not changed, because a new sign-in cannot
+/// fix a refusal of the app itself.
+enum ClaudeUsageFailureCopy {
+    static let permissionMissing = "Claude says this sign-in does not include permission to read usage. Sign in again to grant it."
+
+    static func requestDeclined(status: Int) -> String {
+        "Claude declined CodexBar's usage request (HTTP \(status)). Your sign-in was not changed."
+    }
+
+    static func renewalDeclined(_ detail: String) -> String {
+        "Claude did not renew this sign-in: \(detail). Sign in again."
+    }
+
+    static func renewalUnavailable(_ detail: String) -> String {
+        "Claude could not renew this sign-in right now: \(detail). Your sign-in was not changed."
+    }
+
+    /// Claude's reported wording for a token without the needed scope, on either status.
+    static func isScopeRequirement(_ body: Data) -> Bool {
+        guard body.count <= 65_536, let text = String(bytes: body, encoding: .utf8) else { return false }
+        return text.localizedCaseInsensitiveContains("scope requirement")
     }
 }
 

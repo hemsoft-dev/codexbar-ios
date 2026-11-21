@@ -687,6 +687,17 @@ final class UITestFixtures {
         )
     }
 
+    /// Synthetic refusals for #589, returned by the fixture provider on refresh after a healthy first load.
+    nonisolated fileprivate static func claudeRefusal(_ scenario: String?) -> (message: String, action: ProviderUsageRecoveryAction)? {
+        switch scenario {
+        case "claude-rejection-declined": (ClaudeUsageFailureCopy.requestDeclined(status: 403), .retryRefresh)
+        case "claude-rejection-permission": (ClaudeUsageFailureCopy.permissionMissing, .reauthenticate)
+        case "claude-rejection-renewal-declined": (ClaudeUsageFailureCopy.renewalDeclined("HTTP 400 (invalid_grant)"), .reauthenticate)
+        case "claude-rejection-renewal-unavailable": (ClaudeUsageFailureCopy.renewalUnavailable("HTTP 503"), .retryRefresh)
+        default: nil
+        }
+    }
+
     nonisolated private static func fableFixtureData(
         for account: ProviderAccountConfiguration, scenario: String, now: Date
     ) -> Data {
@@ -1722,7 +1733,16 @@ private actor UITestClaudeProvider: UsageProvider {
     private let scenario: String?
     init(scenario: String?) { self.scenario = scenario }
     func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
-        UITestFixtures.claudeResult(for: configuration, scenario: scenario)
+        let loaded = UITestFixtures.claudeResult(for: configuration, scenario: scenario)
+        guard let refusal = UITestFixtures.claudeRefusal(scenario) else { return loaded }
+        // Shaped like the real provider: a declined request keeps its cached usage, a replaced sign-in returns none.
+        let keepsBars = refusal.action == .retryRefresh
+        return ProviderUsageResult(
+            accountID: configuration.id, providerID: .claude, title: configuration.displayName, plan: loaded.plan,
+            subtitle: keepsBars ? "\(refusal.message) Showing last known data." : refusal.message,
+            bars: keepsBars ? loaded.bars : [], failureMessage: refusal.message, recoveryAction: refusal.action,
+            hasSuccessfulRefreshHistory: keepsBars, fetchedAt: loaded.fetchedAt
+        )
     }
 }
 
@@ -2121,6 +2141,7 @@ actor UITestClaudeResetProvider: UsageProvider, ClaudeUsageResetConsuming {
         guard !uncertainAccounts.contains(account.id) else { throw ClaudeUsageResetError.indeterminate }
         requestsByAccount[account.id, default: 0] += 1
         defaults.set(requestsByAccount, forKey: "fixtureClaudeResetRequests")
+        if scenario == "claude-resets-not-permitted" { throw ClaudeUsageResetError.notPermitted(401) }
         if scenario == "claude-resets-error" {
             uncertainAccounts.insert(account.id)
             defaults.set(Array(uncertainAccounts), forKey: "fixtureClaudeResetUncertain")
@@ -2148,8 +2169,8 @@ actor UITestClaudeResetProvider: UsageProvider, ClaudeUsageResetConsuming {
         let session = formatter.string(from: now.addingTimeInterval(7200))
         let weekly = formatter.string(from: now.addingTimeInterval(3 * 86400))
         let payload = """
-        {"five_hour":{"utilization":\(requests > 0 && scenario != "claude-resets-error" ? 0 : 42),"resets_at":"\(session)"},
-         "seven_day":{"utilization":\(requests > 0 && scenario != "claude-resets-error" ? 0 : 64),"resets_at":"\(weekly)"},
+        {"five_hour":{"utilization":\(requests > 0 && !["claude-resets-error", "claude-resets-not-permitted"].contains(scenario) ? 0 : 42),"resets_at":"\(session)"},
+         "seven_day":{"utilization":\(requests > 0 && !["claude-resets-error", "claude-resets-not-permitted"].contains(scenario) ? 0 : 64),"resets_at":"\(weekly)"},
          "cedar_ember":{"eligible":\(scenario != "claude-resets-ineligible"),"next_grant_id":"fixture_grant"\(cooldown),"grants":[{
            "id":"fixture_grant","label":"Saved Claude reset","resets_left":\(remaining),
            "starts_at":"\(start)","ends_at":"\(end)","clears":["five_hour","seven_day"],
@@ -2160,7 +2181,8 @@ actor UITestClaudeResetProvider: UsageProvider, ClaudeUsageResetConsuming {
         let data = Data(payload.utf8)
         let parsed = ClaudeUsageParser.parse(data, subscriptionType: "max_20x", fetchedAt: now)!
         let inventoryData = scenario == "claude-resets-malformed"
-            ? Data(#"{"cedar_ember":{"eligible":true,"grants":"invalid"}}"#.utf8) : data
+            ? Data(#"{"cedar_ember":{"eligible":true,"grants":"invalid"}}"#.utf8)
+            : scenario == "claude-resets-surface" ? Data(#"{"cedar_ember":{"eligible":false,"ineligible_reason":"surface"}}"#.utf8) : data
         var inventory = scenario == "claude-resets-unknown" ? nil
             : ClaudeUsageResetInventoryParser.parse(inventoryData)?.bound(toAccessToken: "ui-test-credential")
         if scenario == "claude-resets-selection", let current = inventory, let grant = current.grants.first {

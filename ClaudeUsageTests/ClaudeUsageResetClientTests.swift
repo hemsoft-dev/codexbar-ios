@@ -96,7 +96,10 @@ final class ClaudeUsageResetClientTests: XCTestCase {
                 _ = try await harness.client.consume(for: account, accessToken: "fixture-token", grantID: "fixture_grant",
                     credentialBinding: ClaudeUsageResetClient.credentialBinding(for: "fixture-token"), confirmedGrant: fixtureConfirmedGrant)
                 XCTFail("A rejected request cannot report success")
-            } catch { XCTAssertEqual(error as? ClaudeUsageResetError, .httpStatus(status)) }
+            } catch {
+                // Claude accepted this sign-in for the reads just before, so 401 and 403 refuse the reset itself.
+                XCTAssertEqual(error as? ClaudeUsageResetError, [401, 403].contains(status) ? .notPermitted(status) : .httpStatus(status))
+            }
             XCTAssertEqual(ResetClientProtocol.requests.filter { $0.httpMethod == "POST" }.count, 1)
             XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: harness.directory.path).isEmpty)
         }

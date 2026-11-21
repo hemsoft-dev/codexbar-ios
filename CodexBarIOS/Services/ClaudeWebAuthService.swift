@@ -1,5 +1,27 @@
 import Foundation
 
+/// What CodexBar tells Claude about itself (#589). Every request the app sends to a Claude host
+/// carries this user agent. No request's user agent may name another client, and none is re-sent
+/// under a different identity when Claude refuses it. Sign-in and renewal still carry the public
+/// Claude Code client identifier below.
+enum ClaudeClientIdentity {
+    static let userAgent = "CodexBarIOS"
+
+    /// The public client that guided sign-in goes through. CodexBar has no client registration of
+    /// its own; whether this use is permitted is the open question in #548. Sign-in and token
+    /// renewal must use the same value, or saved refresh tokens stop working.
+    static let oauthClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+
+    /// Only the scopes the app's own requests need. `user:profile` reads usage, the saved-reset
+    /// inventory and the profile. `user:inference` is reported to be required to use a saved reset;
+    /// the app sends no inference request. See CLAUDE-USAGE.md.
+    static let requestedScope = "user:profile user:inference"
+
+    static func apply(to request: inout URLRequest) {
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+    }
+}
+
 public struct ClaudeWebAuthResult: Equatable, Sendable {
     public let credentials: ClaudeCredentials
 
@@ -27,7 +49,9 @@ public final class ClaudeWebAuthService: Sendable {
             case .stateMismatch:
                 "Claude sign-in returned an unexpected state value."
             case .callbackTimedOut:
-                "Claude sign-in did not return to the app. Try again, and make sure you continue all the way through Claude in the browser."
+                "Claude sign-in did not return to the app. If Claude showed an error instead of an approval screen, "
+                    + "it did not accept CodexBar's sign-in request. Otherwise try again and continue all the way "
+                    + "through Claude in the browser. Any saved sign-in was not changed."
             case .secureRandomUnavailable:
                 "Claude sign-in could not start securely. Try again."
             case .tokenExchangeFailed(let message):
@@ -66,8 +90,6 @@ public final class ClaudeWebAuthService: Sendable {
     private static let authorizationBaseURL = URL(string: "https://claude.com/cai/oauth/authorize")!
     private static let tokenURL = URL(string: "https://platform.claude.com/v1/oauth/token")!
     private static let callbackPath = "/callback"
-    private static let clientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
-    private static let requestedScope = "org:create_api_key user:profile user:inference user:sessions:claude_code"
     private let session: URLSession
     private let callbackTimeoutNanoseconds: UInt64
     private let preferredCallbackPorts: [UInt16]
@@ -167,10 +189,10 @@ public final class ClaudeWebAuthService: Sendable {
         var components = URLComponents(url: authorizationBaseURL, resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "code", value: "true"),
-            URLQueryItem(name: "client_id", value: clientID),
+            URLQueryItem(name: "client_id", value: ClaudeClientIdentity.oauthClientID),
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
-            URLQueryItem(name: "scope", value: requestedScope),
+            URLQueryItem(name: "scope", value: ClaudeClientIdentity.requestedScope),
             URLQueryItem(name: "code_challenge", value: codeChallenge),
             URLQueryItem(name: "code_challenge_method", value: "S256"),
             URLQueryItem(name: "state", value: state),
@@ -188,7 +210,7 @@ public final class ClaudeWebAuthService: Sendable {
             "grant_type": "authorization_code",
             "code": code,
             "redirect_uri": redirectURI,
-            "client_id": clientID,
+            "client_id": ClaudeClientIdentity.oauthClientID,
             "code_verifier": codeVerifier,
             "state": state,
         ]
@@ -241,6 +263,7 @@ public final class ClaudeWebAuthService: Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        ClaudeClientIdentity.apply(to: &request)
         request.httpBody = Self.makeTokenRequestBody(
             code: code,
             redirectURI: redirectURI,

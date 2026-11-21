@@ -1530,7 +1530,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
         XCTAssertEqual(components.queryItemValue(named: "client_id"), "9d1c250a-e61b-44d9-88ed-5944d1962f5e")
         XCTAssertEqual(components.queryItemValue(named: "response_type"), "code")
         XCTAssertEqual(components.queryItemValue(named: "redirect_uri"), "http://localhost:1461/callback")
-        XCTAssertEqual(components.queryItemValue(named: "scope"), "org:create_api_key user:profile user:inference user:sessions:claude_code")
+        XCTAssertEqual(components.queryItemValue(named: "scope"), "user:profile user:inference")
         XCTAssertEqual(components.queryItemValue(named: "code_challenge"), "challenge")
         XCTAssertEqual(components.queryItemValue(named: "code_challenge_method"), "S256")
         XCTAssertEqual(components.queryItemValue(named: "state"), "state")
@@ -1663,6 +1663,7 @@ final class ConfigurationAndAuthTests: XCTestCase {
     func testClaudeBrowserSignInSanitizesTokenExchangeFailure() async throws {
         let sessionFixture = IsolatedTestURLSession { request in
             XCTAssertEqual(request.url?.absoluteString, "https://platform.claude.com/v1/oauth/token")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "CodexBarIOS")
             return (
                 HTTPURLResponse(
                     url: try XCTUnwrap(request.url),

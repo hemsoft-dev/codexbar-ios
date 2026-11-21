@@ -56,6 +56,24 @@ final class ClaudeUsageResetInventoryTests: XCTestCase {
 
     }
 
+    func testOnlyClaudesSurfaceReasonMarksResetsUnavailableInThisApp() throws {
+        func parse(_ block: String) -> ClaudeUsageResetInventory? {
+            ClaudeUsageResetInventoryParser.parse(Data("{\"cedar_ember\":\(block)}".utf8))
+        }
+        let surface = try XCTUnwrap(parse(#"{"eligible":false,"ineligible_reason":"surface"}"#))
+        XCTAssertTrue(surface.isUnavailableInThisApp)
+        XCTAssertEqual(surface.availableCount(at: now), 0)
+        XCTAssertTrue(surface.bound(toAccessToken: "fixture-token").isUnavailableInThisApp)
+        for block in [#"{"eligible":false}"#, #"{"eligible":false,"ineligible_reason":"cli_version"}"#,
+                      #"{"eligible":false,"ineligible_reason":7}"#, #"{"eligible":false,"ineligible_reason":"Surface!"}"#,
+                      #"{"eligible":true,"grants":[],"ineligible_reason":"surface"}"#,
+        ] {
+            // Other, missing or malformed reasons keep the earlier wording, and never make the inventory unknown.
+            XCTAssertEqual(try XCTUnwrap(parse(block), block).isUnavailableInThisApp, false, block)
+        }
+        XCTAssertFalse(try XCTUnwrap(self.parse()).isUnavailableInThisApp)
+    }
+
     func testConfirmedEmptyAndSeparateAccountsRemainIndependent() throws {
         let empty = try XCTUnwrap(ClaudeUsageResetInventoryParser.parse(Data("{\"cedar_ember\":{\"eligible\":true,\"grants\":[]}}".utf8)))
         let unavailable = try XCTUnwrap(ClaudeUsageResetInventoryParser.parse(Data("{\"cedar_ember\":{\"eligible\":false}}".utf8)))
