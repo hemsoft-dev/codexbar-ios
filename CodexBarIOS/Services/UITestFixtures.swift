@@ -646,6 +646,19 @@ final class UITestFixtures {
         ClaudeCredentialsParser.storedCredential(from: ClaudeCredentials(subscriptionType: "subscription", accessToken: "ui-claude-profile"))
     }
 
+    /// #591: Claude's page never returns to the app, as when Claude shows an error instead of an
+    /// approval screen. The `.invalid` address never resolves, so no Claude host is contacted.
+    static func claudeSignInThatNeverReturns(
+        present: @escaping @MainActor (URL) -> Void,
+        report: @escaping @MainActor (String) -> Void,
+        received _: @escaping @MainActor () -> Void
+    ) async throws -> ClaudeWebAuthResult {
+        report("Waiting for Claude to return to the app...")
+        present(URL(string: "https://claude-sign-in.invalid/fixture")!)
+        try await Task.sleep(for: .seconds(180))
+        throw URLError(.timedOut)
+    }
+
     static func seedClaudeAccount(in store: ProviderConfigurationStore, scenario: String?) {
         let account = ProviderAccountConfiguration(
             id: "ui-claude", providerID: .claude,

@@ -513,6 +513,124 @@ final class DashboardAndSettingsTests: XCTestCase {
     }
 
     @MainActor
+    private func makeClaudeSettingsFixture(
+        _ name: String,
+        authenticate: @escaping DashboardClaudeAuthenticationController.Authenticate
+    ) throws -> (ProviderSettingsViewModel, MemorySecretStore, ProviderAccountConfiguration, () -> Void) {
+        let suiteName = "CodexBarIOSTests.\(name).\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let secretStore = MemorySecretStore()
+        let store = ProviderConfigurationStore(initialPlanAccess: .unrestricted, defaults: defaults, secretStore: secretStore)
+        let claude = try XCTUnwrap(store.addAccount(for: .claude))
+        XCTAssertTrue(store.saveSecret("existing-credential", for: claude))
+        let viewModel = ProviderSettingsViewModel(
+            configurationStore: store,
+            accountID: claude.id,
+            claudeAuthenticate: authenticate
+        )
+        return (viewModel, secretStore, claude, { defaults.removePersistentDomain(forName: suiteName) })
+    }
+
+    @MainActor
+    private func waitForClaudeSheet(_ viewModel: ProviderSettingsViewModel) async {
+        while viewModel.authURL == nil { await Task.yield() }
+    }
+
+    /// #591: closing Claude's page in account settings ends the attempt at once, like the dashboard.
+    @MainActor
+    func testSettingsClaudeSheetCloseCancelsSignInAndKeepsSavedCredential() async throws {
+        var attempts = 0
+        let (viewModel, secretStore, claude, cleanUp) = try makeClaudeSettingsFixture(#function) { present, report, received in
+            attempts += 1
+            present(URL(string: "https://claude.ai/oauth")!)
+            report("Waiting for Claude to return to the app...")
+            if attempts == 1 {
+                try await Task.sleep(for: .seconds(30))
+                XCTFail("Closing the sheet must end the wait.")
+            }
+            received()
+            return ClaudeWebAuthResult(credentials: ClaudeCredentials(accessToken: "second-attempt-token"))
+        }
+        defer { cleanUp() }
+
+        let started = ContinuousClock.now
+        let signIn = Task { await viewModel.signInWithClaude() }
+        await waitForClaudeSheet(viewModel)
+        XCTAssertTrue(viewModel.isSigningInWithClaude)
+
+        viewModel.authURL = nil
+        viewModel.authenticationSheetDismissed()
+        await signIn.value
+
+        XCTAssertLessThan(ContinuousClock.now - started, .seconds(5))
+        XCTAssertFalse(viewModel.isSigningInWithClaude)
+        XCTAssertNil(viewModel.authURL)
+        XCTAssertNil(viewModel.claudeAuthDiagnostic)
+        XCTAssertEqual(viewModel.claudeAuthError, "Claude sign-in canceled. The existing credential was not changed.")
+        XCTAssertEqual(
+            try secretStore.readSecret(account: ProviderConfigurationStore.keychainAccount(for: claude)),
+            "existing-credential"
+        )
+
+        await viewModel.signInWithClaude()
+        XCTAssertEqual(attempts, 2, "The Sign in button must start a new attempt right after a cancel.")
+        XCTAssertNil(viewModel.claudeAuthError)
+        XCTAssertEqual(viewModel.claudeAuthDiagnostic, "Claude sign-in complete.")
+    }
+
+    @MainActor
+    func testSettingsClaudeSignInCompletesAndLaterSheetCloseChangesNothing() async throws {
+        let (viewModel, secretStore, claude, cleanUp) = try makeClaudeSettingsFixture(#function) { present, _, received in
+            present(URL(string: "https://claude.ai/oauth")!)
+            received()
+            return ClaudeWebAuthResult(credentials: ClaudeCredentials(accessToken: "replacement-token"))
+        }
+        defer { cleanUp() }
+
+        await viewModel.signInWithClaude()
+        viewModel.authenticationSheetDismissed()
+
+        XCTAssertFalse(viewModel.isSigningInWithClaude)
+        XCTAssertNil(viewModel.authURL)
+        XCTAssertNil(viewModel.claudeAuthError)
+        XCTAssertEqual(viewModel.claudeAuthDiagnostic, "Claude sign-in complete.")
+        XCTAssertEqual(
+            try secretStore.readSecret(account: ProviderConfigurationStore.keychainAccount(for: claude)),
+            ClaudeCredentialsParser.storedCredential(from: ClaudeCredentials(accessToken: "replacement-token"))
+        )
+    }
+
+    /// The sheet closes itself once Claude returns; that close must not cancel the token exchange.
+    @MainActor
+    func testSettingsClaudeSheetCloseAfterCallbackKeepsTokenExchangeAlive() async throws {
+        let exchangeGate = UsageProviderGate()
+        let (viewModel, secretStore, claude, cleanUp) = try makeClaudeSettingsFixture(#function) { present, _, received in
+            present(URL(string: "https://claude.ai/oauth")!)
+            received()
+            await exchangeGate.wait()
+            return ClaudeWebAuthResult(credentials: ClaudeCredentials(accessToken: "replacement-token"))
+        }
+        defer { cleanUp() }
+
+        let signIn = Task { await viewModel.signInWithClaude() }
+        await exchangeGate.waitUntilBlocked()
+        viewModel.authURL = nil
+        viewModel.authenticationSheetDismissed()
+        XCTAssertTrue(viewModel.isSigningInWithClaude)
+
+        await exchangeGate.release()
+        await signIn.value
+
+        XCTAssertNil(viewModel.claudeAuthError)
+        XCTAssertEqual(viewModel.claudeAuthDiagnostic, "Claude sign-in complete.")
+        XCTAssertEqual(
+            try secretStore.readSecret(account: ProviderConfigurationStore.keychainAccount(for: claude)),
+            ClaudeCredentialsParser.storedCredential(from: ClaudeCredentials(accessToken: "replacement-token"))
+        )
+    }
+
+    @MainActor
     func testRefreshPublishesAccountsAsEachFetchCompletes() async {
         let gate = UsageProviderGate()
         let slow = ProviderAccountConfiguration(

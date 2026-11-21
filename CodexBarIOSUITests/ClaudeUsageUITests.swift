@@ -104,6 +104,36 @@ final class ClaudeUsageUITests: XCTestCase {
         app.terminate()
     }
 
+    /// #591: closing Claude's page in account settings cancels at once and keeps the saved sign-in.
+    private func exerciseSettingsSignInCancel() {
+        continueAfterFailure = false
+        let app = launch(scenario: "claude-settings-sign-in", runID: UUID().uuidString)
+        tap(app.buttons["Open settings"].firstMatch, in: app)
+        let category = app.descendants(matching: .any)["settings-accountsAndGroups"].firstMatch
+        XCTAssertTrue(category.waitForExistence(timeout: 10), app.debugDescription)
+        tap(category, in: app)
+        XCTAssertTrue(app.navigationBars["Accounts & Groups"].waitForExistence(timeout: 10), app.debugDescription)
+        tap(app.otherElements["Synthetic Claude"], in: app)
+        XCTAssertTrue(app.navigationBars["Synthetic Claude"].waitForExistence(timeout: 10), app.debugDescription)
+        tap(app.buttons["Sign in Again"], in: app)
+        XCTAssertTrue(app.buttons["Sign in Again"].waitForNonExistence(timeout: 10), app.debugDescription)
+        keep("claude-settings-sign-in-sheet", app: app)
+        // Drag the sheet down from its top edge, as a person closing Claude's page would.
+        let sheetTop = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
+        sheetTop.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
+        // The 180-second callback wait is gone: the button is back within seconds.
+        let signIn = app.buttons["Sign in Again"]
+        XCTAssertTrue(signIn.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(signIn.isEnabled)
+        let canceled = app.staticTexts["Claude sign-in canceled. The existing credential was not changed."]
+        let form = app.collectionViews["provider-account-settings-form"]
+        for _ in 0..<6 where !(canceled.exists && canceled.isHittable) { form.swipeUp(velocity: .slow) }
+        XCTAssertTrue(canceled.exists, app.debugDescription)
+        reveal(signIn, in: app)
+        keep("claude-settings-sign-in-canceled", app: app)
+        app.terminate()
+    }
+
     private func exercisePromotionalCredit() {
         continueAfterFailure = false
         let app = launch(scenario: "claude-fable-promotional", runID: UUID().uuidString)
@@ -125,6 +155,7 @@ final class ClaudeUsageUITests: XCTestCase {
 
     func testWindowLabelsAndSavedCustomizationForProAndMax() {
         continueAfterFailure = false
+        exerciseSettingsSignInCancel()
         exerciseSavedResetSelection()
         exerciseSelectedUnusableReset()
         exercisePromotionalCredit()
