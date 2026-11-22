@@ -4758,4 +4758,19 @@ extension AppAndWidgetTests {
         let unrelated = WatchComplicationSelection(accountID: "old-id", metricID: "gemini.weekly")
         XCTAssertEqual(WatchComplicationResolver().resolve(snapshot: migrated, selection: unrelated, at: now).availability, .unavailable)
     }
+
+    /// #594: a cached Greptile snapshot restored on the watch drops Greptile before any phone sync.
+    func testRetiredGreptileWatchSnapshotDropsCachedAccountAndFallsBack() throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let metric = WatchMetricSnapshot(id: "claude.weekly", label: "Weekly", exactValue: "25%")
+        let retained = WatchAccountSnapshot(id: "claude.team", providerName: "Claude", accountLabel: "Team", fetchedAt: now, metrics: [metric])
+        let retired = WatchAccountSnapshot(id: "greptile.org", providerName: "Greptile", accountLabel: "Org", fetchedAt: now, metrics: [metric])
+        let payload = WatchDashboardSnapshot(generatedAt: now, refreshIntervalSeconds: 300, accounts: [retired, retained])
+        let migrated = try WatchDashboardSnapshot.decode(payload.encoded())
+        XCTAssertEqual(migrated.accounts, [retained])
+        let selection = WatchComplicationSelection(accountID: "greptile.org", metricID: "greptile.reviews")
+        let result = WatchComplicationResolver().resolve(snapshot: migrated, selection: selection, at: now)
+        XCTAssertEqual(result.availability, .value)
+        XCTAssertEqual(result.exactValue, "25%")
+    }
 }

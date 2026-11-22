@@ -348,7 +348,7 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
                 forKey: .refreshIntervalSeconds
             ),
             accounts: decodedAccounts.compactMap(\.value).filter {
-                !["Google Gemini", "Antigravity"].contains($0.providerName)
+                !["Google Gemini", "Antigravity", "Greptile"].contains($0.providerName)
             },
             isProLocked: try container.decodeIfPresent(Bool.self, forKey: .isProLocked) ?? true,
             proAccessEndsAt: try container.decodeIfPresent(Date.self, forKey: .proAccessEndsAt),
