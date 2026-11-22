@@ -87,6 +87,12 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Record the November 22 authorized read-only App Store Connect API readback of
+  retained Pro product settings (`22490183`, Monthly, Yearly, Lifetime, 16-day
+  billing grace, 175 Free territories) and the owner's disposition accepting
+  public App Store evidence for the private privacy questionnaire and Paid Apps
+  Agreement, closing the post-launch 2.0 disclosure follow-up.
+  ([#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469))
 - Release documents record the owner's November 22 decision on Claude
   sign-in: keep it as is and accept the risk, with no Anthropic outreach.
   ([#598](https://github.com/hemsoft-dev/codexbar-ios/issues/598))

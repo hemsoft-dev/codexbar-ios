@@ -1,0 +1,130 @@
+{
+  "observedAtUtc": "2026-11-22T22:24:58Z",
+  "observedAtEastern": "2026-11-22 5:24:58 PM EST",
+  "method": "Read-only App Store Connect API v1/v2 GET requests authorized by owner Franz Hemmer on November 22, 2026, plus anonymous public App Store checks at 5:21 PM EST",
+  "appId": "6787769891",
+  "appStoreVersion200": {
+    "id": "2c7b9bd4-b877-454d-a5a2-036b25a151f5",
+    "versionString": "2.0.0",
+    "appStoreState": "READY_FOR_SALE",
+    "releaseType": "MANUAL"
+  },
+  "appPriceSchedule": {
+    "manualCount": 1,
+    "manualZero": 1,
+    "automaticCount": 174,
+    "automaticZero": 174
+  },
+  "appInfo": {
+    "id": "d080baf5-aca3-4569-bc40-ec657e5bb125",
+    "appStoreState": "READY_FOR_SALE",
+    "state": "READY_FOR_DISTRIBUTION",
+    "enUSLocalizationId": "5207edde-0272-4c10-8bf5-3f1302aee283",
+    "privacyPolicyUrl": "https://github.com/HemSoft/codexbar-ios/blob/main/PRIVACY.md"
+  },
+  "subscriptionGracePeriod": {
+    "optIn": true,
+    "sandboxOptIn": true,
+    "duration": "SIXTEEN_DAYS",
+    "renewalType": "ALL_RENEWALS"
+  },
+  "subscriptionGroup": {
+    "id": "22490183",
+    "referenceName": "CodexBar Pro"
+  },
+  "subscriptions": {
+    "monthly": {
+      "id": "6824195141",
+      "name": "CodexBar Pro Monthly",
+      "productId": "com.hemsoft.CodexBarIOS.pro.monthly",
+      "state": "APPROVED",
+      "subscriptionPeriod": "ONE_MONTH",
+      "groupLevel": 1,
+      "familySharable": false,
+      "availableInNewTerritories": true,
+      "availableTerritoriesCount": 175,
+      "usaPrices": [
+        {
+          "startDate": null,
+          "customerPrice": "1.99",
+          "proceeds": "1.4"
+        }
+      ],
+      "introductoryOffersCount": 0
+    },
+    "yearly": {
+      "id": "6824195239",
+      "name": "CodexBar Pro Yearly",
+      "productId": "com.hemsoft.CodexBarIOS.pro.yearly",
+      "state": "APPROVED",
+      "subscriptionPeriod": "ONE_YEAR",
+      "groupLevel": 1,
+      "familySharable": false,
+      "availableInNewTerritories": true,
+      "availableTerritoriesCount": 175,
+      "usaPrices": [
+        {
+          "startDate": null,
+          "customerPrice": "14.99",
+          "proceeds": "10.5"
+        }
+      ],
+      "introductoryOffersCount": 175,
+      "introductoryOfferSample": {
+        "duration": "ONE_WEEK",
+        "offerMode": "FREE_TRIAL",
+        "numberOfPeriods": 1,
+        "startDate": "2026-10-18",
+        "endDate": null
+      }
+    }
+  },
+  "lifetime": {
+    "id": "6824195355",
+    "name": "CodexBar Pro Lifetime",
+    "productId": "com.hemsoft.CodexBarIOS.pro.lifetime",
+    "inAppPurchaseType": "NON_CONSUMABLE",
+    "state": "APPROVED",
+    "familySharable": false,
+    "availableInNewTerritories": true,
+    "availableTerritoriesCount": 175,
+    "manualPrices": [
+      {
+        "territory": "USA",
+        "startDate": null,
+        "endDate": null,
+        "customerPrice": "29.99"
+      }
+    ]
+  },
+  "publicStorefrontCheck": {
+    "observedAtEastern": "2026-11-22 5:21 PM EST",
+    "lookupVersion": "2.0.0",
+    "lookupFormattedPrice": "Free",
+    "lookupReleaseDateUtc": "2026-10-23T15:56:39Z",
+    "usPageSha256Prefix": "1a308b1ce2b1c5aa",
+    "usPageBytes": 494286,
+    "publicPrivacyLabel": "Data Not Collected",
+    "publicIapsObserved": [
+      "Pro Monthly",
+      "Pro Yearly",
+      "Pro Lifetime"
+    ],
+    "privacyUrlRedirectStatus": 301,
+    "privacyUrlRedirectLocation": "https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md"
+  },
+  "ownerDisposition": {
+    "decidedBy": "Franz Hemmer",
+    "decidedAtEastern": "2026-11-22 5:24 PM EST",
+    "retainedProductSettings": "Verified via authorized read-only App Store Connect API GET readback on November 22, 2026",
+    "privatePrivacyQuestionnaire": "Accepted public Data Not Collected storefront evidence as sufficient to close #469; private web-portal questionnaire itself remains unverified by API",
+    "paidAppsAgreement": "Accepted live public Pro Monthly, Yearly, and Lifetime IAP availability as sufficient to close #469; private web-portal agreement record itself remains unverified by API",
+    "canonicalPrivacyPolicyUrl": "Scheduled for next editable submission (still READY_FOR_DISTRIBUTION with working 301 redirect)"
+  },
+  "limits": [
+    "No App Store Connect write, submission, pricing change, or release action was performed",
+    "Credentials, key identifiers, issuer identifiers, and tokens are omitted",
+    "Apple's App Store Connect REST API does not expose the private App Privacy questionnaire or Paid Apps Agreement status; those two records remain unverified directly and are closed under the owner's November 22 disposition",
+    "The saved en-US privacyPolicyUrl remains the old HemSoft path while appInfo is READY_FOR_DISTRIBUTION and stays on the next-submission checklist"
+  ]
+}
