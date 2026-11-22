@@ -87,6 +87,9 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Release documents record the owner's November 22 decision on Claude
+  sign-in: keep it as is and accept the risk, with no Anthropic outreach.
+  ([#598](https://github.com/hemsoft-dev/codexbar-ios/issues/598))
 - The OpenCode Go renewal tests no longer start failing once their fixture
   billing period ends. The OpenCode usage reader now takes its observation
   time from a clock that tests pin to the fixture date; the app still uses the
@@ -100,8 +103,8 @@ building, testing, or releasing the app.
 - One `ClaudeClientIdentity` now holds the user agent, the sign-in client
   identifier and the requested scopes for every Claude request, with tests that
   pin the exact values and fail if a Claude service names another client.
-  Sign-in still goes through the public Claude Code client identifier; whether
-  that is permitted stays with
+  Sign-in still goes through the public Claude Code client identifier; the
+  owner decided to keep it as is in
   [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548).
   ([#589](https://github.com/hemsoft-dev/codexbar-ios/issues/589))
 - Record the owner's November 20 dispositions for the remaining 2.0 production
