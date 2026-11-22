@@ -38,7 +38,7 @@ provider snapshot.
 
 ## Third-Party Provider Requests
 
-When you connect a provider, CodexBar uses the credentials you provide to request usage, balance, or review-activity data for the configured account or organization directly from that provider. Depending on what you configure, this may include services such as OpenAI/ChatGPT, Anthropic Claude, GitHub Copilot, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot AI (Kimi), and Greptile.
+When you connect a provider, CodexBar uses the credentials you provide to request usage or balance data for the configured account or organization directly from that provider. Depending on what you configure, this may include services such as OpenAI/ChatGPT, Anthropic Claude, GitHub Copilot, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, and Moonshot AI (Kimi).
 
 Those requests are made to the provider's own APIs or web endpoints. The provider may process the request according to its own terms and privacy policy.
 
@@ -68,26 +68,14 @@ temporary portal access stays in memory and is not saved. These requests are
 read-only: CodexBar does not pay for, change or cancel a subscription. If any
 step fails, Cursor usage still refreshes without a renewal date.
 
-For Greptile billing renewal, CodexBar opens a temporary nonpersistent browser
-session and retains only the secure, root-path Auth.js session cookie (or its
-numbered chunks) for `app.greptile.com`. After verifying the user and selected
-organization, it saves those session values, the verified user identifier, and
-the selected organization in that account's own iOS Keychain entry. Other
-browser data is discarded when the sign-in session closes. Fresh Google-backed
-billing sign-in or reconnection may be unavailable in this version.
-
-The retained dashboard session can grant broader Greptile account access.
-CodexBar sends it only to `app.greptile.com` for identity verification and
-read-only billing-state requests. The identity response's Greptile token is
-used for read-only review-activity requests to `api.greptile.com/mcp`, scoped to
-the selected organization. Existing organization API-key accounts use that MCP
-endpoint directly. The app does not trigger reviews, spend credits, buy plans,
-or change billing settings. The dashboard transport bypasses shared cookie
-storage and HTTP caches and rejects redirects. Session cookies and tokens are
-never included in History, widgets, Watch snapshots, or feedback diagnostics.
-Disconnect removes the local saved credential; it does not sign out another
-CodexBar account or the user's browser session. Removing the account also
-removes its saved local usage history.
+CodexBar 2.0 and earlier could also read Greptile review activity and billing
+renewal. Those versions sent a saved Greptile organization API key to
+`api.greptile.com/mcp`, or a saved Greptile dashboard session to
+`app.greptile.com`, for read-only requests, and kept those values in the iOS
+Keychain. Later versions no longer contact Greptile. When you update, CodexBar
+deletes any saved Greptile account, its Keychain credential, and its local
+usage history from the device, and shows a one-time note. Other accounts are
+not changed.
 
 GitHub Status monitoring is independently configurable and off by default. If
 you enable it, CodexBar periodically requests GitHub's public

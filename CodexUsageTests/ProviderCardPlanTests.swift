@@ -95,12 +95,10 @@ final class ProviderCardPlanTests: XCTestCase {
                                          subtitle: "Synthetic", bars: [], fetchedAt: Date())
         XCTAssertEqual(first.cardPlan, verified)
         XCTAssertEqual(second.cardPlan.displayLabel, "Plan unavailable")
-        let free = ProviderUsageResult(
-            providerID: .greptile, title: "Synthetic", subtitle: "Synthetic", bars: [],
-            greptileAllowanceRenewal: GreptileAllowanceRenewal(renewsAt: nil, observedAt: Date(), isApplicable: true),
-            fetchedAt: Date()
+        let credits = ProviderUsageResult(
+            providerID: .openRouter, title: "Synthetic", subtitle: "Synthetic", bars: [], fetchedAt: Date()
         )
-        XCTAssertEqual(free.cardPlan.displayLabel, "FREE")
+        XCTAssertEqual(credits.cardPlan.displayLabel, "API credits")
     }
 }
 

@@ -312,7 +312,7 @@ public extension ProviderAccountConfiguration {
             ProviderAccountConfiguration(providerID: providerID, authMethod: .apiKey)
         case .cursor:
             ProviderAccountConfiguration(providerID: providerID, authMethod: .browserSession)
-        case .greptile, .museCode:
+        case .museCode:
             ProviderAccountConfiguration(providerID: providerID, authMethod: .browserSession)
         }
     }

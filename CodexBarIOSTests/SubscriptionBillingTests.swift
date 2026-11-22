@@ -1051,7 +1051,7 @@ extension SubscriptionBillingTests {
             try await captureProductionHost(window, name: "claude-provider-billing-\(appearance)-header")
             show(NavigationStack { ProviderSettingsView(configurationStore: store, accountID: account.id, initialUsageResult: result) })
             try await captureProductionHost(window, name: "claude-provider-billing-\(appearance)-settings")
-            show(ProviderCardInformationView(sections: ProviderUsageCard.informationSections(for: result), greptileRenewal: nil,
+            show(ProviderCardInformationView(sections: ProviderUsageCard.informationSections(for: result),
                                              showsBillingSettings: result.canOpenClaudeBillingSettings))
             try await captureProductionHost(window, name: "claude-provider-billing-\(appearance)-information")
             XCTAssertEqual(secrets.billingReads, 0, "Rendering does not inspect the saved billing payload")
@@ -1062,7 +1062,7 @@ extension SubscriptionBillingTests {
                 variant.subscriptionRenewal = SubscriptionRenewal(accountID: account.id, providerID: .claude, state: .renewing,
                                                                    date: Date().addingTimeInterval(86400), observedAt: Date().addingTimeInterval(-90000))
                 XCTAssertNil(variant.boundSubscriptionRenewal?.compactLabel(at: Date()))
-                show(ProviderCardInformationView(sections: ProviderUsageCard.informationSections(for: variant), greptileRenewal: nil,
+                show(ProviderCardInformationView(sections: ProviderUsageCard.informationSections(for: variant),
                                                  showsBillingSettings: variant.canOpenClaudeBillingSettings))
                 try await captureProductionHost(window, name: "claude-provider-billing-dark-large-stale-information")
             } else {

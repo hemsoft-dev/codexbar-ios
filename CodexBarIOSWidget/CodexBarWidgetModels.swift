@@ -32,7 +32,7 @@ struct CodexBarWidgetTile: Identifiable {
         forUnresolvedChoice choice: CodexBarWidgetTileChoice,
         in tiles: [CodexBarWidgetTile]
     ) -> CodexBarWidgetTile {
-        if RetiredGoogleProviderMigration.isRetiredIdentifier(choice.id), let fallback = tiles.first { return fallback }
+        if RetiredProviderMigration.isRetiredIdentifier(choice.id), let fallback = tiles.first { return fallback }
         return .unavailable(choice: choice)
     }
 

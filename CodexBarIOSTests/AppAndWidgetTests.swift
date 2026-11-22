@@ -1510,7 +1510,6 @@ final class AppAndWidgetTests: XCTestCase {
                 .openRouter: "OpenRouter",
                 .openCodeZen: "OpenCode Go / Zen",
                 .moonshot: "Moonshot (Kimi)",
-                .greptile: "Greptile",
                 .museCode: "Muse Code",
             ]
         )

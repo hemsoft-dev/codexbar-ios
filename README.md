@@ -11,18 +11,13 @@ The Windows reference implementation is checked out beside this repo at:
 ## Current Scope
 
 - SwiftUI dashboard with account-scoped cards for Codex, GitHub Copilot, GitHub Billing,
-  Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot and Greptile
+  Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen and Moonshot
 
 - Live provider adapters and settings for enabling accounts, choosing supported
   authentication methods, labeling accounts, and storing credentials in Keychain
 
 - Usage history and charts, configurable usage alerts, and home-screen and
   lock-screen widgets
-
-- Read-only Greptile review-activity tracking through an organization API key,
-  with completed reviews kept distinct from pull requests and billing credits.
-  The [Greptile allowance investigation](GREPTILE-USAGE.md) explains why its
-  published review tools do not establish an account's remaining credits
 
 - An embedded watchOS companion with a live, read-only dashboard that mirrors
   presentation-ready account metrics, visualization choices, ordering, and

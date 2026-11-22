@@ -74,6 +74,7 @@ final class UITestFixtures {
         dynamicTypeSize = environment["CODEXBAR_UI_TEST_DEFAULT_TEXT"] == "1" ? .large : .accessibility2
         URLProtocol.registerClass(UITestNetworkBlocker.self)
         Self.seedRetiredGoogleUpgrade(defaults: defaults, scenario: planScenario)
+        Self.seedRetiredGreptileUpgrade(defaults: defaults, scenario: planScenario)
         configurationStore = ProviderConfigurationStore(
             initialPlanAccess: .unrestricted,
             defaults: defaults,
@@ -103,10 +104,6 @@ final class UITestFixtures {
         Self.seedPlanPillAccounts(in: configurationStore, scenario: scenario)
         let codex = scenario?.hasPrefix("codex-") == true
         let claude = scenario?.hasPrefix("claude-") == true
-        let greptile = scenario?.hasPrefix("greptile-") == true
-        if greptile && configurationStore.configurations.isEmpty {
-            Self.seedGreptileAccount(in: configurationStore, scenario: scenario ?? "")
-        }
         if claude && configurationStore.configurations.isEmpty {
             Self.seedClaudeAccount(in: configurationStore, scenario: scenario)
             Self.seedSecondClaudeAccount(in: configurationStore, scenario: scenario)
@@ -132,9 +129,7 @@ final class UITestFixtures {
             ?? PlanTierFixture.initialResults(in: configurationStore, scenario: scenario)
             ?? Self.initialResults(in: configurationStore, scenario: scenario, defaults: defaults)
         let providers: [any UsageProvider]
-        if greptile {
-            providers = [UITestGreptileProvider(secretStore: UITestSecretStore(suite: suite))]
-        } else if codex {
+        if codex {
             providers = [UITestCodexProvider(scenario: scenario)]
         } else if claude {
             providers = Self.claudeProviders(scenario: scenario, suiteName: suite)
@@ -161,7 +156,6 @@ final class UITestFixtures {
         UITestMuseCodeFixture.presentFailures(of: results, in: refreshService, scenario: scenario)
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
             || scenario?.hasPrefix("subscription-renewals") == true || scenario == "claude-renewal-ultra" || scenario == "claude-provider-billing"
-            || (greptile && environment["CODEXBAR_UI_TEST_MORE_INFORMATION"] == "1")
             || scenario?.hasPrefix("grok-cursor-parity") == true
             || Self.isCursorSessionScenario(scenario) {
             // These routes must load the real provider before evidence is captured.
@@ -176,10 +170,34 @@ final class UITestFixtures {
     }
 
     private static func upgradeEvidenceProviders(scenario: String?, fallback: [any UsageProvider]) -> [any UsageProvider] {
-        scenario == "retired-google-upgrade" ? DemoUsageProvider.samples : fallback
+        Self.isRetiredProviderUpgrade(scenario) ? DemoUsageProvider.samples : fallback
+    }
+
+    nonisolated static func isRetiredProviderUpgrade(_ scenario: String?) -> Bool {
+        scenario == "retired-google-upgrade" || scenario == "retired-greptile-upgrade"
     }
 
     // The old on-disk schema is seeded before the real store migration runs, without provider authorization.
+    private static func seedRetiredGreptileUpgrade(defaults: UserDefaults, scenario: String) {
+        guard scenario == "retired-greptile-upgrade", defaults.data(forKey: "providerConfigurations") == nil else { return }
+        let json = #"""
+        [
+            {"id": "personal", "providerID": "codex", "accountLabel": "Personal Codex", "groupID": "work", "authMethod": "browserSession"},
+            {"id": "team", "providerID": "claude", "accountLabel": "Team Claude", "groupID": "work", "authMethod": "browserSession"},
+            {"id": "greptile.saved", "providerID": "greptile", "accountLabel": "Team Greptile", "groupID": "work", "authMethod": "browserSession"}
+        ]
+        """#
+        defaults.set(Data(json.utf8), forKey: "providerConfigurations")
+        defaults.set(try? JSONEncoder().encode([ProviderAccountGroup(id: "work", name: "Work")]), forKey: "providerAccountGroups")
+        WidgetSnapshotStore.saveBuilderConfiguration(
+            CodexBarWidgetBuilderConfiguration(layout: .oneTile, selectedTileIDs: ["provider.greptile.saved"],
+                                                displayModes: [.compactPercent]), defaults: defaults
+        )
+        for id in ["personal", "team", "greptile.saved"] {
+            defaults.set("ui-test-credential", forKey: "fixture-secret.providerAccount.\(id).credential")
+        }
+    }
+
     private static func seedRetiredGoogleUpgrade(defaults: UserDefaults, scenario: String) {
         guard scenario == "retired-google-upgrade", defaults.data(forKey: "providerConfigurations") == nil else { return }
         let json = #"""
@@ -272,21 +290,10 @@ final class UITestFixtures {
         }
     }
 
-    nonisolated private static func cachedGreptileRenewal(scenario: String?) -> GreptileAllowanceRenewal? {
-        switch scenario {
-        case "greptile-renewal-stale", "greptile-renewal-expired":
-            GreptileAllowanceRenewal(renewsAt: Date().addingTimeInterval(604_800),
-                                    observedAt: Date().addingTimeInterval(-90_000), isStale: true)
-        case "greptile-renewal-paid-expired":
-            GreptileAllowanceRenewal(renewsAt: nil, observedAt: Date().addingTimeInterval(-90_000), isApplicable: false)
-        default: nil
-        }
-    }
-
     nonisolated private static func initialResult(
         for configuration: ProviderAccountConfiguration, scenario: String?
     ) -> ProviderUsageResult {
-        if scenario == "retired-google-upgrade" {
+        if isRetiredProviderUpgrade(scenario) {
             return ProviderUsageResult(accountID: configuration.id, providerID: configuration.providerID,
                                        title: configuration.displayName, subtitle: "Synthetic upgrade fixture",
                                        bars: [UsageBar(stableKey: "five-hour", label: "Usage", used: 25, limit: 100)], fetchedAt: Date())
@@ -311,15 +318,6 @@ final class UITestFixtures {
         }
         if scenario?.hasPrefix("metric-evidence-") == true {
             return metricEvidenceResult(for: configuration, scenario: scenario ?? "")
-        }
-        if scenario?.hasPrefix("greptile-") == true {
-            return ProviderUsageResult(
-                accountID: configuration.id, providerID: .greptile, title: configuration.displayName,
-                subtitle: "Waiting for synthetic Greptile response", bars: [],
-                greptileAllowanceRenewal: cachedGreptileRenewal(scenario: scenario),
-                cacheIdentity: cachedGreptileRenewal(scenario: scenario) == nil ? nil : "synthetic-user:synthetic-org",
-                fetchedAt: Date()
-            )
         }
         if scenario?.hasPrefix("codex-") == true { return codexResult(for: configuration, scenario: scenario) }
         if scenario?.hasPrefix("claude-plan-") == true || scenario == "claude-renewal-ultra" {
@@ -380,7 +378,7 @@ final class UITestFixtures {
             }
             if showsPlanTransitions { PlanTransitionFixtureControls(fixture: planFixture) }
             if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"]?.hasPrefix("claude-plan-ultra-") == true
-                || ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"] == "retired-google-upgrade" {
+                || UITestFixtures.isRetiredProviderUpgrade(ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"]) {
                 UITestWidgetPreviewControl(fixture: self)
             }
         }
@@ -532,44 +530,6 @@ final class UITestFixtures {
             precondition(store.update(account))
             _ = store.saveSecret(codexCredential(for: identity), for: account)
         }
-    }
-
-    private static func seedGreptileAccount(in store: ProviderConfigurationStore, scenario: String) {
-        let account = ProviderAccountConfiguration(
-            id: "ui-greptile-free", providerID: .greptile,
-            accountLabel: "Greptile Free Fixture", authMethod: scenario.hasPrefix("greptile-renewal-") ? .browserSession : .apiKey
-        )
-        precondition(store.update(account))
-        _ = store.saveSecret(account.authMethod == .browserSession ? (try? greptileCredential.encoded()) ?? "" : "ui-test-credential", for: account)
-        if ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_FULL_WIDTH"] == "1" {
-            store.updateMetricWidth(.full, accountID: account.id, metricID: GreptileUsageIdentity.completedReviewsMetricID)
-        }
-    }
-
-    nonisolated static var greptileCredential: GreptileSessionCredentials {
-        return GreptileSessionCredentials(
-            version: 1, subject: "synthetic-user",
-            organization: GreptileOrganization(tenantExternalId: "synthetic-org", name: "Synthetic organization"),
-            cookies: [GreptileSessionCookie(name: "__Secure-authjs.session-token", value: "synthetic-cookie", expiresAt: nil)]
-        )
-    }
-
-    nonisolated static func greptilePayload(scenario: String) -> Data {
-        let reviews = #"[{"id":"synthetic-first","status":"COMPLETED"},"#
-            + #"{"id":"synthetic-second","status":"COMPLETED"},{"id":"synthetic-skipped","status":"SKIPPED"}]"#
-        let payload: String
-        switch scenario {
-        case "greptile-empty":
-            payload = #"{"result":{"codeReviews":[],"total":0}}"#
-        case "greptile-returned-quota":
-            // Compatibility case only: these optional quota fields are not in the published response schema.
-            payload = #"{"result":{"codeReviews":\#(reviews),"total":3,"billingUsage":{"reviewsUsed":3,"includedReviews":17,"billingPeriodStart":"2030-01-01T00:00:00Z","billingPeriodEnd":"2030-01-31T00:00:00Z","plan":"Starter"}}}"#
-        default:
-            // Hypothetical credit fields must not become a quota without a supported unit contract.
-            payload = #"{"result":{"codeReviews":\#(reviews),"total":3,"#
-                + #""billingUsage":{"creditsUsed":12,"includedCredits":50,"plan":"Starter"}}}"#
-        }
-        return Data(payload.utf8)
     }
 
     nonisolated static func codexResult(
@@ -1600,7 +1560,6 @@ struct UITestSecretStore: SecretStore {
         }
         let cursor = secret == UITestCursorBillingFixture.credential
             || [false, true].contains { secret == UITestFixtures.cursorSessionCredential(expired: $0) }
-        let greptile = GreptileSessionCredentials.parse(secret) == UITestFixtures.greptileCredential
         let grok = GrokCredential.parse(secret) == UITestFixtures.planPillGrokCredential
         let billing = SubscriptionBillingSession.parse(secret)
         let fixtureBilling = billing.map {
@@ -1613,7 +1572,7 @@ struct UITestSecretStore: SecretStore {
             $0.accessToken == "synthetic-access" && $0.refreshToken == "synthetic-refresh"
                 && $0.userID == "user_synthetic" && $0.workspaceID == "org_synthetic"
         } == true
-        guard secret.hasPrefix("cursor-plan-") || secret == "ui-test-credential" || codex || cursor || greptile || grok || openCode
+        guard secret.hasPrefix("cursor-plan-") || secret == "ui-test-credential" || codex || cursor || grok || openCode
                 || secret == UITestFixtures.claudeProfileCredential || fixtureBilling else {
             throw UITestFixtureError.invalidCredential
         }
@@ -1972,76 +1931,12 @@ private final class UITestWatchSender: WatchSnapshotSending {
     func publish(_ snapshot: WatchDashboardSnapshot, force: Bool) -> Bool { false }
 }
 
-private struct UITestGreptileProvider: UsageProvider {
-    let providerID = ProviderID.greptile
-    let secretStore: any SecretStore
-
-    func fetchUsage(for configuration: ProviderAccountConfiguration) async throws -> ProviderUsageResult {
-        let settings = URLSessionConfiguration.ephemeral
-        settings.protocolClasses = [UITestNetworkBlocker.self]
-        settings.httpCookieStorage = nil
-        settings.urlCredentialStorage = nil
-        let session = URLSession(configuration: settings)
-        defer { session.invalidateAndCancel() }
-        let provider = GreptileUsageProvider(
-            secretStore: secretStore, session: session,
-            endpoint: URL(string: "https://greptile-fixture.invalid/mcp")!,
-            dashboardBaseURL: URL(string: "https://greptile-fixture.invalid")!
-        )
-        return try await provider.fetchUsage(for: configuration)
-    }
-}
-
 /// Defense in depth: unexpected URLSession traffic must never reach a provider.
 private final class UITestNetworkBlocker: URLProtocol, @unchecked Sendable {
     override static func canInit(with request: URLRequest) -> Bool { true }
     override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
-        let scenario = ProcessInfo.processInfo.environment["CODEXBAR_UI_TEST_SCENARIO"] ?? ""
-        guard request.url?.host == "greptile-fixture.invalid",
-              scenario.hasPrefix("greptile-") else {
-            client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
-            return
-        }
-        if scenario == "greptile-renewal-stale" {
-            client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
-            return
-        }
-        let expiredBilling = ["greptile-renewal-expired", "greptile-renewal-paid-expired"].contains(scenario)
-            && request.url?.path == "/api/trpc/billing.getState"
-        let status = expiredBilling ? 401 : (scenario == "greptile-failure" ? 503 : 200)
-        let response = HTTPURLResponse(
-            url: request.url!, statusCode: status,
-            httpVersion: nil, headerFields: nil
-        )!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Self.payload(for: request, scenario: scenario))
-        client?.urlProtocolDidFinishLoading(self)
-    }
-    private static func payload(for request: URLRequest, scenario: String) -> Data {
-        switch request.url?.path {
-        case "/api/auth/session":
-            let payload = #"{"user":{"greptileId":"synthetic-user","greptileToken":"synthetic-token","#
-                + #""organizations":[{"tenantExternalId":"synthetic-org","name":"Synthetic organization"}]}}"#
-            return Data(payload.utf8)
-        case "/api/trpc/billing.getState":
-            let end: Any
-            switch scenario {
-            case "greptile-renewal-missing": end = NSNull()
-            case "greptile-renewal-malformed": end = "invalid"
-            case "greptile-renewal-passed": end = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-3600))
-            default: end = ISO8601DateFormatter().string(from: Date().addingTimeInterval(604_800))
-            }
-            let kind = ["greptile-renewal-paid": "paid", "greptile-renewal-unknown": "unknown"][scenario] ?? "free"
-            var state: [String: Any] = ["kind": kind, "currentPeriod": ["end": end]]
-            if ["greptile-renewal-available", "greptile-renewal-exhausted", "greptile-renewal-overage"].contains(scenario) {
-                state["used"] = ["greptile-renewal-exhausted": 50, "greptile-renewal-overage": 52][scenario] ?? 12
-                state["includedCreditsPerPeriod"] = 50
-            }
-            return (try? JSONSerialization.data(withJSONObject: [["result": ["data": ["json": state]]]])) ?? Data()
-        case "/mcp": return UITestFixtures.greptilePayload(scenario: scenario)
-        default: return Data()
-        }
+        client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
     }
     override func stopLoading() {}
 }

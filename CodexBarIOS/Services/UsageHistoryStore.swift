@@ -349,15 +349,6 @@ public struct UsageHistorySnapshot: Identifiable, Equatable, Codable, Sendable {
             return total.historyFractionUsed
         }
 
-        if providerID == .greptile,
-           let reviews = bars.first(where: {
-               $0.stableKey == GreptileUsageIdentity.reviewQuotaStableKey
-           }) ?? bars.first(where: {
-               $0.stableKey == GreptileUsageIdentity.completedReviewsStableKey
-           }) {
-            return reviews.used
-        }
-
         if let usage = bars.map(\.historyFractionUsed).max() {
             return usage
         }
@@ -942,7 +933,7 @@ public final class UsageHistoryStore: ObservableObject {
         let currentUsageBars = result.usageHistoryBars()
         if (result.hasFreshBars && !currentUsageBars.isEmpty)
             || (!currentUsageBars.isEmpty && hasUsageHistory)
-            || ([ProviderID.greptile, .codex].contains(result.providerID) && hasUsageHistory) {
+            || (result.providerID == .codex && hasUsageHistory) {
             return usageSeries(
                 for: result,
                 snapshots: accountSnapshots,
@@ -1004,64 +995,11 @@ public final class UsageHistoryStore: ObservableObject {
             )
         }
 
-        if result.providerID == .greptile {
-            return countUsageSeries(
-                accountID: result.accountID,
-                snapshots: snapshots,
-                stableKey: greptilePrimaryStableKey(snapshots: snapshots),
-                severityThresholds: severityThresholds
-            )
-        }
-
         return aggregateUsageSeries(
             accountID: result.accountID,
             snapshots: snapshots,
             severityThresholds: severityThresholds
         )
-    }
-
-    private func countUsageSeries(
-        accountID: String,
-        snapshots: [UsageHistorySnapshot],
-        stableKey: String,
-        severityThresholds: UsageSeverityThresholds
-    ) -> UsageHistorySeries {
-        UsageHistorySeries(
-            accountID: accountID,
-            points: snapshots.compactMap { snapshot in
-                snapshot.bars.first(where: { $0.stableKey == stableKey }).map {
-                    UsageHistoryPoint(
-                        id: snapshot.id,
-                        capturedAt: snapshot.capturedAt,
-                        value: $0.used,
-                        severity: snapshot.effectiveSeverity(
-                            for: $0,
-                            using: severityThresholds
-                        )
-                    )
-                }
-            },
-            isBalance: false,
-            isCount: true
-        )
-    }
-
-    private func greptilePrimaryStableKey(snapshots: [UsageHistorySnapshot]) -> String {
-        if let latestSnapshot = snapshots.reversed().first(where: { snapshot in
-            snapshot.bars.contains(where: {
-                $0.stableKey == GreptileUsageIdentity.reviewQuotaStableKey
-                    || $0.stableKey == GreptileUsageIdentity.completedReviewsStableKey
-            })
-        }) {
-            return latestSnapshot.bars.contains(where: {
-                $0.stableKey == GreptileUsageIdentity.reviewQuotaStableKey
-            })
-                ? GreptileUsageIdentity.reviewQuotaStableKey
-                : GreptileUsageIdentity.completedReviewsStableKey
-        }
-        return snapshots.contains { snapshot in
-            snapshot.bars.contains { $0.stableKey == GreptileUsageIdentity.creditAllowanceStableKey }
-        } ? GreptileUsageIdentity.creditAllowanceStableKey : GreptileUsageIdentity.completedReviewsStableKey
     }
 
     private func aggregateUsageSeries(
@@ -1345,42 +1283,6 @@ public final class UsageHistoryStore: ObservableObject {
                     currentBars: result.bars,
                     severityThresholds: severityThresholds
                 ))
-            } else if result.providerID == .greptile {
-                var seriesIdentities = [
-                    (
-                        GreptileUsageIdentity.reviewQuotaStableKey,
-                        GreptileUsageIdentity.reviewQuotaHistorySeriesID,
-                        "Reviews used"
-                    ),
-                    (
-                        GreptileUsageIdentity.completedReviewsStableKey,
-                        GreptileUsageIdentity.completedReviewsHistorySeriesID,
-                        "Completed reviews"
-                    ),
-                ]
-                seriesIdentities.append((GreptileUsageIdentity.creditAllowanceStableKey, "usage.credit-allowance", "Credits used"))
-                let preferredStableKey = greptilePrimaryStableKey(snapshots: accountSnapshots)
-                if let preferredIndex = seriesIdentities.firstIndex(where: { $0.0 == preferredStableKey }),
-                   preferredIndex != seriesIdentities.startIndex {
-                    let preferredIdentity = seriesIdentities.remove(at: preferredIndex)
-                    seriesIdentities.insert(preferredIdentity, at: seriesIdentities.startIndex)
-                }
-                for (stableKey, seriesID, label) in seriesIdentities where
-                    (result.hasCurrentBars && result.bars.contains(where: { $0.stableKey == stableKey }))
-                        || accountSnapshots.contains(where: { snapshot in
-                            snapshot.bars.contains(where: { $0.stableKey == stableKey })
-                        }) {
-                    options.append(UsageHistorySeriesOption(
-                        id: seriesID,
-                        label: label,
-                        series: countUsageSeries(
-                            accountID: result.accountID,
-                            snapshots: accountSnapshots,
-                            stableKey: stableKey,
-                            severityThresholds: severityThresholds
-                        )
-                    ))
-                }
             } else {
                 options.append(UsageHistorySeriesOption(
                     id: "usage",
@@ -1693,7 +1595,7 @@ public final class UsageHistoryStore: ObservableObject {
         }
 
         do {
-            let migrated = try RetiredGoogleProviderMigration.removingRetiredRecords(from: data)
+            let migrated = try RetiredProviderMigration.removingRetiredRecords(from: data)
             let snapshots = try JSONDecoder().decode([UsageHistorySnapshot].self, from: migrated)
             if migrated != data { defaults.set(migrated, forKey: storageKey) }
             guard Set(snapshots.map(\.id)).count == snapshots.count else {

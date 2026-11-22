@@ -189,7 +189,7 @@ public extension CodexBarWidgetSnapshot {
         }
     }
 
-    func builderTile(resolvingSavedID tileID: String, fallbackForRetiredGoogle: Bool = false) -> CodexBarWidgetBuilderTile? {
+    func builderTile(resolvingSavedID tileID: String, fallbackForRetiredProvider: Bool = false) -> CodexBarWidgetBuilderTile? {
         if let exactMatch = builderTiles.first(where: { $0.id == tileID }) {
             return exactMatch
         }
@@ -217,7 +217,7 @@ public extension CodexBarWidgetSnapshot {
             }
         }
 
-        return fallbackForRetiredGoogle && RetiredGoogleProviderMigration.isRetiredIdentifier(tileID) ? builderTiles.first : nil
+        return fallbackForRetiredProvider && RetiredProviderMigration.isRetiredIdentifier(tileID) ? builderTiles.first : nil
     }
 }
 
@@ -284,10 +284,6 @@ public extension CodexBarWidgetUsageBarSnapshot {
             CursorUsageIdentity.otherModelsMetricID
         default:
             CursorUsageIdentity.canonicalMetricID(suffix)
-        }
-        if suffix == GreptileUsageIdentity.completedReviewsMetricID
-            || suffix == GreptileUsageIdentity.reviewQuotaMetricID {
-            return GreptileUsageIdentity.canonicalReviewUsageMetricID
         }
         let fableSuffix = ClaudeFableUsageIdentity.canonicalWidgetSuffix(suffix)
         if fableSuffix != suffix { return fableSuffix }
@@ -370,10 +366,13 @@ private extension CodexBarWidgetProviderSnapshot {
     }
 }
 
-/// Compatibility with provider identifiers saved by versions before Google support was withdrawn.
-public enum RetiredGoogleProviderMigration {
+/// Compatibility with provider identifiers saved by versions before a provider was withdrawn:
+/// Google Gemini and Antigravity (#556) and Greptile (#594).
+public enum RetiredProviderMigration {
+    public static let retiredProviderIDs: Set<String> = ["gemini", "antigravity", "greptile"]
+
     public static func isRetiredIdentifier(_ value: String) -> Bool {
-        value.split(separator: ".").contains { $0 == "gemini" || $0 == "antigravity" }
+        value.split(separator: ".").contains { retiredProviderIDs.contains(String($0)) }
     }
 
     /// Filter before decoding ProviderID so one retired record cannot invalidate other accounts or history.
@@ -383,7 +382,7 @@ public enum RetiredGoogleProviderMigration {
         }
         let retained = records.filter { record in
             guard let provider = record["providerID"] as? String else { return true }
-            return !["gemini", "antigravity"].contains(provider)
+            return !retiredProviderIDs.contains(provider)
         }
         guard retained.count != records.count else { return data }
         return try JSONSerialization.data(withJSONObject: retained, options: [.sortedKeys])

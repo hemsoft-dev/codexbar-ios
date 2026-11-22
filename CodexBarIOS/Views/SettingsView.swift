@@ -1645,8 +1645,6 @@ extension ProviderID {
             "moon.stars"
         case .cursor:
             "cursorarrow"
-        case .greptile:
-            "checkmark.bubble"
         case .museCode:
             "music.note"
         }

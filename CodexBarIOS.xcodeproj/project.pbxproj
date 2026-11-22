@@ -35,10 +35,6 @@
 		A42100000000000000000201 /* ClaudeFableMetricPreferenceCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42100000000000000000202 /* ClaudeFableMetricPreferenceCompatibility.swift */; };
 		A42000000000000000000101 /* ClaudeUsageResetInventory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42000000000000000000102 /* ClaudeUsageResetInventory.swift */; };
 		A31900000000000000000001 /* ProviderMetricCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31900000000000000000002 /* ProviderMetricCatalog.swift */; };
-		A22600000000000000000001 /* GreptileUsageIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22600000000000000000005 /* GreptileUsageIdentity.swift */; };
-		A22600000000000000000002 /* GreptileUsageIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22600000000000000000005 /* GreptileUsageIdentity.swift */; };
-		A22600000000000000000003 /* GreptileUsageIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22600000000000000000005 /* GreptileUsageIdentity.swift */; };
-		A22600000000000000000004 /* GreptileUsageIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22600000000000000000005 /* GreptileUsageIdentity.swift */; };
 		A22700000000000000000001 /* CursorUsageIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22700000000000000000005 /* CursorUsageIdentity.swift */; };
 		A42100000000000000000101 /* ClaudeFableUsageIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A42100000000000000000105 /* ClaudeFableUsageIdentity.swift */; };
 		A22700000000000000000002 /* CursorUsageIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22700000000000000000005 /* CursorUsageIdentity.swift */; };
@@ -107,7 +103,6 @@
 		100000000000000000000022 /* ClaudeUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000024 /* ClaudeUsageProvider.swift */; };
 		A43100000000000000000101 /* ClaudePlanProfileClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A43100000000000000000102 /* ClaudePlanProfileClient.swift */; };
 		100000000000000000000023 /* OpenRouterUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000025 /* OpenRouterUsageProvider.swift */; };
-		A22500000000000000000001 /* GreptileUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22500000000000000000002 /* GreptileUsageProvider.swift */; };
 		A52200000000000000000101 /* MuseCodeAllowance.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52200000000000000000102 /* MuseCodeAllowance.swift */; };
 		A35300000000000000000301 /* OpenCodeDeviceAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35300000000000000000302 /* OpenCodeDeviceAuthService.swift */; };
 		A35300000000000000000401 /* OpenCodeConsoleUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35300000000000000000402 /* OpenCodeConsoleUsageProvider.swift */; };
@@ -183,16 +178,10 @@
 		A35300000000000000000001 /* OpenCodeSignInUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35300000000000000000002 /* OpenCodeSignInUITests.swift */; };
 		A38400000000000000000001 /* ClaudeUsageUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A38400000000000000000002 /* ClaudeUsageUITests.swift */; };
 		A39100000000000000000001 /* CodexCreditsPoolUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A39100000000000000000002 /* CodexCreditsPoolUITests.swift */; };
-		A39500000000000000000001 /* GreptileAllowanceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A39500000000000000000002 /* GreptileAllowanceUITests.swift */; };
 		A35500000000000000000301 /* GrokSignInUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35500000000000000000302 /* GrokSignInUITests.swift */; };
 		A30700000000000000000001 /* AccountJourneysUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30700000000000000000011 /* AccountJourneysUITests.swift */; };
 		A37700000000000000000005 /* SettingsEvidenceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A37700000000000000000006 /* SettingsEvidenceUITests.swift */; };
 		A30700000000000000000002 /* UITestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30700000000000000000012 /* UITestFixtures.swift */; };
-		A40600000000000000000101 /* GreptileSessionCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000102 /* GreptileSessionCredentials.swift */; };
-		A40600000000000000000201 /* GreptileDashboardClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000202 /* GreptileDashboardClient.swift */; };
-		A40600000000000000000301 /* GreptileAllowanceRenewal.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000302 /* GreptileAllowanceRenewal.swift */; };
-		A40600000000000000000401 /* GreptileBrowserSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000402 /* GreptileBrowserSignInView.swift */; };
-		A40600000000000000000501 /* GreptileRenewalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000502 /* GreptileRenewalView.swift */; };
 		A40600000000000000000601 /* ProviderCardInformationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40600000000000000000602 /* ProviderCardInformationView.swift */; };
 		A46400000000000000010001 /* ProEntitlementValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000001 /* ProEntitlementValue.swift */; };
 		A46400000000000000010007 /* ProEntitlementClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46400000000000000000007 /* ProEntitlementClock.swift */; };
@@ -396,7 +385,6 @@
 		A42100000000000000000202 /* ClaudeFableMetricPreferenceCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeFableMetricPreferenceCompatibility.swift; sourceTree = "<group>"; };
 		A42000000000000000000102 /* ClaudeUsageResetInventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageResetInventory.swift; sourceTree = "<group>"; };
 		A31900000000000000000002 /* ProviderMetricCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderMetricCatalog.swift; sourceTree = "<group>"; };
-		A22600000000000000000005 /* GreptileUsageIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileUsageIdentity.swift; sourceTree = "<group>"; };
 		A22700000000000000000005 /* CursorUsageIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorUsageIdentity.swift; sourceTree = "<group>"; };
 		A42100000000000000000105 /* ClaudeFableUsageIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeFableUsageIdentity.swift; sourceTree = "<group>"; };
 		G20000000000000000000244 /* GitHubStatusMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubStatusMonitor.swift; sourceTree = "<group>"; };
@@ -456,7 +444,6 @@
 		200000000000000000000024 /* ClaudeUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageProvider.swift; sourceTree = "<group>"; };
 		A43100000000000000000102 /* ClaudePlanProfileClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudePlanProfileClient.swift; sourceTree = "<group>"; };
 		200000000000000000000025 /* OpenRouterUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterUsageProvider.swift; sourceTree = "<group>"; };
-		A22500000000000000000002 /* GreptileUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileUsageProvider.swift; sourceTree = "<group>"; };
 		A52200000000000000000102 /* MuseCodeAllowance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuseCodeAllowance.swift; sourceTree = "<group>"; };
 		A35300000000000000000302 /* OpenCodeDeviceAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeDeviceAuthService.swift; sourceTree = "<group>"; };
 		A35300000000000000000402 /* OpenCodeConsoleUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeConsoleUsageProvider.swift; sourceTree = "<group>"; };
@@ -532,17 +519,11 @@
 		A35300000000000000000002 /* OpenCodeSignInUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSignInUITests.swift; sourceTree = "<group>"; };
 		A38400000000000000000002 /* ClaudeUsageUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageUITests.swift; sourceTree = "<group>"; };
 		A39100000000000000000002 /* CodexCreditsPoolUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexCreditsPoolUITests.swift; sourceTree = "<group>"; };
-		A39500000000000000000002 /* GreptileAllowanceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileAllowanceUITests.swift; sourceTree = "<group>"; };
 		A35500000000000000000302 /* GrokSignInUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokSignInUITests.swift; sourceTree = "<group>"; };
 		A30700000000000000000011 /* AccountJourneysUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountJourneysUITests.swift; sourceTree = "<group>"; };
 		A37700000000000000000006 /* SettingsEvidenceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsEvidenceUITests.swift; sourceTree = "<group>"; };
 		A30700000000000000000012 /* UITestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestFixtures.swift; sourceTree = "<group>"; };
 		A30700000000000000000013 /* CodexBarIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexBarIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A40600000000000000000102 /* GreptileSessionCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileSessionCredentials.swift; sourceTree = "<group>"; };
-		A40600000000000000000202 /* GreptileDashboardClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileDashboardClient.swift; sourceTree = "<group>"; };
-		A40600000000000000000302 /* GreptileAllowanceRenewal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileAllowanceRenewal.swift; sourceTree = "<group>"; };
-		A40600000000000000000402 /* GreptileBrowserSignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileBrowserSignInView.swift; sourceTree = "<group>"; };
-		A40600000000000000000502 /* GreptileRenewalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GreptileRenewalView.swift; sourceTree = "<group>"; };
 		A40600000000000000000602 /* ProviderCardInformationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderCardInformationView.swift; sourceTree = "<group>"; };
 		A46400000000000000000001 /* ProEntitlementValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementValue.swift; sourceTree = "<group>"; };
 		A46400000000000000000007 /* ProEntitlementClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProEntitlementClock.swift; sourceTree = "<group>"; };
@@ -720,7 +701,6 @@
 				200000000000000000000004 /* ProviderUsageResult.swift */,
 				A42000000000000000000102 /* ClaudeUsageResetInventory.swift */,
 				A44400000000000000000102 /* SubscriptionRenewal.swift */,
-				A40600000000000000000302 /* GreptileAllowanceRenewal.swift */,
 				A37600000000000000000002 /* ProviderMetricTileContent.swift */,
 				A37700000000000000000002 /* SettingsPresentationModels.swift */,
 				A37700000000000000000004 /* GitHubStatusNotificationAuthorization.swift */,
@@ -804,10 +784,7 @@
 				A42000000000000000000202 /* ClaudeUsageResetClient.swift */,
 				A42100000000000000000202 /* ClaudeFableMetricPreferenceCompatibility.swift */,
 				200000000000000000000025 /* OpenRouterUsageProvider.swift */,
-				A22500000000000000000002 /* GreptileUsageProvider.swift */,
 				A52200000000000000000102 /* MuseCodeAllowance.swift */,
-				A40600000000000000000202 /* GreptileDashboardClient.swift */,
-				A40600000000000000000102 /* GreptileSessionCredentials.swift */,
 				A35300000000000000000202 /* OpenCodeBrowserSessionPolicy.swift */,
 				A35300000000000000000302 /* OpenCodeDeviceAuthService.swift */,
 				A35300000000000000000402 /* OpenCodeConsoleUsageProvider.swift */,
@@ -849,8 +826,6 @@
 				200000000000000000000013 /* ProviderSettingsView.swift */,
 				A44600000000000000000402 /* SubscriptionBillingSignInView.swift */,
 				A40600000000000000000602 /* ProviderCardInformationView.swift */,
-				A40600000000000000000502 /* GreptileRenewalView.swift */,
-				A40600000000000000000402 /* GreptileBrowserSignInView.swift */,
 				A35300000000000000000102 /* OpenCodeBrowserSignInView.swift */,
 				200000000000000000000043 /* ProviderSettingsViewModel.swift */,
 			);
@@ -972,7 +947,6 @@
 				A46700000000000000040002 /* WatchAccessClockStore.swift */,
 				A22700000000000000000005 /* CursorUsageIdentity.swift */,
 				A42100000000000000000105 /* ClaudeFableUsageIdentity.swift */,
-				A22600000000000000000005 /* GreptileUsageIdentity.swift */,
 				200000000000000000000048 /* CodexBarDeepLink.swift */,
 				20000000000000000000003E /* UserFacingDateTimeFormatter.swift */,
 				20000000000000000000002B /* WidgetSnapshotStore.swift */,
@@ -1045,7 +1019,6 @@
 				A35300000000000000000002 /* OpenCodeSignInUITests.swift */,
 				A38400000000000000000002 /* ClaudeUsageUITests.swift */,
 				A39100000000000000000002 /* CodexCreditsPoolUITests.swift */,
-				A39500000000000000000002 /* GreptileAllowanceUITests.swift */,
 				A35500000000000000000302 /* GrokSignInUITests.swift */,
 			);
 			path = CodexBarIOSUITests;
@@ -1348,7 +1321,6 @@
 				A46400000000000000010008 /* ProClockSupport.c in Sources */,
 				A22700000000000000000001 /* CursorUsageIdentity.swift in Sources */,
 				A42100000000000000000101 /* ClaudeFableUsageIdentity.swift in Sources */,
-				A22600000000000000000001 /* GreptileUsageIdentity.swift in Sources */,
 				G10000000000000000000244 /* GitHubStatusMonitor.swift in Sources */,
 				F10000000000000000000002 /* DiagnosticReportView.swift in Sources */,
 				100000000000000000000001 /* CodexBarIOSApp.swift in Sources */,
@@ -1378,12 +1350,7 @@
 				100000000000000000000010 /* SettingsView.swift in Sources */,
 				100000000000000000000011 /* ProviderSettingsView.swift in Sources */,
 				A40600000000000000000601 /* ProviderCardInformationView.swift in Sources */,
-				A40600000000000000000501 /* GreptileRenewalView.swift in Sources */,
-				A40600000000000000000401 /* GreptileBrowserSignInView.swift in Sources */,
 				A44400000000000000000101 /* SubscriptionRenewal.swift in Sources */,
-				A40600000000000000000301 /* GreptileAllowanceRenewal.swift in Sources */,
-				A40600000000000000000201 /* GreptileDashboardClient.swift in Sources */,
-				A40600000000000000000101 /* GreptileSessionCredentials.swift in Sources */,
 				A35300000000000000000101 /* OpenCodeBrowserSignInView.swift in Sources */,
 				100000000000000000000043 /* ProviderSettingsViewModel.swift in Sources */,
 				100000000000000000000012 /* CodexCredentials.swift in Sources */,
@@ -1418,7 +1385,6 @@
 				A42000000000000000000201 /* ClaudeUsageResetClient.swift in Sources */,
 				A42100000000000000000201 /* ClaudeFableMetricPreferenceCompatibility.swift in Sources */,
 				100000000000000000000023 /* OpenRouterUsageProvider.swift in Sources */,
-				A22500000000000000000001 /* GreptileUsageProvider.swift in Sources */,
 				A52200000000000000000101 /* MuseCodeAllowance.swift in Sources */,
 				A35300000000000000000201 /* OpenCodeBrowserSessionPolicy.swift in Sources */,
 				A35300000000000000000301 /* OpenCodeDeviceAuthService.swift in Sources */,
@@ -1538,7 +1504,6 @@
 			files = (
 				A22700000000000000000002 /* CursorUsageIdentity.swift in Sources */,
 				A42100000000000000000102 /* ClaudeFableUsageIdentity.swift in Sources */,
-				A22600000000000000000002 /* GreptileUsageIdentity.swift in Sources */,
 				10000000000000000000002B /* CodexBarIOSWidgetBundle.swift in Sources */,
 				100000000000000000000046 /* CodexBarWidgetConfiguration.swift in Sources */,
 				10000000000000000000002C /* CodexBarWidgetViews.swift in Sources */,
@@ -1566,7 +1531,6 @@
 				A46700000000000000042001 /* WatchAccessClockStore.swift in Sources */,
 				A22700000000000000000003 /* CursorUsageIdentity.swift in Sources */,
 				A42100000000000000000103 /* ClaudeFableUsageIdentity.swift in Sources */,
-				A22600000000000000000003 /* GreptileUsageIdentity.swift in Sources */,
 				D10000000000000000000001 /* CodexBarWatchApp.swift in Sources */,
 				D10000000000000000000002 /* WatchDashboardState.swift in Sources */,
 				D10000000000000000000003 /* WatchDashboardView.swift in Sources */,
@@ -1601,7 +1565,6 @@
 				A46700000000000000042002 /* WatchAccessClockStore.swift in Sources */,
 				A22700000000000000000004 /* CursorUsageIdentity.swift in Sources */,
 				A42100000000000000000104 /* ClaudeFableUsageIdentity.swift in Sources */,
-				A22600000000000000000004 /* GreptileUsageIdentity.swift in Sources */,
 				F31000000000000000000003 /* CodexBarWatchWidgetBundle.swift in Sources */,
 				F31000000000000000000004 /* WatchComplicationConfiguration.swift in Sources */,
 				F31000000000000000000005 /* WatchComplicationViews.swift in Sources */,
@@ -1623,7 +1586,6 @@
 				A35300000000000000000001 /* OpenCodeSignInUITests.swift in Sources */,
 				A38400000000000000000001 /* ClaudeUsageUITests.swift in Sources */,
 				A39100000000000000000001 /* CodexCreditsPoolUITests.swift in Sources */,
-				A39500000000000000000001 /* GreptileAllowanceUITests.swift in Sources */,
 				A35500000000000000000301 /* GrokSignInUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

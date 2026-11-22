@@ -507,6 +507,17 @@ struct ContentView: View {
         ) { authURL in
             SafariAuthSheet(url: authURL.url)
         }
+        .alert(
+            "Greptile is no longer supported",
+            isPresented: Binding(
+                get: { configurationStore.showsGreptileRemovalNotice },
+                set: { if !$0 { configurationStore.acknowledgeGreptileRemovalNotice() } }
+            )
+        ) {
+            Button("OK") { configurationStore.acknowledgeGreptileRemovalNotice() }
+        } message: {
+            Text("CodexBar no longer reads Greptile, so your saved Greptile account was removed from this device. Your other accounts are unchanged.")
+        }
         .confirmationDialog(
             "Reset unreadable usage history?",
             isPresented: $isConfirmingHistoryReset,

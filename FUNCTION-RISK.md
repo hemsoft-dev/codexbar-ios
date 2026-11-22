@@ -190,14 +190,13 @@ These are platform-specific counts, so shared source can appear in both.
 The initial ceilings below are captured as exact line counts and decision
 counts in `scripts/function-risk/baseline.json`. Six production functions
 exceeded 30 in the initial baseline. The measurement gate alone did not fix
-them. Before the next production release, handle the following four bounded work
-items through the repository's issue-first workflow, starting with sign-in and
-pagination. Review the remaining ceilings in each item and lower or remove
+them. Before the next production release, handle the following bounded work
+items through the repository's issue-first workflow. Greptile pagination left
+this list when Greptile support was removed. Review the remaining ceilings in each item and lower or remove
 entries only after fresh coverage proves the improvement.
 
 | Work item | Existing functions | Initial CRAP | Completion evidence |
 | --- | --- | ---: | --- |
-| Greptile pagination | `GreptileUsageProvider.fetchUsage(for:)` | 30.721360 | Exercise remaining early exit and pagination failure paths; preserve incomplete-scan behavior and reduce score to at most 30. |
 | Dashboard metric dispatch | `ProviderUsageCard.metricTile(_:)` | 156 | Extract/test metric selection and presentation decisions without screenshot automation; reduce each resulting function to at most 30. |
 | Settings dispatch and notifications | `SettingsView.summary(for:)`, `settingsDestinationView(_:)`, `updateGitHubStatusNotificationSetting(isEnabled:recovery:)` | 42, 42, 56 | Test destination mapping and notification permission outcomes; reduce each function to at most 30. |
 
@@ -208,6 +207,11 @@ a renamed or removed function, a tool migration and an attempted increase. A
 new production risk requires remediation, not a routine baseline addition.
 
 ## Greptile pagination remediation
+
+Greptile support, including `GreptileUsageProvider` and
+`GreptilePaginationRegressionTests`, was removed in
+[#594](https://github.com/hemsoft-dev/codexbar-ios/issues/594). This section is
+kept as a record of the earlier remediation; its commands no longer apply.
 
 Issue [#375](https://github.com/HemSoft/codexbar-ios/issues/375) removes a redundant
 empty-page branch without changing scan completeness, deduplication, page and

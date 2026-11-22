@@ -222,9 +222,6 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
                 label: name, displayLabel: name
             )
         }
-        if providerID == .greptile, greptileAllowanceRenewal?.isApplicable == true {
-            return .make(providerPrefix: "greptile", identifier: "free", label: "Free")
-        }
         switch providerID {
         case .openRouter, .moonshot:
             return .make(
@@ -253,11 +250,8 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
     public let usageMessages: [String]
     public let dashboardUsageMessages: [String]
     public let cardInformationSections: [ProviderCardInformationSection]
-    /// Review observations retained after a partial Greptile refresh, excluded from fresh history.
-    public let greptileReviewActivityUnavailableReason: String?
     public var subscriptionRenewal: SubscriptionRenewal?
     public var subscriptionBillingProblem: SubscriptionBillingProblem?
-    public var greptileAllowanceRenewal: GreptileAllowanceRenewal?
     public let codexBankedRateLimitResets: CodexBankedRateLimitResets?
     /// Transient account-bound grants; never persist in usage history or device snapshots.
     public let claudeUsageResetInventory: ClaudeUsageResetInventory?
@@ -290,8 +284,6 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
         cardInformationSections: [ProviderCardInformationSection] = [],
         subscriptionRenewal: SubscriptionRenewal? = nil,
         subscriptionBillingProblem: SubscriptionBillingProblem? = nil,
-        greptileAllowanceRenewal: GreptileAllowanceRenewal? = nil,
-        greptileReviewActivityUnavailableReason: String? = nil,
         codexBankedRateLimitResets: CodexBankedRateLimitResets? = nil,
         claudeUsageResetInventory: ClaudeUsageResetInventory? = nil,
         failureMessage: String? = nil,
@@ -319,19 +311,10 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
         self.unavailableUsageMetrics = unavailableUsageMetrics
         self.usageMessages = usageMessages
         self.dashboardUsageMessages = dashboardUsageMessages ?? usageMessages
-        self.cardInformationSections = cardInformationSections.filter { section in
-            guard !section.items.isEmpty else { return false }
-            if providerID == .greptile, section.id == "greptile.credit-allowance" {
-                return unavailableUsageMetrics[GreptileUsageIdentity.creditAllowanceMetricID] == nil
-                    && greptileAllowanceRenewal?.isApplicable != false && greptileAllowanceRenewal?.isStale != true
-            }
-            return true
-        }
-        self.greptileReviewActivityUnavailableReason = greptileReviewActivityUnavailableReason
+        self.cardInformationSections = cardInformationSections.filter { !$0.items.isEmpty }
         // A fresh Go billing observation remains valid if only the independent Zen balance fails.
         self.subscriptionRenewal = failureMessage == nil || providerID == .openCodeZen ? subscriptionRenewal : nil
         self.subscriptionBillingProblem = failureMessage == nil ? subscriptionBillingProblem : nil
-        self.greptileAllowanceRenewal = greptileAllowanceRenewal
         self.codexBankedRateLimitResets = codexBankedRateLimitResets.flatMap {
             $0.availableCount > 0 ? $0 : nil
         }
@@ -356,10 +339,7 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
     }
 
     public var hasCurrentBars: Bool {
-        if providerID == .greptile, greptileReviewActivityUnavailableReason != nil {
-            return hasFreshBars && !usageHistoryBars().isEmpty
-        }
-        return hasFreshBars
+        hasFreshBars
             && (
                 failureMessage == nil
                     || (!preserveCachedBarsOnFailure && preserveCachedCreditsOnFailure)
@@ -370,11 +350,6 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
     public var enabledBarIndices: [Int] {
         bars.indices.filter { index in
             let metricID = bars[index].metricIdentifier(providerID: providerID, index: index)
-            if providerID == .greptile {
-                if bars[index].stableKey == GreptileUsageIdentity.creditAllowanceStableKey,
-                   greptileAllowanceRenewal?.isApplicable == false { return false }
-                return unavailableUsageMetrics[metricID] == nil
-            }
             return unavailableUsageMetrics[metricID] != ProviderMetricCatalog.disabledReason
         }
     }
@@ -384,7 +359,6 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
     }
 
     public func usageHistoryBars() -> [UsageBar] {
-        if providerID == .greptile { return enabledBarIndices.map { bars[$0] } }
         guard providerID == .codex else { return bars }
         return bars.filter { $0.stableKey != CodexUsageParser.creditsPoolStableKey }
     }
@@ -434,15 +408,7 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
                 kind: .monetary(index: index)
             )
         }
-        let greptileUnavailable: [ProviderUsageMetric] = providerID == .greptile
-            ? unavailableUsageMetrics.sorted { $0.key < $1.key }.compactMap { id, reason in
-                guard let label = GreptileUsageIdentity.label(forMetricID: id),
-                      id != GreptileUsageIdentity.creditAllowanceMetricID || greptileAllowanceRenewal?.isApplicable != false
-                else { return nil }
-                return ProviderUsageMetric(id: id, label: label, kind: .unavailableUsage(reason))
-            }
-            : []
-        return usageMetrics + greptileUnavailable + creditMetrics + moneyMetrics
+        return usageMetrics + creditMetrics + moneyMetrics
     }
 
     public var highestSeverity: UsageSeverity {

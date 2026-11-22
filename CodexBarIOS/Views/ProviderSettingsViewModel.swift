@@ -20,15 +20,6 @@ enum GrokFixtureStage: String, Identifiable {
 
 @MainActor
 final class ProviderSettingsViewModel: ObservableObject {
-    private struct CredentialValidationFeedback {
-        let validatingMessage: String
-        let disabledMessage: String
-        let incompleteMessage: String
-        let authenticationFailurePrefix: String
-        let transientFailurePrefix: String
-        let validatedMessage: String
-    }
-
     enum PersistenceBehavior {
         case immediate
         case debounced
@@ -50,9 +41,6 @@ final class ProviderSettingsViewModel: ObservableObject {
     @Published private(set) var isSigningInWithCursor = false
     @Published var subscriptionBillingSession: SubscriptionBillingSignInSession?
     @Published private(set) var subscriptionBillingMessage: String?
-    @Published var greptileBrowserSession: GreptileBrowserSignInSession?
-    @Published private(set) var isSigningInWithGreptile = false
-    private var greptileAttemptID: UUID?
     @Published private(set) var codexAuthError: String?
     @Published private(set) var copilotAuthError: String?
     @Published private(set) var claudeAuthError: String?
@@ -117,13 +105,6 @@ final class ProviderSettingsViewModel: ObservableObject {
     private var needsCredentialMetricsRefresh = false
     private var metricsCredentialRevision = 0
     private var isCredentialRefreshPending = false
-    private var validationFeedbackProviderID: ProviderID?
-
-    var credentialMessageSystemImage: String {
-        credentialMessage == credentialValidationFeedback?.validatedMessage
-            ? "checkmark.circle"
-            : "clock"
-    }
 
     init(
         configurationStore: ProviderConfigurationStore,
@@ -200,32 +181,8 @@ final class ProviderSettingsViewModel: ObservableObject {
         configuration.providerID
     }
 
-    private var credentialValidationFeedback: CredentialValidationFeedback? {
-        switch providerID {
-        case .greptile:
-            CredentialValidationFeedback(
-                validatingMessage: "API key saved in Keychain. Validating with Greptile...",
-                disabledMessage: "API key saved in Keychain. Enable this account to validate it with Greptile.",
-                incompleteMessage: "API key saved in Keychain. "
-                    + "Greptile validation did not complete; refresh to try again.",
-                authenticationFailurePrefix: "API key saved in Keychain, but Greptile validation failed. ",
-                transientFailurePrefix: "API key saved in Keychain. "
-                    + "Greptile could not validate it right now. ",
-                validatedMessage: "API key saved in Keychain and validated by Greptile."
-            )
-        default:
-            nil
-        }
-    }
-
-    private var showsCredentialValidationFeedback: Bool {
-        validationFeedbackProviderID == providerID
-    }
-
     var availableAuthMethods: [ProviderAuthMethod] {
         switch providerID {
-        case .greptile:
-            configuration.authMethod == .apiKey && configurationStore.hasSecret(for: configuration) ? [.apiKey] : [.browserSession]
         case .codex, .claude, .grok, .xSubscription, .cursor, .githubBilling, .openCodeZen:
             [.browserSession]
         case .copilot:
@@ -250,20 +207,6 @@ final class ProviderSettingsViewModel: ObservableObject {
                 setupURL: URL(string: "https://openrouter.ai/settings/management-keys"),
                 securityMessage: "Management keys can administer API keys and are more sensitive than inference "
                     + "keys. CodexBar stores this credential only in Keychain."
-            )
-        }
-
-        if providerID == .greptile {
-            return ProviderCredentialPresentation(
-                sectionTitle: "Greptile Connection",
-                unsavedPlaceholder: "Sign in to Greptile",
-                savedPlaceholder: "Greptile session saved",
-                saveButtonTitle: "Sign in to Greptile",
-                setupMessage: nil,
-                setupLinkTitle: nil,
-                setupURL: nil,
-                securityMessage: "Your Greptile session stays in this account's Keychain entry. "
-                    + "CodexBar reads the selected organization's billing period and review activity."
             )
         }
 
@@ -405,22 +348,8 @@ final class ProviderSettingsViewModel: ObservableObject {
             completeCredentialRefresh(revision: credentialRevision)
         }
         guard credentialRevision == metricsCredentialRevision else { return }
-        guard let result else {
-            if requiresFreshRequest,
-               showsCredentialValidationFeedback,
-               let feedback = credentialValidationFeedback {
-                credentialError = nil
-                credentialMessage = feedback.incompleteMessage
-            }
-            return
-        }
+        guard let result else { return }
         acceptUsageResult(result)
-        if showsCredentialValidationFeedback {
-            updateCredentialValidationFeedback(with: result)
-            if result.failureMessage == nil {
-                validationFeedbackProviderID = nil
-            }
-        }
     }
 
     func prepare() async {
@@ -486,7 +415,6 @@ final class ProviderSettingsViewModel: ObservableObject {
         cancelSubscriptionBillingSignIn()
         cancelGrokSignIn()
         cancelOpenCodeSignIn()
-        cancelGreptileSignIn()
         codexSignInTask?.cancel()
         codexAuthPresenter.finish()
         cursorSignInTask?.cancel()
@@ -528,7 +456,6 @@ final class ProviderSettingsViewModel: ObservableObject {
     func saveGenericCredential() {
         credentialError = nil
         credentialMessage = nil
-        validationFeedbackProviderID = nil
         guard persist(configuration) else {
             credentialError = configurationStore.lastError
             return
@@ -538,23 +465,15 @@ final class ProviderSettingsViewModel: ObservableObject {
             return
         }
         secret = ""
-        if let feedback = credentialValidationFeedback {
-            validationFeedbackProviderID = providerID
-            credentialMessage = configuration.isEnabled
-                ? feedback.validatingMessage
-                : feedback.disabledMessage
-        }
         credentialsDidChange()
     }
 
     func removeSavedCredential(message: String? = nil) {
-        if providerID == .greptile { cancelGreptileSignIn() }
         if providerID.usesXAIConsumerAuth { cancelGrokSignIn() }
         if providerID == .openCodeZen { cancelOpenCodeSignIn() }
         if providerID == .githubBilling { cancelAuthentication() }
         credentialError = nil
         credentialMessage = nil
-        validationFeedbackProviderID = nil
         flushPendingChanges()
         guard persistSecret("") else {
             credentialError = configurationStore.lastError
@@ -562,62 +481,6 @@ final class ProviderSettingsViewModel: ObservableObject {
         }
         openCodeCredentialMessage = message
         credentialsDidChange()
-    }
-
-    func startGreptileSignIn() {
-        guard !isSigningInWithGreptile else { return }
-        credentialError = nil
-        credentialMessage = nil
-        isSigningInWithGreptile = true
-        let attemptID = UUID()
-        greptileAttemptID = attemptID
-        greptileBrowserSession = GreptileBrowserSignInSession { [weak self] result in
-            guard let self, self.greptileAttemptID == attemptID else { return }
-            self.greptileBrowserSession = nil
-            self.greptileAttemptID = nil
-            self.isSigningInWithGreptile = false
-            self.completeGreptileSignIn(result)
-        }
-    }
-
-    private func completeGreptileSignIn(_ result: Result<GreptileSessionCredentials, Error>) {
-        do {
-            let credential = try result.get()
-            guard configurationStore.canReconnectGreptile(credential, for: configuration) else {
-                credentialError = configurationStore.lastError
-                return
-            }
-            var updated = configuration
-            updated.authMethod = .browserSession
-            if updated.accountLabel.isEmpty { updated.accountLabel = credential.organization.name }
-            guard persistCredential(try credential.encoded(), with: updated) else {
-                credentialError = "Greptile sign-in completed, but secure storage failed. Your saved account was not changed."
-                return
-            }
-            validationFeedbackProviderID = nil
-            credentialMessage = "Greptile connected. Reading your usage…"
-            credentialsDidChange(refreshMetrics: false)
-            refreshConnectedGreptile()
-        } catch {
-            credentialError = (error as? GreptileSignInError ?? .invalidSession).localizedDescription
-        }
-    }
-
-    private func refreshConnectedGreptile() {
-        let revision = metricsCredentialRevision
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            let refreshed = await self.onAccountRefresh(self.configuration)
-            guard revision == self.metricsCredentialRevision, let refreshed else { return }
-            self.acceptUsageResult(refreshed)
-        }
-    }
-
-    func cancelGreptileSignIn() {
-        greptileAttemptID = nil
-        greptileBrowserSession?.invalidate()
-        greptileBrowserSession = nil
-        isSigningInWithGreptile = false
     }
 
     func startCodexSignIn(mode: CodexBrowserMode) {
@@ -1324,22 +1187,6 @@ final class ProviderSettingsViewModel: ObservableObject {
         )
     }
 
-    private func updateCredentialValidationFeedback(with result: ProviderUsageResult) {
-        guard let feedback = credentialValidationFeedback else { return }
-        if let failureMessage = result.failureMessage {
-            if result.recoveryAction == .reauthenticate || result.recoveryAction == .signIn {
-                credentialMessage = nil
-                credentialError = feedback.authenticationFailurePrefix + failureMessage
-            } else {
-                credentialError = nil
-                credentialMessage = feedback.transientFailurePrefix + failureMessage
-            }
-        } else {
-            credentialError = nil
-            credentialMessage = feedback.validatedMessage
-        }
-    }
-
     func saveCopilotCredential() async {
         isSigningInWithCopilot = true
         credentialError = nil
@@ -1446,10 +1293,6 @@ final class ProviderSettingsViewModel: ObservableObject {
         _ updated: ProviderAccountConfiguration,
         persistence: PersistenceBehavior
     ) {
-        let shouldValidateSavedCredential = credentialValidationFeedback != nil
-            && !configuration.isEnabled
-            && updated.isEnabled
-            && showsCredentialValidationFeedback
         let didChangeRefreshInputs = refreshInputsChanged(from: configuration, to: updated)
         configuration = updated
         if didChangeRefreshInputs {
@@ -1472,12 +1315,6 @@ final class ProviderSettingsViewModel: ObservableObject {
                 }
                 self?.flushPendingChanges()
             }
-        }
-        if shouldValidateSavedCredential, let feedback = credentialValidationFeedback {
-            onCredentialsChanged()
-            credentialError = nil
-            credentialMessage = feedback.validatingMessage
-            requestCredentialMetricsRefresh()
         }
     }
 

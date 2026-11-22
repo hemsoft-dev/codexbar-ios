@@ -142,17 +142,25 @@ public enum KeychainError: Error, Equatable, LocalizedError {
     }
 }
 
-extension RetiredGoogleProviderMigration {
+extension RetiredProviderMigration {
+    /// Set when an upgrade removed a saved Greptile account, until the person has seen the one-time note.
+    static let greptileRemovalNoticeKey = "retiredGreptileRemovalNoticePending"
+
     /// Runs before configuration decoding. Pending account names survive both partial cleanup and relaunch.
+    /// The pending-list key keeps its original name so cleanup that started before Greptile was retired resumes.
     static func run(defaults: UserDefaults, secretStore: SecretStore, configurationKey: String) -> String? {
         var pending = Set(defaults.stringArray(forKey: "retiredGoogleCredentialCleanup") ?? [])
         if let data = defaults.data(forKey: configurationKey),
            let records = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
             for record in records {
-                guard let provider = record["providerID"] as? String, ["gemini", "antigravity"].contains(provider) else { continue }
+                guard let provider = record["providerID"] as? String, retiredProviderIDs.contains(provider) else { continue }
                 let id = record["id"] as? String ?? provider
                 pending.insert(id == provider ? "provider.\(provider).credential" : "providerAccount.\(id).credential")
-                pending.insert("provider.gemini.\(id).coding")
+                if provider == "greptile" {
+                    defaults.set(true, forKey: greptileRemovalNoticeKey)
+                } else {
+                    pending.insert("provider.gemini.\(id).coding")
+                }
             }
         }
         for key in ["confirmedGoogleAccountLinks", "pendingGoogleAccountLinks"] {
@@ -166,7 +174,7 @@ extension RetiredGoogleProviderMigration {
             .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [[String: Any]] } ?? []
         let protectedAccounts = Set(records.compactMap { record -> String? in
             guard let provider = record["providerID"] as? String,
-                  !["gemini", "antigravity"].contains(provider) else { return nil }
+                  !retiredProviderIDs.contains(provider) else { return nil }
             let id = record["id"] as? String ?? provider
             return id == provider ? "provider.\(provider).credential" : "providerAccount.\(id).credential"
         })
@@ -174,6 +182,7 @@ extension RetiredGoogleProviderMigration {
         do {
             pending.formUnion(try secretStore.accountNames().filter { account in
                 account.hasPrefix("provider.gemini.") || account.hasPrefix("provider.antigravity.")
+                    || account.hasPrefix("provider.greptile.")
                     || (account.hasPrefix("providerAccount.") && isRetiredIdentifier(account))
             })
         } catch { cleanupFailed = true }
@@ -195,6 +204,7 @@ extension RetiredGoogleProviderMigration {
         }
         defaults.removeObject(forKey: "confirmedGoogleAccountLinks")
         defaults.removeObject(forKey: "pendingGoogleAccountLinks")
-        return cleanupFailed ? "Saved Google credentials could not all be removed. Cleanup will retry when CodexBar opens again." : nil
+        return cleanupFailed
+            ? "Saved credentials for removed providers could not all be removed. Cleanup will retry when CodexBar opens again." : nil
     }
 }

@@ -55,7 +55,6 @@ public final class UsageRefreshService: ObservableObject {
             return refreshErrorsByAccountID[result.accountID] == nil
                 || result.preserveCachedBarsOnFailure
                 || result.preserveCachedCreditsOnFailure
-                || (result.providerID == .greptile && result.greptileReviewActivityUnavailableReason != nil && result.hasCurrentBars)
         }
     }
 
@@ -115,11 +114,6 @@ public final class UsageRefreshService: ObservableObject {
             monetaryMetrics: cached.monetaryMetrics, unavailableUsageMetrics: cached.unavailableUsageMetrics,
             usageMessages: cached.usageMessages, dashboardUsageMessages: cached.dashboardUsageMessages,
             cardInformationSections: cached.cardInformationSections,
-            greptileAllowanceRenewal: cached.greptileAllowanceRenewal.map { renewal in
-                var stale = renewal
-                stale.isStale = true
-                return stale
-            },
             codexBankedRateLimitResets: cached.codexBankedRateLimitResets,
             failureMessage: message, recoveryAction: .retryRefresh,
             cacheIdentity: cached.cacheIdentity, cacheScope: cached.cacheScope,
@@ -191,7 +185,7 @@ public final class UsageRefreshService: ObservableObject {
                 }
                 group.addTask {
                     do {
-                        let result = await self.preservingGreptileRenewal(try await provider.fetchUsage(for: configuration))
+                        let result = try await provider.fetchUsage(for: configuration)
                         if let message = result.failureMessage {
                             return .failure(
                                 configuration: configuration,
@@ -283,7 +277,7 @@ public final class UsageRefreshService: ObservableObject {
         }
 
         do {
-            let result = preservingVerifiedGrokPlan(preservingGreptileRenewal(try await provider.fetchUsage(for: configuration)))
+            let result = preservingVerifiedGrokPlan(try await provider.fetchUsage(for: configuration))
             guard isCurrent(configuration, generation: generation) else {
                 return nil
             }
@@ -457,22 +451,6 @@ public final class UsageRefreshService: ObservableObject {
         return GrokUsageProvider.retainingVerifiedPlan(cached.verifiedGrokPlanName, for: incoming)
     }
 
-    private func preservingGreptileRenewal(_ incoming: ProviderUsageResult) -> ProviderUsageResult {
-        guard incoming.providerID == .greptile, let failed = incoming.greptileAllowanceRenewal,
-              failed.isApplicable == nil, !failed.requiresNewAccount,
-              let cached = results.first(where: { $0.accountID == incoming.accountID && Self.canReuseCachedResult($0, for: incoming) }),
-              let previous = cached.greptileAllowanceRenewal else { return incoming }
-        let renewal = GreptileAllowanceRenewal(
-            renewsAt: failed.lookupFailed ? previous.renewsAt : nil, observedAt: previous.observedAt,
-            isStale: true, unavailableReason: failed.unavailableReason,
-            requiresAuthentication: failed.requiresAuthentication, lookupFailed: failed.lookupFailed,
-            isApplicable: previous.isApplicable
-        )
-        var result = incoming
-        result.greptileAllowanceRenewal = renewal
-        return result
-    }
-
     private func replaceResult(_ result: ProviderUsageResult) {
         var nextResults = results.filter { $0.accountID != result.accountID }
         nextResults.append(result)
@@ -504,19 +482,8 @@ public final class UsageRefreshService: ObservableObject {
             return
         }
 
-        let freshGreptileCredits = failureResult.greptileReviewActivityUnavailableReason != nil
-            ? failureResult.bars.filter { $0.stableKey == GreptileUsageIdentity.creditAllowanceStableKey }
-            : []
-        let cachedGreptileReviews = freshGreptileCredits.isEmpty ? [] : (cachedResult?.bars ?? []).filter {
-            $0.stableKey == GreptileUsageIdentity.completedReviewsStableKey || $0.stableKey == GreptileUsageIdentity.reviewQuotaStableKey
-        }
-        var unavailableMetrics = dataResult.unavailableUsageMetrics.merging(failureResult.unavailableUsageMetrics) { _, latest in latest }
-        for (index, bar) in cachedGreptileReviews.enumerated() {
-            unavailableMetrics[bar.metricIdentifier(providerID: .greptile, index: index)] =
-                "Review activity unavailable. Last known: \(bar.used.formatted())."
-        }
-        let preserveGreptileHistory = failureResult.providerID == .greptile && failureResult.bars.isEmpty
-        let barsResult = failureResult.preserveCachedBarsOnFailure || preserveGreptileHistory
+        let unavailableMetrics = dataResult.unavailableUsageMetrics.merging(failureResult.unavailableUsageMetrics) { _, latest in latest }
+        let barsResult = failureResult.preserveCachedBarsOnFailure
             ? cachedResult ?? failureResult
             : dataResult
         let creditsResult = failureResult.preserveCachedCreditsOnFailure
@@ -532,8 +499,6 @@ public final class UsageRefreshService: ObservableObject {
                 hasZenBalance: creditsResult.creditsRemaining != nil
             )
             : failureResult.title
-        var renewal = failureResult.greptileAllowanceRenewal ?? cachedResult?.greptileAllowanceRenewal
-        if failureResult.greptileAllowanceRenewal == nil { renewal?.isStale = true }
         replaceResult(ProviderUsageResult(
             accountID: accountID,
             providerID: failureResult.providerID,
@@ -541,8 +506,8 @@ public final class UsageRefreshService: ObservableObject {
             plan: failureResult.plan ?? cachedResult?.plan,
             verifiedGrokPlanName: failureResult.verifiedGrokPlanName ?? cachedResult?.verifiedGrokPlanName,
             subtitle: subtitle,
-            bars: freshGreptileCredits.isEmpty ? barsResult.bars : freshGreptileCredits + cachedGreptileReviews,
-            barsFetchedAt: freshGreptileCredits.isEmpty ? barsResult.barsFetchedAt : failureResult.fetchedAt,
+            bars: barsResult.bars,
+            barsFetchedAt: barsResult.barsFetchedAt,
             creditsRemaining: creditsResult.creditsRemaining,
             creditsFetchedAt: creditsResult.creditsFetchedAt,
             monetaryMetrics: dataResult.monetaryMetrics,
@@ -551,8 +516,6 @@ public final class UsageRefreshService: ObservableObject {
             dashboardUsageMessages: dataResult.dashboardUsageMessages,
             cardInformationSections: dataResult.cardInformationSections,
             subscriptionRenewal: failureResult.providerID == .openCodeZen ? failureResult.boundSubscriptionRenewal : nil,
-            greptileAllowanceRenewal: renewal,
-            greptileReviewActivityUnavailableReason: failureResult.greptileReviewActivityUnavailableReason,
             codexBankedRateLimitResets: dataResult.codexBankedRateLimitResets,
             failureMessage: failureResult.failureMessage,
             recoveryAction: failureResult.recoveryAction,
@@ -572,9 +535,6 @@ public final class UsageRefreshService: ObservableObject {
         _ cachedResult: ProviderUsageResult,
         for failureResult: ProviderUsageResult
     ) -> Bool {
-        if failureResult.providerID == .greptile {
-            return cachedResult.cacheIdentity == failureResult.cacheIdentity
-        }
         if [.grok, .xSubscription, .codex].contains(failureResult.providerID)
             && (failureResult.recoveryAction == .reauthenticate || !failureResult.allowsUnscopedCacheReuse) {
             return false
@@ -805,7 +765,6 @@ public extension UsageRefreshService {
                 OpenCodeZenUsageProvider(),
                 MoonshotUsageProvider(),
                 CursorUsageProvider(),
-                GreptileUsageProvider(),
             ]
         )
     }

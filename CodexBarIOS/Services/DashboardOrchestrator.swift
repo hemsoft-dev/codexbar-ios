@@ -70,10 +70,6 @@ final class DashboardOrchestrator: ObservableObject {
         configurationStore.cursorHistoryInvalidations.sink { [weak historyStore] accountID in
             historyStore?.removeSnapshots(for: accountID)
         }.store(in: &cancellables)
-        configurationStore.greptileCredentialUpdates.sink { [weak refreshService, weak historyStore] update in
-            if update.identityChanged { historyStore?.removeSnapshots(for: update.accountID) }
-            refreshService?.invalidateCredentials(accountID: update.accountID, preserveCachedResult: !update.identityChanged)
-        }.store(in: &cancellables)
         configurationStore.grokHistoryInvalidations.sink { [weak historyStore] accountID in
             historyStore?.removeSnapshots(for: accountID)
         }.store(in: &cancellables)
