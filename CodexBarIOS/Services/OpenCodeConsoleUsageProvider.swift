@@ -5,6 +5,8 @@ struct OpenCodeConsoleUsageProvider {
     private static let refreshCoordinator = CredentialRefreshCoordinator<ProviderCredentialRefreshResult<OpenCodeConsoleCredential>>()
     let secretStore: SecretStore
     var makeSession: @Sendable () -> URLSession = { OpenCodeDeviceAuthService.makeSession() }
+    /// The instant a fetch observes usage and billing at. Tests pin it so fixture billing periods never expire.
+    var now: @Sendable () -> Date = { Date() }
 
     func fetchUsage(
         credential: OpenCodeConsoleCredential, configuration: ProviderAccountConfiguration
@@ -17,10 +19,10 @@ struct OpenCodeConsoleUsageProvider {
                 accountID: configuration.id, providerID: .openCodeZen, title: "OpenCode",
                 subtitle: "Reconnect in account settings.", bars: [],
                 failureMessage: "OpenCode authorization is unavailable. Reconnect in account settings.",
-                fetchedAt: Date()
+                fetchedAt: now()
             )
         }
-        let fetchedAt = Date()
+        let fetchedAt = now()
         async let balance = fetchBalance(current, service: service)
         async let goUsage = fetchGo(current, configuration: configuration, service: service, now: fetchedAt)
         let identity = Data(SHA256.hash(data: Data("\(current.workspaceID)\u{0}\(current.userID)".utf8)))

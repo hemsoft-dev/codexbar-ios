@@ -87,6 +87,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- The OpenCode Go renewal tests no longer start failing once their fixture
+  billing period ends. The OpenCode usage reader now takes its observation
+  time from a clock that tests pin to the fixture date; the app still uses the
+  current time.
+  ([#596](https://github.com/hemsoft-dev/codexbar-ios/issues/596))
 - Remove the Greptile provider code, its local regression targets, UI journeys
   and documentation. The release UI gate now covers 47 journeys per device
   family (25 original), including a new upgrade journey that checks the

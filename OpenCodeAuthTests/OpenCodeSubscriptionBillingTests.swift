@@ -94,7 +94,7 @@ final class OpenCodeSubscriptionBillingTests: XCTestCase, @unchecked Sendable {
                 XCTAssertEqual(request.value(forHTTPHeaderField: "x-org-id"), "org_synthetic")
                 return (200, path.contains("/billing/") ? Data(#"{"balanceMicroCents":"2500000000"}"#.utf8) : data)
             }
-            let result = await OpenCodeConsoleUsageProvider(secretStore: secrets, makeSession: Self.session)
+            let result = await OpenCodeConsoleUsageProvider(secretStore: secrets, makeSession: Self.session, now: { [now] in now })
                 .fetchUsage(credential: credentials, configuration: config)
             XCTAssertNil(result.failureMessage, scenario)
             XCTAssertEqual(result.creditsRemaining, 25, scenario)
@@ -120,7 +120,7 @@ final class OpenCodeSubscriptionBillingTests: XCTestCase, @unchecked Sendable {
                 }
                 return request.url!.path.contains("/billing/") ? (503, Data()) : (200, data)
             }
-            let result = await OpenCodeConsoleUsageProvider(secretStore: secrets, makeSession: Self.session)
+            let result = await OpenCodeConsoleUsageProvider(secretStore: secrets, makeSession: Self.session, now: { [now] in now })
                 .fetchUsage(credential: credentials, configuration: config)
             XCTAssertNotNil(result.failureMessage)
             XCTAssertNil(result.creditsRemaining)
@@ -134,7 +134,7 @@ final class OpenCodeSubscriptionBillingTests: XCTestCase, @unchecked Sendable {
             let displayed = try XCTUnwrap(refresh.results.first)
             XCTAssertNotNil(displayed.failureMessage)
             XCTAssertEqual(displayed.boundSubscriptionRenewal?.state, expected)
-            XCTAssertEqual(displayed.subscriptionBillingInformation(at: Date())?.items.first?.label,
+            XCTAssertEqual(displayed.subscriptionBillingInformation(at: now)?.items.first?.label,
                            state == "pending" ? "Renewal date unavailable" : state == "canceled" ? "Does not renew" : "Next subscription renewal")
         }
     }
@@ -191,7 +191,7 @@ final class OpenCodeSubscriptionBillingTests: XCTestCase, @unchecked Sendable {
             return (200, request.url!.path.contains("/billing/") ? Data(#"{"balanceMicroCents":"2500000000"}"#.utf8) : data)
         }
         let task = Task {
-            await OpenCodeConsoleUsageProvider(secretStore: secrets, makeSession: Self.session)
+            await OpenCodeConsoleUsageProvider(secretStore: secrets, makeSession: Self.session, now: { [now] in now })
                 .fetchUsage(credential: credentials, configuration: config)
         }
         await fulfillment(of: [after], timeout: 3)
