@@ -47,9 +47,10 @@ What stays the same, and what this does not establish:
 
 - Sign-in still goes through the public Claude Code client identifier, because
   CodexBar has no client registration of its own. Only the user agent is
-  truthful. Whether this sign-in is permitted is
-  [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548), and the
-  release hold stays.
+  truthful. On November 22 Franz decided to keep this sign-in as it is,
+  without contacting Anthropic, and accepted the risk
+  ([#548 decision](https://github.com/hemsoft-dev/codexbar-ios/issues/548#issuecomment-7076699406)). That is the owner's decision, not permission
+  from Anthropic.
 - `anthropic-beta: oauth-2025-04-20`, `anthropic-version: 2023-06-01` and the
   `cedar_ember=1` query are kept as protocol parameters.
 - Accounts signed in earlier are not signed out, migrated or rewritten. Renewal
@@ -384,8 +385,8 @@ pending receipt and refreshes usage and inventory. Any other `unavailable`
 answer stays unconfirmed and keeps the receipt. Live use of a Fable reset beside
 a weekly reset remains pending for Franz
 ([#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559)).
-Authentication and client-identity qualification remains separate under
-[#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548).
+Authentication and client identity were decided separately by the owner in
+[#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548#issuecomment-7076699406).
 
 ## Fable weekly allowance
 
