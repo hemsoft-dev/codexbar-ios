@@ -2,7 +2,7 @@
 
 This document tracks the work required to ship CodexBar for iOS and iPadOS through TestFlight and App Store review.
 
-Status last reviewed: November 15, 2026
+Status last reviewed: November 22, 2026
 
 ## Post-launch status
 
@@ -42,7 +42,7 @@ evidence is retained below and in the existing issues.
 
 | Existing issue | Remaining criterion | Owner and next actual trigger |
 | --- | --- | --- |
-| [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469) | Private privacy questionnaire, Paid Apps Agreement status and retained product settings | Franz will read these in App Store Connect and report them. The other two criteria have owner dispositions from November 20: not enrolled in the Small Business Program by choice, and the canonical privacy URL is changed with the next submission (see the final submission checklist). No ASC write is authorized now. |
+| [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469) | None. Closed November 22 | Retained Pro product settings were reverified on November 22 via authorized read-only App Store Connect API GET readbacks ([receipt](docs/evidence/2026-11-22-asc-pro-readback.json)). Franz accepted the public App Store evidence (`Data Not Collected` and live Pro Monthly, Yearly and Lifetime IAPs) as sufficient disposition for the private privacy questionnaire and Paid Apps Agreement, which remain unverified directly via API. Small Business Program non-enrollment (November 20) and the canonical privacy URL change on the next-submission checklist stand. No ASC write occurred; the November 1 publishing hold is unchanged. |
 | [#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470) | None. Closed on owner dispositions, November 20 | New-customer Free download and Pro screen reported as working by Franz. Production trial, Restore and family-device checks waived by Franz and left unverified. No production screenshots, by decision. All 175 public storefronts showed Free on November 19. Details are under "Owner dispositions, November 20". |
 | [#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409) | None. Closed as not planned, November 21 | Owner decision: Greptile support is removed from the app ([#594](https://github.com/hemsoft-dev/codexbar-ios/issues/594)). An upgrade deletes saved Greptile accounts and history and shows a one-time note. |
 | [#548](https://github.com/hemsoft-dev/codexbar-ios/issues/548) | None. Closed on an owner decision, November 22 | Franz decided to keep Claude sign-in as it is, without contacting Anthropic, and accepted the risk with Anthropic's published credential guidance known ([decision](https://github.com/hemsoft-dev/codexbar-ios/issues/548#issuecomment-7076699406)). The app identifies itself truthfully and requests fewer scopes ([#589](https://github.com/hemsoft-dev/codexbar-ios/issues/589)). This records the owner's decision; it is not permission from Anthropic or a legal conclusion. Franz's general publishing hold from November 1 is separate and unchanged. |
@@ -141,7 +141,45 @@ Connect readback or a retroactive pass of a missed launch requirement.
 | Production-device screenshots | Not supplied, by decision | Franz's written reports stand as the evidence |
 | Small Business Program | Not enrolled, by choice | Franz's stated decision; not an enrollment-screen readback. The missed before-shipping timing does not pass retroactively |
 | Canonical privacy policy URL | Change it with the next submission | The old address still redirected on November 20. Carried by the final submission checklist |
-| Privacy questionnaire, Paid Apps Agreement, retained product settings | Open | Franz will read them in App Store Connect and report; tracked in #469 |
+| Privacy questionnaire, Paid Apps Agreement, retained product settings | Resolved November 22 | Retained product settings reverified by read-only ASC API GET on November 22; Franz accepted the public App Store evidence for the private questionnaire and Paid Apps Agreement, closing #469 (see below) |
+
+### Retained Pro product readback and #469 closeout, November 22
+
+With Franz's explicit authorization on November 22, 2026 at 5:24 PM EST, read-only
+App Store Connect API GET requests ([receipt](docs/evidence/2026-11-22-asc-pro-readback.json),
+observed at **5:24:58 PM EST**, `2026-11-22T22:24:58Z`) reverified the retained
+2.0 Pro configuration with zero ASC writes:
+
+- App version `2.0.0` (`2c7b9bd4-b877-454d-a5a2-036b25a151f5`) remains
+  `READY_FOR_SALE` with `MANUAL` release; the app price schedule retains 1
+  manual and 174 automatic zero-price records (175/175 Free).
+- Subscription group `22490183` (**CodexBar Pro**): Monthly (`6824195141`,
+  `com.hemsoft.CodexBarIOS.pro.monthly`, `APPROVED`, `ONE_MONTH`, level 1,
+  `familySharable: false`, 175 territories, USA `$1.99`, 0 introductory offers)
+  and Yearly (`6824195239`, `com.hemsoft.CodexBarIOS.pro.yearly`, `APPROVED`,
+  `ONE_YEAR`, level 1, `familySharable: false`, 175 territories, USA `$14.99`,
+  175 `ONE_WEEK` `FREE_TRIAL` introductory offers starting `2026-10-18` with
+  null end date).
+- Lifetime non-consumable (`6824195355`, `com.hemsoft.CodexBarIOS.pro.lifetime`,
+  `APPROVED`, `NON_CONSUMABLE`, `familySharable: false`, 175 territories, USA
+  manual price `$29.99`).
+- App-level subscription billing grace period remains `optIn: true`,
+  `sandboxOptIn: true`, `SIXTEEN_DAYS`, `ALL_RENEWALS`.
+- App info (`d080baf5-aca3-4569-bc40-ec657e5bb125`) remains
+  `READY_FOR_DISTRIBUTION` with en-US `privacyPolicyUrl` still set to
+  `https://github.com/HemSoft/codexbar-ios/blob/main/PRIVACY.md`. An anonymous
+  check at 5:21 PM EST confirmed the `HTTP/2 301` redirect to
+  [PRIVACY.md](https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md),
+  and the URL update stays on the final submission checklist for the next
+  editable submission.
+
+Because Apple's App Store Connect REST API does not expose the private App
+Privacy questionnaire or Paid Apps Agreement status, those two web-portal
+records remain unverified directly. On November 22, 2026, Franz accepted the
+public App Store evidence checked at 5:21 PM EST (`2.0.0`, `Free`,
+`Data Not Collected`, and live `Pro Monthly`, `Pro Yearly` and `Pro Lifetime`
+IAPs) as sufficient disposition to close [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469).
+The November 1 publishing hold is unchanged.
 
 Fixed `T`, the rule never to raise the app price after `T`, the recorded hosted
 release-gate failure and the November 1 hold are unchanged.
@@ -708,7 +746,10 @@ en-US name and subtitle, and the saved
 These fields do not verify the unpublished privacy questionnaire, legal
 agreements or Small Business Program status.
 
-Paid Apps Agreement status remains **UNVERIFIED**. On November 20, 2026 Franz
+Paid Apps Agreement status remains **UNVERIFIED** directly via App Store Connect
+(on November 22, 2026, Franz accepted live public Pro IAP availability as
+sufficient disposition to close [#469](https://github.com/hemsoft-dev/codexbar-ios/issues/469)).
+On November 20, 2026 Franz
 stated that he is not enrolled in the
 [Small Business Program](https://developer.apple.com/app-store/small-business-program/),
 by choice. That is his decision as stated, not an enrollment-screen readback.
