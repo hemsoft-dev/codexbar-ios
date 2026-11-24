@@ -218,9 +218,10 @@ private final class AntigravityHiddenPageLoad: NSObject, WKNavigationDelegate {
     }
 
     /// A hidden page is only read while CodexBar is on screen. In the background iOS suspends the app mid-load.
+    /// At launch, and during any brief interruption, the app is inactive but still on screen, and that counts.
     static var isAppOnScreen: Bool {
         #if canImport(UIKit)
-        UIApplication.shared.applicationState == .active
+        UIApplication.shared.applicationState != .background
         #else
         true
         #endif
