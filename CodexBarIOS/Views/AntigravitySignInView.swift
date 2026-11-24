@@ -30,9 +30,15 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
     private var progress = AntigravityCaptureProgress()
     private var signInNavigation = AntigravitySignInNavigation()
     private var finishTask: Task<Void, Never>?
+    private let reader: AntigravityPageReading?
+    private var widePageRead: Task<Void, Never>?
 
-    init(isSynthetic: Bool = false, completion: @escaping (Result<AntigravitySignInResult, AntigravitySignInError>) -> Void) {
+    init(
+        isSynthetic: Bool = false, reader: AntigravityPageReading? = nil,
+        completion: @escaping (Result<AntigravitySignInResult, AntigravitySignInError>) -> Void
+    ) {
         self.isSynthetic = isSynthetic
+        self.reader = reader ?? (isSynthetic ? nil : WebKitAntigravityPageReader())
         self.completion = completion
         super.init()
         AntigravityPendingSignIns.begin(storeID)
@@ -96,7 +102,30 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
         if case let .quota(body) = response { AntigravityGateDiagnostics.recordQuotaResponse(body) }
         if event == .unreadableQuota { message = AntigravityReadError.unreadableResponse.localizedDescription }
         if event == .quota { finishAfterProfileGrace() }
+        if event == .profile { readUsageOnAWidePage(observedPath: path) }
         if event == .signedOut, case let .signInLink(link) = response { followSignInLink(link) }
+    }
+
+    /// The plan response means the customer is signed in. On a phone-width page Google's Settings opens as a list
+    /// and never asks for quota by itself, so the wide hidden page that every refresh uses reads it now, with the
+    /// same sign-in. Whichever page reports usage first finishes the sign-in. `observedPath` is where the visible
+    /// page was, such as `/u/1/remote` for a second Google account, so the wide page reads that same account.
+    private func readUsageOnAWidePage(observedPath: String?) {
+        guard widePageRead == nil, let reader, progress.capture == nil else { return }
+        let marker = AntigravityWebSessionMarker(websiteDataStoreID: storeID, pagePath: observedPath)
+        widePageRead = Task { [weak self] in
+            let capture = try? await reader.read(marker: marker)
+            self?.adopt(capture)
+        }
+    }
+
+    /// A wide-page read that found nothing leaves the next plan response free to try again.
+    private func adopt(_ capture: AntigravityPageCapture?) {
+        widePageRead = nil
+        guard completion != nil, progress.capture == nil, let capture else { return }
+        AntigravityGateDiagnostics.record("signin.wide-page-quota")
+        let event = progress.receive(.quota(capture.quotaBody), pagePath: capture.pagePath, requiresReadableQuota: true)
+        if event == .quota { succeed() }
     }
 
     /// Opens Google's own Sign in link, as tapping it on the page would.
@@ -131,6 +160,8 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
         completion = nil
         finishTask?.cancel()
         finishTask = nil
+        widePageRead?.cancel()
+        widePageRead = nil
         receiver.onResponse = nil
         if let webView {
             webView.stopLoading()
@@ -253,8 +284,8 @@ struct AntigravitySignInView: View {
         } else {
             VStack(spacing: 0) {
                 Text(
-                    "Sign in on Google's website. CodexBar returns here once Google's page shows your usage. "
-                        + "If it doesn't, open Settings on the page, then Models & Usage."
+                    "Sign in on Google's website. CodexBar returns here by itself a few seconds after you are signed in. "
+                        + "If it doesn't, tap Models & Usage below."
                 )
                 .font(.footnote)
                 .padding()

@@ -9,9 +9,20 @@ Terms used here are defined in [GLOSSARY.md](GLOSSARY.md).
 Status on November 24, 2026: the owner signed in on his iPhone at 19:26 UTC with
 a development build and reported that the card's values match Google's page.
 The response that build recorded is now a unit-test fixture, and it has the
-layout described below. No signed-in request has been made by an agent. Still
-pending with the owner: a refresh by the hidden web view after sign-in, the
-comparison with `agy /usage`, and the seven-day session check.
+layout described below. No signed-in request has been made by an agent.
+
+A refresh after sign-in did not work on that build, and now does. At 21:20 UTC
+the owner refreshed and the card said Google's page didn't report usage. The
+build's log and a picture of the hidden page showed why: Google's app uses its
+phone layout on a page 768 points wide or less, where Settings opens as a list
+and the usage screen never opens from its address, so the page never asked for
+quota. The hidden page is now 1280 points wide. With that build the owner's
+phone read quota 3 seconds after opening the page at 21:46 UTC and 1 second
+after at 23:18 UTC, on the same sign-in, and he confirmed the four meters.
+
+Still pending with the owner: a sign-in on the build where sign-in also reads
+through the wide page, the comparison with `agy /usage`, and the seven-day
+session check.
 
 Checked signed out on November 24, 2026, against Google's live page: the hidden
 read reports "sign in again" in under a second, and in the iOS simulator the
@@ -30,11 +41,15 @@ credentials, so whether Google accepts a sign-in there is still unverified.
    the usage screen.
 3. Google's page requests the account's quota from Google's service. CodexBar
    reads the text of that response as the page receives it.
-4. Once a response parses into one or more of the four meters, CodexBar saves
+4. Once the customer is signed in, CodexBar opens the same usage screen in a
+   hidden page 1280 points wide and reads the quota response from it. On a
+   phone-width page Google's app shows Settings as a list, and the usage screen
+   that asks for quota opens only when tapped.
+5. Once a response parses into one or more of the four meters, CodexBar saves
    the account. A canceled or failed sign-in leaves no account and no website
    data.
-5. On refresh, CodexBar loads the same page in a hidden web view that uses the
-   account's website data, and reads the response again.
+6. On refresh, CodexBar loads the usage screen in the same kind of wide hidden
+   page, using the account's website data, and reads the response again.
 
 CodexBar sends no request of its own to a Google host for this provider. It
 computes no Google signature, sends no Google API key, and neither copies
@@ -108,7 +123,8 @@ Google and can change without notice.
 | --- | --- |
 | The page reported usage | The meters, read time, and plan when reported |
 | The page showed Google's Sign in link, or moved to Google's sign-in form | "Google asked you to sign in again", no values, a sign-in action |
-| The page loaded but reported no usage | An explanation that an account which only works through a connected computer can't be read, no values |
+| The page loaded signed in but reported no usage in time | The last reading, marked stale, with an explanation that also says an account which only works through a connected computer can't be read. Without an earlier reading, the explanation and no values. |
+| CodexBar wasn't on screen | The last reading with the time it was read. Nothing is loaded, and the next refresh on screen runs at once. An account that was never read says it refreshes while CodexBar is open. |
 | The page didn't load | The last reading, marked stale, with the failure. Stale readings raise no alerts and add no history. |
 | The response wasn't recognized | The last reading, marked stale, and a note that an app update may be needed |
 
@@ -144,9 +160,12 @@ sign-in is removed from the shared store once per installation.
 ## Development-build diagnostics
 
 Debug builds write `Library/Caches/AntigravityGate/events.log` and
-`quota-response.json` in the app container: page hosts and paths, outcomes and
-the last quota response. They hold no profile response, cookie, header or
-account name. Release builds write nothing.
+`quota-response.json` in the app container: page hosts and paths, timings,
+outcomes and the last quota response. When a hidden page reports no usage they
+also record its route, its headings and button labels, and a picture of the
+page as `hidden-page.png`. The picture can show the signed-in account's name
+and avatar, and it stays in the app's caches on the device. They hold no
+profile response, cookie or header. Release builds write nothing.
 
 ## Known limits
 
@@ -155,11 +174,15 @@ account name. Release builds write nothing.
 - The response layout was inferred from public page code and matched the one
   live response captured so far. Most unit-test fixtures are still built from
   that layout; one is the live response.
-- Whether the Models & Usage screen fetches quota when opened by its address in
-  a hidden web view is unverified. During the owner's sign-in the first load of
-  the usage screen brought the plan but no quota for 19 seconds, and a second
-  load brought quota in 3 seconds. Google's app reports its own address as the
-  entry (`/remote`) even on the usage screen, so refresh opens that entry's
-  usage screen first.
+- The hidden page has to stay wider than Google's phone layout. If Google
+  changes that width, or how the usage screen opens, refresh stops reporting
+  usage and the card keeps the last reading, marked stale.
+- The reader waits up to 30 seconds on the first page and 15 on each fallback.
+  On the owner's phone quota arrived 1 to 3 seconds after the page opened.
+- Google's app reports its own address as the entry (`/remote`) even on the
+  usage screen, so refresh opens that entry's usage screen first.
+- Refresh runs only while CodexBar is on screen. In the background iOS suspends
+  the app mid-load, so widgets and the watch show the last reading with its
+  time until the app is opened.
 - Passkey and security-key sign-in may not work inside an in-app browser.
 - AI credits and Gemini app chat limits are out of scope.

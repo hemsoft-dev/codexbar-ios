@@ -120,28 +120,41 @@ final class AntigravityCaptureReceiver: NSObject, WKScriptMessageHandler {
 
 /// Reads usage without showing the page. One read runs at a time.
 public final class WebKitAntigravityPageReader: AntigravityPageReading {
-    private let attemptTimeout: Duration
+    private let firstAttemptTimeout: Duration
+    private let laterAttemptTimeout: Duration
     private let profileGrace: Duration
 
-    public init(attemptTimeout: Duration = .seconds(15), profileGrace: Duration = .milliseconds(1500)) {
-        self.attemptTimeout = attemptTimeout
+    /// On the owner's phone a wide page reported quota 1 to 3 seconds after it was opened. The limits leave room
+    /// for a slow connection.
+    public init(
+        firstAttemptTimeout: Duration = .seconds(30), laterAttemptTimeout: Duration = .seconds(15),
+        profileGrace: Duration = .milliseconds(1500)
+    ) {
+        self.firstAttemptTimeout = firstAttemptTimeout
+        self.laterAttemptTimeout = laterAttemptTimeout
         self.profileGrace = profileGrace
     }
 
     public func read(marker: AntigravityWebSessionMarker) async throws -> AntigravityPageCapture {
-        try await AntigravityReadQueue.shared.run { [attemptTimeout, profileGrace] in
+        try await AntigravityReadQueue.shared.run { [firstAttemptTimeout, laterAttemptTimeout, profileGrace] in
+            guard AntigravityHiddenPageLoad.isAppOnScreen else {
+                AntigravityGateDiagnostics.record("read.skipped app-not-active")
+                throw AntigravityReadError.appNotActive
+            }
             let load = AntigravityHiddenPageLoad(storeID: marker.websiteDataStoreID)
             defer { load.finish() }
             return try await load.read(
                 urls: AntigravityPagePolicy.pageURLs(pagePath: marker.pagePath),
-                attemptTimeout: attemptTimeout, profileGrace: profileGrace
+                timeouts: (first: firstAttemptTimeout, later: laterAttemptTimeout), profileGrace: profileGrace
             )
         }
     }
 }
 
+/// Runs one hidden page load at a time. Canceling the caller cancels its load, so a canceled sign-in releases
+/// its web view at once and neither keeps its website data alive nor holds up the reads behind it.
 @MainActor
-private final class AntigravityReadQueue {
+final class AntigravityReadQueue {
     static let shared = AntigravityReadQueue()
     private var tail: Task<Void, Never>?
 
@@ -149,10 +162,15 @@ private final class AntigravityReadQueue {
         let previous = tail
         let task = Task { @MainActor in
             await previous?.value
+            try Task.checkCancellation()
             return try await work()
         }
         tail = Task { _ = await task.result }
-        return try await task.value
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
     }
 }
 
@@ -161,24 +179,32 @@ private final class AntigravityHiddenPageLoad: NSObject, WKNavigationDelegate {
     private let webView: WKWebView
     private let receiver = AntigravityCaptureReceiver()
     private var attempt = AntigravityReadAttempt()
+    private var started = SuspendingClock.now
 
     init(storeID: UUID) {
         webView = WKWebView(
-            frame: CGRect(x: 0, y: 0, width: 390, height: 844),
+            frame: CGRect(origin: .zero, size: AntigravityPagePolicy.hiddenPageSize),
             configuration: AntigravityCaptureReceiver.configuration(storeID: storeID, receiver: receiver)
         )
         super.init()
         webView.navigationDelegate = self
         receiver.onResponse = { [weak self] response, path in
             self?.attempt.receive(response, pagePath: path)
+            self?.recordResponse(response)
         }
         attachBehindApp()
     }
 
-    /// A page outside any window may never run its scripts, so the web view sits invisibly behind the app.
+    private func recordResponse(_ response: AntigravityPagePolicy.CapturedResponse) {
+        if case .profile = response { AntigravityGateDiagnostics.record("read.profile t=\(elapsed)") }
+        if case .signInLink = response { AntigravityGateDiagnostics.record("read.sign-in-link t=\(elapsed)") }
+    }
+
+    /// A page outside any window may never run its scripts, so the web view sits behind the app's own content,
+    /// nearly transparent in case anything above it ever is.
     private func attachBehindApp() {
         #if canImport(UIKit)
-        webView.alpha = 0
+        webView.alpha = 0.02
         webView.isUserInteractionEnabled = false
         webView.accessibilityElementsHidden = true
         let window = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
@@ -197,18 +223,33 @@ private final class AntigravityHiddenPageLoad: NSObject, WKNavigationDelegate {
         #endif
     }
 
-    func read(urls: [URL], attemptTimeout: Duration, profileGrace: Duration) async throws -> AntigravityPageCapture {
+    /// A hidden page is only read while CodexBar is on screen. In the background iOS suspends the app mid-load.
+    /// At launch, and during any brief interruption, the app is inactive but still on screen, and that counts.
+    static var isAppOnScreen: Bool {
+        #if canImport(UIKit)
+        UIApplication.shared.applicationState != .background
+        #else
+        true
+        #endif
+    }
+
+    func read(
+        urls: [URL], timeouts: (first: Duration, later: Duration), profileGrace: Duration
+    ) async throws -> AntigravityPageCapture {
         var reachedAntigravity = false
-        for url in urls {
-            if let capture = try await open(url, attemptTimeout: attemptTimeout, profileGrace: profileGrace) { return capture }
+        for (index, url) in urls.enumerated() {
+            let limit = index == 0 ? timeouts.first : timeouts.later
+            if let capture = try await open(url, attemptTimeout: limit, profileGrace: profileGrace) { return capture }
             reachedAntigravity = reachedAntigravity || attempt.reachedAntigravity(at: webView.url)
         }
+        guard Self.isAppOnScreen else { throw AntigravityReadError.appNotActive }
         throw AntigravityReadAttempt.failure(reachedAntigravity: reachedAntigravity)
     }
 
     /// Loads one page and returns what it reported, or nil when it reported no usage in time.
     private func open(_ url: URL, attemptTimeout: Duration, profileGrace: Duration) async throws -> AntigravityPageCapture? {
         attempt = AntigravityReadAttempt()
+        started = SuspendingClock.now
         AntigravityGateDiagnostics.record("read.open \(AntigravityGateDiagnostics.describe(url))")
         webView.load(URLRequest(url: url))
         try await wait(until: attemptTimeout) { $0.isSettled }
@@ -219,20 +260,30 @@ private final class AntigravityHiddenPageLoad: NSObject, WKNavigationDelegate {
         }
         guard attempt.progress.quotaBody != nil else {
             let place = AntigravityGateDiagnostics.describe(webView.url)
-            AntigravityGateDiagnostics.record("read.no-quota failed=\(attempt.navigationFailed) at=\(place)")
+            let profile = attempt.progress.profileBody != nil
+            AntigravityGateDiagnostics.record(
+                "read.no-quota t=\(elapsed) failed=\(attempt.navigationFailed) profile=\(profile) at=\(place)"
+            )
+            await AntigravityGateDiagnostics.recordPageState(of: webView)
             return nil
         }
         // Google's page asks for the plan in a separate request; give it a moment to arrive.
         try await wait(until: profileGrace) { $0.progress.profileBody != nil }
         let capture = attempt.progress.capture
-        AntigravityGateDiagnostics.record("read.quota path=\(capture?.pagePath ?? "?") profile=\(capture?.profileBody != nil)")
+        AntigravityGateDiagnostics.record("read.quota t=\(elapsed) path=\(capture?.pagePath ?? "?") profile=\(capture?.profileBody != nil)")
         AntigravityGateDiagnostics.recordQuotaResponse(capture?.quotaBody ?? "")
         return capture
     }
 
+    /// Whole seconds since this page was opened, not counting time the app spent suspended.
+    private var elapsed: Int {
+        Int((SuspendingClock.now - started).components.seconds)
+    }
+
+    /// Waits on a clock that stops while iOS has the app suspended, so a suspended load isn't mistaken for a slow one.
     private func wait(until limit: Duration, for condition: (AntigravityReadAttempt) -> Bool) async throws {
-        let deadline = ContinuousClock.now + limit
-        while !condition(attempt), ContinuousClock.now < deadline {
+        let deadline = SuspendingClock.now + limit
+        while !condition(attempt), SuspendingClock.now < deadline {
             try await Task.sleep(for: .milliseconds(150))
         }
     }
@@ -245,6 +296,7 @@ private final class AntigravityHiddenPageLoad: NSObject, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         attempt.pageFinished(at: webView.url)
+        AntigravityGateDiagnostics.record("read.finished t=\(elapsed) at=\(AntigravityGateDiagnostics.describe(webView.url))")
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {

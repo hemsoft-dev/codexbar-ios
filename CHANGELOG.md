@@ -19,8 +19,11 @@ building, testing, or releasing the app.
   each account's Google sign-in in a private browser profile that is deleted
   with the account. A canceled sign-in adds no account. A limit you haven't
   used shows no reset time, as on Google's page. The account owner signed in
-  on an iPhone and confirmed the values match Google's page; whether the
-  sign-in lasts a week is still being checked.
+  on an iPhone and confirmed the values match Google's page. Antigravity
+  refreshes only while CodexBar is open; widgets and Apple Watch show the last
+  reading with its time. If Google's page loads without reporting usage, the
+  card keeps the last reading and marks it stale. Whether the sign-in lasts a
+  week is still being checked.
   ([#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601))
 
 - Add Account now explains that Muse Code isn't available on iPhone. Meta

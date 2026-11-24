@@ -37,6 +37,16 @@ public enum AntigravityReadError: LocalizedError, Equatable, Sendable {
     case noUsageReported
     case pageFailed
     case unreadableResponse
+    /// CodexBar isn't on screen, where a hidden page can't be relied on to finish loading.
+    case appNotActive
+
+    /// Whether the card keeps showing the last reading, marked stale. A sign-in that has ended shows no values.
+    public var keepsLastReading: Bool {
+        switch self {
+        case .noUsageReported, .pageFailed, .unreadableResponse, .appNotActive: true
+        case .notConfigured, .signInRequired: false
+        }
+    }
 
     public var errorDescription: String? {
         switch self {
@@ -45,12 +55,14 @@ public enum AntigravityReadError: LocalizedError, Equatable, Sendable {
         case .signInRequired:
             "Google asked you to sign in again. Sign in to read Antigravity usage."
         case .noUsageReported:
-            "Google's page didn't report usage for this account. An Antigravity account that only works through a "
-                + "connected computer can't be read by CodexBar."
+            "Google's page loaded but didn't report usage this time. CodexBar tries again at the next refresh. "
+                + "An Antigravity account that only works through a connected computer can't be read by CodexBar."
         case .pageFailed:
             "Google's Antigravity page didn't load. Check your connection and try again."
         case .unreadableResponse:
             "Google's Antigravity page reported usage in a form CodexBar doesn't recognize. An app update may be needed."
+        case .appNotActive:
+            "Antigravity refreshes while CodexBar is open."
         }
     }
 }
@@ -81,6 +93,10 @@ public enum AntigravityPagePolicy {
     static let profileMethodSuffix = "/google.gca.aicode.v1alpha.JetskiRemoteAgentProxyService/GetUserProfile"
     static let responseHosts: Set<String> = ["aicode.clients6.google.com", "aicode.googleapis.com"]
     public static let messageHandlerName = "codexbarAntigravity"
+    /// Google's app shows Settings as a list on a narrow page, and the address then opens the list, not the usage
+    /// screen. On a wide page the same address opens Models & Usage, which is what asks for quota. Seen on the
+    /// owner's phone on November 24, 2026: a 390-point page never asked for quota.
+    public static let hiddenPageSize = CGSize(width: 1280, height: 900)
     static let maximumBodyLength = 256 * 1024
 
     /// The notice a customer accepts before signing in. Also quoted in PRIVACY.md and ANTIGRAVITY-USAGE.md.
