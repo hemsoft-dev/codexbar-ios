@@ -102,16 +102,17 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
         if case let .quota(body) = response { AntigravityGateDiagnostics.recordQuotaResponse(body) }
         if event == .unreadableQuota { message = AntigravityReadError.unreadableResponse.localizedDescription }
         if event == .quota { finishAfterProfileGrace() }
-        if event == .profile { readUsageOnAWidePage() }
+        if event == .profile { readUsageOnAWidePage(observedPath: path) }
         if event == .signedOut, case let .signInLink(link) = response { followSignInLink(link) }
     }
 
     /// The plan response means the customer is signed in. On a phone-width page Google's Settings opens as a list
     /// and never asks for quota by itself, so the wide hidden page that every refresh uses reads it now, with the
-    /// same sign-in. Whichever page reports usage first finishes the sign-in.
-    private func readUsageOnAWidePage() {
+    /// same sign-in. Whichever page reports usage first finishes the sign-in. `observedPath` is where the visible
+    /// page was, such as `/u/1/remote` for a second Google account, so the wide page reads that same account.
+    private func readUsageOnAWidePage(observedPath: String?) {
         guard widePageRead == nil, let reader, progress.capture == nil else { return }
-        let marker = AntigravityWebSessionMarker(websiteDataStoreID: storeID)
+        let marker = AntigravityWebSessionMarker(websiteDataStoreID: storeID, pagePath: observedPath)
         widePageRead = Task { [weak self] in
             let capture = try? await reader.read(marker: marker)
             self?.adopt(capture)

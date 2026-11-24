@@ -180,25 +180,32 @@ final class AntigravityAccountTests: XCTestCase {
     func testSignedInCustomerGetsUsageFromTheWidePageWithoutOpeningSettingsByHand() async throws {
         // On a phone-width page Google's Settings opens as a list and never asks for quota. The plan response says
         // the customer is signed in; the wide hidden page then reads usage with the same website data store.
-        let capture = AntigravityPageCapture(quotaBody: AntigravityFixtures.liveQuotaBody, pagePath: "/remote")
+        let capture = AntigravityPageCapture(quotaBody: AntigravityFixtures.liveQuotaBody, pagePath: "/u/1/remote")
         let reader = AntigravityFixtureReader([.failure(.noUsageReported), .success(capture)])
         var outcomes: [Result<AntigravitySignInResult, AntigravitySignInError>] = []
         let session = AntigravitySignInSession(isSynthetic: true, reader: reader) { outcomes.append($0) }
         session.acceptNotice()
 
-        session.receive(.profile(AntigravityFixtures.profileBody), path: "/remote")
+        // The customer chose a second Google account, which Google's app serves under `/u/1`.
+        session.receive(.profile(AntigravityFixtures.profileBody), path: "/u/1/remote")
         for _ in 0..<20 where await reader.markers.isEmpty { try await Task.sleep(for: .milliseconds(50)) }
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertTrue(outcomes.isEmpty, "a wide page that reported nothing is not a sign-in")
 
-        session.receive(.profile(AntigravityFixtures.profileBody), path: "/remote")
+        session.receive(.profile(AntigravityFixtures.profileBody), path: "/u/1/remote")
         for _ in 0..<40 where outcomes.isEmpty { try await Task.sleep(for: .milliseconds(50)) }
         let result = try XCTUnwrap(outcomes.first).get()
         XCTAssertEqual(result.marker.websiteDataStoreID, session.storeID)
+        XCTAssertEqual(result.marker.pagePath, "/u/1/remote", "later refreshes read the same account")
         XCTAssertEqual(result.capture.quotaBody, AntigravityFixtures.liveQuotaBody)
         XCTAssertEqual(result.capture.profileBody, AntigravityFixtures.profileBody, "the plan the visible page reported is kept")
         let reads = await reader.markers
         XCTAssertEqual(reads.map(\.websiteDataStoreID), [session.storeID, session.storeID], "it reads with this sign-in's own store")
+        XCTAssertEqual(reads.map(\.pagePath), ["/u/1/remote", "/u/1/remote"], "and the account the visible page is showing")
+        XCTAssertEqual(
+            AntigravityPagePolicy.pageURLs(pagePath: reads.first?.pagePath).first?.absoluteString,
+            "https://antigravity.google.com/u/1/remote/settings?settingsScreen=Models"
+        )
         AntigravitySignInSession.discard(storeID: session.storeID)
     }
 

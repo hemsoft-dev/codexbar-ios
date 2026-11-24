@@ -124,7 +124,7 @@ Google and can change without notice.
 | The page reported usage | The meters, read time, and plan when reported |
 | The page showed Google's Sign in link, or moved to Google's sign-in form | "Google asked you to sign in again", no values, a sign-in action |
 | The page loaded signed in but reported no usage in time | The last reading, marked stale, with an explanation that also says an account which only works through a connected computer can't be read. Without an earlier reading, the explanation and no values. |
-| CodexBar wasn't on screen | The last reading, marked stale. Nothing is loaded, and the next refresh on screen runs at once. |
+| CodexBar wasn't on screen | The last reading with the time it was read. Nothing is loaded, and the next refresh on screen runs at once. An account that was never read says it refreshes while CodexBar is open. |
 | The page didn't load | The last reading, marked stale, with the failure. Stale readings raise no alerts and add no history. |
 | The response wasn't recognized | The last reading, marked stale, and a note that an app update may be needed |
 

@@ -88,6 +88,13 @@ public actor AntigravityReadCache {
         public let outcome: Result<AntigravityPageCapture, AntigravityReadError>
     }
 
+    /// Off screen there is nothing new to say, so widgets and the watch keep the last reading with its own time.
+    /// Only an account with no reading at all reports that it refreshes while the app is open.
+    private static func offScreenResult(_ reading: Reading, earlier: Reading?) -> Reading {
+        guard reading.outcome == .failure(.appNotActive), let earlier, (try? earlier.outcome.get()) != nil else { return reading }
+        return earlier
+    }
+
     private var readings: [UUID: Reading] = [:]
     private var inFlight: [UUID: Task<Reading, Never>] = [:]
 
@@ -128,6 +135,6 @@ public actor AntigravityReadCache {
             // against the five-minute limit and never replaces an earlier reading.
             if reading.outcome != .failure(.appNotActive) { readings[storeID] = reading }
         }
-        return reading
+        return Self.offScreenResult(reading, earlier: readings[storeID])
     }
 }

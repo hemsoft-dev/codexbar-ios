@@ -185,11 +185,12 @@ final class AntigravityUsageProviderTests: XCTestCase, @unchecked Sendable {
         let provider = provider(
             account: account, marker: AntigravityWebSessionMarker(websiteDataStoreID: UUID()), reader: reader, clock: clock
         )
-        _ = try await provider.fetchUsage(for: account)
+        let first = try await provider.fetchUsage(for: account)
         clock.advance(5 * 60)
         let skipped = try await provider.fetchUsage(for: account)
-        XCTAssertEqual(skipped.failureMessage, "Antigravity refreshes while CodexBar is open.")
-        XCTAssertTrue(skipped.preserveCachedBarsOnFailure)
+        XCTAssertNil(skipped.failureMessage, "off screen, widgets and the watch keep the last reading")
+        XCTAssertEqual(skipped.fetchedAt, first.fetchedAt, "with the time it was read")
+        XCTAssertEqual(skipped.bars.map(\.used), first.bars.map(\.used))
 
         // Back on screen a moment later, the refresh runs at once.
         clock.advance(2)
@@ -198,6 +199,15 @@ final class AntigravityUsageProviderTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(refreshed.fetchedAt, start.addingTimeInterval(5 * 60 + 2))
         let reads = await reader.markers
         XCTAssertEqual(reads.count, 3)
+        // An account that has never been read off screen has nothing to keep, and says when it refreshes.
+        let neverRead = AntigravityFixtures.configuration(id: "never-read")
+        let offScreen = AntigravityFixtureReader([.failure(.appNotActive)])
+        let fresh = self.provider(
+            account: neverRead, marker: AntigravityWebSessionMarker(websiteDataStoreID: UUID()), reader: offScreen, clock: clock
+        )
+        let unread = try await fresh.fetchUsage(for: neverRead)
+        XCTAssertEqual(unread.failureMessage, "Antigravity refreshes while CodexBar is open.")
+        XCTAssertTrue(unread.bars.isEmpty)
         for error in [AntigravityReadError.noUsageReported, .pageFailed, .unreadableResponse, .appNotActive] {
             XCTAssertTrue(error.keepsLastReading, "\(error)")
         }
