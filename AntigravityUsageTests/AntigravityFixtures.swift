@@ -96,9 +96,12 @@ actor AntigravityFixtureReader: AntigravityPageReading {
 actor AntigravityFixtureWebsiteData: AntigravityWebsiteDataManaging {
     private(set) var stores: Set<UUID>
     private(set) var removed: [UUID] = []
+    /// Stores WebKit would still refuse to remove, with how many attempts each one refuses.
+    private var busy: [UUID: Int]
 
-    init(stores: Set<UUID>) {
+    init(stores: Set<UUID>, busy: [UUID: Int] = [:]) {
         self.stores = stores
+        self.busy = busy
     }
 
     func add(_ id: UUID) {
@@ -106,6 +109,10 @@ actor AntigravityFixtureWebsiteData: AntigravityWebsiteDataManaging {
     }
 
     func removeStore(id: UUID) async {
+        if let refusals = busy[id], refusals > 0 {
+            busy[id] = refusals - 1
+            return
+        }
         stores.remove(id)
         removed.append(id)
     }

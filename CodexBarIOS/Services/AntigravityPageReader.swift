@@ -38,14 +38,28 @@ public enum AntigravityWebsiteDataCleanup {
     /// Removes stores no saved account names: a canceled sign-in, a replaced sign-in or a removed account.
     /// Antigravity is the only feature that creates identified stores, so every unnamed one is its leftover.
     /// `keptStoreIDs` is asked again before each removal, so a sign-in saved meanwhile keeps its store; nil stops.
+    /// WebKit refuses to remove a store whose web view closed a moment ago, so a store that survives the first
+    /// pass gets one more try after `retryDelay`.
     public static func removeOrphanedStores(
         keeping keptStoreIDs: @Sendable () async -> Set<UUID>?,
-        data: AntigravityWebsiteDataManaging = WebKitAntigravityWebsiteData()
+        data: AntigravityWebsiteDataManaging = WebKitAntigravityWebsiteData(),
+        retryDelay: Duration = .seconds(2)
     ) async {
+        guard await removeOrphans(keeping: keptStoreIDs, data: data) else { return }
+        try? await Task.sleep(for: retryDelay)
+        _ = await removeOrphans(keeping: keptStoreIDs, data: data)
+    }
+
+    /// One pass. Returns true when a store that should be gone is still there.
+    private static func removeOrphans(
+        keeping keptStoreIDs: @Sendable () async -> Set<UUID>?, data: AntigravityWebsiteDataManaging
+    ) async -> Bool {
         for id in await data.storeIDs() {
-            guard let kept = await keptStoreIDs() else { return }
+            guard let kept = await keptStoreIDs() else { return false }
             if !kept.contains(id) { await data.removeStore(id: id) }
         }
+        guard let kept = await keptStoreIDs() else { return false }
+        return await !Set(data.storeIDs()).isSubset(of: kept)
     }
 }
 
@@ -156,7 +170,7 @@ private final class AntigravityHiddenPageLoad: NSObject, WKNavigationDelegate {
         super.init()
         webView.navigationDelegate = self
         receiver.onResponse = { [weak self] response, path in
-            self?.attempt.progress.receive(response, pagePath: path, requiresReadableQuota: false)
+            self?.attempt.receive(response, pagePath: path)
         }
         attachBehindApp()
     }

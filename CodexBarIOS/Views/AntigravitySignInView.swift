@@ -28,6 +28,7 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
     private let receiver = AntigravityCaptureReceiver()
     private var completion: ((Result<AntigravitySignInResult, AntigravitySignInError>) -> Void)?
     private var progress = AntigravityCaptureProgress()
+    private var navigation = AntigravitySignInNavigation()
     private var finishTask: Task<Void, Never>?
 
     init(isSynthetic: Bool = false, completion: @escaping (Result<AntigravitySignInResult, AntigravitySignInError>) -> Void) {
@@ -49,11 +50,17 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
         receiver.onResponse = { [weak self] response, path in self?.receive(response, path: path) }
         self.webView = webView
         AntigravityGateDiagnostics.record("signin.begin")
-        openUsagePage()
+        loadUsagePage()
     }
 
+    /// The customer's "Models & Usage" button.
     func openUsagePage() {
         message = nil
+        navigation.customerReopenedUsagePage()
+        loadUsagePage()
+    }
+
+    private func loadUsagePage() {
         guard let url = AntigravityPagePolicy.pageURLs(pagePath: nil).first else { return }
         webView?.load(URLRequest(url: url))
     }
@@ -89,6 +96,13 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
         if case let .quota(body) = response { AntigravityGateDiagnostics.recordQuotaResponse(body) }
         if event == .unreadableQuota { message = AntigravityReadError.unreadableResponse.localizedDescription }
         if event == .quota { finishAfterProfileGrace() }
+        if event == .signedOut, case let .signInLink(link) = response { followSignInLink(link) }
+    }
+
+    /// Opens Google's own Sign in link, as tapping it on the page would.
+    private func followSignInLink(_ link: URL) {
+        guard let url = navigation.signInLinkShown(link) else { return }
+        webView?.load(URLRequest(url: url))
     }
 
     /// Google's page asks for the plan in a separate request; give it a moment to arrive.
@@ -139,8 +153,11 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
         AntigravityPendingSignIns.end(storeID)
         Task {
             // WebKit removes a store only after its web view is gone, so wait for the released view to unload.
-            try? await Task.sleep(for: .seconds(1))
-            await WebKitAntigravityWebsiteData().removeStore(id: storeID)
+            // The launch sweep removes anything this leaves behind.
+            for delay in [1, 5] {
+                try? await Task.sleep(for: .seconds(delay))
+                await WebKitAntigravityWebsiteData().removeStore(id: storeID)
+            }
         }
     }
 
@@ -150,6 +167,7 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
         host = webView.url?.host ?? AntigravityPagePolicy.pageHost
         canGoBack = webView.canGoBack
         AntigravityGateDiagnostics.record("signin.page \(AntigravityGateDiagnostics.describe(webView.url))")
+        if navigation.shouldReopenUsagePage(afterFinishing: webView.url, hasReading: progress.capture != nil) { loadUsagePage() }
     }
 
     func webView(

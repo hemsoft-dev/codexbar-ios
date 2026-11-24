@@ -123,6 +123,58 @@ final class AntigravityWebSessionTests: XCTestCase, @unchecked Sendable {
         XCTAssertNil(AntigravityPagePolicy.capturedResponse(from: message(body: ["url": quota, "status": 200, "body": 7])))
     }
 
+    func testGooglesSignInLinkMeansSignedOutAndIsTheOnlyLinkEverFollowed() throws {
+        let link = "https://accounts.google.com/ServiceLogin?passive=1209600&continue=https://antigravity.google.com/remote"
+        func message(_ body: [String: Any], host: String = "antigravity.google.com") -> AntigravityPagePolicy.ForwardedMessage {
+            AntigravityPagePolicy.ForwardedMessage(
+                name: "codexbarAntigravity", isMainFrame: true, originScheme: "https", originHost: host, body: body
+            )
+        }
+        XCTAssertEqual(
+            AntigravityPagePolicy.capturedResponse(from: message(["signInURL": link]))?.response,
+            .signInLink(try XCTUnwrap(URL(string: link)))
+        )
+        for other in [
+            "https://accounts.google.com/SignOutOptions", "https://accounts.google.com.evil.example/ServiceLogin",
+            "http://accounts.google.com/ServiceLogin", "https://accounts.google.com/ServiceLoginAuth",
+            "https://evil.example/?https://accounts.google.com/ServiceLogin", "javascript:alert(1)",
+        ] {
+            XCTAssertNil(AntigravityPagePolicy.capturedResponse(from: message(["signInURL": other])), other)
+        }
+        XCTAssertNil(AntigravityPagePolicy.capturedResponse(from: message(["signInURL": link], host: "evil.example")))
+        XCTAssertTrue(AntigravityPagePolicy.captureScript.contains("a[href^=\"https://accounts.google.com/ServiceLogin\"]"))
+
+        // A refresh that sees the link stops at once and asks for sign-in.
+        let url = try XCTUnwrap(URL(string: link))
+        var attempt = AntigravityReadAttempt()
+        attempt.receive(.signInLink(url), pagePath: nil)
+        XCTAssertTrue(attempt.needsSignIn)
+        XCTAssertTrue(attempt.isSettled)
+        // Once usage has been reported, a stray link changes nothing.
+        var reading = AntigravityReadAttempt()
+        reading.receive(.quota("[1]"), pagePath: "/remote/settings")
+        reading.receive(.signInLink(url), pagePath: nil)
+        XCTAssertFalse(reading.needsSignIn)
+    }
+
+    func testSignInBrowserFollowsGooglesLinkOnceAndReopensUsageAfterTheCustomerReturns() throws {
+        let link = try XCTUnwrap(URL(string: "https://accounts.google.com/ServiceLogin?continue=https://antigravity.google.com/remote"))
+        let signInForm = URL(string: "https://accounts.google.com/v3/signin/identifier")
+        let app = URL(string: "https://antigravity.google.com/remote")
+        var navigation = AntigravitySignInNavigation()
+
+        XCTAssertFalse(navigation.shouldReopenUsagePage(afterFinishing: app, hasReading: false), "nothing to return from yet")
+        XCTAssertEqual(navigation.signInLinkShown(link), link)
+        XCTAssertNil(navigation.signInLinkShown(link), "the link is followed once; after that the next step is the customer's")
+        XCTAssertFalse(navigation.shouldReopenUsagePage(afterFinishing: signInForm, hasReading: false))
+        XCTAssertTrue(navigation.shouldReopenUsagePage(afterFinishing: app, hasReading: false))
+        XCTAssertFalse(navigation.shouldReopenUsagePage(afterFinishing: app, hasReading: false), "the usage screen is reopened once")
+
+        navigation.customerReopenedUsagePage()
+        XCTAssertEqual(navigation.signInLinkShown(link), link)
+        XCTAssertFalse(navigation.shouldReopenUsagePage(afterFinishing: app, hasReading: true), "usage already arrived")
+    }
+
     func testSignInCountsOnlyAResponseCodexBarCanRead() {
         var progress = AntigravityCaptureProgress()
         XCTAssertNil(progress.capture)
@@ -303,6 +355,16 @@ final class AntigravityWebSessionTests: XCTestCase, @unchecked Sendable {
         let removed = await data.removed
         XCTAssertEqual(remaining, [kept])
         XCTAssertEqual(Set(removed), orphans)
+    }
+
+    func testStoreWhoseWebViewJustClosedIsRemovedOnTheSecondTry() async {
+        let kept = UUID()
+        let justClosed = UUID()
+        let stuck = UUID()
+        let data = AntigravityFixtureWebsiteData(stores: [kept, justClosed, stuck], busy: [justClosed: 1, stuck: 5])
+        await AntigravityWebsiteDataCleanup.removeOrphanedStores(keeping: { [kept] }, data: data, retryDelay: .milliseconds(10))
+        let remaining = await data.stores
+        XCTAssertEqual(remaining, [kept, stuck], "one retry, then the launch sweep takes over")
     }
 
     func testCleanupStopsWhenItCanNoLongerTellWhichStoresAreSaved() async {

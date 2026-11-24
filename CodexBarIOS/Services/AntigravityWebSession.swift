@@ -140,6 +140,18 @@ public enum AntigravityPagePolicy {
     public enum CapturedResponse: Equatable, Sendable {
         case quota(String)
         case profile(String)
+        /// Google's page is showing its own Sign in link, so nobody is signed in.
+        case signInLink(URL)
+    }
+
+    /// The Sign in link Google's account bar shows to a signed-out visitor.
+    static let signInLinkPrefix = "https://accounts.google.com/ServiceLogin"
+
+    static func signInLink(_ text: String) -> URL? {
+        guard text.hasPrefix(signInLinkPrefix), text.utf8.count <= 2048, let url = URL(string: text),
+              allowsNavigation(to: url), url.host?.lowercased() == "accounts.google.com", url.path == "/ServiceLogin"
+        else { return nil }
+        return url
     }
 
     /// Accepts only a successful response from Google's own service for the two methods CodexBar reads.
@@ -173,14 +185,16 @@ public enum AntigravityPagePolicy {
     public static func capturedResponse(from message: ForwardedMessage) -> (response: CapturedResponse, pagePath: String?)? {
         guard message.name == messageHandlerName, message.isMainFrame, message.originScheme == "https",
               message.originHost == pageHost, let body = message.body as? [String: Any] else { return nil }
+        if let link = (body["signInURL"] as? String).flatMap(signInLink) { return (.signInLink(link), nil) }
         guard let url = body["url"] as? String, let text = body["body"] as? String,
               let status = (body["status"] as? NSNumber)?.intValue,
               let response = capturedResponse(urlString: url, status: status, body: text) else { return nil }
         return (response, body["path"] as? String)
     }
 
-    /// Runs inside Google's page. It forwards the text of two responses the page itself requested and nothing else:
-    /// no cookies, headers, request bodies or other responses. It sends no request of its own.
+    /// Runs inside Google's page. It forwards the text of two responses the page itself requested, and the address of
+    /// the Sign in link Google shows a signed-out visitor. Nothing else: no cookies, headers, request bodies or
+    /// other responses. It sends no request of its own.
     public static let captureScript = """
     (function () {
       if (window.__codexbarAntigravityCapture) { return; }
@@ -202,6 +216,18 @@ public enum AntigravityPagePolicy {
           });
         } catch (error) {}
       }
+      function reportSignInLink() {
+        try {
+          var link = document.querySelector('a[href^="\(signInLinkPrefix)"]');
+          if (link) { window.webkit.messageHandlers.\(messageHandlerName).postMessage({ signInURL: String(link.href) }); }
+        } catch (error) {}
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', reportSignInLink);
+      } else {
+        reportSignInLink();
+      }
+      window.addEventListener('load', reportSignInLink);
       var open = XMLHttpRequest.prototype.open;
       var send = XMLHttpRequest.prototype.send;
       XMLHttpRequest.prototype.open = function (method, url) {
@@ -248,6 +274,8 @@ public struct AntigravityCaptureProgress: Equatable, Sendable {
         case quota
         /// The page reported usage in a form CodexBar can't read; the earlier state is kept.
         case unreadableQuota
+        /// The page showed Google's Sign in link. Meaningful only while no usage has been reported.
+        case signedOut
     }
 
     public private(set) var quotaBody: String?
@@ -266,6 +294,8 @@ public struct AntigravityCaptureProgress: Equatable, Sendable {
         _ response: AntigravityPagePolicy.CapturedResponse, pagePath path: String?, requiresReadableQuota: Bool
     ) -> Event {
         switch response {
+        case .signInLink:
+            return quotaBody == nil ? .signedOut : .ignored
         case let .profile(body):
             profileBody = body
             return .profile
@@ -301,6 +331,11 @@ public struct AntigravityReadAttempt: Equatable, Sendable {
         if AntigravityPagePolicy.isSignInPage(url) { needsSignIn = true }
     }
 
+    /// A refresh takes any response the page received; a Sign in link means the saved sign-in has ended.
+    public mutating func receive(_ response: AntigravityPagePolicy.CapturedResponse, pagePath: String?) {
+        if progress.receive(response, pagePath: pagePath, requiresReadableQuota: false) == .signedOut { needsSignIn = true }
+    }
+
     public mutating func navigationFailed(code: Int) {
         if code != NSURLErrorCancelled { navigationFailed = true }
     }
@@ -313,5 +348,35 @@ public struct AntigravityReadAttempt: Equatable, Sendable {
     /// The error for a read whose pages reported no usage.
     public static func failure(reachedAntigravity: Bool) -> AntigravityReadError {
         reachedAntigravity ? .noUsageReported : .pageFailed
+    }
+}
+
+/// Where the sign-in browser goes next. Google's page shows a signed-out visitor a Sign in link; the browser
+/// follows it once, and reopens the usage screen when Google sends the customer back signed in.
+public struct AntigravitySignInNavigation: Equatable, Sendable {
+    private var followedSignInLink = false
+    private var awaitsReturnFromGoogle = false
+
+    public init() {}
+
+    /// The link to open, or nil when it was already followed once and the next step is the customer's.
+    public mutating func signInLinkShown(_ link: URL) -> URL? {
+        guard !followedSignInLink else { return nil }
+        followedSignInLink = true
+        awaitsReturnFromGoogle = true
+        return link
+    }
+
+    /// True when the customer has just come back from Google's sign-in and the usage screen should be reopened.
+    public mutating func shouldReopenUsagePage(afterFinishing url: URL?, hasReading: Bool) -> Bool {
+        guard awaitsReturnFromGoogle, AntigravityPagePolicy.isAntigravityPage(url) else { return false }
+        awaitsReturnFromGoogle = false
+        return !hasReading
+    }
+
+    /// The customer asked for the usage screen again, so Google's Sign in link may be followed once more.
+    public mutating func customerReopenedUsagePage() {
+        followedSignInLink = false
+        awaitsReturnFromGoogle = false
     }
 }
