@@ -49,7 +49,7 @@ launch it once with `CODEXBAR_UI_TESTS=1`, `CODEXBAR_UI_TEST_RESET=1`,
 `CODEXBAR_UI_TEST_SCENARIO=plan-pills` and a chosen
 `CODEXBAR_UI_TEST_RUN_ID`. Then run the test on the same simulator with
 `TEST_RUNNER_CODEXBAR_UPGRADE_RUN_ID` set to that identifier and
-`TEST_RUNNER_CODEXBAR_UPGRADE_KEPT_ACCOUNT="OpenRouter fixture"`. Xcode
+`TEST_RUNNER_CODEXBAR_UPGRADE_KEPT_ACCOUNT="Codex Free fixture"`. Xcode
 installs the current build over 2.0.0 and keeps its data.
 
 Supplemental native view-host rendering is available through
