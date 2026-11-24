@@ -312,7 +312,7 @@ public extension ProviderAccountConfiguration {
             ProviderAccountConfiguration(providerID: providerID, authMethod: .apiKey)
         case .cursor:
             ProviderAccountConfiguration(providerID: providerID, authMethod: .browserSession)
-        case .museCode:
+        case .museCode, .antigravityWeb:
             ProviderAccountConfiguration(providerID: providerID, authMethod: .browserSession)
         }
     }

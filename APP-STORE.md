@@ -1257,6 +1257,17 @@ Version 1.2 submission status:
 
 - Brand asset permissions need a careful pass before submission.
 
+- Antigravity is experimental and has no authorization from Google
+  ([#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601),
+  [decision record](docs/2026-11-23-antigravity-web-session-decision.md)).
+  Guideline 5.2.2 lets App Review ask for it. The review notes in
+  `fastlane/metadata/review_information/notes.txt` say what the app reads and
+  that no authorization exists. If Apple asks for authorization, stop and
+  report on #601; a request to Google is drafted only then. The description
+  lists Antigravity as experimental. Do not submit a build with Antigravity
+  until the feasibility gate on #601 has passed. No Antigravity mark or logo is
+  used in the app or its screenshots.
+
 - Widgets must continue to show useful stale/error states because iOS controls refresh timing.
 
 - OpenCode Go and Zen now have guided phone authorization and workspace

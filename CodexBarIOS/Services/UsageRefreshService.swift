@@ -765,6 +765,7 @@ public extension UsageRefreshService {
                 OpenCodeZenUsageProvider(),
                 MoonshotUsageProvider(),
                 CursorUsageProvider(),
+                AntigravityUsageProvider(),
             ]
         )
     }

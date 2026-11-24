@@ -898,7 +898,8 @@ final class AppAndWidgetTests: XCTestCase {
         let configurationStore = ProviderConfigurationStore.appStoreScreenshotDemo()
         let results = AppStoreScreenshotFixtures.results(for: configurationStore)
 
-        XCTAssertEqual(Set(results.map(\.providerID)), Set(ProviderID.allCases.filter { $0.isAvailableOnIPhone }))
+        // Store screenshots show every provider except experimental ones, which carry no marketing claim (#601).
+        XCTAssertEqual(Set(results.map(\.providerID)), Set(ProviderID.allCases.filter { $0.isAvailableOnIPhone && !$0.isExperimental }))
         XCTAssertTrue(results.allSatisfy { $0.accountID.hasPrefix("app-store-screenshots.") })
         XCTAssertGreaterThanOrEqual(
             configurationStore.configurations.filter {
@@ -1510,7 +1511,7 @@ final class AppAndWidgetTests: XCTestCase {
                 .openRouter: "OpenRouter",
                 .openCodeZen: "OpenCode Go / Zen",
                 .moonshot: "Moonshot (Kimi)",
-                .museCode: "Muse Code",
+                .museCode: "Muse Code", .antigravityWeb: "Antigravity",
             ]
         )
     }

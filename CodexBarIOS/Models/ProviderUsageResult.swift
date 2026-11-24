@@ -211,7 +211,8 @@ public struct ProviderUsageResult: Identifiable, Equatable, Sendable {
     public var title: String
     public let plan: ProviderPlanDescriptor?
 
-    public var showsCardPlan: Bool { providerID != .openCodeZen }
+    /// Antigravity shows only the plan Google's page reported; without one there is no pill.
+    public var showsCardPlan: Bool { providerID != .openCodeZen && (providerID != .antigravityWeb || plan != nil) }
 
     /// Presentation fallback only. Never infers a subscription from usage or account labels.
     public var cardPlan: ProviderPlanDescriptor {

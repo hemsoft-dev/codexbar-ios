@@ -180,7 +180,10 @@ final class AccountJourneysUITests: XCTestCase {
         tap(app.buttons["Done"], in: app)
 
         tap(app.buttons["dashboard-add-account"], in: app)
-        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Antigravity")).firstMatch.exists)
+        // The retired Google providers stay gone. AntigravityUITests covers the experimental provider that replaced one (#601).
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Google Gemini")).firstMatch.exists)
+        XCTAssertFalse(app.buttons["add-account.provider.gemini"].exists)
+        XCTAssertFalse(app.buttons["add-account.provider.antigravity"].exists)
         tap(app.buttons["OpenRouter"], in: app)
         let accountLabel = app.textFields["account-label"]
         reveal(accountLabel, in: app)

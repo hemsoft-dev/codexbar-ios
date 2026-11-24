@@ -434,6 +434,9 @@ public final class ProviderConfigurationStore: ObservableObject {
     private let defaults: UserDefaults
     private let secretStore: SecretStore
     private let widgetSnapshotDefaults: UserDefaults?
+    private let antigravityWebsiteData: AntigravityWebsiteDataManaging
+    /// The latest website-data sweep; tests wait on it.
+    private(set) var antigravityWebsiteDataSweep: Task<Void, Never>?
     private let configurationsKey = DefaultsKey.configurations
     private let groupsKey = DefaultsKey.groups
     private let appAppearanceKey = DefaultsKey.appAppearance
@@ -457,7 +460,8 @@ public final class ProviderConfigurationStore: ObservableObject {
         initialPlanAccess: AccountPlanAccess = .unresolved,
         defaults: UserDefaults = .standard,
         secretStore: SecretStore = KeychainService(),
-        widgetSnapshotDefaults: UserDefaults? = WidgetSnapshotStore.userDefaults()
+        widgetSnapshotDefaults: UserDefaults? = WidgetSnapshotStore.userDefaults(),
+        antigravityWebsiteData: AntigravityWebsiteDataManaging = WebKitAntigravityWebsiteData()
     ) {
         let migrationError = RetiredProviderMigration.run(
             defaults: defaults, secretStore: secretStore, configurationKey: DefaultsKey.configurations
@@ -483,6 +487,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         self.defaults = defaults
         self.secretStore = secretStore
         self.widgetSnapshotDefaults = widgetSnapshotDefaults
+        self.antigravityWebsiteData = antigravityWebsiteData
         self.groups = groupLoadResult.groups
         self.configurations = configurationLoadResult.configurations
         self.secretAvailability = [:]
@@ -821,6 +826,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             }
             saveMetricLayouts()
             refreshSecretAvailability()
+            removeUnusedAntigravityWebsiteData()
         }
         if let firstDeletionError {
             lastError = firstDeletionError
@@ -1511,6 +1517,7 @@ public final class ProviderConfigurationStore: ObservableObject {
             }
             lastError = nil
             refreshSecretAvailability()
+            if configuration.providerID == .antigravityWeb { removeUnusedAntigravityWebsiteData() }
             return true
         } catch {
             lastError = error.localizedDescription
@@ -1677,7 +1684,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         }
 
         if configuration.requiresSecret
-            || [.codex, .claude, .cursor, .grok, .xSubscription].contains(configuration.providerID) {
+            || [.codex, .claude, .cursor, .grok, .xSubscription, .antigravityWeb].contains(configuration.providerID) {
             return hasSecret(for: configuration)
         }
 
@@ -1823,6 +1830,10 @@ public final class ProviderConfigurationStore: ObservableObject {
 
         if configuration.providerID == .openRouter {
             return "Not configured - enter OpenRouter Management API Key"
+        }
+
+        if configuration.providerID == .antigravityWeb {
+            return AntigravityReadError.notConfigured.localizedDescription
         }
 
         return "Not configured"
@@ -2341,7 +2352,7 @@ public final class ProviderConfigurationStore: ObservableObject {
         }
 
         switch configuration.providerID {
-        case .codex, .githubBilling, .cursor, .grok, .xSubscription:
+        case .codex, .githubBilling, .cursor, .grok, .xSubscription, .antigravityWeb:
             normalized.authMethod = .browserSession
         case .copilot, .claude, .openRouter, .openCodeZen, .moonshot, .museCode:
             break
@@ -2837,6 +2848,7 @@ extension ProviderConfigurationStore {
             hasIncompleteAccountReset = false
             lastError = nil
             reconcileAccountAccess()
+            removeUnusedAntigravityWebsiteData()
             return true
         }
 
@@ -2862,6 +2874,7 @@ extension ProviderConfigurationStore {
             saveMetricLayouts()
         }
         refreshSecretAvailability()
+        removeUnusedAntigravityWebsiteData()
         hasIncompleteAccountReset = true
         defaults.set(true, forKey: incompleteAccountResetKey)
         lastError = firstDeletionError
@@ -2871,6 +2884,33 @@ extension ProviderConfigurationStore {
 }
 
 extension ProviderConfigurationStore {
+    /// The website data store each saved Antigravity account signs in with.
+    func antigravityWebSessionMarkers() -> [AntigravityWebSessionMarker] {
+        configurations.filter { $0.providerID == .antigravityWeb }.compactMap { configuration in
+            AntigravityWebSessionMarker.parse(try? secretStore.readSecret(account: Self.keychainAccount(for: configuration)))
+        }
+    }
+
+    /// Deletes Google website data no saved Antigravity account uses. Runs at launch and after an Antigravity
+    /// sign-in is saved, replaced or removed, so removing an account removes its Google sign-in.
+    public func removeUnusedAntigravityWebsiteData() {
+        let data = antigravityWebsiteData
+        let previous = antigravityWebsiteDataSweep
+        antigravityWebsiteDataSweep = Task { [weak self] in
+            await previous?.value
+            await AntigravityWebsiteDataCleanup.removeOrphanedStores(
+                keeping: { [weak self] in
+                    await MainActor.run {
+                        guard let self else { return nil }
+                        return Set(self.antigravityWebSessionMarkers().map(\.websiteDataStoreID))
+                            .union(AntigravityPendingSignIns.storeIDs)
+                    }
+                },
+                data: data
+            )
+        }
+    }
+
     public func acknowledgeGreptileRemovalNotice() {
         defaults.removeObject(forKey: RetiredProviderMigration.greptileRemovalNoticeKey)
         showsGreptileRemovalNotice = false

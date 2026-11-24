@@ -1,6 +1,8 @@
 CodexBar 2.1.0
 
-Google Gemini and Antigravity are no longer supported on iOS. Saved Google accounts, credentials and website sessions are removed on upgrade. Your other accounts, groups and usage history remain available.
+Antigravity is available as an experimental provider. After a notice, you sign in to Google in an in-app browser and CodexBar shows the weekly and five-hour limits that Google's own Models & Usage page reports for Gemini Models and for Claude and GPT Models. Google doesn't officially support third-party tools reading that page, and its terms allow account suspension.
+
+Google Gemini chat limits and the Antigravity sign-in from version 2.0 are no longer supported. Google accounts, credentials and website sessions saved by version 2.0 are removed on upgrade; add Antigravity again to use the new provider. Your other accounts, groups and usage history remain available.
 
 Greptile is no longer supported. Updating removes a saved Greptile account and its usage history from this device, and CodexBar shows a one-time note when it does. Your other accounts are unchanged.
 

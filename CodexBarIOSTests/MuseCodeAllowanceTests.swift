@@ -360,7 +360,7 @@ final class MuseCodeAllowanceTests: XCTestCase {
     func testExistingProviderIdentifiersAreUnchanged() throws {
         XCTAssertEqual(ProviderID.allCases.map(\.rawValue), [
             "codex", "copilot", "githubBilling", "claude", "grok", "xSubscription", "openRouter",
-            "openCodeZen", "moonshot", "cursor", "museCode",
+            "openCodeZen", "moonshot", "cursor", "museCode", "antigravityWeb",
         ])
         let saved = try JSONEncoder().encode(ProviderID.allCases.filter { $0 != .museCode }.map(ProviderAccountConfiguration.defaultConfiguration))
         let decoded = try JSONDecoder().decode([ProviderAccountConfiguration].self, from: saved)

@@ -391,6 +391,29 @@ struct ProviderSettingsView: View {
                             .foregroundStyle(.red)
                     }
 
+                } else if providerID == .antigravityWeb {
+                    Button(configurationStore.hasSecret(for: configuration) ? "Sign in Again" : "Sign in with Google") {
+                        viewModel.startAntigravitySignIn()
+                    }
+                    .disabled(viewModel.antigravitySignInSession != nil)
+                    .accessibilityIdentifier("antigravity-sign-in")
+                    Text("Experimental. CodexBar reads the usage that Google's Models & Usage page shows you. Your Google "
+                        + "sign-in stays in a private browser profile for this account on this device.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    if configurationStore.hasSecret(for: configuration) {
+                        Button("Sign Out", role: .destructive) {
+                            viewModel.removeSavedCredential()
+                        }
+                        .accessibilityIdentifier("antigravity-sign-out")
+                    }
+                    if let antigravityMessage = viewModel.antigravityMessage {
+                        Text(antigravityMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("antigravity-sign-in-status")
+                    }
+
                 } else if providerID == .openCodeZen {
                     Button(configurationStore.hasSecret(for: configuration) ? "Reconnect OpenCode" : "Sign in with OpenCode") {
                         viewModel.startOpenCodeSignIn()
@@ -553,7 +576,7 @@ struct ProviderSettingsView: View {
             usageResultForAccount: { accountID in
                 accountID == viewModel.configuration.id ? viewModel.usageResult : nil
             },
-            isActive: viewModel.authURL == nil
+            isActive: viewModel.authURL == nil && viewModel.antigravitySignInSession == nil
                 && viewModel.openCodeBrowserSession == nil && viewModel.subscriptionBillingSession == nil
         )
         .accessibilityIdentifier("provider-account-settings-form")
@@ -607,6 +630,9 @@ struct ProviderSettingsView: View {
         })
         .sheet(item: $viewModel.openCodeBrowserSession) { session in
             OpenCodeBrowserSignInView(session: session)
+        }
+        .sheet(item: $viewModel.antigravitySignInSession) { session in
+            AntigravitySignInView(session: session)
         }
         .sheet(item: $viewModel.authURL, onDismiss: {
             viewModel.authenticationSheetDismissed()

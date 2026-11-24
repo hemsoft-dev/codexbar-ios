@@ -226,10 +226,14 @@ enum CodexBarWidgetFocus: String, AppEnum {
     case moonshot
     case openCodeZen
     case openRouter
+    case antigravityWeb
 
     // WidgetConfigurationTests checks this list against every display representation.
     static var allCases: [Self] {
-        [.dashboardOrder, .codex, .copilot, .claude, .grok, .xSubscription, .cursor, .moonshot, .openCodeZen, .openRouter]
+        [
+            .dashboardOrder, .codex, .copilot, .claude, .grok, .xSubscription, .cursor, .moonshot, .openCodeZen, .openRouter,
+            .antigravityWeb,
+        ]
     }
 
     static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Focus")
@@ -244,6 +248,7 @@ enum CodexBarWidgetFocus: String, AppEnum {
         .moonshot: "Moonshot (Kimi)",
         .openCodeZen: "OpenCode Go + Zen",
         .openRouter: "OpenRouter",
+        .antigravityWeb: "Antigravity",
     ]
 
     var providerID: String? {
@@ -268,6 +273,8 @@ enum CodexBarWidgetFocus: String, AppEnum {
             "openCodeZen"
         case .openRouter:
             "openRouter"
+        case .antigravityWeb:
+            "antigravityWeb"
         }
     }
 }
