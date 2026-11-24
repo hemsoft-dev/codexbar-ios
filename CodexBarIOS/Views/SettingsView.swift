@@ -1591,14 +1591,18 @@ struct AddAccountSetupFlow: View {
                             Button {
                                 select(providerID)
                             } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Label(providerID.displayName, systemImage: providerID.addAccountIconName)
-                                    if providerID.isExperimental {
-                                        Text("Experimental")
-                                            .font(.caption)
-                                            .foregroundStyle(.orange)
-                                            .accessibilityIdentifier("add-account.experimental.\(providerID.rawValue)")
+                                Label {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(providerID.displayName)
+                                        if providerID.isExperimental {
+                                            Text("Experimental")
+                                                .font(.caption)
+                                                .foregroundStyle(.orange)
+                                                .accessibilityIdentifier("add-account.experimental.\(providerID.rawValue)")
+                                        }
                                     }
+                                } icon: {
+                                    Image(systemName: providerID.addAccountIconName)
                                 }
                             }
                             .accessibilityIdentifier("add-account.provider.\(providerID.rawValue)")

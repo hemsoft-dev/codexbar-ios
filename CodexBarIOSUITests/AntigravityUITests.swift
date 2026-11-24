@@ -69,10 +69,18 @@ final class AntigravityUITests: XCTestCase {
     }
 
     /// Data saved by version 2.0's Gemini and Antigravity providers is removed at launch; the new account is not.
+    ///
+    /// By default the old on-disk records are seeded by the fixture. To run it over data that a real 2.0.0 build
+    /// wrote, install that build, launch it once with a Google fixture account and a known run identifier, then pass
+    /// `TEST_RUNNER_CODEXBAR_UPGRADE_RUN_ID` and `TEST_RUNNER_CODEXBAR_UPGRADE_KEPT_ACCOUNT` (see UI-TESTING.md).
     func testUpgradeFromRetiredGoogleAccountsKeepsANewAntigravityAccountAcrossRelaunches() {
-        let runID = UUID().uuidString
-        var app = launch(scenario: "retired-google-upgrade", runID: runID)
-        XCTAssertTrue(app.buttons["More options for Personal Codex"].waitForExistence(timeout: 15), app.debugDescription)
+        let environment = ProcessInfo.processInfo.environment
+        let installedRunID = environment["CODEXBAR_UPGRADE_RUN_ID"]
+        let runID = installedRunID ?? UUID().uuidString
+        let keptAccount = "More options for \(environment["CODEXBAR_UPGRADE_KEPT_ACCOUNT"] ?? "Personal Codex")"
+        var app = launch(scenario: "retired-google-upgrade", runID: runID, reset: installedRunID == nil)
+        XCTAssertTrue(app.buttons[keptAccount].waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertFalse(text(containing: "Google", in: app).exists, "the retired Google accounts were removed by the upgrade")
         XCTAssertFalse(text(containing: "Google Gemini", in: app).exists)
         XCTAssertFalse(text(containing: "Antigravity", in: app).exists, "the retired accounts were removed by the upgrade")
 
@@ -99,7 +107,7 @@ final class AntigravityUITests: XCTestCase {
         for relaunch in 1...2 {
             app.terminate()
             app = launch(scenario: "retired-google-upgrade", runID: runID, reset: false)
-            XCTAssertTrue(app.buttons["More options for Personal Codex"].waitForExistence(timeout: 15), app.debugDescription)
+            XCTAssertTrue(app.buttons[keptAccount].waitForExistence(timeout: 15), app.debugDescription)
             let card = app.buttons["More options for Antigravity 1"]
             reveal(card, in: app)
             XCTAssertTrue(card.exists, "relaunch \(relaunch): the new account must survive the launch cleanup")
