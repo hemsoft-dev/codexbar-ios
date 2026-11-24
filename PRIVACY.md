@@ -11,6 +11,7 @@ paired Apple Watch:
 
 - Provider account labels and configuration choices you enter in the app.
 - API keys, access tokens, refresh tokens, and similar credentials for providers you choose to connect.
+- For Antigravity, a Google web sign-in kept in a private browser profile for that account, as described below.
 - Usage, balance, refresh status, and snapshot history used to show cards, trends, alerts, and widgets.
 - GitHub Status monitoring choices and local observation state, including the
   selected check interval, banner and notification preferences, last status
@@ -41,6 +42,23 @@ provider snapshot.
 When you connect a provider, CodexBar uses the credentials you provide to request usage or balance data for the configured account or organization directly from that provider. Depending on what you configure, this may include services such as OpenAI/ChatGPT, Anthropic Claude, GitHub Copilot, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, and Moonshot AI (Kimi).
 
 Those requests are made to the provider's own APIs or web endpoints. The provider may process the request according to its own terms and privacy policy.
+
+Antigravity support is experimental and works differently. Google doesn't
+officially support third-party tools reading its Antigravity page, and Google's
+terms allow it to suspend an account that uses third-party software with
+Antigravity. CodexBar shows a notice saying so before you sign in. When you
+accept it, CodexBar opens Google's own Antigravity web app in an in-app browser
+and you sign in to Google there. CodexBar then reads two responses that
+Google's page itself requested: your quota, and your plan name. It also notices
+when Google's page shows its Sign in link, which is how it knows you are signed
+out. It reads no cookies, passwords or other page content, and it sends no
+request of its own to Google for this provider. Your Google sign-in stays in a private browser
+profile that only that Antigravity account uses. It is not saved in the
+Keychain and is not sent anywhere except to Google by Google's page. The
+Keychain holds only the identifier of that browser profile and the path of the
+Google page it opens. Signing out or
+removing the account deletes the profile. Google's page receives your account
+email with your plan; CodexBar discards it.
 
 For Grok, CodexBar starts xAI's device authorization in a system browser and
 stores the resulting account-scoped OAuth token in the iOS Keychain after

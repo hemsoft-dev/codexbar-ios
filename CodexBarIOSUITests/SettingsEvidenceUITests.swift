@@ -24,7 +24,10 @@ final class SettingsEvidenceUITests: XCTestCase {
             tap(app.buttons["Add Account"].firstMatch, in: app)
             XCTAssertTrue(app.navigationBars["Choose a Provider"].waitForExistence(timeout: 5))
             XCTAssertFalse(app.staticTexts["Google Gemini"].exists)
-            XCTAssertFalse(app.staticTexts["Antigravity"].exists)
+            XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Google Gemini")).firstMatch.exists)
+            // The retired providers are not offered. The experimental Antigravity entry is a different provider (#601).
+            XCTAssertFalse(app.buttons["add-account.provider.gemini"].exists)
+            XCTAssertFalse(app.buttons["add-account.provider.antigravity"].exists)
             capture("upgrade-provider-list-\(theme)")
             app.terminate()
             app.launchEnvironment["CODEXBAR_UI_TEST_RESET"] = "0"

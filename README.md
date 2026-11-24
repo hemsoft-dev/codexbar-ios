@@ -11,7 +11,8 @@ The Windows reference implementation is checked out beside this repo at:
 ## Current Scope
 
 - SwiftUI dashboard with account-scoped cards for Codex, GitHub Copilot, GitHub Billing,
-  Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen and Moonshot
+  Claude, Grok, X Subscription, Cursor, OpenRouter, OpenCode Go + Zen, Moonshot and
+  Antigravity (experimental)
 
 - Live provider adapters and settings for enabling accounts, choosing supported
   authentication methods, labeling accounts, and storing credentials in Keychain
@@ -145,6 +146,26 @@ Muse Code isn't available on iPhone. Meta restricts the subscription credential
 to the Muse Code CLI and documents no sign-in or usage service an iPhone app can
 use, so Add Account explains the limit instead of offering a setup flow. See
 [the Muse Code contract](MUSE-CODE.md).
+
+## Antigravity sign-in (experimental)
+
+Antigravity is labelled Experimental in Add Account. Choosing it shows a notice
+first: Google doesn't officially support third-party tools reading its page,
+Google's terms allow account suspension, and CodexBar keeps a Google web
+sign-in on the device and sends it nowhere. After you accept, an in-app browser
+opens Google's Antigravity web app, follows its Sign in link, and you sign in
+on Google's own form. CodexBar
+adds the account once Google's Models & Usage page has reported usage. A
+canceled or failed sign-in adds nothing.
+
+The card shows Gemini Models and Claude and GPT Models, each with a weekly and a
+five-hour limit, as percent used. CodexBar reads the response Google's own page
+fetched and sends no request of its own to Google. Each account has a private
+browser profile that is deleted with the account. See
+[the Antigravity contract](ANTIGRAVITY-USAGE.md) and
+[the decision record](docs/2026-11-23-antigravity-web-session-decision.md). The
+live sign-in and the comparison with Google's page are pending with the account
+owner.
 
 ## GitHub Copilot Sign-In
 

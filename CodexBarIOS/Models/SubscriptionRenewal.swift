@@ -169,7 +169,7 @@ extension ProviderUsageResult {
     }
 
     private var subscriptionBillingIsNotApplicable: Bool {
-        if [.openRouter, .moonshot, .githubBilling].contains(providerID) { return true }
+        if [.openRouter, .moonshot, .githubBilling, .antigravityWeb].contains(providerID) { return true }
         let identifier = plan?.identifier.lowercased() ?? ""
         return identifier.hasSuffix(".free") || identifier.hasSuffix(".hobby") || identifier.contains(".api-credits")
     }

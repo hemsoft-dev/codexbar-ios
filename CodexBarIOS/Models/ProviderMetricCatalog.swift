@@ -21,6 +21,14 @@ public enum ProviderMetricCatalog {
             MuseCodeAllowance.Window.allCases.map {
                 Definition(sourceProviderID: .museCode, key: $0.rawValue, label: $0.label, window: $0 == .window ? "5h" : "weekly")
             }
+        case .antigravityWeb:
+            // Google's page lists the weekly limit before the five-hour limit in each group.
+            [
+                Definition(sourceProviderID: .antigravityWeb, key: "gemini-weekly", label: "Gemini Models weekly", window: "weekly"),
+                Definition(sourceProviderID: .antigravityWeb, key: "gemini-5h", label: "Gemini Models five-hour", window: "5h"),
+                Definition(sourceProviderID: .antigravityWeb, key: "3p-weekly", label: "Claude and GPT Models weekly", window: "weekly"),
+                Definition(sourceProviderID: .antigravityWeb, key: "3p-5h", label: "Claude and GPT Models five-hour", window: "5h"),
+            ]
         default:
             []
         }

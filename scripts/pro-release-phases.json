@@ -194,6 +194,9 @@
     "native-germany"
   ],
   "excluded_marketing": [
+    "CodexBarIOSUITests/AntigravityUITests/testCardStatesShowOnlyWhatGooglesPageReported",
+    "CodexBarIOSUITests/AntigravityUITests/testNoticeComesFirstAndTheAccountExistsOnlyAfterGooglesPageReportsUsage",
+    "CodexBarIOSUITests/AntigravityUITests/testUpgradeFromRetiredGoogleAccountsKeepsANewAntigravityAccountAcrossRelaunches",
     "CodexBarIOSUITests/CodexCreditsPoolUITests/testBillingSignInRecoveryEvidence",
     "CodexBarIOSUITests/CodexCreditsPoolUITests/testClaudeUltraReportedWindowsEvidence",
     "CodexBarIOSUITests/StorefrontReviewCaptureTests/testCaptureThreeLocalStoreKitProducts"

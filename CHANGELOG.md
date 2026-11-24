@@ -8,6 +8,19 @@ building, testing, or releasing the app.
 
 ### Added
 
+- Antigravity is back as an experimental provider. Add Account shows a notice
+  first: Google doesn't officially support third-party tools reading its
+  Antigravity page, and Google's terms allow account suspension. After you
+  accept it, you sign in to Google in an in-app browser, and the card shows the
+  weekly and five-hour limits that Google's own Models & Usage page reports for
+  Gemini Models and for Claude and GPT Models, as percent used, with the plan
+  Google reports. A five-hour limit that Google has paused says the weekly
+  limit was reached. CodexBar sends no request of its own to Google and keeps
+  each account's Google sign-in in a private browser profile that is deleted
+  with the account. A canceled sign-in adds no account. The live sign-in and
+  the comparison with Google's page are pending with the account owner.
+  ([#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601))
+
 - Add Account now explains that Muse Code isn't available on iPhone. Meta
   doesn't offer a sign-in or usage service that iPhone apps can use for Muse
   Code subscriptions, and CodexBar won't estimate an allowance from token
@@ -35,10 +48,13 @@ building, testing, or releasing the app.
   their history are unchanged.
   ([#594](https://github.com/hemsoft-dev/codexbar-ios/issues/594))
 
-- Removed Google Gemini and Antigravity support from iOS. Saved Google accounts,
-  credentials and website sessions are removed on upgrade. Other providers,
+- Removed Google Gemini support and the Antigravity sign-in that version 2.0
+  had. Google accounts, credentials and website sessions saved by version 2.0
+  are removed on upgrade and are not carried over to the new experimental
+  Antigravity provider, which you add again from Add Account. Other providers,
   account groups and their usage history remain available.
-  ([#556](https://github.com/hemsoft-dev/codexbar-ios/issues/556))
+  ([#556](https://github.com/hemsoft-dev/codexbar-ios/issues/556),
+  [#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601))
 
 - Show Claude Ultra and Max names from supported account metadata while keeping
   only the session and weekly limits Claude reports.

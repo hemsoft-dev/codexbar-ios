@@ -402,6 +402,8 @@ extension ProviderID {
             "Cursor"
         case .museCode:
             "Muse Code"
+        case .antigravityWeb:
+            "Antigravity"
         }
     }
 }

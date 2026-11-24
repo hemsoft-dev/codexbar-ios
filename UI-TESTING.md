@@ -29,6 +29,29 @@ intercepted transport and asserts the header countdown and exact-date row.
 It also checks Grok denial and Cancel. Light/default and dark/accessibility
 states are synthetic, not a live Google login or Franz account verification.
 
+Focused Antigravity capture (outside the release phase count):
+`CodexBarIOSUITests/AntigravityUITests`. Its two methods are listed under
+`excluded_marketing` in the phase manifest and run only when selected with
+`-only-testing:CodexBarIOSUITests/AntigravityUITests` on the
+`CodexBarIOSUITests` scheme. The `antigravity-add` scenario drives Add Account,
+the Experimental label, the notice, a canceled and a failed synthetic sign-in
+that leave no account, a synthetic sign-in that adds the card, and a relaunch.
+The `antigravity-states` scenario renders the four meters, the reached weekly
+limit, missing pools, an extra pool, a stale reading, an account that needs a
+computer and an expired sign-in, in light and dark. Every response is built
+from the field layout in Google's public page code. No Google page or account
+is opened, so these captures are not a live sign-in or a quota comparison.
+
+`testUpgradeFromRetiredGoogleAccountsKeepsANewAntigravityAccountAcrossRelaunches`
+seeds version 2.0's on-disk records by default. To run it over data a real
+2.0.0 build wrote, build tag `v2.0.0-build5` for the simulator, install it, and
+launch it once with `CODEXBAR_UI_TESTS=1`, `CODEXBAR_UI_TEST_RESET=1`,
+`CODEXBAR_UI_TEST_SCENARIO=plan-pills` and a chosen
+`CODEXBAR_UI_TEST_RUN_ID`. Then run the test on the same simulator with
+`TEST_RUNNER_CODEXBAR_UPGRADE_RUN_ID` set to that identifier and
+`TEST_RUNNER_CODEXBAR_UPGRADE_KEPT_ACCOUNT="Codex Free fixture"`. Xcode
+installs the current build over 2.0.0 and keeps its data.
+
 Supplemental native view-host rendering is available through
 `CodexBarIOSTests/SubscriptionBillingTests/testBillingRecoveryProductionViewHostEvidence`.
 It mounts the compiled production sign-in, provider-card and information views

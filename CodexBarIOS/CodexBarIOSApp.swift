@@ -135,6 +135,7 @@ struct CodexBarIOSApp: App {
                 .preferredColorScheme(configurationStore.appAppearance.colorScheme)
                 .task {
                     await removeRetiredGoogleWebsiteData()
+                    configurationStore.removeUnusedAntigravityWebsiteData()
                     #if DEBUG
                     if let fixtures = UITestFixtures.current {
                         guard !fixtures.isNativeTestHost else { return }
@@ -335,8 +336,13 @@ private enum DebugUsageAlertMode {
 }
 #endif
 
+/// Removes what the retired Gemini sign-in left in the shared website data store, once per installation.
+/// Antigravity (#601) signs in through per-account stores of its own, which this never opens.
 @MainActor
 private func removeRetiredGoogleWebsiteData() async {
+    let completedKey = "retiredGoogleWebsiteDataRemoved"
+    guard !UserDefaults.standard.bool(forKey: completedKey) else { return }
+    defer { UserDefaults.standard.set(true, forKey: completedKey) }
     let store = WKWebsiteDataStore.default()
     let types = WKWebsiteDataStore.allWebsiteDataTypes()
     let records = await store.dataRecords(ofTypes: types)

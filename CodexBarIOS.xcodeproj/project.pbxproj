@@ -10,6 +10,17 @@
 		A46700000000000000043001 /* WatchAccessReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46700000000000000040004 /* WatchAccessReaderTests.swift */; };
 		A45100000000000000000201 /* UITestOpenCodeRenewalProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45100000000000000000202 /* UITestOpenCodeRenewalProvider.swift */; };
 		A52200000000000000000105 /* UITestMuseCodeFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52200000000000000000106 /* UITestMuseCodeFixture.swift */; };
+		A60100000000000000000101 /* AntigravityQuotaParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000102 /* AntigravityQuotaParser.swift */; };
+		A60100000000000000000111 /* AntigravityWebSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000112 /* AntigravityWebSession.swift */; };
+		A60100000000000000000121 /* AntigravityPageReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000122 /* AntigravityPageReader.swift */; };
+		A60100000000000000000131 /* AntigravityUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000132 /* AntigravityUsageProvider.swift */; };
+		A60100000000000000000141 /* AntigravityGateDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000142 /* AntigravityGateDiagnostics.swift */; };
+		A60100000000000000000151 /* UITestAntigravityFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000152 /* UITestAntigravityFixture.swift */; };
+		A60100000000000000000161 /* AntigravitySignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000162 /* AntigravitySignInView.swift */; };
+		A60100000000000000000171 /* AntigravityFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000172 /* AntigravityFixtures.swift */; };
+		A60100000000000000000181 /* AntigravityQuotaParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000182 /* AntigravityQuotaParserTests.swift */; };
+		A60100000000000000000191 /* AntigravityUsageProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000192 /* AntigravityUsageProviderTests.swift */; };
+		A60100000000000000000201 /* AntigravityWebSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000202 /* AntigravityWebSessionTests.swift */; };
 		A45100000000000000000101 /* OpenCodeSubscriptionBilling.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45100000000000000000102 /* OpenCodeSubscriptionBilling.swift */; };
 		A44600000000000000000601 /* UITestSubscriptionBillingProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A44600000000000000000602 /* UITestSubscriptionBillingProtocol.swift */; };
 		A44600000000000000000501 /* SubscriptionBillingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A44600000000000000000502 /* SubscriptionBillingTests.swift */; };
@@ -65,6 +76,7 @@
 		10000000000000000000004B /* ConfigurationAndAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004B /* ConfigurationAndAuthTests.swift */; };
 		10000000000000000000004C /* ProviderParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004C /* ProviderParsingTests.swift */; };
 		A52200000000000000000107 /* MuseCodeAllowanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52200000000000000000108 /* MuseCodeAllowanceTests.swift */; };
+		A60100000000000000000401 /* AntigravityAccountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000402 /* AntigravityAccountTests.swift */; };
 		10000000000000000000004D /* UsageHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004D /* UsageHistoryTests.swift */; };
 		10000000000000000000004E /* ProviderNetworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004E /* ProviderNetworkTests.swift */; };
 		10000000000000000000004F /* DashboardAndSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000004F /* DashboardAndSettingsTests.swift */; };
@@ -179,6 +191,7 @@
 		A38400000000000000000001 /* ClaudeUsageUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A38400000000000000000002 /* ClaudeUsageUITests.swift */; };
 		A39100000000000000000001 /* CodexCreditsPoolUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A39100000000000000000002 /* CodexCreditsPoolUITests.swift */; };
 		A35500000000000000000301 /* GrokSignInUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35500000000000000000302 /* GrokSignInUITests.swift */; };
+		A60100000000000000000301 /* AntigravityUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60100000000000000000302 /* AntigravityUITests.swift */; };
 		A30700000000000000000001 /* AccountJourneysUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30700000000000000000011 /* AccountJourneysUITests.swift */; };
 		A37700000000000000000005 /* SettingsEvidenceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A37700000000000000000006 /* SettingsEvidenceUITests.swift */; };
 		A30700000000000000000002 /* UITestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30700000000000000000012 /* UITestFixtures.swift */; };
@@ -360,6 +373,17 @@
 		A46700000000000000040004 /* WatchAccessReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAccessReaderTests.swift; sourceTree = "<group>"; };
 		A45100000000000000000202 /* UITestOpenCodeRenewalProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestOpenCodeRenewalProvider.swift; sourceTree = "<group>"; };
 		A52200000000000000000106 /* UITestMuseCodeFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestMuseCodeFixture.swift; sourceTree = "<group>"; };
+		A60100000000000000000102 /* AntigravityQuotaParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityQuotaParser.swift; sourceTree = "<group>"; };
+		A60100000000000000000112 /* AntigravityWebSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityWebSession.swift; sourceTree = "<group>"; };
+		A60100000000000000000122 /* AntigravityPageReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityPageReader.swift; sourceTree = "<group>"; };
+		A60100000000000000000132 /* AntigravityUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityUsageProvider.swift; sourceTree = "<group>"; };
+		A60100000000000000000142 /* AntigravityGateDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityGateDiagnostics.swift; sourceTree = "<group>"; };
+		A60100000000000000000152 /* UITestAntigravityFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestAntigravityFixture.swift; sourceTree = "<group>"; };
+		A60100000000000000000162 /* AntigravitySignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravitySignInView.swift; sourceTree = "<group>"; };
+		A60100000000000000000172 /* AntigravityFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityUsageTests/AntigravityFixtures.swift; sourceTree = SOURCE_ROOT; };
+		A60100000000000000000182 /* AntigravityQuotaParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityUsageTests/AntigravityQuotaParserTests.swift; sourceTree = SOURCE_ROOT; };
+		A60100000000000000000192 /* AntigravityUsageProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityUsageTests/AntigravityUsageProviderTests.swift; sourceTree = SOURCE_ROOT; };
+		A60100000000000000000202 /* AntigravityWebSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityUsageTests/AntigravityWebSessionTests.swift; sourceTree = SOURCE_ROOT; };
 		A45100000000000000000102 /* OpenCodeSubscriptionBilling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeSubscriptionBilling.swift; sourceTree = "<group>"; };
 		A44600000000000000000602 /* UITestSubscriptionBillingProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestSubscriptionBillingProtocol.swift; sourceTree = "<group>"; };
 		A44600000000000000000502 /* SubscriptionBillingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarIOSTests/SubscriptionBillingTests.swift; sourceTree = SOURCE_ROOT; };
@@ -411,6 +435,7 @@
 		20000000000000000000004B /* ConfigurationAndAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationAndAuthTests.swift; sourceTree = "<group>"; };
 		20000000000000000000004C /* ProviderParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderParsingTests.swift; sourceTree = "<group>"; };
 		A52200000000000000000108 /* MuseCodeAllowanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuseCodeAllowanceTests.swift; sourceTree = "<group>"; };
+		A60100000000000000000402 /* AntigravityAccountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityAccountTests.swift; sourceTree = "<group>"; };
 		20000000000000000000004D /* UsageHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageHistoryTests.swift; sourceTree = "<group>"; };
 		20000000000000000000004E /* ProviderNetworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderNetworkTests.swift; sourceTree = "<group>"; };
 		20000000000000000000004F /* DashboardAndSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardAndSettingsTests.swift; sourceTree = "<group>"; };
@@ -520,6 +545,7 @@
 		A38400000000000000000002 /* ClaudeUsageUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageUITests.swift; sourceTree = "<group>"; };
 		A39100000000000000000002 /* CodexCreditsPoolUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexCreditsPoolUITests.swift; sourceTree = "<group>"; };
 		A35500000000000000000302 /* GrokSignInUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokSignInUITests.swift; sourceTree = "<group>"; };
+		A60100000000000000000302 /* AntigravityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityUITests.swift; sourceTree = "<group>"; };
 		A30700000000000000000011 /* AccountJourneysUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountJourneysUITests.swift; sourceTree = "<group>"; };
 		A37700000000000000000006 /* SettingsEvidenceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsEvidenceUITests.swift; sourceTree = "<group>"; };
 		A30700000000000000000012 /* UITestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestFixtures.swift; sourceTree = "<group>"; };
@@ -791,6 +817,12 @@
 				A45100000000000000000102 /* OpenCodeSubscriptionBilling.swift */,
 				A45100000000000000000202 /* UITestOpenCodeRenewalProvider.swift */,
 				A52200000000000000000106 /* UITestMuseCodeFixture.swift */,
+				A60100000000000000000102 /* AntigravityQuotaParser.swift */,
+				A60100000000000000000112 /* AntigravityWebSession.swift */,
+				A60100000000000000000122 /* AntigravityPageReader.swift */,
+				A60100000000000000000132 /* AntigravityUsageProvider.swift */,
+				A60100000000000000000142 /* AntigravityGateDiagnostics.swift */,
+				A60100000000000000000152 /* UITestAntigravityFixture.swift */,
 				A35500000000000000000102 /* GrokDeviceAuthService.swift */,
 				A35500000000000000000202 /* GrokUsageProvider.swift */,
 				A45800000000000000000102 /* XSubscriptionUsageParser.swift */,
@@ -827,6 +859,7 @@
 				A44600000000000000000402 /* SubscriptionBillingSignInView.swift */,
 				A40600000000000000000602 /* ProviderCardInformationView.swift */,
 				A35300000000000000000102 /* OpenCodeBrowserSignInView.swift */,
+				A60100000000000000000162 /* AntigravitySignInView.swift */,
 				200000000000000000000043 /* ProviderSettingsViewModel.swift */,
 			);
 			path = Views;
@@ -885,6 +918,11 @@
 				20000000000000000000004E /* ProviderNetworkTests.swift */,
 				20000000000000000000004C /* ProviderParsingTests.swift */,
 				A52200000000000000000108 /* MuseCodeAllowanceTests.swift */,
+				A60100000000000000000402 /* AntigravityAccountTests.swift */,
+				A60100000000000000000172 /* AntigravityFixtures.swift */,
+				A60100000000000000000182 /* AntigravityQuotaParserTests.swift */,
+				A60100000000000000000192 /* AntigravityUsageProviderTests.swift */,
+				A60100000000000000000202 /* AntigravityWebSessionTests.swift */,
 				200000000000000000000050 /* TestSupport.swift */,
 				A42000000000000000000502 /* ClaudeUsageResetInventoryTests.swift */,
 				A42000000000000000000602 /* ClaudeUsageResetClientTests.swift */,
@@ -1020,6 +1058,7 @@
 				A38400000000000000000002 /* ClaudeUsageUITests.swift */,
 				A39100000000000000000002 /* CodexCreditsPoolUITests.swift */,
 				A35500000000000000000302 /* GrokSignInUITests.swift */,
+				A60100000000000000000302 /* AntigravityUITests.swift */,
 			);
 			path = CodexBarIOSUITests;
 			sourceTree = "<group>";
@@ -1392,6 +1431,13 @@
 				A45100000000000000000101 /* OpenCodeSubscriptionBilling.swift in Sources */,
 				A45100000000000000000201 /* UITestOpenCodeRenewalProvider.swift in Sources */,
 				A52200000000000000000105 /* UITestMuseCodeFixture.swift in Sources */,
+				A60100000000000000000101 /* AntigravityQuotaParser.swift in Sources */,
+				A60100000000000000000111 /* AntigravityWebSession.swift in Sources */,
+				A60100000000000000000121 /* AntigravityPageReader.swift in Sources */,
+				A60100000000000000000131 /* AntigravityUsageProvider.swift in Sources */,
+				A60100000000000000000141 /* AntigravityGateDiagnostics.swift in Sources */,
+				A60100000000000000000151 /* UITestAntigravityFixture.swift in Sources */,
+				A60100000000000000000161 /* AntigravitySignInView.swift in Sources */,
 				A35500000000000000000101 /* GrokDeviceAuthService.swift in Sources */,
 				A35500000000000000000201 /* GrokUsageProvider.swift in Sources */,
 				A45800000000000000000101 /* XSubscriptionUsageParser.swift in Sources */,
@@ -1474,6 +1520,11 @@
 				10000000000000000000004E /* ProviderNetworkTests.swift in Sources */,
 				10000000000000000000004C /* ProviderParsingTests.swift in Sources */,
 				A52200000000000000000107 /* MuseCodeAllowanceTests.swift in Sources */,
+				A60100000000000000000401 /* AntigravityAccountTests.swift in Sources */,
+				A60100000000000000000171 /* AntigravityFixtures.swift in Sources */,
+				A60100000000000000000181 /* AntigravityQuotaParserTests.swift in Sources */,
+				A60100000000000000000191 /* AntigravityUsageProviderTests.swift in Sources */,
+				A60100000000000000000201 /* AntigravityWebSessionTests.swift in Sources */,
 				100000000000000000000050 /* TestSupport.swift in Sources */,
 				A42000000000000000000501 /* ClaudeUsageResetInventoryTests.swift in Sources */,
 				A42000000000000000000601 /* ClaudeUsageResetClientTests.swift in Sources */,
@@ -1587,6 +1638,7 @@
 				A38400000000000000000001 /* ClaudeUsageUITests.swift in Sources */,
 				A39100000000000000000001 /* CodexCreditsPoolUITests.swift in Sources */,
 				A35500000000000000000301 /* GrokSignInUITests.swift in Sources */,
+				A60100000000000000000301 /* AntigravityUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

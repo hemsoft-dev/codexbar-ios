@@ -25,6 +25,7 @@ final class WidgetConfigurationTests: XCTestCase {
             (.moonshot, "moonshot"),
             (.openCodeZen, "openCodeZen"),
             (.openRouter, "openRouter"),
+            (.antigravityWeb, "antigravityWeb"),
         ]
 
         for (focus, providerID) in mappings {

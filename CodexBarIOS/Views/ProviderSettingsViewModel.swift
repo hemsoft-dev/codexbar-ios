@@ -51,6 +51,8 @@ final class ProviderSettingsViewModel: ObservableObject {
     @Published var authURL: PresentedAuthURL?
     @Published private(set) var copilotTotalAllotmentText = ""
     @Published var openCodeBrowserSession: OpenCodeBrowserSignInSession?
+    @Published var antigravitySignInSession: AntigravitySignInSession?
+    @Published private(set) var antigravityMessage: String?
     @Published private(set) var isSigningInWithOpenCode = false
     var openCodeSessionValidator: any OpenCodeSessionValidating = OpenCodeSessionValidator()
     private var openCodeAttemptID: UUID?
@@ -183,7 +185,7 @@ final class ProviderSettingsViewModel: ObservableObject {
 
     var availableAuthMethods: [ProviderAuthMethod] {
         switch providerID {
-        case .codex, .claude, .grok, .xSubscription, .cursor, .githubBilling, .openCodeZen:
+        case .codex, .claude, .grok, .xSubscription, .cursor, .githubBilling, .openCodeZen, .antigravityWeb:
             [.browserSession]
         case .copilot:
             [.browserSession, .cliToken]
@@ -411,7 +413,29 @@ final class ProviderSettingsViewModel: ObservableObject {
         }
     }
 
+    func startAntigravitySignIn() {
+        guard providerID == .antigravityWeb, antigravitySignInSession == nil else { return }
+        flushPendingChanges()
+        antigravityMessage = nil
+        antigravitySignInSession = AntigravityAccountConnector.makeSession { [weak self] result in
+            self?.completeAntigravitySignIn(result)
+        }
+    }
+
+    /// A canceled or failed sign-in leaves the saved one as it was.
+    private func completeAntigravitySignIn(_ result: Result<AntigravitySignInResult, AntigravitySignInError>) {
+        antigravitySignInSession = nil
+        let configuration = configuration
+        let store = configurationStore
+        Task { @MainActor [weak self] in
+            let error = await AntigravityAccountConnector.reconnect(result, configuration: configuration, in: store)
+            self?.antigravityMessage = error?.message
+            if error == nil { self?.credentialsDidChange() }
+        }
+    }
+
     func cancelAuthentication() {
+        antigravitySignInSession?.cancel()
         cancelSubscriptionBillingSignIn()
         cancelGrokSignIn()
         cancelOpenCodeSignIn()

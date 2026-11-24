@@ -414,6 +414,26 @@ public extension DemoUsageProvider {
                 ],
                 subtitle: "Cursor plan usage"
             ),
+            DemoUsageProvider(
+                providerID: .antigravityWeb,
+                plan: .make(
+                    providerPrefix: "antigravityWeb", identifier: "google-ai-pro", label: "Google AI Pro",
+                    displayLabel: "Google AI Pro"
+                ),
+                bars: [
+                    UsageBar(
+                        stableKey: "gemini-weekly", label: "Gemini Models weekly", used: 24, limit: 100,
+                        resetDescription: "Resets in 6d 2h"
+                    ),
+                    UsageBar(
+                        stableKey: "gemini-5h", label: "Gemini Models five-hour", used: 3, limit: 100,
+                        resetDescription: "Resets in 4h 35m"
+                    ),
+                    UsageBar(stableKey: "3p-weekly", label: "Claude and GPT Models weekly", used: 0, limit: 100),
+                    UsageBar(stableKey: "3p-5h", label: "Claude and GPT Models five-hour", used: 0, limit: 100),
+                ],
+                subtitle: "Experimental · read from Google's Models & Usage page"
+            ),
         ]
     }
 }

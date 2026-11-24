@@ -348,7 +348,10 @@ public struct WatchDashboardSnapshot: Codable, Equatable, Sendable {
                 forKey: .refreshIntervalSeconds
             ),
             accounts: decodedAccounts.compactMap(\.value).filter {
-                !["Google Gemini", "Antigravity", "Greptile"].contains($0.providerName)
+                // The provider that reads Google's Models & Usage page is also named Antigravity (#601).
+                // Only the retired one, whose identifiers start with `antigravity.`, is dropped.
+                let isCurrentAntigravity = $0.providerName == "Antigravity" && $0.id.hasPrefix("antigravityWeb.")
+                return isCurrentAntigravity || !["Google Gemini", "Antigravity", "Greptile"].contains($0.providerName)
             },
             isProLocked: try container.decodeIfPresent(Bool.self, forKey: .isProLocked) ?? true,
             proAccessEndsAt: try container.decodeIfPresent(Date.self, forKey: .proAccessEndsAt),

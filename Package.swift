@@ -85,6 +85,14 @@ let package = Package(
             ]
         ),
         .testTarget(
+            name: "AntigravityUsageTests",
+            dependencies: ["CodexBarIOS"],
+            path: "AntigravityUsageTests",
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins"),
+            ]
+        ),
+        .testTarget(
             name: "GrokAuthTests",
             dependencies: ["CodexBarIOS"],
             path: "GrokAuthTests",

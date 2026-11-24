@@ -125,7 +125,9 @@ final class UITestFixtures {
         }
         Self.seedXSubscriptionAccounts(in: configurationStore, scenario: scenario)
         UITestMuseCodeFixture.seed(in: configurationStore, scenario: scenario)
+        UITestAntigravityFixture.seed(in: configurationStore, scenario: scenario)
         let results = UITestMuseCodeFixture.results(in: configurationStore, scenario: scenario)
+            ?? UITestAntigravityFixture.results(in: configurationStore, scenario: scenario)
             ?? PlanTierFixture.initialResults(in: configurationStore, scenario: scenario)
             ?? Self.initialResults(in: configurationStore, scenario: scenario, defaults: defaults)
         let providers: [any UsageProvider]
@@ -147,13 +149,16 @@ final class UITestFixtures {
             ]
         }
         refreshService = UsageRefreshService(
-            providers: PlanTierFixture.providers(
-                overriding: Self.providersForPlanPills(
-                    Self.upgradeEvidenceProviders(scenario: scenario, fallback: providers), scenario: scenario, suiteName: suite
-                ), scenario: scenario
+            providers: UITestAntigravityFixture.providers(
+                overriding: PlanTierFixture.providers(
+                    overriding: Self.providersForPlanPills(
+                        Self.upgradeEvidenceProviders(scenario: scenario, fallback: providers), scenario: scenario, suiteName: suite
+                    ), scenario: scenario
+                ), scenario: scenario, secretStore: UITestSecretStore(suite: suite)
             ), initialResults: results
         )
         UITestMuseCodeFixture.presentFailures(of: results, in: refreshService, scenario: scenario)
+        UITestAntigravityFixture.presentFailures(of: results, in: refreshService, scenario: scenario)
         if scenario?.hasPrefix("opencode-renewal-") == true || scenario == "plan-pills" || scenario?.hasPrefix("claude-plan-") == true
             || scenario?.hasPrefix("subscription-renewals") == true || scenario == "claude-renewal-ultra" || scenario == "claude-provider-billing"
             || scenario?.hasPrefix("grok-cursor-parity") == true
@@ -1573,7 +1578,8 @@ struct UITestSecretStore: SecretStore {
                 && $0.userID == "user_synthetic" && $0.workspaceID == "org_synthetic"
         } == true
         guard secret.hasPrefix("cursor-plan-") || secret == "ui-test-credential" || codex || cursor || grok || openCode
-                || secret == UITestFixtures.claudeProfileCredential || fixtureBilling else {
+                || secret == UITestFixtures.claudeProfileCredential || fixtureBilling
+                || AntigravityWebSessionMarker.parse(secret) != nil else {
             throw UITestFixtureError.invalidCredential
         }
         UserDefaults(suiteName: suite)?.set(secret, forKey: "fixture-secret.\(account)")

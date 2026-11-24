@@ -1516,6 +1516,22 @@ struct AddAccountFlowState: Equatable {
         accountID = configuration.id
         return configuration.id
     }
+
+    /// Antigravity's account is created only after its sign-in succeeds; every other provider's is created first.
+    func startsWithSignIn(_ providerID: ProviderID) -> Bool {
+        providerID == .antigravityWeb && accountID == nil
+    }
+
+    /// Whether a provider whose account is created only after sign-in may start that sign-in now.
+    @MainActor
+    func canBeginSignIn(for providerID: ProviderID, configurationStore: ProviderConfigurationStore) -> Bool {
+        guard startsWithSignIn(providerID), !configurationStore.isAccountCreationBlocked else { return false }
+        guard configurationStore.canAddAccount(for: providerID) else {
+            configurationStore.requestProPresentation()
+            return false
+        }
+        return true
+    }
 }
 
 struct AddAccountSetupFlow: View {
@@ -1529,6 +1545,8 @@ struct AddAccountSetupFlow: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var flowState = AddAccountFlowState()
+    @State private var antigravitySession: AntigravitySignInSession?
+    @State private var antigravityMessage: String?
 
     init(
         configurationStore: ProviderConfigurationStore,
@@ -1573,11 +1591,30 @@ struct AddAccountSetupFlow: View {
                             Button {
                                 select(providerID)
                             } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Label(providerID.displayName, systemImage: providerID.addAccountIconName)
+                                Label {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(providerID.displayName)
+                                        if providerID.isExperimental {
+                                            Text("Experimental")
+                                                .font(.caption)
+                                                .foregroundStyle(.orange)
+                                                .accessibilityIdentifier("add-account.experimental.\(providerID.rawValue)")
+                                        }
+                                    }
+                                } icon: {
+                                    Image(systemName: providerID.addAccountIconName)
                                 }
                             }
-                            .accessibilityHint("Creates this account and opens its setup screen.")
+                            .accessibilityIdentifier("add-account.provider.\(providerID.rawValue)")
+                            .accessibilityHint(providerID.isExperimental
+                                ? "Shows a notice, then opens Google sign-in. The account is added after sign-in succeeds."
+                                : "Creates this account and opens its setup screen.")
+                        }
+                        if let antigravityMessage {
+                            Text(antigravityMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("add-account.antigravity-message")
                         }
                     } footer: {
                         ForEach(AddAccountFlowState.unavailableProviders) { providerID in
@@ -1599,7 +1636,12 @@ struct AddAccountSetupFlow: View {
                 }
             }
         }
-        .accountPlanPresentation(configurationStore: configurationStore, isActive: flowState.accountID == nil)
+        .accountPlanPresentation(
+            configurationStore: configurationStore, isActive: flowState.accountID == nil && antigravitySession == nil
+        )
+        .sheet(item: $antigravitySession) { session in
+            AntigravitySignInView(session: session)
+        }
         .task {
             guard let initialProviderID, flowState.accountID == nil else {
                 return
@@ -1608,7 +1650,36 @@ struct AddAccountSetupFlow: View {
         }
     }
 
+    /// Antigravity is added only after Google's page has reported usage, so a canceled sign-in leaves no account.
+    private func beginAntigravitySignIn() {
+        guard antigravitySession == nil,
+              flowState.canBeginSignIn(for: .antigravityWeb, configurationStore: configurationStore) else { return }
+        antigravityMessage = nil
+        antigravitySession = AntigravityAccountConnector.makeSession { result in
+            antigravitySession = nil
+            antigravityMessage = (try? result.get()) == nil ? AntigravityAccountError(result.failureMessage).message : nil
+            if let signIn = try? result.get() { Task { await addAntigravityAccount(signIn) } }
+        }
+    }
+
+    private func addAntigravityAccount(_ signIn: AntigravitySignInResult) async {
+        var state = flowState
+        let outcome = await AntigravityAccountConnector.addAccount(for: signIn, flowState: &state, in: configurationStore)
+        flowState = state
+        switch outcome {
+        case let .failure(error):
+            antigravityMessage = error.message
+        case let .success(configuration):
+            onAccountCreated(configuration.id)
+            onCredentialsChanged(configuration.id)
+        }
+    }
+
     private func select(_ providerID: ProviderID) {
+        if flowState.startsWithSignIn(providerID) {
+            beginAntigravitySignIn()
+            return
+        }
         let previousAccountID = flowState.accountID
         guard let accountID = flowState.select(
             providerID,
@@ -1647,6 +1718,8 @@ extension ProviderID {
             "cursorarrow"
         case .museCode:
             "music.note"
+        case .antigravityWeb:
+            "arrow.up.circle"
         }
     }
 }

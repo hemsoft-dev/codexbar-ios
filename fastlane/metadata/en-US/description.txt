@@ -20,6 +20,7 @@ Supported providers:
 - OpenRouter
 - OpenCode Go + Zen
 - Moonshot (Kimi)
+- Antigravity (experimental)
 
 What you can track:
 

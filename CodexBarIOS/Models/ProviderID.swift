@@ -12,6 +12,9 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
     case moonshot
     case cursor
     case museCode
+    /// Experimental. Read from Google's Models & Usage web page (ANTIGRAVITY-USAGE.md). The raw value must never
+    /// contain a dotted part equal to a retired Google identifier; see `RetiredProviderMigration`.
+    case antigravityWeb
 
     public var id: String {
         rawValue
@@ -41,12 +44,14 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
             "Cursor"
         case .museCode:
             "Muse Code"
+        case .antigravityWeb:
+            "Antigravity"
         }
     }
 
     public var supportsPlanBadge: Bool {
         switch self {
-        case .codex, .copilot, .githubBilling, .claude, .grok, .xSubscription, .museCode:
+        case .codex, .copilot, .githubBilling, .claude, .grok, .xSubscription, .museCode, .antigravityWeb:
             true
         case .openRouter, .openCodeZen, .moonshot, .cursor:
             false
@@ -61,6 +66,12 @@ public enum ProviderID: String, CaseIterable, Codable, Identifiable, Sendable {
 
     public var isAvailableOnIPhone: Bool {
         phoneUnavailableReason == nil
+    }
+
+    /// Experimental providers read a source the service doesn't officially offer to third-party apps.
+    /// Add Account labels them and shows a notice before sign-in.
+    public var isExperimental: Bool {
+        self == .antigravityWeb
     }
 
     /// Providers signed in through xAI's Grok CLI device authorization. They share the credential
