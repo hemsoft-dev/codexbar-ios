@@ -23,6 +23,8 @@ final class AntigravityWebSessionTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(AntigravityPagePolicy.sanitizedPagePath("/remote/settings"), "/remote/settings")
         XCTAssertEqual(AntigravityPagePolicy.sanitizedPagePath("/u/1/remote/settings/"), "/u/1/remote/settings")
         XCTAssertEqual(AntigravityPagePolicy.sanitizedPagePath("/remote"), "/remote")
+        XCTAssertEqual(AntigravityPagePolicy.sanitizedPagePath("/u/1/remote"), "/u/1/remote")
+        XCTAssertNil(AntigravityPagePolicy.sanitizedPagePath("/remote/agents/new"))
         for path in [
             "/remote/c/3f2a-conversation", "remote/settings", "/remote/settings?x=1", "//evil.example/settings",
             "/remote/../settings", String(repeating: "/a", count: 40) + "/settings",
@@ -39,6 +41,15 @@ final class AntigravityWebSessionTests: XCTestCase, @unchecked Sendable {
             "https://antigravity.google.com/remote/settings?settingsScreen=Models",
             "https://antigravity.google.com/?settingsOpen=true&settingsScreen=Models",
         ])
+        // On the owner's phone Google's app reported its address as the entry, `/remote`, while showing usage.
+        XCTAssertEqual(AntigravityPagePolicy.pageURLs(pagePath: "/remote").map(\.absoluteString), [
+            "https://antigravity.google.com/remote/settings?settingsScreen=Models",
+            "https://antigravity.google.com/?settingsOpen=true&settingsScreen=Models",
+        ])
+        XCTAssertEqual(
+            AntigravityPagePolicy.pageURLs(pagePath: "/u/1/remote").first?.absoluteString,
+            "https://antigravity.google.com/u/1/remote/settings?settingsScreen=Models"
+        )
         XCTAssertEqual(AntigravityPagePolicy.pageURLs(pagePath: nil).count, 2)
         XCTAssertEqual(AntigravityPagePolicy.pageURLs(pagePath: "https://evil.example/settings").count, 2)
         for url in AntigravityPagePolicy.pageURLs(pagePath: "/remote") {

@@ -17,8 +17,10 @@ building, testing, or releasing the app.
   Google reports. A five-hour limit that Google has paused says the weekly
   limit was reached. CodexBar sends no request of its own to Google and keeps
   each account's Google sign-in in a private browser profile that is deleted
-  with the account. A canceled sign-in adds no account. The live sign-in and
-  the comparison with Google's page are pending with the account owner.
+  with the account. A canceled sign-in adds no account. A limit you haven't
+  used shows no reset time, as on Google's page. The account owner signed in
+  on an iPhone and confirmed the values match Google's page; whether the
+  sign-in lasts a week is still being checked.
   ([#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601))
 
 - Add Account now explains that Muse Code isn't available on iPhone. Meta

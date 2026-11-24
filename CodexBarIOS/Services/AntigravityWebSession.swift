@@ -92,10 +92,13 @@ public enum AntigravityPagePolicy {
             + "Removing the account deletes it.",
     ]
 
-    /// Pages opened to read usage, most likely first. `pagePath` is the one sign-in observed.
+    /// Pages opened to read usage, most likely first. `pagePath` is the one sign-in observed. Google's app reports
+    /// its own address as the app entry, such as `/remote` or `/u/1/remote`, even while it shows the usage screen,
+    /// so an entry path is turned into that entry's usage screen.
     public static func pageURLs(pagePath: String?) -> [URL] {
         var urls: [URL] = []
-        for path in [pagePath.flatMap(sanitizedPagePath), defaultPagePath, "/"].compactMap({ $0 }) {
+        let observed = pagePath.flatMap(sanitizedPagePath).map { $0.hasSuffix("/remote") ? $0 + "/settings" : $0 }
+        for path in [observed, defaultPagePath, "/"].compactMap({ $0 }) {
             var components = URLComponents()
             components.scheme = "https"
             components.host = pageHost
@@ -115,7 +118,7 @@ public enum AntigravityPagePolicy {
         guard path.hasPrefix("/"), path.count <= 64, path.allSatisfy(allowed.contains), !path.contains("//") else { return nil }
         // Only the usage screen or the app's entry are worth reopening; a conversation path is never saved.
         let trimmed = path.count > 1 && path.hasSuffix("/") ? String(path.dropLast()) : path
-        guard trimmed.hasSuffix("/settings") || trimmed == "/remote" || trimmed == "/" else { return nil }
+        guard trimmed.hasSuffix("/settings") || trimmed.hasSuffix("/remote") || trimmed == "/" else { return nil }
         return trimmed
     }
 

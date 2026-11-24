@@ -194,6 +194,8 @@ final class AntigravityAccountTests: XCTestCase {
             try XCTUnwrap(results.first { $0.accountID == "ui-antigravity-\(state)" })
         }
         XCTAssertEqual(try result("measured").bars.map(\.used), [3, 9, 0, 0])
+        XCTAssertEqual(try result("measured").bars.map { $0.resetsAt != nil }, [true, true, false, false],
+                       "untouched pools carry a reset time in the fixture, as in Google's response, and show none")
         XCTAssertEqual(try result("weekly-limit").unavailableUsageMetrics["antigravityWeb.gemini-5h"], "Weekly limit reached")
         XCTAssertEqual(try result("partial").bars.map(\.stableKey), ["gemini-weekly", "3p-weekly"])
         XCTAssertEqual(try result("extra-pool").bars.last?.stableKey, "extra-gemini-argon-wtu-weekly")

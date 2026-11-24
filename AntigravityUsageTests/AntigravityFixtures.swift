@@ -15,7 +15,9 @@ enum AntigravityFixtures {
     ) -> [Any] {
         var fields: [Any] = [id, name, window, remaining ?? NSNull(), NSNull()]
         fields.append(reset.map { [String(Int($0.timeIntervalSince1970)), 0] as [Any] } ?? NSNull())
-        fields.append(description ?? NSNull())
+        // Google describes a pool once it has been used; an untouched pool has no description.
+        let used = (remaining as? Double).map { $0 < 1 } ?? false
+        fields.append(description ?? (used ? "You have used some of this limit." : NSNull()) as Any)
         if let disabled { fields.append(disabled) }
         return fields
     }
@@ -44,6 +46,22 @@ enum AntigravityFixtures {
             ]),
         ])
     }
+
+    /// The response Google's page received on the owner's iPhone on November 24, 2026 at 19:26 UTC, as the debug
+    /// build recorded it. It holds quota pools and Google's own descriptions, and nothing that identifies an account.
+    static let liveCaptureDate = Date(timeIntervalSince1970: 1_795_548_397)
+    static let liveQuotaBody = [
+        #"[[[null,[[[["gemini-weekly","Weekly Limit Remaining","weekly",0.92771715,null,["1796073749"],"You have used so"#,
+        #"me of your weekly limit, it will fully refresh in 6 days, 1 hour."],["gemini-5h","Five Hour Limit Remaining",""#,
+        #"5h",1,null,["1795566397"]]],"Gemini Models","Models within this group: Gemini 4 Neon, Gemini 4 Carbon, Gemini "#,
+        #"4 Argon, Gemini 4 Hydrogen, Gemini 3.8 Flash"],[[["3p-weekly","Weekly Limit Remaining","weekly",1,null,["17961"#,
+        #"53197"]],["3p-5h","Five Hour Limit Remaining","5h",1,null,["1795566397"]]],"Claude and GPT models","Models wit"#,
+        #"hin this group: Claude Opus 5.5, Claude Sonnet 5.5, GPT-OSS 120B"]],"Within each group, models share a weekly "#,
+        #"limit and a 5-hour limit. Quota is consumed proportionally to the cost of the tokens. Thus, limits will last l"#,
+        #"onger with shorter tasks or using more cost-effective models. The 5-hour limit smooths out aggregate demand to"#,
+        #" fairly distribute global capacity across all users, while your weekly limit is tied directly to your individu"#,
+        #"al tier."]]]"#,
+    ].joined()
 
     static let profileBody = #"["person@example.com",["g1-ultra-tier","Google AI Ultra","You can upgrade.","https://one.google.com/ai","Upgrade"]]"#
     static let profileWithoutPlanBody = #"["person@example.com"]"#
