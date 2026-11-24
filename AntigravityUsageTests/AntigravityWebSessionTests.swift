@@ -19,6 +19,13 @@ final class AntigravityWebSessionTests: XCTestCase, @unchecked Sendable {
         }
     }
 
+    func testHiddenPageIsWideEnoughForGooglesDesktopLayout() {
+        // Google's app uses its phone layout at 768 points or less. There Settings is a list, and the usage screen
+        // that asks for quota never opens from its address. On the owner's phone a 390-point page got no quota.
+        XCTAssertGreaterThan(AntigravityPagePolicy.hiddenPageSize.width, 1024)
+        XCTAssertGreaterThan(AntigravityPagePolicy.hiddenPageSize.height, 600)
+    }
+
     func testOnlyTheUsageScreenOrTheAppEntryIsRememberedAsAPagePath() {
         XCTAssertEqual(AntigravityPagePolicy.sanitizedPagePath("/remote/settings"), "/remote/settings")
         XCTAssertEqual(AntigravityPagePolicy.sanitizedPagePath("/u/1/remote/settings/"), "/u/1/remote/settings")

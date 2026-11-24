@@ -93,6 +93,10 @@ public enum AntigravityPagePolicy {
     static let profileMethodSuffix = "/google.gca.aicode.v1alpha.JetskiRemoteAgentProxyService/GetUserProfile"
     static let responseHosts: Set<String> = ["aicode.clients6.google.com", "aicode.googleapis.com"]
     public static let messageHandlerName = "codexbarAntigravity"
+    /// Google's app shows Settings as a list on a narrow page, and the address then opens the list, not the usage
+    /// screen. On a wide page the same address opens Models & Usage, which is what asks for quota. Seen on the
+    /// owner's phone on November 24, 2026: a 390-point page never asked for quota.
+    public static let hiddenPageSize = CGSize(width: 1280, height: 900)
     static let maximumBodyLength = 256 * 1024
 
     /// The notice a customer accepts before signing in. Also quoted in PRIVACY.md and ANTIGRAVITY-USAGE.md.

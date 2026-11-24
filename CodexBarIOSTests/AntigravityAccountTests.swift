@@ -177,6 +177,43 @@ final class AntigravityAccountTests: XCTestCase {
         AntigravitySignInSession.discard(storeID: session.storeID)
     }
 
+    func testSignedInCustomerGetsUsageFromTheWidePageWithoutOpeningSettingsByHand() async throws {
+        // On a phone-width page Google's Settings opens as a list and never asks for quota. The plan response says
+        // the customer is signed in; the wide hidden page then reads usage with the same website data store.
+        let capture = AntigravityPageCapture(quotaBody: AntigravityFixtures.liveQuotaBody, pagePath: "/remote")
+        let reader = AntigravityFixtureReader([.failure(.noUsageReported), .success(capture)])
+        var outcomes: [Result<AntigravitySignInResult, AntigravitySignInError>] = []
+        let session = AntigravitySignInSession(isSynthetic: true, reader: reader) { outcomes.append($0) }
+        session.acceptNotice()
+
+        session.receive(.profile(AntigravityFixtures.profileBody), path: "/remote")
+        for _ in 0..<20 where await reader.markers.isEmpty { try await Task.sleep(for: .milliseconds(50)) }
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertTrue(outcomes.isEmpty, "a wide page that reported nothing is not a sign-in")
+
+        session.receive(.profile(AntigravityFixtures.profileBody), path: "/remote")
+        for _ in 0..<40 where outcomes.isEmpty { try await Task.sleep(for: .milliseconds(50)) }
+        let result = try XCTUnwrap(outcomes.first).get()
+        XCTAssertEqual(result.marker.websiteDataStoreID, session.storeID)
+        XCTAssertEqual(result.capture.quotaBody, AntigravityFixtures.liveQuotaBody)
+        XCTAssertEqual(result.capture.profileBody, AntigravityFixtures.profileBody, "the plan the visible page reported is kept")
+        let reads = await reader.markers
+        XCTAssertEqual(reads.map(\.websiteDataStoreID), [session.storeID, session.storeID], "it reads with this sign-in's own store")
+        AntigravitySignInSession.discard(storeID: session.storeID)
+    }
+
+    func testCanceledSignInIgnoresAWidePageThatAnswersLate() async throws {
+        let reader = AntigravityFixtureReader([.success(AntigravityPageCapture(quotaBody: AntigravityFixtures.liveQuotaBody))])
+        var outcomes: [Result<AntigravitySignInResult, AntigravitySignInError>] = []
+        let session = AntigravitySignInSession(isSynthetic: true, reader: reader) { outcomes.append($0) }
+        session.acceptNotice()
+        session.receive(.profile(AntigravityFixtures.profileBody), path: "/remote")
+        session.cancel()
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertEqual(outcomes.count, 1)
+        XCTAssertEqual(outcomes.first?.failureMessage, AntigravitySignInError.canceled.localizedDescription)
+    }
+
     // MARK: Simulator fixtures
 
     func testStateFixturesGoThroughTheRealParserAndProvider() async throws {

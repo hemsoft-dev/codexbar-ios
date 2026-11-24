@@ -124,11 +124,10 @@ public final class WebKitAntigravityPageReader: AntigravityPageReading {
     private let laterAttemptTimeout: Duration
     private let profileGrace: Duration
 
-    /// Google's app takes several seconds to start in a new web view before it asks for quota. On the owner's
-    /// phone the visible browser received quota 8 to 9 seconds after an already loaded page was reopened, and a
-    /// 15-second limit from a cold start was never enough.
+    /// On the owner's phone a wide page reported quota 1 to 3 seconds after it was opened. The limits leave room
+    /// for a slow connection.
     public init(
-        firstAttemptTimeout: Duration = .seconds(45), laterAttemptTimeout: Duration = .seconds(20),
+        firstAttemptTimeout: Duration = .seconds(30), laterAttemptTimeout: Duration = .seconds(15),
         profileGrace: Duration = .milliseconds(1500)
     ) {
         self.firstAttemptTimeout = firstAttemptTimeout
@@ -177,7 +176,7 @@ private final class AntigravityHiddenPageLoad: NSObject, WKNavigationDelegate {
 
     init(storeID: UUID) {
         webView = WKWebView(
-            frame: CGRect(x: 0, y: 0, width: 390, height: 844),
+            frame: CGRect(origin: .zero, size: AntigravityPagePolicy.hiddenPageSize),
             configuration: AntigravityCaptureReceiver.configuration(storeID: storeID, receiver: receiver)
         )
         super.init()
@@ -258,6 +257,7 @@ private final class AntigravityHiddenPageLoad: NSObject, WKNavigationDelegate {
             AntigravityGateDiagnostics.record(
                 "read.no-quota t=\(elapsed) failed=\(attempt.navigationFailed) profile=\(profile) at=\(place)"
             )
+            await AntigravityGateDiagnostics.recordPageState(of: webView)
             return nil
         }
         // Google's page asks for the plan in a separate request; give it a moment to arrive.
