@@ -19,6 +19,33 @@ final class AntigravityWebSessionTests: XCTestCase, @unchecked Sendable {
         }
     }
 
+    @MainActor
+    func testCancelingAReadStopsItsPageLoadAndFreesTheQueue() async throws {
+        let queue = AntigravityReadQueue()
+        let started = expectation(description: "the load started")
+        let abandoned = Task { @MainActor in
+            try await queue.run {
+                started.fulfill()
+                try await Task.sleep(for: .seconds(60))
+                return "finished"
+            }
+        }
+        await fulfillment(of: [started], timeout: 5)
+        let clock = ContinuousClock()
+        let begin = clock.now
+        abandoned.cancel()
+        let outcome = await abandoned.result
+        XCTAssertThrowsError(try outcome.get()) { XCTAssertTrue($0 is CancellationError, "\($0)") }
+
+        // The next read doesn't wait for the abandoned one, and a read canceled before its turn never starts.
+        let next = try await queue.run { "next" }
+        XCTAssertEqual(next, "next")
+        XCTAssertLessThan(clock.now - begin, .seconds(5))
+        let neverStarted = Task { @MainActor in try await queue.run { XCTFail("a canceled read must not load a page") } }
+        neverStarted.cancel()
+        _ = await neverStarted.result
+    }
+
     func testHiddenPageIsWideEnoughForGooglesDesktopLayout() {
         // Google's app uses its phone layout at 768 points or less. There Settings is a list, and the usage screen
         // that asks for quota never opens from its address. On the owner's phone a 390-point page got no quota.

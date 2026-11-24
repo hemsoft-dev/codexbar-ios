@@ -151,8 +151,10 @@ public final class WebKitAntigravityPageReader: AntigravityPageReading {
     }
 }
 
+/// Runs one hidden page load at a time. Canceling the caller cancels its load, so a canceled sign-in releases
+/// its web view at once and neither keeps its website data alive nor holds up the reads behind it.
 @MainActor
-private final class AntigravityReadQueue {
+final class AntigravityReadQueue {
     static let shared = AntigravityReadQueue()
     private var tail: Task<Void, Never>?
 
@@ -160,10 +162,15 @@ private final class AntigravityReadQueue {
         let previous = tail
         let task = Task { @MainActor in
             await previous?.value
+            try Task.checkCancellation()
             return try await work()
         }
         tail = Task { _ = await task.result }
-        return try await task.value
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
     }
 }
 
