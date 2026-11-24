@@ -165,8 +165,10 @@ browser profile that is deleted with the account. See
 [the Antigravity contract](ANTIGRAVITY-USAGE.md) and
 [the decision record](docs/2026-11-23-antigravity-web-session-decision.md). The
 account owner signed in on an iPhone on November 24, 2026 and confirmed the
-values match Google's page. A refresh after sign-in and the seven-day session
-check are still pending with him.
+values match Google's page. A refresh after sign-in failed on that first build
+and has been changed since; it and the seven-day session check are still
+pending with him. Antigravity refreshes only while CodexBar is open, so widgets
+and Apple Watch show the last reading with its time.
 
 ## GitHub Copilot Sign-In
 

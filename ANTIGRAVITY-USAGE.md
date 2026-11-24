@@ -9,9 +9,17 @@ Terms used here are defined in [GLOSSARY.md](GLOSSARY.md).
 Status on November 24, 2026: the owner signed in on his iPhone at 19:26 UTC with
 a development build and reported that the card's values match Google's page.
 The response that build recorded is now a unit-test fixture, and it has the
-layout described below. No signed-in request has been made by an agent. Still
-pending with the owner: a refresh by the hidden web view after sign-in, the
-comparison with `agy /usage`, and the seven-day session check.
+layout described below. No signed-in request has been made by an agent.
+
+A refresh after sign-in did not work on that build. At 21:20 UTC the owner
+refreshed and the card said Google's page didn't report usage; signing in again
+worked. The build's log shows the hidden page loaded signed in and reported no
+quota within the 15 seconds it was given, twice. The visible browser received
+quota 8 to 9 seconds after reopening an already loaded page. The reader now
+waits up to 45 seconds on the first page. Whether that is enough is unverified.
+
+Still pending with the owner: a working refresh after sign-in, the comparison
+with `agy /usage`, and the seven-day session check.
 
 Checked signed out on November 24, 2026, against Google's live page: the hidden
 read reports "sign in again" in under a second, and in the iOS simulator the
@@ -108,7 +116,8 @@ Google and can change without notice.
 | --- | --- |
 | The page reported usage | The meters, read time, and plan when reported |
 | The page showed Google's Sign in link, or moved to Google's sign-in form | "Google asked you to sign in again", no values, a sign-in action |
-| The page loaded but reported no usage | An explanation that an account which only works through a connected computer can't be read, no values |
+| The page loaded signed in but reported no usage in time | The last reading, marked stale, with an explanation that also says an account which only works through a connected computer can't be read. Without an earlier reading, the explanation and no values. |
+| CodexBar wasn't on screen | The last reading, marked stale. Nothing is loaded, and the next refresh on screen runs at once. |
 | The page didn't load | The last reading, marked stale, with the failure. Stale readings raise no alerts and add no history. |
 | The response wasn't recognized | The last reading, marked stale, and a note that an app update may be needed |
 
@@ -155,11 +164,16 @@ account name. Release builds write nothing.
 - The response layout was inferred from public page code and matched the one
   live response captured so far. Most unit-test fixtures are still built from
   that layout; one is the live response.
-- Whether the Models & Usage screen fetches quota when opened by its address in
-  a hidden web view is unverified. During the owner's sign-in the first load of
-  the usage screen brought the plan but no quota for 19 seconds, and a second
-  load brought quota in 3 seconds. Google's app reports its own address as the
-  entry (`/remote`) even on the usage screen, so refresh opens that entry's
-  usage screen first.
+- A refresh by the hidden web view has not worked yet on a real account. The
+  first build gave the page 15 seconds, and Google's app needs longer than that
+  to start in a new web view and ask for quota. The reader now waits up to 45
+  seconds on the first page and 20 on each fallback. Debug builds log how long
+  the page, the plan and the quota took, so the next attempt shows the real
+  numbers.
+- Google's app reports its own address as the entry (`/remote`) even on the
+  usage screen, so refresh opens that entry's usage screen first.
+- Refresh runs only while CodexBar is on screen. In the background iOS suspends
+  the app mid-load, so widgets and the watch show the last reading with its
+  time until the app is opened.
 - Passkey and security-key sign-in may not work inside an in-app browser.
 - AI credits and Gemini app chat limits are out of scope.

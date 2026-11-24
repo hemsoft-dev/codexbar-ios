@@ -156,17 +156,53 @@ final class AntigravityUsageProviderTests: XCTestCase, @unchecked Sendable {
         XCTAssertNotEqual(expired.cacheIdentity, reading.cacheIdentity, "the refresh service must not reuse the earlier reading")
     }
 
-    func testAccountThatNeedsAComputerExplainsItselfWithoutValues() async throws {
-        let reader = AntigravityFixtureReader([.failure(.noUsageReported)])
+    func testPageThatLoadsWithoutReportingUsageExplainsItselfAndKeepsTheLastReading() async throws {
+        // On the owner's phone the hidden page loaded signed in and reported nothing in time. That must not blank
+        // a card that had values, and an account that needs a computer still gets its explanation.
+        let reader = AntigravityFixtureReader([.success(capture), .failure(.noUsageReported)])
         let account = AntigravityFixtures.configuration()
-        let result = try await provider(
-            account: account, marker: AntigravityWebSessionMarker(websiteDataStoreID: UUID()), reader: reader, clock: Clock(start)
-        ).fetchUsage(for: account)
+        let clock = Clock(start)
+        let provider = provider(
+            account: account, marker: AntigravityWebSessionMarker(websiteDataStoreID: UUID()), reader: reader, clock: clock
+        )
+        let reading = try await provider.fetchUsage(for: account)
+        clock.advance(5 * 60)
+        let result = try await provider.fetchUsage(for: account)
 
+        XCTAssertEqual(result.failureMessage?.contains("didn't report usage this time"), true)
         XCTAssertEqual(result.failureMessage?.contains("connected computer"), true)
-        XCTAssertTrue(result.bars.isEmpty)
-        XCTAssertFalse(result.preserveCachedBarsOnFailure)
+        XCTAssertTrue(result.bars.isEmpty, "the failure itself carries no values")
+        XCTAssertTrue(result.preserveCachedBarsOnFailure, "the refresh service keeps the last reading and marks it stale")
+        XCTAssertEqual(result.cacheIdentity, reading.cacheIdentity)
+        XCTAssertFalse(result.hasCurrentBars)
         XCTAssertEqual(result.recoveryAction, .retryRefresh)
+    }
+
+    func testRefreshWhileTheAppIsOffScreenLoadsNothingAndDoesNotCountAgainstTheLimit() async throws {
+        let reader = AntigravityFixtureReader([.success(capture), .failure(.appNotActive), .success(capture)])
+        let account = AntigravityFixtures.configuration()
+        let clock = Clock(start)
+        let provider = provider(
+            account: account, marker: AntigravityWebSessionMarker(websiteDataStoreID: UUID()), reader: reader, clock: clock
+        )
+        _ = try await provider.fetchUsage(for: account)
+        clock.advance(5 * 60)
+        let skipped = try await provider.fetchUsage(for: account)
+        XCTAssertEqual(skipped.failureMessage, "Antigravity refreshes while CodexBar is open.")
+        XCTAssertTrue(skipped.preserveCachedBarsOnFailure)
+
+        // Back on screen a moment later, the refresh runs at once.
+        clock.advance(2)
+        let refreshed = try await provider.fetchUsage(for: account)
+        XCTAssertNil(refreshed.failureMessage)
+        XCTAssertEqual(refreshed.fetchedAt, start.addingTimeInterval(5 * 60 + 2))
+        let reads = await reader.markers
+        XCTAssertEqual(reads.count, 3)
+        for error in [AntigravityReadError.noUsageReported, .pageFailed, .unreadableResponse, .appNotActive] {
+            XCTAssertTrue(error.keepsLastReading, "\(error)")
+        }
+        XCTAssertFalse(AntigravityReadError.signInRequired.keepsLastReading, "an ended sign-in shows no values")
+        XCTAssertFalse(AntigravityReadError.notConfigured.keepsLastReading)
     }
 
     func testPageThatDidNotLoadKeepsTheLastReadingStaleAndRetriesAfterAMinute() async throws {

@@ -50,17 +50,17 @@ public final class AntigravityUsageProvider: UsageProvider {
         "antigravity-web:\(storeID.uuidString.lowercased())"
     }
 
-    /// A page that didn't load keeps the last reading, marked stale. A page that asked for sign-in, or reported no
-    /// usage, shows no values: its identity never matches a cached reading.
+    /// A page that didn't load, or loaded without reporting usage, keeps the last reading, marked stale. A page that
+    /// asked for sign-in shows no values: its identity never matches a cached reading.
     static func failure(
         _ error: AntigravityReadError, configuration: ProviderAccountConfiguration, storeID: UUID?, at date: Date
     ) -> ProviderUsageResult {
-        let keepsLastReading = error == .pageFailed || error == .unreadableResponse
+        let keepsLastReading = error.keepsLastReading
         let message = error.localizedDescription
         let recovery: ProviderUsageRecoveryAction = switch error {
         case .notConfigured: .signIn
         case .signInRequired: .reauthenticate
-        case .noUsageReported, .pageFailed, .unreadableResponse: .retryRefresh
+        case .noUsageReported, .pageFailed, .unreadableResponse, .appNotActive: .retryRefresh
         }
         return ProviderUsageResult(
             accountID: configuration.id,
@@ -124,7 +124,9 @@ public actor AntigravityReadCache {
         let reading = await task.value
         if inFlight[storeID] == task {
             inFlight[storeID] = nil
-            readings[storeID] = reading
+            // A read that didn't run because the app wasn't on screen loaded nothing, so it doesn't count
+            // against the five-minute limit and never replaces an earlier reading.
+            if reading.outcome != .failure(.appNotActive) { readings[storeID] = reading }
         }
         return reading
     }

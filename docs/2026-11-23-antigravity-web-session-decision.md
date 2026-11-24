@@ -99,7 +99,10 @@ the issue. If any of them fails, the pull request is reverted.
 Gate status on November 24, 2026: Franz signed in on his iPhone and reported
 that the values match Google's page, which covers items 1 and 2 by his report.
 The response the build recorded matches the inferred layout. Item 3 is pending,
-and so is a refresh by the hidden web view after sign-in.
+and so is a working refresh after sign-in: the first one Franz tried, at 21:20
+UTC, reported no usage, because the hidden page was given 15 seconds and needs
+longer. The reader now waits up to 45 seconds; that is not yet confirmed on his
+phone.
 
 Gate items:
 
