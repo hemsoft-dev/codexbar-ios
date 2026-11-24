@@ -162,10 +162,11 @@ class UIShardTests(unittest.TestCase):
                          '4f299b77c869f5674c5fc63a9af4cd208a0ac17c39a43b8b88b8538763229ead')
         # Removing the approved step and its job-level grant must recover the
         # pre-relay workflow plus the explicit manual cost-only mode and the
-        # opt-in SwiftPM regressions (#562). Pin the full remaining workflow.
+        # opt-in SwiftPM regressions (#562), and the artifact exclusions for
+        # interrupted xcresult staging files (#575). Pin the full remaining workflow.
         restored = workflow.replace(notifier, '').replace('      pull-requests: write\n', '', 1)
         self.assertEqual(hashlib.sha256(restored.encode()).hexdigest(),
-                         '71e478372406a8e2c475c0d6af314c0084e887550c65ffbd1897d907bfe3eb72')
+                         '2fc0b649b1da8477bcee69d4787d599c48afac635ed3272731fff40aff0e11ef')
 
 
 if __name__ == '__main__':

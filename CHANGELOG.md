@@ -103,6 +103,11 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- The manual release UI gate's workflow-scope test passes again. A November 16
+  change to the CI workflow's artifact exclusions had not updated the hash that
+  test pins, so the gate's shard-policy step would have failed.
+  ([#603](https://github.com/hemsoft-dev/codexbar-ios/issues/603))
+
 - Record the November 22 authorized read-only App Store Connect API readback of
   retained Pro product settings (`22490183`, Monthly, Yearly, Lifetime, 16-day
   billing grace, 175 Free territories) and the owner's disposition accepting
