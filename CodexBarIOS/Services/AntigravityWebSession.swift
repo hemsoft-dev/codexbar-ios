@@ -192,11 +192,13 @@ public enum AntigravityPagePolicy {
         return (response, body["path"] as? String)
     }
 
-    /// Runs inside Google's page. It forwards the text of two responses the page itself requested, and the address of
+    /// Runs inside Google's Antigravity page only, never on Google's sign-in pages. It forwards the text of two responses the page itself requested, and the address of
     /// the Sign in link Google shows a signed-out visitor. Nothing else: no cookies, headers, request bodies or
     /// other responses. It sends no request of its own.
     public static let captureScript = """
     (function () {
+      // Google's sign-in pages load in the same browser; nothing is installed on them.
+      if (window.location.hostname !== '\(pageHost)') { return; }
       if (window.__codexbarAntigravityCapture) { return; }
       window.__codexbarAntigravityCapture = true;
       var suffixes = ['\(quotaMethodSuffix)', '\(profileMethodSuffix)'];

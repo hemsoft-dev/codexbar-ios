@@ -2891,6 +2891,23 @@ extension ProviderConfigurationStore {
         }
     }
 
+    /// The website data stores saved Antigravity accounts sign in with, or nil when that can't be told right now:
+    /// a saved sign-in that can't be read, or one this version can't interpret. Cleanup must not run on a guess,
+    /// because a store removed by mistake is a sign-in lost for good.
+    func antigravityRetainedStoreIDs() -> Set<UUID>? {
+        var storeIDs = Set<UUID>()
+        for configuration in configurations where configuration.providerID == .antigravityWeb {
+            do {
+                guard let stored = try secretStore.readSecret(account: Self.keychainAccount(for: configuration)) else { continue }
+                guard let marker = AntigravityWebSessionMarker.parse(stored) else { return nil }
+                storeIDs.insert(marker.websiteDataStoreID)
+            } catch {
+                return nil
+            }
+        }
+        return storeIDs
+    }
+
     /// Deletes Google website data no saved Antigravity account uses. Runs at launch and after an Antigravity
     /// sign-in is saved, replaced or removed, so removing an account removes its Google sign-in.
     public func removeUnusedAntigravityWebsiteData() {
@@ -2901,9 +2918,7 @@ extension ProviderConfigurationStore {
             await AntigravityWebsiteDataCleanup.removeOrphanedStores(
                 keeping: { [weak self] in
                     await MainActor.run {
-                        guard let self else { return nil }
-                        return Set(self.antigravityWebSessionMarkers().map(\.websiteDataStoreID))
-                            .union(AntigravityPendingSignIns.storeIDs)
+                        self?.antigravityRetainedStoreIDs()?.union(AntigravityPendingSignIns.storeIDs)
                     }
                 },
                 data: data

@@ -41,7 +41,8 @@ tells the web view to do is open a page.
 
 ## What is read
 
-A script injected into the main frame of `antigravity.google.com` forwards the
+A script that runs only in the main frame of `antigravity.google.com`, and does
+nothing on Google's sign-in pages, forwards the
 response text of two of the page's own calls, and the address of the Sign in
 link in Google's account bar when the page shows one. It reads no cookies,
 headers or request bodies, and it starts no request.

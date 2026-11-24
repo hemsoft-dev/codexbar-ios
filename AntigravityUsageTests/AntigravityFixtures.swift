@@ -56,6 +56,12 @@ enum AntigravityFixtures {
 final class AntigravityFixtureSecretStore: SecretStore, @unchecked Sendable {
     private let lock = NSLock()
     private var values: [String: String]
+    private var readsFail = false
+
+    /// Stands in for a Keychain that is locked or briefly unavailable.
+    func failReads(_ fail: Bool) {
+        lock.withLock { readsFail = fail }
+    }
 
     init(_ values: [String: String] = [:]) {
         self.values = values
@@ -66,7 +72,10 @@ final class AntigravityFixtureSecretStore: SecretStore, @unchecked Sendable {
     }
 
     func readSecret(account: String) throws -> String? {
-        lock.withLock { values[account] }
+        try lock.withLock {
+            if readsFail { throw KeychainError.unhandledStatus(-25308) }
+            return values[account]
+        }
     }
 
     func saveSecret(_ secret: String, account: String) throws {

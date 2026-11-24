@@ -231,11 +231,17 @@ final class AntigravityWebSessionTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(AntigravityReadAttempt.failure(reachedAntigravity: false), .pageFailed)
     }
 
-    func testCaptureScriptForwardsTwoResponsesAndTouchesNoCredentials() {
+    func testCaptureScriptForwardsTwoResponsesAndTouchesNoCredentials() throws {
         let script = AntigravityPagePolicy.captureScript
         XCTAssertTrue(script.contains("/GetUserQuotaSummary"))
         XCTAssertTrue(script.contains("/GetUserProfile"))
         XCTAssertTrue(script.contains("messageHandlers.codexbarAntigravity"))
+        // The first thing it does is leave every page that isn't Google's Antigravity app, sign-in pages included.
+        let guardLine = "if (window.location.hostname !== 'antigravity.google.com') { return; }"
+        let guardIndex = try XCTUnwrap(script.range(of: guardLine)).lowerBound
+        for hook in ["XMLHttpRequest.prototype.open =", "window.fetch =", "addEventListener", "postMessage"] {
+            XCTAssertLessThan(guardIndex, try XCTUnwrap(script.range(of: hook)).lowerBound, hook)
+        }
         // It reads responses the page requested. It never reads cookies or headers and never starts a request.
         for forbidden in [
             "document.cookie", "getResponseHeader", "setRequestHeader", "Authorization", "SAPISID",
@@ -372,6 +378,52 @@ final class AntigravityWebSessionTests: XCTestCase, @unchecked Sendable {
         await AntigravityWebsiteDataCleanup.removeOrphanedStores(keeping: { nil }, data: data)
         let removed = await data.removed
         XCTAssertTrue(removed.isEmpty)
+    }
+
+    @MainActor
+    func testCleanupRemovesNothingWhileASavedSignInCannotBeReadOrUnderstood() async throws {
+        let suite = "antigravity-unreadable-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let secrets = AntigravityFixtureSecretStore()
+        let signedIn = UUID()
+        let orphan = UUID()
+        let data = AntigravityFixtureWebsiteData(stores: [signedIn])
+        let store = ProviderConfigurationStore(
+            initialPlanAccess: AccountPlanAccess(hasProAccess: true, isResolved: true), defaults: defaults, secretStore: secrets,
+            widgetSnapshotDefaults: nil, antigravityWebsiteData: data
+        )
+        let account = try XCTUnwrap(store.addAccount(for: .antigravityWeb))
+        let signedOut = try XCTUnwrap(store.addAccount(for: .antigravityWeb))
+        XCTAssertTrue(store.saveSecret(AntigravityWebSessionMarker(websiteDataStoreID: signedIn).storedValue, for: account))
+        await store.antigravityWebsiteDataSweep?.value
+        XCTAssertEqual(store.antigravityRetainedStoreIDs(), [signedIn], "an account without a saved sign-in keeps nothing")
+        await data.add(orphan)
+
+        // The Keychain can't be read: the signed-in account's store must not be mistaken for a leftover.
+        secrets.failReads(true)
+        XCTAssertNil(store.antigravityRetainedStoreIDs())
+        store.removeUnusedAntigravityWebsiteData()
+        await store.antigravityWebsiteDataSweep?.value
+        var stores = await data.stores
+        XCTAssertEqual(stores, [signedIn, orphan], "nothing is removed on a guess")
+
+        // A saved value this version can't interpret is treated the same way.
+        secrets.failReads(false)
+        try secrets.saveSecret(#"{"version":99,"websiteDataStoreID":"\#(UUID().uuidString)"}"#,
+                               account: ProviderConfigurationStore.keychainAccount(for: signedOut))
+        XCTAssertNil(store.antigravityRetainedStoreIDs())
+        store.removeUnusedAntigravityWebsiteData()
+        await store.antigravityWebsiteDataSweep?.value
+        stores = await data.stores
+        XCTAssertEqual(stores, [signedIn, orphan])
+
+        // Once every saved sign-in is readable again, the leftover goes and the signed-in store stays.
+        try secrets.deleteSecret(account: ProviderConfigurationStore.keychainAccount(for: signedOut))
+        store.removeUnusedAntigravityWebsiteData()
+        await store.antigravityWebsiteDataSweep?.value
+        stores = await data.stores
+        XCTAssertEqual(stores, [signedIn])
     }
 
     @MainActor
