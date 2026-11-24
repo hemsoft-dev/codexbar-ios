@@ -28,7 +28,7 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
     private let receiver = AntigravityCaptureReceiver()
     private var completion: ((Result<AntigravitySignInResult, AntigravitySignInError>) -> Void)?
     private var progress = AntigravityCaptureProgress()
-    private var navigation = AntigravitySignInNavigation()
+    private var signInNavigation = AntigravitySignInNavigation()
     private var finishTask: Task<Void, Never>?
 
     init(isSynthetic: Bool = false, completion: @escaping (Result<AntigravitySignInResult, AntigravitySignInError>) -> Void) {
@@ -56,7 +56,7 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
     /// The customer's "Models & Usage" button.
     func openUsagePage() {
         message = nil
-        navigation.customerReopenedUsagePage()
+        signInNavigation.customerReopenedUsagePage()
         loadUsagePage()
     }
 
@@ -101,7 +101,7 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
 
     /// Opens Google's own Sign in link, as tapping it on the page would.
     private func followSignInLink(_ link: URL) {
-        guard let url = navigation.signInLinkShown(link) else { return }
+        guard let url = signInNavigation.signInLinkShown(link) else { return }
         webView?.load(URLRequest(url: url))
     }
 
@@ -167,7 +167,7 @@ final class AntigravitySignInSession: NSObject, ObservableObject, Identifiable, 
         host = webView.url?.host ?? AntigravityPagePolicy.pageHost
         canGoBack = webView.canGoBack
         AntigravityGateDiagnostics.record("signin.page \(AntigravityGateDiagnostics.describe(webView.url))")
-        if navigation.shouldReopenUsagePage(afterFinishing: webView.url, hasReading: progress.capture != nil) { loadUsagePage() }
+        if signInNavigation.shouldReopenUsagePage(afterFinishing: webView.url, hasReading: progress.capture != nil) { loadUsagePage() }
     }
 
     func webView(
