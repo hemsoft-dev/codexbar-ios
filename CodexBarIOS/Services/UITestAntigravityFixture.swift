@@ -101,9 +101,10 @@ enum UITestAntigravityFixture {
             bucket("gemini-weekly", "Weekly Limit Remaining", window: "weekly", remaining: 0.9725, resetIn: 6 * day + 21 * 3600, now: now),
             bucket("gemini-5h", "Five Hour Limit Remaining", window: "5h", remaining: 0.91, resetIn: 2 * 3600 + 15 * 60, now: now),
         ]
+        // Like Google's real response, untouched pools carry a reset time; the card must not show it.
         var other = [
-            bucket("3p-weekly", "Weekly Limit Remaining", window: "weekly", remaining: 1, now: now),
-            bucket("3p-5h", "Five Hour Limit Remaining", window: "5h", remaining: 1, now: now),
+            bucket("3p-weekly", "Weekly Limit Remaining", window: "weekly", remaining: 1, resetIn: 7 * day, now: now),
+            bucket("3p-5h", "Five Hour Limit Remaining", window: "5h", remaining: 1, resetIn: 5 * 3600, now: now),
         ]
         switch state {
         case .weeklyLimit:
