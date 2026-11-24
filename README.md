@@ -153,7 +153,8 @@ Antigravity is labelled Experimental in Add Account. Choosing it shows a notice
 first: Google doesn't officially support third-party tools reading its page,
 Google's terms allow account suspension, and CodexBar keeps a Google web
 sign-in on the device and sends it nowhere. After you accept, an in-app browser
-opens Google's Antigravity web app and you sign in to Google there. CodexBar
+opens Google's Antigravity web app, follows its Sign in link, and you sign in
+on Google's own form. CodexBar
 adds the account once Google's Models & Usage page has reported usage. A
 canceled or failed sign-in adds nothing.
 

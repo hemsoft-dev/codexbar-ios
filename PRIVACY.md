@@ -49,9 +49,10 @@ terms allow it to suspend an account that uses third-party software with
 Antigravity. CodexBar shows a notice saying so before you sign in. When you
 accept it, CodexBar opens Google's own Antigravity web app in an in-app browser
 and you sign in to Google there. CodexBar then reads two responses that
-Google's page itself requested: your quota, and your plan name. It reads no
-cookies, passwords or other page content, and it sends no request of its own to
-Google for this provider. Your Google sign-in stays in a private browser
+Google's page itself requested: your quota, and your plan name. It also notices
+when Google's page shows its Sign in link, which is how it knows you are signed
+out. It reads no cookies, passwords or other page content, and it sends no
+request of its own to Google for this provider. Your Google sign-in stays in a private browser
 profile that only that Antigravity account uses. It is not saved in the
 Keychain and is not sent anywhere except to Google by Google's page. The
 Keychain holds only the identifier of that browser profile and the path of the

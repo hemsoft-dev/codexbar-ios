@@ -11,13 +11,21 @@ request has been made by an agent. The owner's live sign-in, the same-minute
 comparison with Google's page and `agy /usage`, and the seven-day session check
 are pending.
 
+Checked signed out on November 24, 2026, against Google's live page: the hidden
+read reports "sign in again" in under a second, and in the iOS simulator the
+in-app browser reaches Google's "Sign in" form after the notice. Nobody entered
+credentials, so whether Google accepts a sign-in there is still unverified.
+
 ## What CodexBar does
 
 1. The customer picks Antigravity in Add Account and reads a notice. Nothing
    loads from Google before they accept it.
 2. An in-app browser opens Google's Antigravity web app at
-   `https://antigravity.google.com/remote/settings?settingsScreen=Models`. The
-   customer signs in to Google there.
+   `https://antigravity.google.com/remote/settings?settingsScreen=Models`.
+   Signed out, that page stays on its own address and shows Google's Sign in
+   link. The browser follows that link once, as a tap would, and the customer
+   signs in on Google's form. When Google sends them back, the browser reopens
+   the usage screen.
 3. Google's page requests the account's quota from Google's service. CodexBar
    reads the text of that response as the page receives it.
 4. Once a response parses into one or more of the four meters, CodexBar saves
@@ -34,8 +42,9 @@ tells the web view to do is open a page.
 ## What is read
 
 A script injected into the main frame of `antigravity.google.com` forwards the
-response text of two of the page's own calls. It reads no cookies, headers or
-request bodies, and it starts no request.
+response text of two of the page's own calls, and the address of the Sign in
+link in Google's account bar when the page shows one. It reads no cookies,
+headers or request bodies, and it starts no request.
 
 | Page call | Host | Used for |
 | --- | --- | --- |
@@ -44,7 +53,10 @@ request bodies, and it starts no request.
 
 CodexBar accepts a forwarded response only when it came from the main frame of
 `https://antigravity.google.com`, the call's host and method match the table,
-the status is 2xx and the body is at most 256 KB.
+the status is 2xx and the body is at most 256 KB. It accepts a Sign in link
+only when it is `https://accounts.google.com/ServiceLogin`. During sign-in that
+link is the one address the browser opens that the customer didn't tap. During
+a refresh it means the saved sign-in has ended, and nothing is opened.
 
 The page asks for `application/json+protobuf`, where each message is a JSON
 array indexed by field number. The field numbers below were read from the
@@ -90,7 +102,7 @@ Google and can change without notice.
 | What happened | What the card shows |
 | --- | --- |
 | The page reported usage | The meters, read time, and plan when reported |
-| The page asked for Google sign-in | "Google asked you to sign in again", no values, a sign-in action |
+| The page showed Google's Sign in link, or moved to Google's sign-in form | "Google asked you to sign in again", no values, a sign-in action |
 | The page loaded but reported no usage | An explanation that an account which only works through a connected computer can't be read, no values |
 | The page didn't load | The last reading, marked stale, with the failure. Stale readings raise no alerts and add no history. |
 | The response wasn't recognized | The last reading, marked stale, and a note that an app update may be needed |
@@ -107,7 +119,9 @@ that path.
 - The Keychain item for an account holds the store's identifier and the page
   path that reported usage. It holds no Google cookie, token or key.
 - Removing the account, signing out or replacing the sign-in deletes the store.
-  A sweep at launch deletes any store no saved account names.
+  WebKit refuses to delete a store whose web view closed within the last
+  second, so the deletion is tried again two seconds later, and a sweep at
+  launch deletes any store no saved account names.
 - One account loads Google's page at most once every five minutes. A page that
   failed to load can be retried after one minute. Sign-in hands its reading to
   the first refresh, so adding an account loads the page once.
