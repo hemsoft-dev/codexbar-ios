@@ -96,7 +96,12 @@ live provider checks are not an agent prerequisite, and the gate build and the
 product share the same sign-in and reading code. The gate items stay open on
 the issue. If any of them fails, the pull request is reverted.
 
-Gate items, all pending for Franz:
+Gate status on November 24, 2026: Franz signed in on his iPhone and reported
+that the values match Google's page, which covers items 1 and 2 by his report.
+The response the build recorded matches the inferred layout. Item 3 is pending,
+and so is a refresh by the hidden web view after sign-in.
+
+Gate items:
 
 1. Google sign-in completes inside the in-app browser and reaches the Models &
    Usage page.

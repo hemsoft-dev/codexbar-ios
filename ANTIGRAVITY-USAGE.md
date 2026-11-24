@@ -6,10 +6,12 @@ decision behind it is in
 [docs/2026-11-23-antigravity-web-session-decision.md](docs/2026-11-23-antigravity-web-session-decision.md).
 Terms used here are defined in [GLOSSARY.md](GLOSSARY.md).
 
-Status on November 24, 2026: built against simulator fixtures. No signed-in
-request has been made by an agent. The owner's live sign-in, the same-minute
-comparison with Google's page and `agy /usage`, and the seven-day session check
-are pending.
+Status on November 24, 2026: the owner signed in on his iPhone at 19:26 UTC with
+a development build and reported that the card's values match Google's page.
+The response that build recorded is now a unit-test fixture, and it has the
+layout described below. No signed-in request has been made by an agent. Still
+pending with the owner: a refresh by the hidden web view after sign-in, the
+comparison with `agy /usage`, and the seven-day session check.
 
 Checked signed out on November 24, 2026, against Google's live page: the hidden
 read reports "sign in again" in under a second, and in the iOS simulator the
@@ -84,7 +86,9 @@ Google and can change without notice.
 - Percent used is 100 minus the whole percent Google's page shows. The page
   shows `Math.round(fraction × 100)`, so 0.9725 remaining is 97% on the page
   and 3% used on the card.
-- A pool with a full fraction and no reset time is untouched: 0% used.
+- A pool with a full fraction is untouched: 0% used. Google sends a reset time
+  for it anyway, and its page shows none. The card shows a reset time only for a
+  pool Google describes as used, or whose fraction is below full.
 - A five-hour pool Google marks disabled shows "Weekly limit reached". It is
   never shown as 0% or 100%.
 - A pool that is missing, has no fraction, has a fraction outside 0 to 1, has a
@@ -148,11 +152,14 @@ account name. Release builds write nothing.
 
 - Google can block sign-in inside an in-app browser, or change the page, at any
   time. Either stops the provider.
-- The response layout is inferred from public page code, and the unit-test
-  fixtures are built from it. A sanitized live response replaces them after the
-  owner's first sign-in.
+- The response layout was inferred from public page code and matched the one
+  live response captured so far. Most unit-test fixtures are still built from
+  that layout; one is the live response.
 - Whether the Models & Usage screen fetches quota when opened by its address in
-  a hidden web view is unverified. Sign-in records the page path that reported
-  usage, and refresh tries it first.
+  a hidden web view is unverified. During the owner's sign-in the first load of
+  the usage screen brought the plan but no quota for 19 seconds, and a second
+  load brought quota in 3 seconds. Google's app reports its own address as the
+  entry (`/remote`) even on the usage screen, so refresh opens that entry's
+  usage screen first.
 - Passkey and security-key sign-in may not work inside an in-app browser.
 - AI credits and Gemini app chat limits are out of scope.

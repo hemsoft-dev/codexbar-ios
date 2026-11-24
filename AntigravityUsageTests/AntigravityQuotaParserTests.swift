@@ -40,6 +40,37 @@ final class AntigravityQuotaParserTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(result.fetchedAt, now)
     }
 
+    func testResponseCapturedOnTheOwnersPhoneReadsAsGooglesPageShowedIt() throws {
+        // Google's page showed 93%, 100%, 100% and 100% remaining, and a refresh time for the used pool only.
+        let result = try AntigravityQuotaParser.result(
+            from: AntigravityPageCapture(quotaBody: AntigravityFixtures.liveQuotaBody), configuration: account,
+            fetchedAt: AntigravityFixtures.liveCaptureDate
+        )
+        XCTAssertEqual(result.bars.map(\.stableKey), ["gemini-weekly", "gemini-5h", "3p-weekly", "3p-5h"])
+        XCTAssertEqual(result.bars.map(\.used), [7, 0, 0, 0])
+        XCTAssertEqual(bar("gemini-weekly", in: result)?.resetsAt, Date(timeIntervalSince1970: 1_796_073_749))
+        for key in ["gemini-5h", "3p-weekly", "3p-5h"] {
+            XCTAssertNil(bar(key, in: result)?.resetsAt, "\(key): Google sends a reset time for an untouched pool but its page shows none")
+        }
+        XCTAssertTrue(result.unavailableUsageMetrics.isEmpty)
+        XCTAssertTrue(result.usageMessages.isEmpty)
+        XCTAssertNil(result.failureMessage)
+        XCTAssertTrue(AntigravityCaptureProgress.isReadable(AntigravityFixtures.liveQuotaBody))
+
+        let buckets = try AntigravityQuotaParser.buckets(fromQuotaBody: AntigravityFixtures.liveQuotaBody)
+        XCTAssertEqual(buckets.map(\.groupName), ["Gemini Models", "Gemini Models", "Claude and GPT models", "Claude and GPT models"])
+        XCTAssertEqual(buckets.map(\.hasDescription), [true, false, false, false])
+        XCTAssertFalse(buckets.contains { $0.isMalformed || $0.isDisabled })
+    }
+
+    func testUsedPoolWithoutGooglesDescriptionStillShowsItsReset() throws {
+        let body = #"[[[null,[[[["gemini-weekly","Weekly Limit Remaining","weekly",0.5,null,["1796073749"]]],"Gemini Models"]]]]]"#
+        let result = try AntigravityQuotaParser.result(
+            from: AntigravityPageCapture(quotaBody: body), configuration: account, fetchedAt: AntigravityFixtures.liveCaptureDate
+        )
+        XCTAssertEqual(bar("gemini-weekly", in: result)?.resetsAt, Date(timeIntervalSince1970: 1_796_073_749))
+    }
+
     func testPercentUsedIsOneHundredMinusThePagesRoundedRemaining() {
         // The page computes Math.round(fraction * 100), which rounds a half up.
         let cases: [(Double, Double)] = [(1, 0), (0.9725, 3), (0.7612, 24), (0.975, 2), (0.985, 1), (0.004, 100), (0.005, 99), (0, 100)]

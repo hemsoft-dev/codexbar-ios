@@ -31,6 +31,8 @@ public enum AntigravityQuotaParser {
         /// Nil when Google sent no fraction, or one outside 0...1.
         public var remainingFraction: Double?
         public var resetTime: Date?
+        /// Google's sentence about the pool. Its page shows a refresh time only for pools that have one.
+        public var hasDescription = false
         public var isDisabled: Bool
         public var isMalformed: Bool
     }
@@ -91,6 +93,7 @@ public enum AntigravityQuotaParser {
             window: checked(3, message.string) ?? "",
             remainingFraction: fraction.flatMap { $0.isFinite && (0...1).contains($0) ? $0 : nil },
             resetTime: reset,
+            hasDescription: message.string(7)?.isEmpty == false,
             isDisabled: disabled,
             isMalformed: malformed || bucketID.isEmpty || fraction.map { !$0.isFinite || !(0...1).contains($0) } == true
         )
@@ -116,6 +119,7 @@ public enum AntigravityQuotaParser {
                 window: object["window"] as? String ?? "",
                 remainingFraction: hasBadFraction ? nil : fraction,
                 resetTime: reset,
+                hasDescription: (object["description"] as? String)?.isEmpty == false,
                 isDisabled: object["disabled"] as? Bool ?? false,
                 isMalformed: bucketID.isEmpty || hasBadFraction || (resetText != nil && reset == nil)
             )
@@ -217,8 +221,10 @@ public enum AntigravityQuotaParser {
     private static func bar(for bucket: Bucket, key: String, label: String, window: String, fetchedAt: Date) -> UsageBar? {
         guard !bucket.isMalformed, let remaining = bucket.remainingFraction else { return nil }
         if !bucket.window.isEmpty && bucket.window != window { return nil }
-        // A reset Google reports as already past says nothing about the next one, so it isn't shown.
-        let reset = bucket.resetTime.flatMap { $0 > fetchedAt ? $0 : nil }
+        // Google sends a reset time even for an untouched pool, but its page shows a refresh time only for a pool
+        // it describes as used. The card follows the page. A reset already past is never shown.
+        let showsReset = bucket.hasDescription || remaining < 1
+        let reset = bucket.resetTime.flatMap { showsReset && $0 > fetchedAt ? $0 : nil }
         // No pace forecast: Google reports when a limit refreshes, not when its window began.
         return UsageBar(
             stableKey: key,
