@@ -167,8 +167,9 @@ browser profile that is deleted with the account. See
 account owner signed in on an iPhone on November 24, 2026 and confirmed the
 values match Google's page. Refresh after sign-in failed on that first build and
 works since the hidden page was made wide enough for Google's desktop layout;
-he confirmed that the same day. The seven-day session check is still pending
-with him. Antigravity refreshes only while CodexBar is open, so widgets and
+he confirmed that the same day. He closed the work on November 25 without a
+seven-day session check, so how long a sign-in lasts isn't known. Antigravity
+refreshes only while CodexBar is open, so widgets and
 Apple Watch show the last reading with its time.
 
 ## GitHub Copilot Sign-In

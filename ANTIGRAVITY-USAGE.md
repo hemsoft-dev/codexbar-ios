@@ -20,9 +20,12 @@ quota. The hidden page is now 1280 points wide. With that build the owner's
 phone read quota 3 seconds after opening the page at 21:46 UTC and 1 second
 after at 23:18 UTC, on the same sign-in, and he confirmed the four meters.
 
-Still pending with the owner: a sign-in on the build where sign-in also reads
-through the wide page, the comparison with `agy /usage`, and the seven-day
-session check.
+On November 25 the owner signed in again on the build where sign-in also reads
+through the wide page. The log shows the quota arriving one second after the
+plan at 00:44 and 05:03 UTC, and he reported that the sign-in page closed by
+itself. He then closed the issue. The comparison with `agy /usage` and the
+seven-day session check were not run, by his decision, so how long a Google
+sign-in lasts is not known.
 
 Checked signed out on November 24, 2026, against Google's live page: the hidden
 read reports "sign in again" in under a second, and in the iOS simulator the
