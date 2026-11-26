@@ -4609,7 +4609,7 @@ extension AppAndWidgetTests {
         let groups = [ProviderAccountGroup(id: "work", name: "Work")]
         defaults.set(try JSONEncoder().encode(groups), forKey: "providerAccountGroups")
         defaults.set(["team", "personal"], forKey: "dashboardCardOrder")
-        let secretStore = KeychainService(service: suite)
+        let secretStore = keychainOrMemorySecretStore(service: suite)
         let removed = ["providerAccount.gemini.saved.credential", "providerAccount.legacy-coding.credential",
                        "provider.gemini.gemini.saved.coding", "provider.antigravity.credential", "provider.gemini.credential",
         ]
@@ -4653,7 +4653,7 @@ extension AppAndWidgetTests {
                                                           configurationKey: "providerConfigurations"))
         XCTAssertEqual(defaults.data(forKey: "providerConfigurations"), Data("[]".utf8))
         XCTAssertTrue(defaults.stringArray(forKey: "retiredGoogleCredentialCleanup")?.contains("providerAccount.old-id.credential") == true)
-        let keychain = KeychainService(service: suite)
+        let keychain = keychainOrMemorySecretStore(service: suite)
         try keychain.saveSecret("synthetic", account: "providerAccount.old-id.credential")
         defer { try? keychain.deleteSecret(account: "providerAccount.old-id.credential") }
         XCTAssertNil(RetiredProviderMigration.run(defaults: defaults, secretStore: keychain,
@@ -4686,7 +4686,7 @@ extension AppAndWidgetTests {
         let history = #"[{"providerID":"greptile","id":"old"},{"providerID":"claude","id":"kept"}]"#
         defaults.set(Data(history.utf8), forKey: "usageHistorySnapshots")
         defaults.set(Data(history.utf8), forKey: "usageHistoryDailySnapshots")
-        let secretStore = KeychainService(service: suite)
+        let secretStore = keychainOrMemorySecretStore(service: suite)
         let removed = ["providerAccount.greptile.saved.credential", "provider.greptile.credential",
                        "providerAccount.greptile.orphan.credential",
         ]

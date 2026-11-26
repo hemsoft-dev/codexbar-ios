@@ -1,4 +1,5 @@
 import Foundation
+import Security
 @testable import CodexBarIOS
 
 func makeHistoryResult(
@@ -109,6 +110,34 @@ final class MemorySecretStore: SecretStore, @unchecked Sendable {
         defer { lock.unlock() }
         secrets.removeValue(forKey: account)
     }
+}
+
+/// A memory store that also lists its accounts, as the Keychain does.
+final class ListingMemorySecretStore: SecretStore, @unchecked Sendable {
+    private let lock = NSLock()
+    private var secrets: [String: String] = [:]
+
+    func accountNames() throws -> [String] { lock.withLock { Array(secrets.keys) } }
+    func readSecret(account: String) throws -> String? { lock.withLock { secrets[account] } }
+    func saveSecret(_ secret: String, account: String) throws { lock.withLock { secrets[account] = secret } }
+    func deleteSecret(account: String) throws { lock.withLock { _ = secrets.removeValue(forKey: account) } }
+}
+
+/// The Keychain when the test host is signed, and memory when it isn't. The local audit builds tests with code
+/// signing off, and an unsigned host gets `errSecMissingEntitlement` from every Keychain call. Any other Keychain
+/// failure still reaches the test.
+func keychainOrMemorySecretStore(service: String) -> SecretStore {
+    let keychain = KeychainService(service: service)
+    let probe = "codexbar.test.entitlement-probe"
+    do {
+        try keychain.saveSecret("probe", account: probe)
+        try keychain.deleteSecret(account: probe)
+    } catch KeychainError.unhandledStatus(errSecMissingEntitlement) {
+        return ListingMemorySecretStore()
+    } catch {
+        return keychain
+    }
+    return keychain
 }
 
 final class FailingSaveSecretStore: SecretStore, @unchecked Sendable {
