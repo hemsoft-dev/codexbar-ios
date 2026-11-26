@@ -633,3 +633,36 @@ constant and the shipped build 5 binary are unchanged. Reviewed commit
 `9365554bc9d514a91002a854cb96d1b3c52671e37ccbd856d7e8b0888921911e` with the same 157 production files and four accepted diagnostics. This is a
 source review, not a new CodeQL analysis.
 ([#515](https://github.com/hemsoft-dev/codexbar-ios/issues/515))
+
+## November 26 release source review for 2.1.0
+
+The baseline had not been renewed since build 5. Between that source and the
+2.1.0 candidate, production Swift lost the Google and Greptile providers and
+gained the experimental Antigravity provider, 151 files in place of 157. The
+[hosted analysis](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/45792672836)
+of the first candidate, `4a9923a8a4c5cbfa7db1e7dda1b4ba939644dd92`, extracted
+all 151 files with no extraction error and reported the same four severity-7.5
+findings and no others. It failed, as intended, because the baseline's source
+snapshot was stale. No finding is in the Antigravity sources.
+
+Each finding's source and consumers were read again at reviewed commit
+`ac4fee83e40cf5342fff45a0721da532c5f05642`, which differs from the analyzed
+candidate by one closure in `ProviderConfigurationStore.swift`, after both of
+that file's findings:
+
+| Finding | Line | Review |
+| --- | --- | --- |
+| OpenCode credential digest | 134, unchanged | Still an in-memory cache discriminator. `ProviderUsageResult` is not `Codable`. Its `cacheIdentity` is compared in memory by `UsageRefreshService` and `ProviderConfigurationStore`. Nothing persists or sends it. |
+| Collapsed dashboard account IDs | 2374 to 2311 | Still configured local IDs. An Antigravity account's ID is the provider name plus a random UUID, as for other providers. |
+| Free active account ID | 2982 to 2696 | Same IDs. `chooseActiveAccount` still accepts only an existing candidate. |
+| UI-test secret store | 1613 to 1585 | Still compiled only in `DEBUG` and active only on simulators with an isolated defaults suite. It no longer accepts the removed Google fixture. It now also accepts a well-formed Antigravity sign-in marker, which holds a website data store UUID and a page path and no credential. The rationale says so. |
+
+The baseline binds source snapshot
+`236e6595c158c8ae06fdb66309d2303f9864c9749ad18771a431e66b2f7bd0d2` and the
+four diagnostic identities from that run's raw SARIF. The OpenCode identity is
+unchanged; the other three changed with their line numbers. Analyzer and query
+pack versions, the severity threshold and the matching rules are unchanged.
+Replaying the hosted SARIF and source-reach file against this baseline accepts
+the four findings with none blocking. A replay is not a hosted pass: the
+merged candidate needs its own successful analysis, recorded on
+[#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607).

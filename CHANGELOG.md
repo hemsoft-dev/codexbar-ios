@@ -98,6 +98,14 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- The release build with complete strict concurrency and warnings as errors
+  compiles again. A closure in the Antigravity website-data cleanup, added
+  with [#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601), failed
+  that build; ordinary builds only warned. The reviewed security baseline is
+  renewed for the 2.1.0 source after a fresh analysis found the same four
+  accepted findings and no new ones.
+  ([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607))
+
 - Release text for 2.1.0 was checked against what 2.0.0 shipped. Two entries
   were removed from this section because they described changes customers
   never saw: subscription scores were added and removed between releases
