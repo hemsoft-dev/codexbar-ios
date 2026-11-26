@@ -117,6 +117,26 @@ python3 scripts/function-risk/measure.py --platform watch \
   --result "$risk_run/watch.xcresult" --output "$risk_run/watch-risk"
 ```
 
+If a phase stops with `Application failed preflight checks`, the simulator
+refused the launch, not the app. `xcodebuild` shuts down a simulator it booted,
+so test discovery and the run that follows each boot it again. On a fast Mac
+the second install can finish before SpringBoard is up; SpringBoard then keeps
+treating the app as mid-update and logs `Cannot launch application scene while
+it's application is being updated`. Boot the runner's simulator before its
+first phase and the phases reuse the running device. This was seen on air on
+November 26, 2026, where the native phases failed three times without it and
+passed with it ([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607)):
+
+```sh
+native_out="$risk_run/native"
+( until [ -f "$native_out/ownership.json" ]; do sleep 0.5; done
+  xcrun simctl bootstatus "$(jq -r .device.deviceId "$native_out/ownership.json")" -b ) &
+./scripts/run-pro-release-validation.sh native --output "$native_out"
+```
+
+For the UI families, run `xcrun simctl bootstatus "$ui_device_id" -b` after
+`provision`. The runner still shuts the device down at the end.
+
 The native command creates its own simulator and fresh instrumented DerivedData.
 It runs the full ordinary iOS suite, including 197 shared Pro test methods from
 22 sources, then four separately selected native phases: preparation 1, native

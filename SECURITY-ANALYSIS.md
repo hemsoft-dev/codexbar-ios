@@ -646,9 +646,11 @@ findings and no others. It failed, as intended, because the baseline's source
 snapshot was stale. No finding is in the Antigravity sources.
 
 Each finding's source and consumers were read again at reviewed commit
-`ac4fee83e40cf5342fff45a0721da532c5f05642`, which differs from the analyzed
-candidate by one closure in `ProviderConfigurationStore.swift`, after both of
-that file's findings:
+`b65ae666acda61c4af8bf3a678562b12b87abfb2`. It differs from the analyzed
+candidate in two production files: one closure in
+`ProviderConfigurationStore.swift`, after both of that file's findings, and
+where `ClaudeUsageResetInventoryView.swift` shows the result of a reset. Neither
+change touches a finding's source or a consumer of it:
 
 | Finding | Line | Review |
 | --- | --- | --- |
@@ -658,7 +660,7 @@ that file's findings:
 | UI-test secret store | 1613 to 1585 | Still compiled only in `DEBUG` and active only on simulators with an isolated defaults suite. It no longer accepts the removed Google fixture. It now also accepts a well-formed Antigravity sign-in marker, which holds a website data store UUID and a page path and no credential. The rationale says so. |
 
 The baseline binds source snapshot
-`236e6595c158c8ae06fdb66309d2303f9864c9749ad18771a431e66b2f7bd0d2` and the
+`acd588ee1f3c56a848981d01bcdcfc9aa48e52375d283ec78d0e878d9b8ca46b` and the
 four diagnostic identities from that run's raw SARIF. The OpenCode identity is
 unchanged; the other three changed with their line numbers. Analyzer and query
 pack versions, the severity threshold and the matching rules are unchanged.
