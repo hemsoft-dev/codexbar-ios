@@ -9,8 +9,8 @@ Status last reviewed: November 26, 2026
 Prepared November 26, 2026 under
 [#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607), which is the
 release ledger. The mode is **Prepare**: nothing is uploaded and nothing in App
-Store Connect is changed. This section records preparation, not qualification;
-gate results for the frozen candidate are recorded on #607.
+Store Connect is changed. The candidate's gate results are under
+[Qualification of the second candidate](#qualification-of-the-second-candidate).
 
 ### Boundary
 
@@ -18,7 +18,7 @@ gate results for the frozen candidate are recorded on #607.
 | --- | --- | --- |
 | Live version | 2.0.0 build 5, public since October 23, 2026 | Apple's public lookup on November 25 and 26 reports 2.0.0, Free |
 | Live source | `62f6d8e392360b91cb704c2503e9796f8ddc285c`, tag `v2.0.0-build5` | [Build 5 qualification](#build-5-qualification-and-submission) |
-| Candidate | 2.1.0 build 6, all fourteen project configurations | `CodexBarIOS.xcodeproj/project.pbxproj`; the candidate commit and tag are recorded on #607 |
+| Candidate | 2.1.0 build 6, all fourteen project configurations, at `ab22e84c3ce794243b215005561035959e56c255`, tag `v2.1.0-build6-rc2` | `CodexBarIOS.xcodeproj/project.pbxproj`. The first candidate, `4a9923a` (`v2.1.0-build6-rc1`), failed its gates and was replaced |
 | Changes | 67 commits, pull requests #506 to #606, from the tag to `d9ce7c3` | `git log v2.0.0-build5..d9ce7c3` |
 | App Store Connect | Not read during this preparation | The last authorized readback was [November 22](docs/evidence/2026-11-22-asc-pro-readback.json): 2.0.0 `READY_FOR_SALE`, manual release. Repository records say build 6 was never uploaded. Read the version and build list again before any upload |
 
@@ -88,8 +88,78 @@ None of these has been made.
   for Franz.
 - How long an Antigravity sign-in lasts. Franz declined the seven-day check.
 - TestFlight on iPhone, iPad and Apple Watch, which needs an approved upload.
+- A passing hosted Full iOS UI validation and a passing hosted performance run
+  for the candidate. Both failed on hosted runners; see the qualification
+  below.
+- Greptile removal over data written by a real 2.0.0 build. The 2.0.0 fixture
+  used for the upgrade check has no Greptile account.
 - The causes in [#564](https://github.com/hemsoft-dev/codexbar-ios/issues/564)
   and [#565](https://github.com/hemsoft-dev/codexbar-ios/issues/565).
+
+### Qualification of the second candidate
+
+Run on November 26, 2026 for `ab22e84c3ce794243b215005561035959e56c255`
+(`v2.1.0-build6-rc2`). The first candidate, `4a9923a`, failed its gates: a
+strict-concurrency compiler error from the Antigravity work, an iPad layout
+defect in the Claude reset sheet, three tests that needed a signed host and a
+stale security baseline. [#609](https://github.com/hemsoft-dev/codexbar-ios/pull/609)
+fixed those. Full receipts are on
+[#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607) and, on air, in
+`~/codexbar-release/2.1.0-build6-ab22e84/evidence`.
+
+**The hosted full UI gate and the hosted performance gate did not pass.** The
+candidate is qualified locally only. Whether that is enough to upload is
+Franz's decision, as it was for build 5.
+
+Local, on air with Xcode 26.6 (17F113), iOS 26.2 (23C54) and watchOS 26.5
+(23T570), from a clean checkout of the candidate:
+
+| Gate | Result |
+| --- | --- |
+| Seven perfection gates | 7 of 7 |
+| Ordinary iOS tests with coverage | 1,170 of 1,170 |
+| Native StoreKit: preparation 1, commerce 25, Germany preparation 1, Germany storefront 1 | All passed |
+| iOS and watchOS function risk | Passed |
+| watchOS tests | 111 of 111 |
+| UI family, iPhone (iPhone Air) | 47 of 47 journeys and the three preparation and reset calls |
+| UI family, iPad (iPad mini) | 47 of 47 journeys and the three calls |
+| Upgrade from `v2.0.0-build5` installed as 2.0.0 (5), candidate installed over it | Passed for the Google account and a new Antigravity account. The 2.0.0 fixture has no Greptile account |
+| Usage history performance, paired experiment | Passed, ratios 0.997 to 1.056, run CV at most 0.068. The script used the default Xcode, 27.2 |
+
+The runner's simulators were booted before their first phase; see
+[FUNCTION-RISK.md](FUNCTION-RISK.md#reproduce) for why.
+
+Hosted:
+
+| Run | Result |
+| --- | --- |
+| [Swift security 45842396961](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/45842396961) | Passed |
+| [CI 45842392758](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/45842392758), three attempts | **Failed.** SwiftLint, strict concurrency, iOS tests (native commerce 25 of 25, function risk), watchOS tests and SwiftPM smoke passed. Eleven of twelve UI shards passed. The iPhone native shard failed in every attempt, each time differently: StoreKit never answered the app's `AppTransaction` request in the purchase journey; then the journeys passed and the evidence command `simctl spawn log show` took 15.6 s against its 15 s limit; then the purchase journey passed and StoreKit never answered in the purchase-error journey |
+| [CI 45886967908](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/45886967908), second full run | **Failed, then cancelled.** The five quality jobs passed. The iPad native shard's journeys passed and the same evidence command exceeded its limit. The remaining shards were cancelled as redundant |
+| [Performance 45842401518](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/45842401518) | Inconclusive, run CV 0.157 to 0.220 |
+| [Performance 45862050487](https://github.com/hemsoft-dev/codexbar-ios/actions/runs/45862050487), the one permitted rerun | **Failed**: two inconclusive findings and one regression finding (1 account, record, ratio 1.312) on a metric whose run CV was 0.203. That metric read 0.872 and 0.984 in the two earlier hosted runs |
+
+Every hosted UI failure was in a native StoreKit shard and none repeated
+locally. The hosted iPad native shard passed in the first run. No hosted run
+of this commit passed Full iOS UI validation.
+
+### Archive
+
+Built locally from the candidate and **not uploaded**:
+`~/codexbar-release/2.1.0-build6-ab22e84/CodexBar-2.1.0-6.xcarchive`, exported
+to `export/CodexBarIOS.ipa`, 12,462,060 bytes, SHA-256
+`3c772f1dfa94ecf7cbf58240d2cc588726a33cce7ee776baf10166166736f8c8`.
+
+The app, widget, Watch app and Watch widget are each 2.1.0 (6), signed by
+`Apple Distribution: Franz Hemmer (W2A23PX5BP)`, and pass
+`codesign --verify --strict --deep`. Each embeds its App Store profile, which
+expires October 7, 2027, has a privacy manifest and declares
+`ITSAppUsesNonExemptEncryption` false. `./scripts/verify-export-compliance.sh`
+passes for `source` and for the archive. The Release binary contains none of
+the UI-test fixture or Antigravity debug-diagnostic code.
+
+Before any upload: read the version and build list in App Store Connect, and
+build the archive again if `main`'s app source has changed since the candidate.
 
 ## Post-launch status
 

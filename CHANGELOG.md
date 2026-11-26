@@ -102,6 +102,12 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- The release tracker records the gate results for the second 2.1.0
+  candidate: every local gate passed and a signed archive was built and not
+  uploaded, while the hosted full UI gate and the hosted performance run did
+  not pass on GitHub's runners.
+  ([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607))
+
 - The release build with complete strict concurrency and warnings as errors
   compiles again. A closure in the Antigravity website-data cleanup, added
   with [#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601), failed
