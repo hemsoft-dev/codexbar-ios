@@ -2,7 +2,94 @@
 
 This document tracks the work required to ship CodexBar for iOS and iPadOS through TestFlight and App Store review.
 
-Status last reviewed: November 22, 2026
+Status last reviewed: November 26, 2026
+
+## CodexBar 2.1.0 release preparation
+
+Prepared November 26, 2026 under
+[#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607), which is the
+release ledger. The mode is **Prepare**: nothing is uploaded and nothing in App
+Store Connect is changed. This section records preparation, not qualification;
+gate results for the frozen candidate are recorded on #607.
+
+### Boundary
+
+| Item | Value | Evidence |
+| --- | --- | --- |
+| Live version | 2.0.0 build 5, public since October 23, 2026 | Apple's public lookup on November 25 and 26 reports 2.0.0, Free |
+| Live source | `62f6d8e392360b91cb704c2503e9796f8ddc285c`, tag `v2.0.0-build5` | [Build 5 qualification](#build-5-qualification-and-submission) |
+| Candidate | 2.1.0 build 6, all fourteen project configurations | `CodexBarIOS.xcodeproj/project.pbxproj`; the candidate commit and tag are recorded on #607 |
+| Changes | 67 commits, pull requests #506 to #606, from the tag to `d9ce7c3` | `git log v2.0.0-build5..d9ce7c3` |
+| App Store Connect | Not read during this preparation | The last authorized readback was [November 22](docs/evidence/2026-11-22-asc-pro-readback.json): 2.0.0 `READY_FOR_SALE`, manual release. Repository records say build 6 was never uploaded. Read the version and build list again before any upload |
+
+### Change audit
+
+Every customer entry in the [2.1.0 changelog](CHANGELOG.md#210---unreleased)
+was compared with the code at `v2.0.0-build5` and at the candidate. Two entries
+were removed because customers never saw the change they described:
+
+- Subscription scores were added in
+  [#520](https://github.com/hemsoft-dev/codexbar-ios/pull/520) and removed in
+  [#538](https://github.com/hemsoft-dev/codexbar-ios/pull/538), both after
+  build 5. The tag contains no score code.
+- The Greptile billing sign-in note
+  ([#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409)) applied to
+  a provider that 2.1.0 removes.
+
+The Antigravity entry no longer says a week-long sign-in check is under way.
+Franz closed [#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601)
+on November 25 without it.
+
+### What's New and its sources
+
+The text is [release_notes.txt](fastlane/metadata/en-US/release_notes.txt),
+1,906 characters of Apple's 4,000.
+
+| Paragraph | Changelog entries |
+| --- | --- |
+| Antigravity as an experimental provider | [#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601) |
+| Gemini and the 2.0 Antigravity sign-in removed | [#556](https://github.com/hemsoft-dev/codexbar-ios/issues/556), [#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601) |
+| Greptile removed | [#594](https://github.com/hemsoft-dev/codexbar-ios/issues/594) |
+| Claude plan names, saved resets, promotional credit | [#540](https://github.com/hemsoft-dev/codexbar-ios/issues/540), [#551](https://github.com/hemsoft-dev/codexbar-ios/issues/551), [#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559), [#560](https://github.com/hemsoft-dev/codexbar-ios/issues/560) |
+| Missing Grok and X Subscription usage stays unavailable | [#518](https://github.com/hemsoft-dev/codexbar-ios/issues/518) |
+| Claude billing opens Claude's own page | [#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454) |
+| CodexBar's own user agent and fewer Claude permissions | [#589](https://github.com/hemsoft-dev/codexbar-ios/issues/589) |
+| Muse Code notice in Add Account | [#522](https://github.com/hemsoft-dev/codexbar-ios/issues/522) |
+
+Two fixes are in the changelog and not in What's New: closing the Claude
+sign-in page cancels at once
+([#591](https://github.com/hemsoft-dev/codexbar-ios/issues/591)), and
+subscription access stays current when StoreKit briefly reports an earlier
+status ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470)).
+
+The [promotional text](fastlane/metadata/en-US/promotional_text.txt) is the
+evergreen copy, 163 characters of Apple's 170. The
+[review notes](fastlane/metadata/review_information/notes.txt) are 3,799
+characters of 4,000 and now say that Google Gemini was removed. The public
+screenshots show Codex, GitHub Copilot, GitHub Billing, OpenRouter and
+OpenCode, none of the removed providers, so they are kept.
+
+### App Store Connect changes that wait for Franz
+
+None of these has been made.
+
+- Upload of the 2.1.0 build and its selection on a new 2.1.0 version.
+- What's New, promotional text and review notes from the files above.
+- The privacy policy URL, to
+  `https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md`.
+- Submission for review, and the release method.
+
+### Not verified
+
+- The live Claude checks for Fable reset wording
+  ([#559](https://github.com/hemsoft-dev/codexbar-ios/issues/559)) and
+  promotional credit
+  ([#560](https://github.com/hemsoft-dev/codexbar-ios/issues/560)) are pending
+  for Franz.
+- How long an Antigravity sign-in lasts. Franz declined the seven-day check.
+- TestFlight on iPhone, iPad and Apple Watch, which needs an approved upload.
+- The causes in [#564](https://github.com/hemsoft-dev/codexbar-ios/issues/564)
+  and [#565](https://github.com/hemsoft-dev/codexbar-ios/issues/565).
 
 ## Post-launch status
 
@@ -30,10 +117,13 @@ screenshot. It resolves that specific check, not new-customer commerce or
 Family Sharing.
 
 The [November 1 release hold](https://github.com/hemsoft-dev/codexbar-ios/issues/470#issuecomment-6569029608)
-still prohibits new versions, submissions, TestFlight uploads, pricing and
-App Store Connect changes. Ordinary source work and reviewed merges continue.
-The launch report does not lift that hold. Keep `T` fixed at October 31,
-2026, 8:00 PM EDT and preserve Free pricing.
+prohibited new versions, submissions, TestFlight uploads, pricing and App Store
+Connect changes. On November 25, 2026 Franz asked to get a new version ready
+for the App Store ([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607)).
+That request starts the preparation of 2.1.0 described below and nothing else.
+An upload, any App Store Connect change, a submission and a release each still
+need his approval for that step. Keep `T` fixed at October 31, 2026, 8:00 PM
+EDT and preserve Free pricing.
 
 ### Remaining work and next triggers
 
@@ -712,8 +802,9 @@ fixture-isolation evidence separately from live App Store configuration.
 ### Copy and privacy release checks
 
 The launch plan used family-deadline promotional text before `T`. The following
-evergreen copy remains a draft for a future authorized metadata update, after
-worldwide Free is verified:
+evergreen copy is in `fastlane/metadata/en-US/promotional_text.txt` since
+[#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607). The value saved
+in App Store Connect is unchanged until Franz approves the write:
 
 ```text
 Start free with one AI account and 7-day history. CodexBar Pro adds all accounts, widgets, Watch, alerts and 90-day history. Original purchasers keep lifetime Pro.
@@ -1264,9 +1355,10 @@ Version 1.2 submission status:
   `fastlane/metadata/review_information/notes.txt` say what the app reads and
   that no authorization exists. If Apple asks for authorization, stop and
   report on #601; a request to Google is drafted only then. The description
-  lists Antigravity as experimental. Do not submit a build with Antigravity
-  until the feasibility gate on #601 has passed. No Antigravity mark or logo is
-  used in the app or its screenshots.
+  lists Antigravity as experimental. Franz signed in on his iPhone and
+  confirmed matching values and working refresh on November 24 and 25, and
+  closed #601 without the seven-day sign-in check. No Antigravity mark or logo
+  is used in the app or its screenshots.
 
 - Widgets must continue to show useful stale/error states because iOS controls refresh timing.
 

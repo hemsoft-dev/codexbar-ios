@@ -22,8 +22,8 @@ building, testing, or releasing the app.
   on an iPhone and confirmed the values match Google's page. Antigravity
   refreshes only while CodexBar is open; widgets and Apple Watch show the last
   reading with its time. If Google's page loads without reporting usage, the
-  card keeps the last reading and marks it stale. Whether the sign-in lasts a
-  week is still being checked.
+  card keeps the last reading and marks it stale. How long a Google sign-in
+  lasts isn't known. When it ends, the card asks you to sign in again.
   ([#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601))
 
 - Add Account now explains that Muse Code isn't available on iPhone. Meta
@@ -65,10 +65,6 @@ building, testing, or releasing the app.
   only the session and weekly limits Claude reports.
   ([#540](https://github.com/hemsoft-dev/codexbar-ios/issues/540))
 
-- Simplify the dashboard and weekly quota details to show usage and reset
-  information without subscription scores.
-  ([#537](https://github.com/hemsoft-dev/codexbar-ios/issues/537))
-
 ### Fixed
 
 - Closing the Claude sign-in page in account settings now cancels the sign-in
@@ -94,12 +90,6 @@ building, testing, or releasing the app.
   Grok's existing billing connection is unchanged.
   ([#454](https://github.com/hemsoft-dev/codexbar-ios/issues/454))
 
-- Explain that Google sign-in cannot connect Greptile billing yet. Block the
-  unsupported sign-in with return and cancel actions, preserve saved connections
-  when canceled, and reject denied billing access before connecting an account.
-  Existing saved sessions can still refresh their actual renewal dates.
-  ([#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409))
-
 - Keep missing Grok and X Subscription usage unavailable instead of inferring
   a zero percentage from the account's paid plan.
   ([#518](https://github.com/hemsoft-dev/codexbar-ios/issues/518))
@@ -107,6 +97,17 @@ building, testing, or releasing the app.
 - Keep subscription access current when StoreKit briefly returns an earlier status at expiration. Background checks wait for Purchase and Restore to finish so they cannot interrupt those requests. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 ### Developer Experience
+
+- Release text for 2.1.0 was checked against what 2.0.0 shipped. Two entries
+  were removed from this section because they described changes customers
+  never saw: subscription scores were added and removed between releases
+  ([#518](https://github.com/hemsoft-dev/codexbar-ios/issues/518),
+  [#537](https://github.com/hemsoft-dev/codexbar-ios/issues/537)), and the
+  Greptile billing sign-in note
+  ([#409](https://github.com/hemsoft-dev/codexbar-ios/issues/409)) applied to
+  a provider this version removes. The App Store promotional text no longer
+  carries the expired October 31 family deadline.
+  ([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607))
 
 - The manual release UI gate's workflow-scope test passes again. A November 16
   change to the CI workflow's artifact exclusions had not updated the hash that

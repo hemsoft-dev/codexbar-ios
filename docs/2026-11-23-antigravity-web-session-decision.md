@@ -100,11 +100,20 @@ Gate status on November 24, 2026: Franz signed in on his iPhone and reported
 that the values match Google's page, which covers items 1 and 2 by his report.
 The response the build recorded matches the inferred layout.
 
-Item 3 is pending. The first refresh Franz tried, at 21:20 UTC, reported no
-usage: Google's app shows Settings as a list on a phone-width page, so the
-hidden page never opened the usage screen. With the hidden page made 1280
-points wide, his phone read quota at 21:46 and 23:18 UTC on the same sign-in
-and he confirmed the four meters.
+The first refresh Franz tried, at 21:20 UTC, reported no usage: Google's app
+shows Settings as a list on a phone-width page, so the hidden page never opened
+the usage screen. With the hidden page made 1280 points wide, his phone read
+quota at 21:46 and 23:18 UTC on the same sign-in and he confirmed the four
+meters.
+
+Item 3 was not run. On November 25, 2026 Franz said the feature works and
+[closed the issue](https://github.com/hemsoft-dev/codexbar-ios/issues/601#issuecomment-7153436953)
+without the seven-day check and without the comparison with `agy /usage`. The
+phone's log shows a refresh at 05:02 UTC that day, about four hours after the
+sign-in at 00:44 UTC. Later that day he reported that it was still working and
+asked for a release
+([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607)). How long a
+sign-in lasts is not known.
 
 Gate items:
 
