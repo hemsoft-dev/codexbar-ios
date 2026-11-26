@@ -29,6 +29,9 @@ final class ClaudeUsageUITests: XCTestCase {
         XCTAssertTrue(feedback.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertEqual(feedback.label, "Claude declined this reset and wants another saved reset used first. Check the refreshed list.")
         XCTAssertEqual(actions.count, 2)
+        // The result stays on screen below the list. As a last row it sat below the visible rows of a short sheet.
+        let visible = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: feedback)
+        wait(for: [visible], timeout: 5)
         reveal(feedback, in: app)
         keep("claude-reset-selection-declined", app: app)
         app.terminate()
