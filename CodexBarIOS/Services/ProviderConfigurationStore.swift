@@ -2917,8 +2917,10 @@ extension ProviderConfigurationStore {
             await previous?.value
             await AntigravityWebsiteDataCleanup.removeOrphanedStores(
                 keeping: { [weak self] in
-                    await MainActor.run {
-                        self?.antigravityRetainedStoreIDs()?.union(AntigravityPendingSignIns.storeIDs)
+                    // A store that is gone can't say what to keep, so the cleanup removes nothing.
+                    guard let self else { return nil }
+                    return await MainActor.run {
+                        self.antigravityRetainedStoreIDs()?.union(AntigravityPendingSignIns.storeIDs)
                     }
                 },
                 data: data
