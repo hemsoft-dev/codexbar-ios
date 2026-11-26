@@ -90,7 +90,7 @@ None of these has been made.
 - TestFlight on iPhone, iPad and Apple Watch, which needs an approved upload.
 - A passing hosted Full iOS UI validation and a passing hosted performance run
   for the candidate. Both failed on hosted runners; see the qualification
-  below.
+  below. The first is a release requirement and blocks upload.
 - Greptile removal over data written by a real 2.0.0 build. The 2.0.0 fixture
   used for the upgrade check has no Greptile account.
 - The causes in [#564](https://github.com/hemsoft-dev/codexbar-ios/issues/564)
@@ -107,9 +107,14 @@ fixed those. Full receipts are on
 [#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607) and, on air, in
 `~/codexbar-release/2.1.0-build6-ab22e84/evidence`.
 
-**The hosted full UI gate and the hosted performance gate did not pass.** The
-candidate is qualified locally only. Whether that is enough to upload is
-Franz's decision, as it was for build 5.
+**Upload is blocked.** The hosted full UI gate and the hosted performance gate
+did not pass, and [AGENTS.md](AGENTS.md#build-and-test) says a release cannot
+proceed until all five quality jobs and Full iOS UI validation pass for the
+exact candidate commit. The local results below do not satisfy that rule.
+Build 5 shipped without a passing hosted gate; that exception is recorded
+below as unverified and is not a waiver for this candidate. The next step is a
+passing hosted run for `ab22e84`, by rerunning the failed shard of run
+45842392758, or a new candidate with its own complete run.
 
 Local, on air with Xcode 26.6 (17F113), iOS 26.2 (23C54) and watchOS 26.5
 (23T570), from a clean checkout of the candidate:
@@ -158,8 +163,10 @@ expires October 7, 2027, has a privacy manifest and declares
 passes for `source` and for the archive. The Release binary contains none of
 the UI-test fixture or Antigravity debug-diagnostic code.
 
-Before any upload: read the version and build list in App Store Connect, and
-build the archive again if `main`'s app source has changed since the candidate.
+Before any upload: a hosted CI run must pass for the exact candidate commit,
+Franz must approve the upload, the version and build list in App Store Connect
+must be read, and the archive must be built again if `main`'s app source has
+changed since the candidate.
 
 ## Post-launch status
 

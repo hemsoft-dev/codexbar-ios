@@ -105,7 +105,8 @@ building, testing, or releasing the app.
 - The release tracker records the gate results for the second 2.1.0
   candidate: every local gate passed and a signed archive was built and not
   uploaded, while the hosted full UI gate and the hosted performance run did
-  not pass on GitHub's runners.
+  not pass on GitHub's runners. Upload stays blocked until a hosted run passes
+  for the candidate's exact commit.
   ([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607))
 
 - The release build with complete strict concurrency and warnings as errors
