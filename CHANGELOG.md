@@ -67,6 +67,10 @@ building, testing, or releasing the app.
 
 ### Fixed
 
+- After you use a saved Claude reset, the result now stays on screen at the
+  bottom of the sheet. On a short sheet, such as on iPad mini, it could
+  appear below the last visible row, so it looked as if nothing had happened.
+  ([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607))
 - Closing the Claude sign-in page in account settings now cancels the sign-in
   right away, the same way it does on the dashboard. CodexBar says the sign-in
   was canceled and that your saved sign-in was not changed, and the Sign in
@@ -97,6 +101,16 @@ building, testing, or releasing the app.
 - Keep subscription access current when StoreKit briefly returns an earlier status at expiration. Background checks wait for Purchase and Restore to finish so they cannot interrupt those requests. ([#470](https://github.com/hemsoft-dev/codexbar-ios/issues/470))
 
 ### Developer Experience
+
+- The release build with complete strict concurrency and warnings as errors
+  compiles again. A closure in the Antigravity website-data cleanup, added
+  with [#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601), failed
+  that build; ordinary builds only warned. The reviewed security baseline is
+  renewed for the 2.1.0 source after a fresh analysis found the same four
+  accepted findings and no new ones. Three provider-removal tests no longer
+  need a signed test host, so the local audit's unsigned unit-test gate
+  passes again.
+  ([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607))
 
 - Release text for 2.1.0 was checked against what 2.0.0 shipped. Two entries
   were removed from this section because they described changes customers

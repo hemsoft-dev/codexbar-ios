@@ -72,11 +72,16 @@ struct ClaudeUsageResetInventoryView: View {
                     grantRow(grant, at: date)
                 }
             }
+        }
+        // The result of a reset stays on screen below the list. As a last row it fell below the visible rows of a
+        // short sheet, such as on iPad mini, and looked as if nothing had happened.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             if let feedback {
-                Section {
-                    Label(feedback.message, systemImage: feedback.isSuccess ? "checkmark.circle" : "info.circle")
-                        .accessibilityIdentifier("claude-reset-feedback")
-                }
+                Label(feedback.message, systemImage: feedback.isSuccess ? "checkmark.circle" : "info.circle")
+                    .accessibilityIdentifier("claude-reset-feedback")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(.bar)
             }
         }
     }
