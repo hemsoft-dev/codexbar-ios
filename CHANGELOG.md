@@ -108,7 +108,8 @@ building, testing, or releasing the app.
   the seventh attempt of its iPhone native shard; the earlier attempts stalled
   in the simulator's trust daemon on GitHub's runners, and the validation
   guide now says how to read and rerun that. The hosted performance run did
-  not pass; the same experiment passed locally.
+  not pass; the same experiment passed locally. The upgrade from the shipped
+  2.0.0 build was checked with a Gemini account and with a Greptile account.
   ([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607))
 
 - The release build with complete strict concurrency and warnings as errors
