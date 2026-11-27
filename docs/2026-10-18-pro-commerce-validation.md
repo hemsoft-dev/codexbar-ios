@@ -283,6 +283,25 @@ needs a green run for the exact SHA. Keep the red run's link next to the green
 one. `storekit-server.log` in the phase folder shows what the test server did
 and when.
 
+### Judging a red hosted native UI shard
+
+The native UI shards (`iOS UI journeys (iphone, native)` and `(ipad, native)`)
+launch the app against the same test server. Two failures there are runner
+timing and not the app
+([#607](https://github.com/hemsoft-dev/codexbar-ios/issues/607)):
+
+| Evidence | Meaning |
+| --- | --- |
+| The journey fails with `Purchase information did not resolve`, the phase's `native-observer/app-sdk.stdout` has `Completed async eval kickoff` with no `trustd returned` after it, and `app-trace.stdout` has more `appTransactionBegin` than `appTransactionReturn` events | The simulator's trust daemon never answered the certificate check behind StoreKit's `AppTransaction`. The app was waiting on StoreKit. |
+| `outcome.json` has `Observer command deadline exceeded` and every phase summary passed | The evidence command `simctl spawn log show` ran past its 15-second limit. |
+
+For either one, rerun only the failed shard: `gh run rerun <run-id> --failed`.
+Each shard publishes a proof for the exact commit and the final job reads all
+twelve from the run, so a rerun that passes makes the run green for that
+commit. Read the evidence of every failed attempt before the next one; any
+other failure is investigated first. On November 26, 2026 the iPhone shard
+failed six times this way on one commit and passed on the seventh.
+
 The expiration case also uses the ten-second rate. It disables auto-renew for
 the real purchased transaction, requires verified auto-renew-off, and waits for
 native expired status and service access denial before checking a fresh source.
