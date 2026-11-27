@@ -91,8 +91,6 @@ None of these has been made.
 - A passing hosted performance run for the candidate. It was inconclusive and
   then failed on a noisy metric; the same experiment passed locally. See the
   qualification below.
-- Greptile removal over data written by a real 2.0.0 build. The 2.0.0 fixture
-  used for the upgrade check has no Greptile account.
 - The causes in [#564](https://github.com/hemsoft-dev/codexbar-ios/issues/564)
   and [#565](https://github.com/hemsoft-dev/codexbar-ios/issues/565).
 
@@ -128,7 +126,7 @@ Local, on air with Xcode 26.6 (17F113), iOS 26.2 (23C54) and watchOS 26.5
 | watchOS tests | 111 of 111 |
 | UI family, iPhone (iPhone Air) | 47 of 47 journeys and the three preparation and reset calls |
 | UI family, iPad (iPad mini) | 47 of 47 journeys and the three calls |
-| Upgrade from `v2.0.0-build5` installed as 2.0.0 (5), candidate installed over it | Passed for the Google account and a new Antigravity account. The 2.0.0 fixture has no Greptile account |
+| Upgrade from `v2.0.0-build5` installed as 2.0.0 (5), candidate installed over it | Passed. With a Gemini account: the account is gone, the others remain and a new Antigravity account survives two relaunches. With a Greptile account, in a second run: the account and its credential are gone and the one-time note appears |
 | Usage history performance, paired experiment | Passed, ratios 0.997 to 1.056, run CV at most 0.068. The script used the default Xcode, 27.2 |
 
 The runner's simulators were booted before their first phase; see
