@@ -2,7 +2,7 @@
 
 This document tracks the work required to ship CodexBar for iOS and iPadOS through TestFlight and App Store review.
 
-Status last reviewed: November 26, 2026
+Status last reviewed: November 27, 2026
 
 ## CodexBar 2.1.0 release preparation
 
@@ -20,7 +20,7 @@ Store Connect is changed. The candidate's gate results are under
 | Live source | `62f6d8e392360b91cb704c2503e9796f8ddc285c`, tag `v2.0.0-build5` | [Build 5 qualification](#build-5-qualification-and-submission) |
 | Candidate | 2.1.0 build 6, all fourteen project configurations, at `ab22e84c3ce794243b215005561035959e56c255`, tag `v2.1.0-build6-rc2` | `CodexBarIOS.xcodeproj/project.pbxproj`. The first candidate, `4a9923a` (`v2.1.0-build6-rc1`), failed its gates and was replaced |
 | Changes | 67 commits, pull requests #506 to #606, from the tag to `d9ce7c3` | `git log v2.0.0-build5..d9ce7c3` |
-| App Store Connect | Not read during this preparation | The last authorized readback was [November 22](docs/evidence/2026-11-22-asc-pro-readback.json): 2.0.0 `READY_FOR_SALE`, manual release. Repository records say build 6 was never uploaded. Read the version and build list again before any upload |
+| App Store Connect | Read on November 27 before the upload: 2.0.0 `READY_FOR_SALE`, no 2.1.0 version, builds 1 to 5 only | [#613](https://github.com/hemsoft-dev/codexbar-ios/issues/613). It was not read during qualification |
 
 ### Change audit
 
@@ -69,15 +69,20 @@ characters of 4,000 and now say that Google Gemini was removed. The public
 screenshots show Codex, GitHub Copilot, GitHub Billing, OpenRouter and
 OpenCode, none of the removed providers, so they are kept.
 
-### App Store Connect changes that wait for Franz
+### App Store Connect state and what still waits for Franz
 
-None of these has been made.
+Franz approved the upload and the review preparation on November 26
+([#613](https://github.com/hemsoft-dev/codexbar-ios/issues/613)). Done on
+November 27; see [Upload and review preparation](#upload-and-review-preparation).
 
-- Upload of the 2.1.0 build and its selection on a new 2.1.0 version.
-- What's New, promotional text and review notes from the files above.
-- The privacy policy URL, to
-  `https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md`.
-- Submission for review, and the release method.
+Still waiting for him:
+
+- The description. App Store Connect copied the 2.0.0 description into the
+  2.1.0 version, and it lists Greptile and Google Gemini. The repository's
+  [description](fastlane/metadata/en-US/description.txt) does not. It was not
+  among the approved fields, so it is not saved yet.
+- Submission for review, and the release method. The version is set to manual
+  release.
 
 ### Not verified
 
@@ -166,9 +171,25 @@ expires October 7, 2027, has a privacy manifest and declares
 passes for `source` and for the archive. The Release binary contains none of
 the UI-test fixture or Antigravity debug-diagnostic code.
 
-Before any upload: Franz must approve it, the version and build list in App
-Store Connect must be read, and the archive must be built again, with a new
-complete hosted run, if `main`'s app source has changed since the candidate.
+### Upload and review preparation
+
+Done on November 27, 2026 (UTC) under
+[#613](https://github.com/hemsoft-dev/codexbar-ios/issues/613), after Franz
+chose "Upload and prepare review". Nothing is submitted for review.
+
+| Step | Result |
+| --- | --- |
+| Before the upload | `main` differed from the candidate in Markdown files only. App Store Connect had no 2.1.0 version and no build 6 |
+| Upload | The archive above, once, 06:58 to 06:59, with `xcrun altool` from Xcode 26.6. Delivery identifier `2a4cf4f0-5c99-43e2-98e5-65faeb35eec6`. One warning: from April 2027 uploads need the iOS 27 SDK |
+| Processing | Build `2a4cf4f0-5c99-43e2-98e5-65faeb35eec6`, 2.1.0 (6), `VALID` at 07:01, App Store eligible, no non-exempt encryption |
+| Version | `5335cda8-5b5d-4f86-ab91-7bab4450e746`, 2.1.0, `PREPARE_FOR_SUBMISSION`, manual release, no phased release, build 6 selected |
+| What's New, promotional text | Saved and read back equal to the repository files |
+| Review notes | Saved on review detail `78ca27b4-27f1-4e86-9666-a90fdb5c38e3` and read back equal. Contact details unchanged |
+| Privacy policy URL | Saved on the editable app information as `https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md`. The live record keeps the old address until 2.1.0 is released |
+| Unchanged | Keywords, support URL, name, subtitle, screenshots (4 iPhone, 4 iPad, 1 Watch), price, availability, Pro products, age rating |
+| Public store afterwards | 2.0.0, Free |
+
+TestFlight and device checks of build 6 are skipped so far.
 
 ## Post-launch status
 
