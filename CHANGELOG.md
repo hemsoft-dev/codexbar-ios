@@ -4,7 +4,15 @@ Notable changes to CodexBar are documented here. Entries describe shipped app
 behavior; development-only changes are listed separately when they affect
 building, testing, or releasing the app.
 
-## 2.1.0 - Unreleased
+## Unreleased
+
+No changes yet.
+
+## 2.1.0 - 2026-11-27
+
+Build 6 was submitted for App Review on November 27, 2026 with manual release.
+The date above is the submission date; distribution is tracked in the
+[release tracker](APP-STORE.md#codexbar-210-release-preparation).
 
 ### Added
 
@@ -104,8 +112,9 @@ building, testing, or releasing the app.
 
 - Build 6 of 2.1.0 was uploaded to App Store Connect on November 27 and
   processed. The 2.1.0 version exists there with the build selected, manual
-  release, and the What's New, promotional text, review notes and privacy
-  policy URL from this repository. It is not submitted for review.
+  release, and the description, What's New, promotional text, review notes
+  and privacy policy URL from this repository. It was submitted for App Review
+  the same day.
   ([#613](https://github.com/hemsoft-dev/codexbar-ios/issues/613))
 
 - The release tracker records the gate results for the second 2.1.0
