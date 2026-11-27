@@ -102,6 +102,12 @@ building, testing, or releasing the app.
 
 ### Developer Experience
 
+- Build 6 of 2.1.0 was uploaded to App Store Connect on November 27 and
+  processed. The 2.1.0 version exists there with the build selected, manual
+  release, and the What's New, promotional text, review notes and privacy
+  policy URL from this repository. It is not submitted for review.
+  ([#613](https://github.com/hemsoft-dev/codexbar-ios/issues/613))
+
 - The release tracker records the gate results for the second 2.1.0
   candidate: every local gate passed and a signed archive was built and not
   uploaded. The hosted release gate passed for the candidate's exact commit on
