@@ -24,7 +24,7 @@ Store Connect is changed. The candidate's gate results are under
 
 ### Change audit
 
-Every customer entry in the [2.1.0 changelog](CHANGELOG.md#210---unreleased)
+Every customer entry in the [2.1.0 changelog](CHANGELOG.md#210---2026-11-27)
 was compared with the code at `v2.0.0-build5` and at the candidate. Two entries
 were removed because customers never saw the change they described:
 
@@ -71,18 +71,22 @@ OpenCode, none of the removed providers, so they are kept.
 
 ### App Store Connect state and what still waits for Franz
 
-Franz approved the upload and the review preparation on November 26
-([#613](https://github.com/hemsoft-dev/codexbar-ios/issues/613)). Done on
-November 27; see [Upload and review preparation](#upload-and-review-preparation).
+Franz approved the upload and the review preparation on November 26, and the
+description fix and the submission with manual release on November 27
+([#613](https://github.com/hemsoft-dev/codexbar-ios/issues/613)). Version
+2.1.0 build 6 is **waiting for review**; see
+[Upload, review preparation and submission](#upload-review-preparation-and-submission).
 
 Still waiting for him:
 
-- The description. App Store Connect copied the 2.0.0 description into the
-  2.1.0 version, and it lists Greptile and Google Gemini. The repository's
-  [description](fastlane/metadata/en-US/description.txt) does not. It was not
-  among the approved fields, so it is not saved yet.
-- Submission for review, and the release method. The version is set to manual
-  release.
+- The release. The version is set to manual release, so after Apple approves
+  it nothing goes live until he releases it. A phased release is his choice at
+  that point; none is set.
+- TestFlight checks on iPhone, iPad and Apple Watch, if he wants them before
+  releasing.
+
+If Apple asks for authorization from Google for Antigravity (guideline 5.2.2),
+stop and report on [#601](https://github.com/hemsoft-dev/codexbar-ios/issues/601).
 
 ### Not verified
 
@@ -171,11 +175,11 @@ expires October 7, 2027, has a privacy manifest and declares
 passes for `source` and for the archive. The Release binary contains none of
 the UI-test fixture or Antigravity debug-diagnostic code.
 
-### Upload and review preparation
+### Upload, review preparation and submission
 
 Done on November 27, 2026 (UTC) under
 [#613](https://github.com/hemsoft-dev/codexbar-ios/issues/613), after Franz
-chose "Upload and prepare review". Nothing is submitted for review.
+chose "Upload and prepare review" and then "Fix it, submit, manual release".
 
 | Step | Result |
 | --- | --- |
@@ -187,9 +191,12 @@ chose "Upload and prepare review". Nothing is submitted for review.
 | Review notes | Saved on review detail `78ca27b4-27f1-4e86-9666-a90fdb5c38e3` and read back equal. Contact details unchanged |
 | Privacy policy URL | Saved on the editable app information as `https://github.com/hemsoft-dev/codexbar-ios/blob/main/PRIVACY.md`. The live record keeps the old address until 2.1.0 is released |
 | Unchanged | Keywords, support URL, name, subtitle, screenshots (4 iPhone, 4 iPad, 1 Watch), price, availability, Pro products, age rating |
+| Description | Saved at 07:27 from the repository and read back equal, 3,017 characters. It no longer lists Greptile or Google Gemini |
+| Submission | Review submission `0293544d-7955-4d82-8e39-6bf8e03cd075`, one item (app version 2.1.0), submitted at 07:27:26. Version and submission `WAITING_FOR_REVIEW`, release type `MANUAL` |
 | Public store afterwards | 2.0.0, Free |
 
-TestFlight and device checks of build 6 are skipped so far.
+Skipped, not passed: TestFlight and device checks of build 6, and a passing
+hosted performance run.
 
 ## Post-launch status
 
@@ -199,13 +206,14 @@ The existing [October 23 readback](https://github.com/hemsoft-dev/codexbar-ios/i
 records public 2.0.0 distribution at 11:56:39 AM EDT. This update reconciles
 those records. A separate November 15 public-page observation is recorded
 below; no fresh App Store Connect observation was performed.
-Development source is **2.1.0 build 6, Unreleased**, distinct from distributed
-**2.0.0 build 5**. The launch sequence below is retained history.
+As of November 27, 2026, **2.1.0 build 6** is submitted for App Review and
+not released; the distributed version is still **2.0.0 build 5**. The launch
+sequence below is retained history.
 
 [Next-version preparation](https://github.com/hemsoft-dev/codexbar-ios/issues/568)
 uses 2.1.0 for the merged provider and dashboard changes since shipped 2.0.
 All fourteen active project configurations retain build 6. The
-[changelog](CHANGELOG.md#210---unreleased) and local
+[changelog](CHANGELOG.md#210---2026-11-27) and local
 [draft release notes](fastlane/metadata/en-US/release_notes.txt) describe this
 development source. Build 6 is retained from the prior preparation. No new
 upload-inventory check or release qualification was performed for this metadata

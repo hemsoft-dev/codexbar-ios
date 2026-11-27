@@ -47,12 +47,14 @@ The Windows reference implementation is checked out beside this repo at:
 Version 2.0.0 build 5 is the last recorded public App Store release, observed
 on October 23, 2026. Its source is tagged
 [`v2.0.0-build5`](https://github.com/hemsoft-dev/codexbar-ios/tree/v2.0.0-build5).
-Development source is **2.1.0 build 6, Unreleased**, covering the merged provider
-and dashboard changes since 2.0. See the [changelog](CHANGELOG.md#210---unreleased),
-[draft release notes](fastlane/metadata/en-US/release_notes.txt) and
-[App Store tracker](APP-STORE.md#post-launch-status) for the source boundary,
-historical validation and remaining production checks. The standing release
-hold remains in force; source preparation does not authorize distribution.
+Version **2.1.0 build 6** was submitted for App Review on November 27, 2026
+and is waiting for review. It is set to manual release, so it reaches the App
+Store only when the owner releases it after approval. Its source is tagged
+[`v2.1.0-build6-rc2`](https://github.com/hemsoft-dev/codexbar-ios/tree/v2.1.0-build6-rc2).
+See the [changelog](CHANGELOG.md#210---2026-11-27), the submitted
+[release notes](fastlane/metadata/en-US/release_notes.txt) and the
+[App Store tracker](APP-STORE.md#codexbar-210-release-preparation) for what
+was qualified and what was not.
 
 ## Local validation
 
